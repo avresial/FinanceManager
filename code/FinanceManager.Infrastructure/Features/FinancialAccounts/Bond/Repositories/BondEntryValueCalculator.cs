@@ -5,13 +5,13 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Reposito
 
 internal sealed class BondEntryValueCalculator(AppDbContext context)
 {
-    public async Task Recalculate(int accountId, DateTime startDate)
+    public async Task Recalculate(int accountId, DateTime startDate, CancellationToken cancellationToken = default)
     {
         // Each supported provider gets its own dialect below; anything else falls back to the managed
         // loop rather than being handed SQL Server syntax it cannot parse.
         if (!context.Database.IsRelational() || !DatabaseProviders.HasSetBasedRecalculation(context))
         {
-            await RecalculateInMemory(accountId, startDate);
+            await RecalculateInMemory(accountId, startDate, cancellationToken);
             return;
         }
 
@@ -44,7 +44,7 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
                 SET "Value" = r."NewValue"
                 FROM running AS r
                 WHERE "BondEntries"."EntryId" = r."EntryId"
-                """);
+                """, cancellationToken);
         }
         else if (DatabaseProviders.IsNpgsql(context))
         {
@@ -70,7 +70,7 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
                 SET "Value" = r."NewValue"
                 FROM running AS r
                 WHERE e."EntryId" = r."EntryId"
-                """);
+                """, cancellationToken);
         }
         else
         {
@@ -99,17 +99,17 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
                 SET Value = r.NewValue
                 FROM BondEntries e
                 INNER JOIN running r ON e.EntryId = r.EntryId
-                """);
+                """, cancellationToken);
         }
     }
 
-    private async Task RecalculateInMemory(int accountId, DateTime startDate)
+    private async Task RecalculateInMemory(int accountId, DateTime startDate, CancellationToken cancellationToken)
     {
         var entries = await context.BondEntries
             .Where(e => e.AccountId == accountId && e.PostingDate >= startDate)
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (entries.Count == 0) return;
 
@@ -119,7 +119,7 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
                 .Where(e => e.AccountId == accountId && bondIds.Contains(e.BondDetailsId) && e.PostingDate < startDate)
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
-                .ToListAsync())
+                .ToListAsync(cancellationToken))
             .GroupBy(e => e.BondDetailsId)
             .ToDictionary(g => g.Key, g => g.First().Value);
 
@@ -133,6 +133,6 @@ internal sealed class BondEntryValueCalculator(AppDbContext context)
             }
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

@@ -3,6 +3,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 public interface IAccountEntryRepository<T>
 {
     IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
+    IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken);
     Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true);
 
     /// <summary>
@@ -63,6 +64,7 @@ public interface IAccountEntryRepository<T>
     Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
     Task RecalculateValues(int accountId, int entryId);
+    Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Recomputes the running <c>Value</c> of every entry in the account from its <c>ValueChange</c>
@@ -71,11 +73,16 @@ public interface IAccountEntryRepository<T>
     /// (e.g. legacy imports that never ran a recalculation pass).
     /// </summary>
     Task RecalculateValues(int accountId);
+    Task RecalculateValues(int accountId, CancellationToken cancellationToken);
     Task<bool> Add(T entry, bool recalculate = true);
+    Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
+    Task<bool> Add(IEnumerable<T> entries, bool recalculate, CancellationToken cancellationToken);
     Task<bool> AddLabel(int entryId, int labelId);
     Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
     Task<bool> Delete(int accountId, int entryId);
+    Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken);
     Task<bool> Delete(int accountId);
+    Task<bool> Delete(int accountId, CancellationToken cancellationToken);
 }

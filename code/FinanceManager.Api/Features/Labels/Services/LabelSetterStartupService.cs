@@ -70,8 +70,13 @@ internal sealed class LabelSetterStartupService(
                     unlabeledEntries.Select(entry => entry.AccountId).Distinct().Count());
                 logger.LogInformation("Label setter startup scan completed.");
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Label setter startup scan cancelled during application shutdown.");
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Label setter startup scan cancelled or timed out.");
             }
             catch (Exception ex)
             {

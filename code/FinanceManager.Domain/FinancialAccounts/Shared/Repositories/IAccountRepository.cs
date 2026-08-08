@@ -14,6 +14,7 @@ public interface IAccountRepository<T>
     /// </summary>
     Task<List<T>> GetAll(int userId);
     Task<T?> Get(int accountId);
+    Task<T?> Get(int accountId, CancellationToken cancellationToken);
     Task<bool> Exists(int accountId);
     Task<int?> Add(int userId, string accountName);
     Task<bool> Update(int accountId, string accountName);

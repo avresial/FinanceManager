@@ -63,9 +63,12 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
             .ToList();
     }
 
-    public async Task<CurrencyAccount?> Get(int accountId)
+    public Task<CurrencyAccount?> Get(int accountId) => Get(accountId, CancellationToken.None);
+
+    public async Task<CurrencyAccount?> Get(int accountId, CancellationToken cancellationToken)
     {
-        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
+        var accountToReturn = await context.Accounts.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency, cancellationToken);
         if (accountToReturn is null) return null;
         return new CurrencyAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel);
     }

@@ -138,11 +138,15 @@ public class CachedAccountEntryRepositoryTests
     public async Task Add_InvalidatesOwnersCache()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
+        inner.Setup(r => r.Add(
+                It.IsAny<CurrencyAccountEntry>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
 
-        await sut.Add(Entry());
+        await sut.Add(Entry(), recalculate: true, cancellationToken: TestContext.Current.CancellationToken);
 
         invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -151,11 +155,15 @@ public class CachedAccountEntryRepositoryTests
     public async Task AddBatch_InvalidatesOwnersCache_OncePerUser()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>())).ReturnsAsync(true);
+        inner.Setup(r => r.Add(
+                It.IsAny<IEnumerable<CurrencyAccountEntry>>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
 
-        await sut.Add([Entry(1), Entry(2), Entry(3)]);
+        await sut.Add([Entry(1), Entry(2), Entry(3)], recalculate: true, cancellationToken: TestContext.Current.CancellationToken);
 
         invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -177,11 +185,11 @@ public class CachedAccountEntryRepositoryTests
     public async Task DeleteEntry_InvalidatesOwnersCache()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Delete(_accountId, 1)).ReturnsAsync(true);
+        inner.Setup(r => r.Delete(_accountId, 1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
 
-        await sut.Delete(_accountId, 1);
+        await sut.Delete(_accountId, 1, TestContext.Current.CancellationToken);
 
         invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -190,11 +198,11 @@ public class CachedAccountEntryRepositoryTests
     public async Task DeleteAccount_InvalidatesOwnersCache()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Delete(_accountId)).ReturnsAsync(true);
+        inner.Setup(r => r.Delete(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
 
-        await sut.Delete(_accountId);
+        await sut.Delete(_accountId, TestContext.Current.CancellationToken);
 
         invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
     }

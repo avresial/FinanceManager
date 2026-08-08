@@ -141,6 +141,11 @@ public sealed class InvestmentTransactionService(
         {
             throw;
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Adding investment transaction cancelled for account {AccountId}.", request.AccountId);
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Failed to add investment transaction for account {AccountId}", request.AccountId);

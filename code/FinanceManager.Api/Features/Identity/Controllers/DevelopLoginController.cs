@@ -77,6 +77,10 @@ public class DevelopLoginController(IHostEnvironment environment, IGuestLoginSer
             RefreshTokenCookie.Append(Response, Request.IsHttps, refreshOptions.Value.CookieName, refreshToken,
                 DateTimeOffset.UtcNow.AddDays(refreshOptions.Value.SlidingValidityDays));
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Refresh-token issuance cancelled for user {UserId}.", user.UserId);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while issuing a refresh token for user {UserId}", user.UserId);

@@ -115,6 +115,20 @@ public class NbpCurrencyExchangeRateProviderTests
     }
 
     [Fact]
+    public async Task Range_ServerError_MarksEveryAffectedDayAsFailed()
+    {
+        var provider = CreateProvider(new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("boom")
+        }));
+
+        var results = await provider.GetExchangeRateAsync(_usd, _pln, _date, _date.AddDays(1));
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.Equal(CurrencyExchangeRateProviderStatus.Failed, result.Result.Status));
+    }
+
+    [Fact]
     public async Task Range_Disabled_PlnToPln_ReturnsNotFound_WithoutCallingApi()
     {
         var handler = new MockHttpMessageHandler(_ => Ok(_usdRangeResponse));

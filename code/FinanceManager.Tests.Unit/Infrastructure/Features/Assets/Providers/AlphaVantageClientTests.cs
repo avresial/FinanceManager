@@ -4,6 +4,8 @@ using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
+using Moq.Protected;
 using System.Net;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
@@ -16,10 +18,12 @@ public class AlphaVantageClientTests
     private static readonly DateTime _start = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = new(2024, 1, 31, 0, 0, 0, DateTimeKind.Utc);
 
-    private static AlphaVantageClient CreateClient(MockHttpMessageHandler handler)
+    private static AlphaVantageClient CreateClient(
+        HttpMessageHandler handler,
+        ILogger<AlphaVantageClient>? logger = null)
     {
         var httpClient = new HttpClient(handler);
-        var logger = LoggerFactory.Create(b => { }).CreateLogger<AlphaVantageClient>();
+        logger ??= LoggerFactory.Create(b => { }).CreateLogger<AlphaVantageClient>();
         var config = new ExternalServiceConfiguration
         {
             ServiceName = "AlphaVantage",
@@ -66,6 +70,67 @@ public class AlphaVantageClientTests
         Assert.Empty(result);
     }
 
+    [Fact]
+    public async Task GetDailySeries_WhenCallerCancels_RethrowsAndLogsDebug()
+    {
+        var logger = new Mock<ILogger>();
+        using var cancellation = new CancellationTokenSource();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((_, _) => cancellation.Cancel())
+            .ThrowsAsync(new OperationCanceledException("caller cancelled", cancellation.Token));
+        var client = CreateClient(handler.Object, CreateLogger(logger));
+
+        // This test intentionally supplies a cancelled caller token rather than the test-run token.
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, cancellation.Token));
+#pragma warning restore xUnit1051
+
+        var levels = GetLogLevels(logger);
+        Assert.Contains(LogLevel.Debug, levels);
+        Assert.DoesNotContain(LogLevel.Error, levels);
+    }
+
+    [Fact]
+    public async Task GetDailySeries_WhenHttpTimesOut_ReturnsEmptyAndLogsDebug()
+    {
+        var logger = new Mock<ILogger>();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("request timeout"));
+        var client = CreateClient(handler.Object, CreateLogger(logger));
+
+        var result = await client.GetDailySeries(
+            "AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        var levels = GetLogLevels(logger);
+        Assert.Contains(LogLevel.Debug, levels);
+        Assert.DoesNotContain(LogLevel.Error, levels);
+    }
+
+    private static ILogger<AlphaVantageClient> CreateLogger(Mock<ILogger> logger)
+    {
+        var factory = new Mock<ILoggerFactory>();
+        factory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
+        return factory.Object.CreateLogger<AlphaVantageClient>();
+    }
+
+    private static List<LogLevel> GetLogLevels(Mock<ILogger> logger) =>
+        logger.Invocations
+            .Where(invocation => invocation.Method.Name == nameof(ILogger.Log))
+            .Select(invocation => (LogLevel)invocation.Arguments[0])
+            .ToList();
+
     private const string _emptySeries = """{ "Time Series (Daily)": {} }""";
 
     private sealed class StubExternalServiceConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
@@ -100,4 +165,5 @@ public class AlphaVantageClientTests
             });
         }
     }
+
 }

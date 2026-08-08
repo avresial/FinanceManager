@@ -69,6 +69,10 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         {
             await activeUsersRepository.Add(token.UserId, DateOnly.FromDateTime(DateTime.UtcNow));
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Adding user {UserId} to the active-user repository cancelled or timed out.", token.UserId);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error occurred while adding user to active users repository");
@@ -77,6 +81,10 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
         try
         {
             await insightsGenerationChannel.QueueUser(token.UserId, cancellationToken);
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Insights generation queueing cancelled for user {UserId}.", token.UserId);
         }
         catch (Exception ex)
         {
@@ -90,6 +98,10 @@ public class LoginController(JwtTokenGenerator jwtTokenGenerator, IUserRepositor
             var refreshToken = await refreshTokenService.Issue(user.UserId, cancellationToken);
             RefreshTokenCookie.Append(Response, Request.IsHttps, refreshOptions.Value.CookieName, refreshToken,
                 DateTimeOffset.UtcNow.AddDays(refreshOptions.Value.SlidingValidityDays));
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Refresh-token issuance cancelled for user {UserId}.", user.UserId);
         }
         catch (Exception ex)
         {

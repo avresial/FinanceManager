@@ -81,6 +81,16 @@ internal sealed class LabelSetterAiService(
 
             return result;
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "AI label assignment cancelled for {Count} entries.", entryIds.Count);
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "AI label assignment cancelled or timed out for {Count} entries.", entryIds.Count);
+            return [];
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "AI model label assignment failed for batch of {Count} entries.", entryIds.Count);

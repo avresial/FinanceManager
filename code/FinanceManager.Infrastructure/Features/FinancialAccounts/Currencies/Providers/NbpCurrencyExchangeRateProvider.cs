@@ -74,6 +74,7 @@ internal sealed class NbpCurrencyExchangeRateProvider(
         }
 
         Dictionary<DateTime, decimal> merged = [];
+        HashSet<DateTime> failedDates = [];
         for (var chunkStart = start; chunkStart <= end; chunkStart = chunkStart.AddDays(_rangeChunkDays))
         {
             var chunkEnd = chunkStart.AddDays(_rangeChunkDays - 1);
@@ -82,7 +83,10 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{Iso(chunkStart)}/{Iso(chunkEnd)}/?format=json");
             var (failed, rates) = await FetchSeriesAsync(url, foreignCode, chunkStart, chunkEnd);
             if (failed)
+            {
+                failedDates.UnionWith(EnumerateDates(chunkStart, chunkEnd));
                 continue;
+            }
 
             foreach (var (day, mid) in rates)
                 merged[day] = mid;
@@ -91,7 +95,9 @@ internal sealed class NbpCurrencyExchangeRateProvider(
         List<(DateTime Date, CurrencyExchangeRateProviderResult Result)> results = [];
         foreach (var day in EnumerateDates(start, end))
         {
-            if (merged.TryGetValue(day, out var mid) && mid > 0)
+            if (failedDates.Contains(day))
+                results.Add((day, new(CurrencyExchangeRateProviderStatus.Failed)));
+            else if (merged.TryGetValue(day, out var mid) && mid > 0)
                 results.Add((day, new(CurrencyExchangeRateProviderStatus.Success, invert ? 1m / mid : mid)));
             else
                 results.Add((day, new(CurrencyExchangeRateProviderStatus.NotFound)));
@@ -103,7 +109,8 @@ internal sealed class NbpCurrencyExchangeRateProvider(
     // Returns (Failed, effectiveDate→mid). Failed marks a transport/parse error so the caller can report
     // it distinctly; a 404 (non-publication day or unknown currency) is not a failure and yields an empty
     // map so the date is simply reported as NotFound.
-    private async Task<(bool Failed, Dictionary<DateTime, decimal> Rates)> FetchSeriesAsync(string url, string code, DateTime start, DateTime end)
+    private async Task<(bool Failed, Dictionary<DateTime, decimal> Rates)> FetchSeriesAsync(
+        string url, string code, DateTime start, DateTime end)
     {
         try
         {
@@ -130,6 +137,11 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             }
 
             return (false, rates);
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "NBP request cancelled or timed out for {Code} {Start:yyyy-MM-dd}..{End:yyyy-MM-dd}.", code, start, end);
+            return (true, []);
         }
         catch (JsonException ex)
         {

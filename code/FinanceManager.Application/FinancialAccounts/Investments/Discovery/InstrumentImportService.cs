@@ -183,6 +183,12 @@ public sealed class InstrumentImportService(
         {
             throw;
         }
+        catch (OperationCanceledException ex)
+        {
+            var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);
+            logger.LogDebug(ex, "Alpha Vantage validation cancelled for {Symbol}", sanitizedSymbol);
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);

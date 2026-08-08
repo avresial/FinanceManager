@@ -56,9 +56,12 @@ internal class BondAccountRepository(AppDbContext context) : IAccountRepository<
             .ToList();
     }
 
-    public async Task<BondAccount?> Get(int accountId)
+    public Task<BondAccount?> Get(int accountId) => Get(accountId, CancellationToken.None);
+
+    public async Task<BondAccount?> Get(int accountId, CancellationToken cancellationToken)
     {
-        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond);
+        var accountToReturn = await context.Accounts.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Bond, cancellationToken);
         if (accountToReturn is null) return null;
         return new BondAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }

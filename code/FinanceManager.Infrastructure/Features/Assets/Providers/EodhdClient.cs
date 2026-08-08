@@ -90,7 +90,17 @@ internal sealed class EodhdClient(
 
             return prices;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "EODHD daily series cancelled for {Symbol}.", Sanitize(eodhdSymbol));
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "EODHD daily series cancelled or timed out for {Symbol}.", Sanitize(eodhdSymbol));
+            return [];
+        }
+        catch (Exception ex)
         {
             logger.LogError(ex, "EODHD daily series failed for {Symbol}", Sanitize(eodhdSymbol));
             return [];

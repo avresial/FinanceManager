@@ -73,10 +73,14 @@ internal class DatabaseInitializer(
                 logger.LogInformation("Seeding data with {Seeder}", seeder.GetType().Name);
                 await seeder.Seed(cancellationToken);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
-                logger.LogInformation("Data seeding cancelled while running {Seeder}", seeder.GetType().Name);
+                logger.LogDebug(ex, "Data seeding cancelled during application shutdown while running {Seeder}.", seeder.GetType().Name);
                 return;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Data seeding cancelled or timed out while running {Seeder}.", seeder.GetType().Name);
             }
             catch (Exception ex)
             {

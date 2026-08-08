@@ -125,16 +125,16 @@ public class CachedAccountEntryRepositoryRangeTests
         var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(2, jan20), Entry(1, jan10) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan10, jan20, ct).ToListAsync(ct);
 
         // Inner was called with FULL month bounds, not the requested slice.
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(2, result.Count);
     }
 
@@ -151,7 +151,7 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[]
              {
                  Entry(4, jan25), Entry(2, jan20), Entry(1, jan10), Entry(3, jan5)
@@ -160,10 +160,10 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
-        var second = await sut.Get(_accountId, jan5, jan25).ToListAsync(ct);
+        var first = await sut.Get(_accountId, jan10, jan20, ct).ToListAsync(ct);
+        var second = await sut.Get(_accountId, jan5, jan25, ct).ToListAsync(ct);
 
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(2, first.Count);
         Assert.Equal(4, second.Count);
     }
@@ -180,13 +180,13 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, jan15) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(2, feb10) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, jan15, feb10).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan15, feb10, ct).ToListAsync(ct);
 
         Assert.Equal(2, result.Count);
         // Newest-first: _feb entry (id=2) before _jan entry (id=1)
@@ -206,22 +206,22 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, jan15) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(2, _feb.AddDays(10)) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId, _mar, marEnd))
+        inner.Setup(r => r.Get(_accountId, _mar, marEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(3, _mar.AddDays(5)) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        await sut.Get(_accountId, jan15, _feb.AddDays(28)).ToListAsync(ct);   // seeds _jan + _feb
-        var result = await sut.Get(_accountId, _feb, mar20).ToListAsync(ct);  // _feb=hit, _mar=miss
+        await sut.Get(_accountId, jan15, _feb.AddDays(28), ct).ToListAsync(ct);   // seeds _jan + _feb
+        var result = await sut.Get(_accountId, _feb, mar20, ct).ToListAsync(ct);  // _feb=hit, _mar=miss
 
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
-        inner.Verify(r => r.Get(_accountId, _feb, febEnd), Times.Once);
-        inner.Verify(r => r.Get(_accountId, _mar, marEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _feb, febEnd, It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _mar, marEnd, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(2, result.Count);
     }
 
@@ -234,16 +234,16 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
-        var second = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
+        var first = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
+        var second = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
 
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Empty(first);
         Assert.Empty(second);
     }
@@ -261,13 +261,13 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId, _feb, febEnd))
+        inner.Setup(r => r.Get(_accountId, _feb, febEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { feb1Entry }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, _jan, _feb.AddDays(27)).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, _feb.AddDays(27), ct).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(10, result[0].EntryId);
@@ -281,11 +281,11 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(5, jan31) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(5, result[0].EntryId);
@@ -308,17 +308,17 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, oldDate, olderEnd))
+        inner.Setup(r => r.Get(_accountId, oldDate, olderEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, oldDate) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId, horizon, horizonMonthEnd))
+        inner.Setup(r => r.Get(_accountId, horizon, horizonMonthEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(2, recentDate) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache(), options: _twelveMonthOptions);
-        var result = await sut.Get(_accountId, oldDate, recentDate).ToListAsync(ct);
+        var result = await sut.Get(_accountId, oldDate, recentDate, ct).ToListAsync(ct);
 
         // Older portion passed straight through; recent portion inflated to full month.
-        inner.Verify(r => r.Get(_accountId, oldDate, olderEnd), Times.Once);
-        inner.Verify(r => r.Get(_accountId, horizon, horizonMonthEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, oldDate, olderEnd, It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(r => r.Get(_accountId, horizon, horizonMonthEnd, It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(2, result.Count);
         // Newest-first: recent (id=2) before old (id=1).
         Assert.Equal(2, result[0].EntryId);
@@ -335,17 +335,17 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, oldStart, oldEnd))
+        inner.Setup(r => r.Get(_accountId, oldStart, oldEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, oldStart) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, options: _twelveMonthOptions);
 
-        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
-        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd, ct).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd, ct).ToListAsync(ct);
 
         // Both calls pass through — no bucket caching for old data.
-        inner.Verify(r => r.Get(_accountId, oldStart, oldEnd), Times.Exactly(2));
+        inner.Verify(r => r.Get(_accountId, oldStart, oldEnd, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     // ── GetEntriesWithMinimumCount routes through the cached Get ─────────────────
@@ -356,7 +356,7 @@ public class CachedAccountEntryRepositoryRangeTests
         var janEnd = MonthBucket.MonthEndInclusive(_jan);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, _jan.AddDays(10)) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
@@ -369,7 +369,7 @@ public class CachedAccountEntryRepositoryRangeTests
 
         // Second call: full cache hit.
         await sut.GetEntriesWithMinimumCount(_accountId, _jan, janEnd);
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public class CachedAccountEntryRepositoryRangeTests
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         inner.Setup(r => r.GetPostingDates(_accountId))
              .ReturnsAsync([jan20, jan10, jan5]);
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(3, jan20), Entry(2, jan10), Entry(1, jan5) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
@@ -422,7 +422,7 @@ public class CachedAccountEntryRepositoryRangeTests
         Assert.Equal(3, entries.Count);
         Assert.Equal(jan5, effectiveStart);
         // Inner Get was inflated to full month.
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
         // Inner GetEntriesWithMinimumCount must NOT be called (decorator handles it).
         inner.Verify(r => r.GetEntriesWithMinimumCount(
             It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>()), Times.Never);
@@ -445,9 +445,9 @@ public class CachedAccountEntryRepositoryRangeTests
         resolver.Setup(r => r.GetUserId(_accountId2, It.IsAny<CancellationToken>())).ReturnsAsync(_userId2);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, jan20) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId2, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId2, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { new CurrencyAccountEntry(_accountId2, 2, jan10, 200m, 200m) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache(), resolver: resolver.Object);
@@ -473,9 +473,9 @@ public class CachedAccountEntryRepositoryRangeTests
         resolver.Setup(r => r.GetUserId(_accountId2, It.IsAny<CancellationToken>())).ReturnsAsync(_userId2);
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, _jan.AddDays(5)) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Get(_accountId2, _jan, janEnd))
+        inner.Setup(r => r.Get(_accountId2, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { new CurrencyAccountEntry(_accountId2, 2, _jan.AddDays(10), 50m, 50m) }.ToAsyncEnumerable());
 
         var cache = BuildCache();
@@ -484,8 +484,8 @@ public class CachedAccountEntryRepositoryRangeTests
         await sut.GetRange([_accountId, _accountId2], _jan, janEnd);
         await sut.GetRange([_accountId, _accountId2], _jan, janEnd);
 
-        inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
-        inner.Verify(r => r.Get(_accountId2, _jan, janEnd), Times.Once);
+        inner.Verify(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(r => r.Get(_accountId2, _jan, janEnd, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── Invalidation busts range buckets ──────────────────────────────────────────
@@ -502,14 +502,18 @@ public class CachedAccountEntryRepositoryRangeTests
         inner.SetupSequence(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan5, 100m) }.ToAsyncEnumerable())
              .Returns(new[] { Entry(2, jan15, 200m), Entry(1, jan5, 200m) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
+        inner.Setup(r => r.Add(
+                It.IsAny<CurrencyAccountEntry>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, invalidator: new CacheInvalidator(cache));
 
-        var before = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct); // miss → cached
-        await sut.Add(Entry(2, jan15, 200m));                               // write busts global:u42
-        var after = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);  // miss again
+        var before = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct); // miss → cached
+        await sut.Add(Entry(2, jan15, 200m), recalculate: true, cancellationToken: ct); // write busts global:u42
+        var after = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);  // miss again
 
         Assert.Single(before);
         Assert.Equal(2, after.Count);
@@ -524,15 +528,15 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _jan, _feb))
+        inner.Setup(r => r.Get(_accountId, _jan, _feb, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, _jan.AddDays(5)) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache(), resolver: ResolverFor(_accountId, null));
 
-        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
-        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb, ct).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb, ct).ToListAsync(ct);
 
         // Both calls fall through — no caching without a resolvable userId.
-        inner.Verify(r => r.Get(_accountId, _jan, _feb), Times.Exactly(2));
+        inner.Verify(r => r.Get(_accountId, _jan, _feb, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

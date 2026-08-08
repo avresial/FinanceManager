@@ -43,6 +43,11 @@ internal sealed class CsvCurrencyExchangeProvider(
 
             return new(CurrencyExchangeRateProviderStatus.NotFound);
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "CSV exchange-rate lookup cancelled or timed out for {FromCurrency} to {ToCurrency} on {Date}.", fromCurrency, toCurrency, date);
+            return new(CurrencyExchangeRateProviderStatus.Failed);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load CSV exchange rate for {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);

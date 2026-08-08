@@ -110,6 +110,16 @@ public sealed class CurrencyRateBackfillService(
                 var written = await exchangeRateRepository.AddRange(pair.From, pair.To, missing, cancellationToken);
                 inserted += written;
             }
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogDebug(ex, "Currency backfill persistence cancelled for pair {From}->{To}.", pair.From, pair.To);
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                failures++;
+                logger.LogDebug(ex, "Currency backfill persistence failed with a cancellation for pair {From}->{To}; continuing.", pair.From, pair.To);
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 failures++;

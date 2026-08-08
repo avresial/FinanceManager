@@ -23,9 +23,14 @@ public sealed class PriceBackfillBackgroundService(
                 var backfillService = scope.ServiceProvider.GetRequiredService<IInvestmentPriceBackfillService>();
                 await backfillService.BackfillAsync(request.Start, request.End, stoppingToken);
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
+                logger.LogDebug(ex, "Price backfill cancelled during application shutdown for {Start:yyyy-MM-dd}..{End:yyyy-MM-dd}.", request.Start, request.End);
                 break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Price backfill cancelled or timed out for {Start:yyyy-MM-dd}..{End:yyyy-MM-dd}.", request.Start, request.End);
             }
             catch (Exception ex)
             {

@@ -22,6 +22,10 @@ internal sealed class GuestSessionCleanupService(
             {
                 ClearExpiredSessions();
             }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Guest session cleanup sweep cancelled or timed out.");
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Guest session cleanup sweep failed.");
@@ -31,8 +35,9 @@ internal sealed class GuestSessionCleanupService(
             {
                 await timer.WaitForNextTickAsync(stoppingToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
+                logger.LogDebug(ex, "Guest session cleanup timer cancelled during application shutdown.");
                 return;
             }
         }
@@ -48,6 +53,10 @@ internal sealed class GuestSessionCleanupService(
             try
             {
                 DropGuestDatabase(guestUserId);
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Dropping in-memory database for guest {GuestUserId} cancelled or timed out.", guestUserId);
             }
             catch (Exception ex)
             {

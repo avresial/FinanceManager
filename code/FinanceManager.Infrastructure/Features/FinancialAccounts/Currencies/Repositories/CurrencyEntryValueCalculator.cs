@@ -5,7 +5,7 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Re
 
 internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
 {
-    public async Task Recalculate(int accountId, DateTime startDate)
+    public async Task Recalculate(int accountId, DateTime startDate, CancellationToken cancellationToken = default)
     {
         var anchor = await context.CurrencyEntries
             .AsNoTracking()
@@ -13,7 +13,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
             .OrderByDescending(e => e.PostingDate)
             .ThenByDescending(e => e.EntryId)
             .Select(e => (decimal?)e.Value)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         // Each supported provider gets its own dialect below; anything else falls back to the managed
         // loop rather than being handed SQL Server syntax it cannot parse.
@@ -23,7 +23,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
                 .Where(e => e.AccountId == accountId && e.PostingDate >= startDate)
                 .OrderBy(e => e.PostingDate)
                 .ThenBy(e => e.EntryId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             decimal running = anchor ?? 0m;
             foreach (var entry in entries)
@@ -32,7 +32,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
                 entry.Value = running;
             }
 
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -55,7 +55,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
                 SET "Value" = r."NewValue"
                 FROM running AS r
                 WHERE "CurrencyEntries"."EntryId" = r."EntryId"
-                """);
+                """, cancellationToken);
         }
         else if (DatabaseProviders.IsNpgsql(context))
         {
@@ -74,7 +74,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
                 SET "Value" = r."NewValue"
                 FROM running AS r
                 WHERE e."EntryId" = r."EntryId"
-                """);
+                """, cancellationToken);
         }
         else
         {
@@ -93,7 +93,7 @@ internal sealed class CurrencyEntryValueCalculator(AppDbContext context)
                 SET Value = r.NewValue
                 FROM CurrencyEntries AS e
                 INNER JOIN running AS r ON e.EntryId = r.EntryId
-                """);
+                """, cancellationToken);
         }
     }
 }

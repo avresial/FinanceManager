@@ -17,6 +17,11 @@ public class UsersService(IFinancialAccountRepository financialAccountRepository
             {
                 await financialAccountRepository.RemoveAccount(account.Value, account.Key);
             }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogDebug(ex, "Deleting user {UserId} cancelled or timed out while removing account {AccountId}.", userId, account.Value);
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, ex.Message);

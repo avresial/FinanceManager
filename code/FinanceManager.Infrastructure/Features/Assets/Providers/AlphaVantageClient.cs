@@ -72,6 +72,16 @@ internal sealed class AlphaVantageClient(
 
             return result;
         }
+        catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Stock API search cancelled for the requested keywords.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Stock API search cancelled or timed out.");
+            return [];
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Stock API search failed for keywords {Keywords}", keywords);
@@ -125,6 +135,16 @@ internal sealed class AlphaVantageClient(
                     apiResponse.Series.Count, ticker, start.Date, end.Date);
 
             return prices;
+        }
+        catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Stock API daily series cancelled.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Stock API daily series cancelled or timed out.");
+            return [];
         }
         catch (Exception ex)
         {

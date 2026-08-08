@@ -19,6 +19,12 @@ public class GuestLoginService(IGuestSessionStore guestSessionStore, IServiceSco
         {
             await SeedGuestSandbox(guestUserId, cancellationToken);
         }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Guest sandbox seeding cancelled for {GuestUserId}; aborting guest login.", guestUserId);
+            guestSessionStore.Remove(guestUserId);
+            throw;
+        }
         catch (Exception ex)
         {
             // A half-seeded sandbox would still authenticate (the session is in the store, the token would be valid),

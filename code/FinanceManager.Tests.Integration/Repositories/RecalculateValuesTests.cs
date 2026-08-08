@@ -48,11 +48,11 @@ public sealed class RecalculateValuesTests : IDisposable
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true, cancellationToken: ct);
 
         // Insert between existing entries — triggers recalculation from jan15 onwards.
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 0, 200m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 0, 200m), recalculate: true, cancellationToken: ct);
 
         var entries = await _context.CurrencyEntries
             .Where(e => e.AccountId == _accountId)
@@ -75,11 +75,11 @@ public sealed class RecalculateValuesTests : IDisposable
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
         // Simulate legacy import drift: each entry's Value equals its ValueChange and no recalc ran.
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 1000m, 1000m), recalculate: false);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 200m, 200m), recalculate: false);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 500m, 500m), recalculate: false);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 1000m, 1000m), recalculate: false, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 200m, 200m), recalculate: false, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 500m, 500m), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId);
+        await repo.RecalculateValues(_accountId, ct);
 
         var entries = await _context.CurrencyEntries
             .Where(e => e.AccountId == _accountId)
@@ -100,8 +100,8 @@ public sealed class RecalculateValuesTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, -200m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, -200m), recalculate: true, cancellationToken: ct);
 
         var entry = await _context.CurrencyEntries.FirstAsync(e => e.PostingDate == jan10, ct);
         await repo.Update(new CurrencyAccountEntry(_accountId, entry.EntryId, jan10, 0, 1500m));
@@ -123,11 +123,11 @@ public sealed class RecalculateValuesTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true, cancellationToken: ct);
 
         var entry = await _context.CurrencyEntries.FirstAsync(e => e.PostingDate == jan10, ct);
-        await repo.Delete(_accountId, entry.EntryId);
+        await repo.Delete(_accountId, entry.EntryId, ct);
 
         var remaining = await _context.CurrencyEntries
             .Where(e => e.AccountId == _accountId)
@@ -151,13 +151,13 @@ public sealed class RecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
         // Different bond — must remain independent.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
 
         // Out-of-order insert for bondA.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
 
         var bondAEntries = await _context.BondEntries
             .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)
@@ -189,11 +189,11 @@ public sealed class RecalculateValuesTests : IDisposable
         const int bondB = 2;
 
         // Simulate legacy import drift: Value equals ValueChange across two bonds, no recalc.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId);
+        await repo.RecalculateValues(_accountId, ct);
 
         var bondAEntries = await _context.BondEntries
             .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)

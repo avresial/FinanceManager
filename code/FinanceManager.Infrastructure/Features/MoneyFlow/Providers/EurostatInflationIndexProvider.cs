@@ -44,6 +44,16 @@ public class EurostatInflationIndexProvider(
 
             return result;
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Eurostat inflation-index request cancelled.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Eurostat inflation-index request cancelled or timed out.");
+            return new Dictionary<DateTime, decimal>();
+        }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidOperationException)
         {
             logger.LogWarning(ex, "Eurostat did not return the Polish inflation index for {Start:d}–{End:d}", start, end);

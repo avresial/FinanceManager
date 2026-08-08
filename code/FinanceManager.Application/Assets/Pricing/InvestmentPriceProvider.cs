@@ -301,6 +301,19 @@ public class InvestmentPriceProvider(
                         ? await priceSource.GetDailySeries(symbol.Provider, symbol.Symbol, string.Empty, start, end, rawCurrency, ct)
                         : await priceSource.GetDailySeries(symbol.Symbol, string.Empty, start, end, rawCurrency, ct);
                 }
+                catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
+                {
+                    logger.LogDebug(ex, "Price fetch cancelled for listing {ListingId} provider {Provider} symbol {Symbol}.",
+                        listing.Id, symbol.Provider, symbol.Symbol);
+                    throw;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    logger.LogDebug(ex, "Price fetch cancelled or timed out for listing {ListingId} provider {Provider} symbol {Symbol}; trying the next source.",
+                        listing.Id, symbol.Provider, symbol.Symbol);
+                    await symbolRepository.RecordFetchResult(symbol.Id, null, ex.Message, ct);
+                    continue;
+                }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogWarning(ex, "Price fetch failed for listing {ListingId} provider {Provider} symbol {Symbol}",

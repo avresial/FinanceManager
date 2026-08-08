@@ -98,6 +98,16 @@ internal sealed class LabelSuggestionAiService(
 
             return result;
         }
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "AI label suggestion cancelled.");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "AI label suggestion cancelled or timed out.");
+            return [];
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "AI label suggestion failed.");

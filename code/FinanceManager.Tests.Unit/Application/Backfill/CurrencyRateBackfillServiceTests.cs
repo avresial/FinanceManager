@@ -141,6 +141,48 @@ public class CurrencyRateBackfillServiceTests
         Assert.True(result.RateLimited);
     }
 
+    [Fact]
+    public async Task PersistenceCancellationWithoutCallerCancellation_CountsFailureAndContinues()
+    {
+        var date = DateTime.UtcNow.Date.AddDays(-1);
+        SetupPairs(("USD", "PLN"), ("EUR", "PLN"));
+        _exchangeRates
+            .Setup(x => x.GetLatestDate(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DateTime?)null);
+        _fxSource
+            .Setup(x => x.GetDailyRatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string from, string _, CancellationToken _) =>
+                FxDailyResult.Success(new Dictionary<DateTime, decimal> { [date] = from == "USD" ? 4m : 4.2m }));
+        _exchangeRates
+            .Setup(x => x.GetExistingDates(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<DateTime>());
+        _exchangeRates
+            .Setup(x => x.AddRange(
+                "USD",
+                "PLN",
+                It.IsAny<IReadOnlyCollection<(DateTime Date, decimal Rate)>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException("database timeout"));
+        _exchangeRates
+            .Setup(x => x.AddRange(
+                "EUR",
+                "PLN",
+                It.IsAny<IReadOnlyCollection<(DateTime Date, decimal Rate)>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var result = await CreateSut().BackfillAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.ProviderRequests);
+        Assert.Equal(1, result.RowsInserted);
+        Assert.Equal(1, result.Failures);
+    }
+
     private void SetupPairs(params (string From, string To)[] pairs) =>
         _discovery
             .Setup(x => x.GetPairsAsync(It.IsAny<CancellationToken>()))
