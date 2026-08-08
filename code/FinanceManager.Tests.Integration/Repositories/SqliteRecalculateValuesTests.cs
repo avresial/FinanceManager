@@ -64,11 +64,11 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 1000m, 1000m), recalculate: false);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 200m, 200m), recalculate: false);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 500m, 500m), recalculate: false);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 1000m, 1000m), recalculate: false, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 200m, 200m), recalculate: false, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 500m, 500m), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId);
+        await repo.RecalculateValues(_accountId, ct);
 
         var entries = await ReadCurrencyEntries(ct);
 
@@ -87,12 +87,12 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
         var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
 
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true);
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1000m), recalculate: true, cancellationToken: ct);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true, cancellationToken: ct);
 
         // Inserting between existing entries recalculates from jan15 on, seeded by the jan10 anchor —
         // the part of the statement that reads a value from outside the updated range.
-        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 0, 200m), recalculate: true);
+        await repo.Add(new CurrencyAccountEntry(_accountId, 0, jan15, 0, 200m), recalculate: true, cancellationToken: ct);
 
         var entries = await ReadCurrencyEntries(ct);
 
@@ -114,13 +114,13 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 100m, 100m, bondA), recalculate: false);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 100m, 100m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
         // A second bond in the same account must keep its own running total.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId);
+        await repo.RecalculateValues(_accountId, ct);
 
         var bondAEntries = await ReadBondEntries(bondA, ct);
         var bondBEntries = await ReadBondEntries(bondB, ct);
@@ -146,12 +146,12 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
 
         // Exercises the per-bond anchor selection: bondA anchors on its own jan10 row, not bondB's.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true);
+        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
 
         var bondAEntries = await ReadBondEntries(bondA, ct);
         var bondBEntries = await ReadBondEntries(bondB, ct);

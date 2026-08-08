@@ -120,6 +120,18 @@ public class CurrencyAccountImportServiceTests
     }
 
     [Fact]
+    public async Task ImportEntries_WhenCallerCancels_PropagatesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _service.ImportEntries(1, 1, [], cancellationToken: cancellation.Token));
+#pragma warning restore xUnit1051
+    }
+
+    [Fact]
     public async Task ImportEntries_ExceedsPlanLimit_ThrowsInvalidOperationException()
     {
         // Arrange
@@ -548,7 +560,7 @@ public class CurrencyAccountImportServiceTests
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.ApplyResolvedConflicts(null!));
+            _service.ApplyResolvedConflicts(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -565,11 +577,11 @@ public class CurrencyAccountImportServiceTests
         };
 
         // Act
-        await _service.ApplyResolvedConflicts(new[] { resolvedConflict });
+        await _service.ApplyResolvedConflicts(new[] { resolvedConflict }, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(1, 5), Times.Once);
-        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>()), Times.Never);
+        _mockAccountEntryRepository.Verify(x => x.Delete(1, 5, It.IsAny<CancellationToken>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -587,11 +599,11 @@ public class CurrencyAccountImportServiceTests
         };
 
         // Act
-        await _service.ApplyResolvedConflicts(new[] { resolvedConflict });
+        await _service.ApplyResolvedConflicts(new[] { resolvedConflict }, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -609,11 +621,11 @@ public class CurrencyAccountImportServiceTests
         };
 
         // Act
-        await _service.ApplyResolvedConflicts(new[] { resolvedConflict });
+        await _service.ApplyResolvedConflicts(new[] { resolvedConflict }, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(1, 5), Times.Once);
-        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Delete(1, 5, It.IsAny<CancellationToken>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -649,10 +661,10 @@ public class CurrencyAccountImportServiceTests
         };
 
         // Act
-        await _service.ApplyResolvedConflicts(conflicts);
+        await _service.ApplyResolvedConflicts(conflicts, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>()), Times.Exactly(2));
-        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

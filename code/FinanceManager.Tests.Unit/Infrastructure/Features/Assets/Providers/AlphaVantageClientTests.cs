@@ -4,6 +4,8 @@ using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
+using Moq.Protected;
 using System.Net;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
@@ -71,11 +73,17 @@ public class AlphaVantageClientTests
     [Fact]
     public async Task GetDailySeries_WhenCallerCancels_RethrowsAndLogsDebug()
     {
-        var logger = new ListLogger<AlphaVantageClient>();
+        var logger = new Mock<ILogger>();
         using var cancellation = new CancellationTokenSource();
-        var client = CreateClient(
-            new ThrowingHttpMessageHandler(new OperationCanceledException("caller cancelled", cancellation.Token)), logger);
-        cancellation.Cancel();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((_, _) => cancellation.Cancel())
+            .ThrowsAsync(new OperationCanceledException("caller cancelled", cancellation.Token));
+        var client = CreateClient(handler.Object, CreateLogger(logger));
 
         // This test intentionally supplies a cancelled caller token rather than the test-run token.
 #pragma warning disable xUnit1051
@@ -83,23 +91,45 @@ public class AlphaVantageClientTests
             client.GetDailySeries("AAPL", "US0378331005", _start, _end, _usd, cancellation.Token));
 #pragma warning restore xUnit1051
 
-        Assert.Contains(LogLevel.Debug, logger.Levels);
-        Assert.DoesNotContain(LogLevel.Error, logger.Levels);
+        var levels = GetLogLevels(logger);
+        Assert.Contains(LogLevel.Debug, levels);
+        Assert.DoesNotContain(LogLevel.Error, levels);
     }
 
     [Fact]
     public async Task GetDailySeries_WhenHttpTimesOut_ReturnsEmptyAndLogsDebug()
     {
-        var logger = new ListLogger<AlphaVantageClient>();
-        var client = CreateClient(new ThrowingHttpMessageHandler(new TaskCanceledException("request timeout")), logger);
+        var logger = new Mock<ILogger>();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("request timeout"));
+        var client = CreateClient(handler.Object, CreateLogger(logger));
 
         var result = await client.GetDailySeries(
             "AAPL", "US0378331005", _start, _end, _usd, TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
-        Assert.Contains(LogLevel.Debug, logger.Levels);
-        Assert.DoesNotContain(LogLevel.Error, logger.Levels);
+        var levels = GetLogLevels(logger);
+        Assert.Contains(LogLevel.Debug, levels);
+        Assert.DoesNotContain(LogLevel.Error, levels);
     }
+
+    private static ILogger<AlphaVantageClient> CreateLogger(Mock<ILogger> logger)
+    {
+        var factory = new Mock<ILoggerFactory>();
+        factory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
+        return factory.Object.CreateLogger<AlphaVantageClient>();
+    }
+
+    private static List<LogLevel> GetLogLevels(Mock<ILogger> logger) =>
+        logger.Invocations
+            .Where(invocation => invocation.Method.Name == nameof(ILogger.Log))
+            .Select(invocation => (LogLevel)invocation.Arguments[0])
+            .ToList();
 
     private const string _emptySeries = """{ "Time Series (Daily)": {} }""";
 
@@ -136,26 +166,4 @@ public class AlphaVantageClientTests
         }
     }
 
-    private sealed class ThrowingHttpMessageHandler(Exception exception) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-            Task.FromException<HttpResponseMessage>(exception);
-    }
-
-    private sealed class ListLogger<T> : ILogger<T>
-    {
-        public List<LogLevel> Levels { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
-            Levels.Add(logLevel);
-    }
 }

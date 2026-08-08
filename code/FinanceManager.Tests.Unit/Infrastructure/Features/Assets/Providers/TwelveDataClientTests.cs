@@ -4,8 +4,11 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
+using Moq.Protected;
 using System.Net;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
@@ -124,16 +127,51 @@ public class TwelveDataClientTests
     [Fact]
     public async Task GetDailyRatesAsync_WhenHttpTimesOut_ReturnsFailed()
     {
-        var client = CreateClient(new MockHttpMessageHandler(
-            "{}", exception: new TaskCanceledException("request timeout")));
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("request timeout"));
+        var logger = new Mock<ILogger>();
+        var client = CreateClient(handler.Object, CreateLogger(logger));
 
         var result = await client.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
 
         Assert.Equal(FinanceManager.Application.Backfill.Currencies.FxDailyStatus.Error, result.Status);
         Assert.Empty(result.Points);
+        Assert.Contains(LogLevel.Debug, GetLogLevels(logger));
     }
 
-    private static TwelveDataClient CreateClient(MockHttpMessageHandler handler)
+    [Fact]
+    public async Task GetDailyRatesAsync_WhenCallerCancels_RethrowsAndLogsDebug()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var logger = new Mock<ILogger>();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((_, _) => cancellation.Cancel())
+            .ThrowsAsync(new OperationCanceledException("caller cancelled", cancellation.Token));
+        var client = CreateClient(handler.Object, CreateLogger(logger));
+
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            client.GetDailyRatesAsync("EUR", "USD", cancellation.Token));
+#pragma warning restore xUnit1051
+
+        var levels = GetLogLevels(logger);
+        Assert.Contains(LogLevel.Debug, levels);
+        Assert.DoesNotContain(LogLevel.Error, levels);
+    }
+
+    private static TwelveDataClient CreateClient(
+        HttpMessageHandler handler,
+        ILogger<TwelveDataClient>? logger = null)
     {
         var options = Options.Create(new TwelveDataOptions());
         var config = new ExternalServiceConfiguration
@@ -145,11 +183,24 @@ public class TwelveDataClientTests
         };
         return new TwelveDataClient(
             new HttpClient(handler),
-            NullLogger<TwelveDataClient>.Instance,
+            logger ?? NullLogger<TwelveDataClient>.Instance,
             options,
             new StubConfigService(config),
             new TwelveDataCreditBudget(options));
     }
+
+    private static ILogger<TwelveDataClient> CreateLogger(Mock<ILogger> logger)
+    {
+        var factory = new Mock<ILoggerFactory>();
+        factory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(logger.Object);
+        return factory.Object.CreateLogger<TwelveDataClient>();
+    }
+
+    private static List<LogLevel> GetLogLevels(Mock<ILogger> logger) =>
+        logger.Invocations
+            .Where(invocation => invocation.Method.Name == nameof(ILogger.Log))
+            .Select(invocation => (LogLevel)invocation.Arguments[0])
+            .ToList();
 
     private sealed class StubConfigService(ExternalServiceConfiguration config) : IExternalServiceConfigService
     {
@@ -164,8 +215,7 @@ public class TwelveDataClientTests
 
     private sealed class MockHttpMessageHandler(
         string response,
-        HttpStatusCode statusCode = HttpStatusCode.OK,
-        Exception? exception = null) : HttpMessageHandler
+        HttpStatusCode statusCode = HttpStatusCode.OK) : HttpMessageHandler
     {
         public Uri? LastRequestUri { get; private set; }
         public string? LastAuthorization { get; private set; }
@@ -174,9 +224,6 @@ public class TwelveDataClientTests
         {
             LastRequestUri = request.RequestUri;
             LastAuthorization = request.Headers.Authorization?.ToString();
-            if (exception is not null)
-                return Task.FromException<HttpResponseMessage>(exception);
-
             return Task.FromResult(new HttpResponseMessage(statusCode) { Content = new StringContent(response) });
         }
     }

@@ -131,7 +131,7 @@ public class CachedAccountEntryRepositoryRangeTests
         var sut = CreateSut(inner.Object, BuildCache());
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan10, jan20, ct).ToListAsync(ct);
 
         // Inner was called with FULL month bounds, not the requested slice.
         inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
@@ -160,8 +160,8 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(_accountId, jan10, jan20).ToListAsync(ct);
-        var second = await sut.Get(_accountId, jan5, jan25).ToListAsync(ct);
+        var first = await sut.Get(_accountId, jan10, jan20, ct).ToListAsync(ct);
+        var second = await sut.Get(_accountId, jan5, jan25, ct).ToListAsync(ct);
 
         inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         Assert.Equal(2, first.Count);
@@ -186,7 +186,7 @@ public class CachedAccountEntryRepositoryRangeTests
              .Returns(new[] { Entry(2, feb10) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, jan15, feb10).ToListAsync(ct);
+        var result = await sut.Get(_accountId, jan15, feb10, ct).ToListAsync(ct);
 
         Assert.Equal(2, result.Count);
         // Newest-first: _feb entry (id=2) before _jan entry (id=1)
@@ -216,8 +216,8 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        await sut.Get(_accountId, jan15, _feb.AddDays(28)).ToListAsync(ct);   // seeds _jan + _feb
-        var result = await sut.Get(_accountId, _feb, mar20).ToListAsync(ct);  // _feb=hit, _mar=miss
+        await sut.Get(_accountId, jan15, _feb.AddDays(28), ct).ToListAsync(ct);   // seeds _jan + _feb
+        var result = await sut.Get(_accountId, _feb, mar20, ct).ToListAsync(ct);  // _feb=hit, _mar=miss
 
         inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         inner.Verify(r => r.Get(_accountId, _feb, febEnd), Times.Once);
@@ -240,8 +240,8 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache);
 
-        var first = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
-        var second = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
+        var first = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
+        var second = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
 
         inner.Verify(r => r.Get(_accountId, _jan, janEnd), Times.Once);
         Assert.Empty(first);
@@ -267,7 +267,7 @@ public class CachedAccountEntryRepositoryRangeTests
              .Returns(new[] { feb1Entry }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, _jan, _feb.AddDays(27)).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, _feb.AddDays(27), ct).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(10, result[0].EntryId);
@@ -285,7 +285,7 @@ public class CachedAccountEntryRepositoryRangeTests
              .Returns(new[] { Entry(5, jan31) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache());
-        var result = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);
+        var result = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);
 
         Assert.Single(result);
         Assert.Equal(5, result[0].EntryId);
@@ -314,7 +314,7 @@ public class CachedAccountEntryRepositoryRangeTests
              .Returns(new[] { Entry(2, recentDate) }.ToAsyncEnumerable());
 
         var sut = CreateSut(inner.Object, BuildCache(), options: _twelveMonthOptions);
-        var result = await sut.Get(_accountId, oldDate, recentDate).ToListAsync(ct);
+        var result = await sut.Get(_accountId, oldDate, recentDate, ct).ToListAsync(ct);
 
         // Older portion passed straight through; recent portion inflated to full month.
         inner.Verify(r => r.Get(_accountId, oldDate, olderEnd), Times.Once);
@@ -341,8 +341,8 @@ public class CachedAccountEntryRepositoryRangeTests
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, options: _twelveMonthOptions);
 
-        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
-        await sut.Get(_accountId, oldStart, oldEnd).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd, ct).ToListAsync(ct);
+        await sut.Get(_accountId, oldStart, oldEnd, ct).ToListAsync(ct);
 
         // Both calls pass through — no bucket caching for old data.
         inner.Verify(r => r.Get(_accountId, oldStart, oldEnd), Times.Exactly(2));
@@ -502,14 +502,18 @@ public class CachedAccountEntryRepositoryRangeTests
         inner.SetupSequence(r => r.Get(_accountId, _jan, janEnd))
              .Returns(new[] { Entry(1, jan5, 100m) }.ToAsyncEnumerable())
              .Returns(new[] { Entry(2, jan15, 200m), Entry(1, jan5, 200m) }.ToAsyncEnumerable());
-        inner.Setup(r => r.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
+        inner.Setup(r => r.Add(
+                It.IsAny<CurrencyAccountEntry>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var cache = BuildCache();
         var sut = CreateSut(inner.Object, cache, invalidator: new CacheInvalidator(cache));
 
-        var before = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct); // miss → cached
-        await sut.Add(Entry(2, jan15, 200m));                               // write busts global:u42
-        var after = await sut.Get(_accountId, _jan, janEnd).ToListAsync(ct);  // miss again
+        var before = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct); // miss → cached
+        await sut.Add(Entry(2, jan15, 200m), recalculate: true, cancellationToken: ct); // write busts global:u42
+        var after = await sut.Get(_accountId, _jan, janEnd, ct).ToListAsync(ct);  // miss again
 
         Assert.Single(before);
         Assert.Equal(2, after.Count);
@@ -529,8 +533,8 @@ public class CachedAccountEntryRepositoryRangeTests
 
         var sut = CreateSut(inner.Object, BuildCache(), resolver: ResolverFor(_accountId, null));
 
-        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
-        await sut.Get(_accountId, _jan, _feb).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb, ct).ToListAsync(ct);
+        await sut.Get(_accountId, _jan, _feb, ct).ToListAsync(ct);
 
         // Both calls fall through — no caching without a resolvable userId.
         inner.Verify(r => r.Get(_accountId, _jan, _feb), Times.Exactly(2));

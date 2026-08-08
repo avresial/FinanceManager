@@ -4,13 +4,17 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
 
 namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 
 public class BondEntryRepository(AppDbContext context) : IBondAccountEntryRepository<BondAccountEntry>
 {
     private readonly BondEntryValueCalculator _valueCalculator = new(context);
-    public async Task<bool> Add(BondAccountEntry entry, bool recalculate)
+    public Task<bool> Add(BondAccountEntry entry, bool recalculate) =>
+        Add(entry, recalculate, CancellationToken.None);
+
+    public async Task<bool> Add(BondAccountEntry entry, bool recalculate, CancellationToken cancellationToken)
     {
         // Don't use entry.Value as it may be a placeholder (-1)
         // The correct value will be calculated during recalculation
@@ -21,13 +25,19 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         };
 
         context.BondEntries.Add(newEntry);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
 
         if (recalculate)
-            await RecalculateValues(newEntry.AccountId, newEntry.EntryId);
+            await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
         return true;
     }
-    public async Task<bool> Add(IEnumerable<BondAccountEntry> entries, bool recalculate = true)
+    public Task<bool> Add(IEnumerable<BondAccountEntry> entries, bool recalculate = true) =>
+        Add(entries, recalculate, CancellationToken.None);
+
+    public async Task<bool> Add(
+        IEnumerable<BondAccountEntry> entries,
+        bool recalculate,
+        CancellationToken cancellationToken)
     {
         BondAccountEntry? firstEntry = null;
 
@@ -45,47 +55,67 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             context.BondEntries.Add(newEntry);
         }
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         if (recalculate && firstEntry is not null)
-            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId);
+            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
 
         return true;
     }
 
-    public async Task<bool> Delete(int accountId, int entryId)
+    public Task<bool> Delete(int accountId, int entryId) =>
+        Delete(accountId, entryId, CancellationToken.None);
+
+    public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
     {
-        var entryToDelete = await context.BondEntries.FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
+        var entryToDelete = await context.BondEntries
+            .FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId, cancellationToken);
         if (entryToDelete is null) return false;
         context.BondEntries.Remove(entryToDelete);
-        await context.SaveChangesAsync();
-        await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate);
+        await context.SaveChangesAsync(cancellationToken);
+        await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate, cancellationToken);
 
         return true;
     }
 
-    public async Task<bool> Delete(int accountId)
+    public Task<bool> Delete(int accountId) => Delete(accountId, CancellationToken.None);
+
+    public async Task<bool> Delete(int accountId, CancellationToken cancellationToken)
     {
         if (context.Database.IsRelational())
         {
             var deleted = await context.BondEntries
                 .Where(e => e.AccountId == accountId)
-                .ExecuteDeleteAsync();
+                .ExecuteDeleteAsync(cancellationToken);
             return deleted > 0;
         }
 
-        var entriesToRemove = await context.BondEntries.Where(e => e.AccountId == accountId).ToListAsync();
+        var entriesToRemove = await context.BondEntries.Where(e => e.AccountId == accountId).ToListAsync(cancellationToken);
         context.BondEntries.RemoveRange(entriesToRemove);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
         return true;
     }
 
-    public IAsyncEnumerable<BondAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) => context.BondEntries
+    public IAsyncEnumerable<BondAccountEntry> Get(int accountId, DateTime startDate, DateTime endDate) =>
+        Get(accountId, startDate, endDate, CancellationToken.None);
+
+    public async IAsyncEnumerable<BondAccountEntry> Get(
+        int accountId,
+        DateTime startDate,
+        DateTime endDate,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var entry in context.BondEntries
             .AsNoTracking()
             .Where(x => x.AccountId == accountId && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
-            .AsAsyncEnumerable();
+            .AsAsyncEnumerable()
+            .WithCancellation(cancellationToken))
+        {
+            yield return entry;
+        }
+    }
 
     public async Task<List<DateTime>> GetPostingDates(int accountId) => await context.BondEntries
             .AsNoTracking()
@@ -329,20 +359,25 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return true;
     }
 
-    public async Task RecalculateValues(int accountId, int entryId)
+    public Task RecalculateValues(int accountId, int entryId) =>
+        RecalculateValues(accountId, entryId, CancellationToken.None);
+
+    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
     {
         var startDate = await context.BondEntries
             .AsNoTracking()
             .Where(e => e.AccountId == accountId && e.EntryId == entryId)
             .Select(e => (DateTime?)e.PostingDate)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (startDate is not DateTime date) return;
 
-        await RecalculateValues(accountId, date);
+        await RecalculateValues(accountId, date, cancellationToken);
     }
 
-    public async Task RecalculateValues(int accountId)
+    public Task RecalculateValues(int accountId) => RecalculateValues(accountId, CancellationToken.None);
+
+    public async Task RecalculateValues(int accountId, CancellationToken cancellationToken)
     {
         // Recalculate from the oldest entry: every bond's anchor before it is empty, so each instrument
         // is rebuilt from a zero running balance.
@@ -352,15 +387,15 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .OrderBy(e => e.PostingDate)
             .ThenBy(e => e.EntryId)
             .Select(e => (DateTime?)e.PostingDate)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (startDate is not DateTime date) return;
 
-        await RecalculateValues(accountId, date);
+        await RecalculateValues(accountId, date, cancellationToken);
     }
 
-    private async Task RecalculateValues(int accountId, DateTime startDate)
-        => await _valueCalculator.Recalculate(accountId, startDate);
+    private async Task RecalculateValues(int accountId, DateTime startDate, CancellationToken cancellationToken)
+        => await _valueCalculator.Recalculate(accountId, startDate, cancellationToken);
 
     public async Task<bool> AddLabel(int entryId, int labelId)
     {

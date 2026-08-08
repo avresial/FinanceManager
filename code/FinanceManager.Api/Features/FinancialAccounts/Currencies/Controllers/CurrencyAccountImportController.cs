@@ -39,7 +39,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
             return BadRequest("No import data provided.");
 
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var account = await accountRepository.Get(importDto.AccountId);
+        var account = await accountRepository.Get(importDto.AccountId, HttpContext.RequestAborted);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
             return Forbid();
 
@@ -92,7 +92,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
 
         if (resolvedConflicts.Count != 0)
         {
-            await importService.ApplyResolvedConflicts(resolvedConflicts);
+            await importService.ApplyResolvedConflicts(resolvedConflicts, HttpContext.RequestAborted);
             await dashboardCacheInvalidator.InvalidateUser(userId);
         }
 
@@ -113,12 +113,12 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     {
         if (importDto is null) return BadRequest("No import data provided.");
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var account = await accountRepository.Get(importDto.AccountId);
+        var account = await accountRepository.Get(importDto.AccountId, HttpContext.RequestAborted);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
             return Forbid();
 
         var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails, e.Description));
-        var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries);
+        var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries, cancellationToken: HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(domainResult);
     }
@@ -134,12 +134,12 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
 
         foreach (var accountId in resolvedConflicts.Select(rc => rc.AccountId).Distinct())
         {
-            var account = await accountRepository.Get(accountId);
+            var account = await accountRepository.Get(accountId, HttpContext.RequestAborted);
             if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
                 return Forbid();
         }
 
-        await importService.ApplyResolvedConflicts(resolvedConflicts);
+        await importService.ApplyResolvedConflicts(resolvedConflicts, HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok();
     }

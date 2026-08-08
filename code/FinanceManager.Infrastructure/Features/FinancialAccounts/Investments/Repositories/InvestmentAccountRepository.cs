@@ -62,9 +62,12 @@ internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepos
             .ToList();
     }
 
-    public async Task<InvestmentAccount?> Get(int accountId)
+    public Task<InvestmentAccount?> Get(int accountId) => Get(accountId, CancellationToken.None);
+
+    public async Task<InvestmentAccount?> Get(int accountId, CancellationToken cancellationToken)
     {
-        var accountToReturn = await context.Accounts.AsNoTracking().FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
+        var accountToReturn = await context.Accounts.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock, cancellationToken);
         if (accountToReturn is null) return null;
         return new InvestmentAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }

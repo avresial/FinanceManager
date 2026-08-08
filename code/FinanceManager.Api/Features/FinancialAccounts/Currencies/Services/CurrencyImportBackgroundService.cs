@@ -70,7 +70,8 @@ public sealed class CurrencyImportBackgroundService(
                             lastStatusUpdate = DateTime.UtcNow;
                             await PublishStatus(request.JobId, request.UserId, stoppingToken);
                         }
-                    });
+                    },
+                    cancellationToken: stoppingToken);
 
                 jobStore.TryMarkCompleted(request.JobId, result);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);

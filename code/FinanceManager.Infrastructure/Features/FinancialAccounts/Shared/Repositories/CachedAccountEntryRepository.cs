@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
+using System.Runtime.CompilerServices;
 
 namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
@@ -35,14 +36,25 @@ public class CachedAccountEntryRepository<T>(
 
     // ----- Cached range reads: calendar-month buckets with inflate-on-miss -----
 
-    public IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate)
-        => GetRangeInternal(accountId, startDate, endDate);
+    public IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate) =>
+        Get(accountId, startDate, endDate, CancellationToken.None);
 
-    private async IAsyncEnumerable<T> GetRangeInternal(int accountId, DateTime startDate, DateTime endDate)
+    public IAsyncEnumerable<T> Get(
+        int accountId,
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken cancellationToken)
+        => GetRangeInternal(accountId, startDate, endDate, cancellationToken);
+
+    private async IAsyncEnumerable<T> GetRangeInternal(
+        int accountId,
+        DateTime startDate,
+        DateTime endDate,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (await userResolver.GetUserId(accountId) is not int userId)
+        if (await userResolver.GetUserId(accountId, cancellationToken) is not int userId)
         {
-            await foreach (var e in inner.Get(accountId, startDate, endDate))
+            await foreach (var e in inner.Get(accountId, startDate, endDate).WithCancellation(cancellationToken))
                 yield return e;
             yield break;
         }
@@ -55,7 +67,7 @@ public class CachedAccountEntryRepository<T>(
         var recentStart = startDate >= horizonStart ? startDate : horizonStart;
         if (recentStart <= endDate)
         {
-            foreach (var e in await GetBucketedEntries(userId, accountId, recentStart, endDate, now))
+            foreach (var e in await GetBucketedEntries(userId, accountId, recentStart, endDate, now, cancellationToken))
                 yield return e;
         }
 
@@ -64,7 +76,7 @@ public class CachedAccountEntryRepository<T>(
         if (startDate < horizonStart)
         {
             var olderEnd = endDate < horizonStart ? endDate : horizonStart.AddTicks(-1);
-            await foreach (var e in inner.Get(accountId, startDate, olderEnd))
+            await foreach (var e in inner.Get(accountId, startDate, olderEnd).WithCancellation(cancellationToken))
                 yield return e;
         }
     }
@@ -185,23 +197,35 @@ public class CachedAccountEntryRepository<T>(
     public Task<Dictionary<int, T>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextOlder(accountIds, date);
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
-    public Task RecalculateValues(int accountId, int entryId) => inner.RecalculateValues(accountId, entryId);
-    public Task RecalculateValues(int accountId) => inner.RecalculateValues(accountId);
+    public Task RecalculateValues(int accountId, int entryId) => RecalculateValues(accountId, entryId, CancellationToken.None);
+    public Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken) =>
+        inner.RecalculateValues(accountId, entryId, cancellationToken);
+    public Task RecalculateValues(int accountId) => RecalculateValues(accountId, CancellationToken.None);
+    public Task RecalculateValues(int accountId, CancellationToken cancellationToken) =>
+        inner.RecalculateValues(accountId, cancellationToken);
 
     // ----- Mutating methods: invalidate the owning user's cache at the write boundary -----
 
-    public async Task<bool> Add(T entry, bool recalculate = true)
+    public Task<bool> Add(T entry, bool recalculate = true) => Add(entry, recalculate, CancellationToken.None);
+
+    public async Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken)
     {
-        var result = await inner.Add(entry, recalculate);
-        await InvalidateAccounts([entry.AccountId]);
+        var result = await inner.Add(entry, recalculate, cancellationToken);
+        await InvalidateAccounts([entry.AccountId], CancellationToken.None);
         return result;
     }
 
-    public async Task<bool> Add(IEnumerable<T> entries, bool recalculate = true)
+    public Task<bool> Add(IEnumerable<T> entries, bool recalculate = true) =>
+        Add(entries, recalculate, CancellationToken.None);
+
+    public async Task<bool> Add(
+        IEnumerable<T> entries,
+        bool recalculate,
+        CancellationToken cancellationToken)
     {
         var entryList = entries as IList<T> ?? entries.ToList();
-        var result = await inner.Add(entryList, recalculate);
-        await InvalidateAccounts(entryList.Select(e => e.AccountId));
+        var result = await inner.Add(entryList, recalculate, cancellationToken);
+        await InvalidateAccounts(entryList.Select(e => e.AccountId), CancellationToken.None);
         return result;
     }
 
@@ -212,17 +236,21 @@ public class CachedAccountEntryRepository<T>(
         return result;
     }
 
-    public async Task<bool> Delete(int accountId, int entryId)
+    public Task<bool> Delete(int accountId, int entryId) => Delete(accountId, entryId, CancellationToken.None);
+
+    public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
     {
-        var result = await inner.Delete(accountId, entryId);
-        await InvalidateAccounts([accountId]);
+        var result = await inner.Delete(accountId, entryId, cancellationToken);
+        await InvalidateAccounts([accountId], CancellationToken.None);
         return result;
     }
 
-    public async Task<bool> Delete(int accountId)
+    public Task<bool> Delete(int accountId) => Delete(accountId, CancellationToken.None);
+
+    public async Task<bool> Delete(int accountId, CancellationToken cancellationToken)
     {
-        var result = await inner.Delete(accountId);
-        await InvalidateAccounts([accountId]);
+        var result = await inner.Delete(accountId, cancellationToken);
+        await InvalidateAccounts([accountId], CancellationToken.None);
         return result;
     }
 

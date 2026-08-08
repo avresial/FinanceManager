@@ -37,7 +37,11 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         services.AddSingleton(_testDatabase.Context);
 
         _importServiceMock
-            .Setup(x => x.ImportEntries(_testUserId, _testAccountId, It.IsAny<IEnumerable<BondEntryImport>>()))
+            .Setup(x => x.ImportEntries(
+                _testUserId,
+                _testAccountId,
+                It.IsAny<IEnumerable<BondEntryImport>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BondImportResult(_testAccountId, 1, 0, [], []));
         services.AddSingleton(_importServiceMock.Object);
     }
@@ -67,7 +71,11 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         Assert.True(response.IsSuccessStatusCode);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains($"\"accountId\":{_testAccountId}", content, StringComparison.OrdinalIgnoreCase);
-        _importServiceMock.Verify(x => x.ImportEntries(_testUserId, _testAccountId, It.IsAny<IEnumerable<BondEntryImport>>()), Times.Once);
+        _importServiceMock.Verify(x => x.ImportEntries(
+            _testUserId,
+            _testAccountId,
+            It.IsAny<IEnumerable<BondEntryImport>>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -80,7 +88,11 @@ public class BondAccountImportControllerTests(OptionsProvider optionsProvider) :
         var response = await Client.PostAsJsonAsync("api/BondAccountImport/ImportBondEntries", dto, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        _importServiceMock.Verify(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<BondEntryImport>>()), Times.Never);
+        _importServiceMock.Verify(x => x.ImportEntries(
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<IEnumerable<BondEntryImport>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     public override void Dispose()
