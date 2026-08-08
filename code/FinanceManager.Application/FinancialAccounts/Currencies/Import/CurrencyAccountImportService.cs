@@ -100,7 +100,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 }
                 catch (OperationCanceledException ex)
                 {
-                    logger.LogDebug(ex, "Currency account import cancelled while processing account {AccountId}.", accountId);
+                    logger.LogDebug(ex, "Currency account import cancelled.");
                     throw;
                 }
                 catch (Exception ex)
@@ -141,7 +141,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
             }
             catch (OperationCanceledException ex)
             {
-                logger.LogDebug(ex, "Applying resolved currency import conflict cancelled for account {AccountId}.", resolvedConflict.AccountId);
+                logger.LogDebug(ex, "Applying resolved currency import conflict cancelled.");
             }
             catch (Exception ex)
             {

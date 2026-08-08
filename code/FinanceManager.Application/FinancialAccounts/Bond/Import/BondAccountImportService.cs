@@ -77,7 +77,7 @@ public class BondAccountImportService(
                 }
                 catch (OperationCanceledException ex)
                 {
-                    logger.LogDebug(ex, "Bond account import cancelled while processing account {AccountId}.", accountId);
+                    logger.LogDebug(ex, "Bond account import cancelled.");
                     throw;
                 }
                 catch (Exception ex)
@@ -113,7 +113,7 @@ public class BondAccountImportService(
             }
             catch (OperationCanceledException ex)
             {
-                logger.LogDebug(ex, "Applying resolved bond import conflict cancelled for account {AccountId}.", resolvedConflict.AccountId);
+                logger.LogDebug(ex, "Applying resolved bond import conflict cancelled.");
             }
             catch (Exception ex)
             {

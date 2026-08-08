@@ -138,12 +138,12 @@ internal sealed class AlphaVantageClient(
         }
         catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
         {
-            logger.LogDebug(ex, "Stock API daily series cancelled for ticker {Ticker}.", ticker);
+            logger.LogDebug(ex, "Stock API daily series cancelled.");
             throw;
         }
         catch (OperationCanceledException ex)
         {
-            logger.LogDebug(ex, "Stock API daily series cancelled or timed out for ticker {Ticker}.", ticker);
+            logger.LogDebug(ex, "Stock API daily series cancelled or timed out.");
             return [];
         }
         catch (Exception ex)

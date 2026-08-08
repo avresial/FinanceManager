@@ -185,7 +185,7 @@ public sealed class InstrumentImportService(
         }
         catch (OperationCanceledException ex)
         {
-            logger.LogDebug(ex, "Alpha Vantage validation cancelled for {Symbol}.", instrument.ProviderSymbol);
+            logger.LogDebug(ex, "Alpha Vantage validation cancelled.");
             throw;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
