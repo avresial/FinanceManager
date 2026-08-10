@@ -499,7 +499,7 @@ public class CachedAccountEntryRepositoryRangeTests
         var ct = TestContext.Current.CancellationToken;
 
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.SetupSequence(r => r.Get(_accountId, _jan, janEnd))
+        inner.SetupSequence(r => r.Get(_accountId, _jan, janEnd, It.IsAny<CancellationToken>()))
              .Returns(new[] { Entry(1, jan5, 100m) }.ToAsyncEnumerable())
              .Returns(new[] { Entry(2, jan15, 200m), Entry(1, jan5, 200m) }.ToAsyncEnumerable());
         inner.Setup(r => r.Add(

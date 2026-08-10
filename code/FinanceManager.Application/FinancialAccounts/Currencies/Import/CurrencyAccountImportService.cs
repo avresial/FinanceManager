@@ -206,7 +206,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error applying resolved conflict for account {AccountId}", resolvedConflict.AccountId);
+                logger.LogError(ex, "Error applying resolved currency import conflict.");
             }
         }
     }
