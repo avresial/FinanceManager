@@ -58,6 +58,17 @@ public class DateRangeHelperTests
         Assert.Equal(start, range.Start);
     }
 
+    // The dashboard seeds a rolling 31-day window (counting today) anchored to midnight, so the
+    // start is 30 days before today and the end is exactly `now`.
+    [Fact]
+    public void GetLast31DaysRange_ReturnsMidnightStart30DaysBackAndNowEnd()
+    {
+        var range = DateRangeHelper.GetLast31DaysRange(_now);
+
+        Assert.Equal(new DateTime(2026, 6, 12, 0, 0, 0, DateTimeKind.Utc), range.Start);
+        Assert.Equal(_now, range.End);
+    }
+
     [Fact]
     public void GetExpandedStart_ReturnsOnlyOlderEntry()
     {
