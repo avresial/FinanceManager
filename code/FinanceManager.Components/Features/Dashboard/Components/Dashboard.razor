@@ -3,6 +3,7 @@
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries
 @using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Shared.Helpers
 
 <MudContainer Class="py-2">
     <div class="d-flex justify-end mb-2">
@@ -150,4 +151,5 @@
     }
 </MudContainer>
 
-<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />
+<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

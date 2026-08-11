@@ -44,12 +44,25 @@
     private MudDateRangePicker? _customDateRangePicker;
 
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
+
+    // When StartingOption is the custom key, these seed the displayed custom range so the picker
+    // reflects the active range on first paint instead of falling back to a preset highlight.
+    [Parameter] public DateTime? InitialCustomStart { get; set; }
+    [Parameter] public DateTime? InitialCustomEnd { get; set; }
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
 
     protected override void OnInitialized()
     {
-        if (_presets.Any(p => p.Key == StartingOption))
+        if (StartingOption == DateRangeHelper.CustomRangeKey
+            && InitialCustomStart is DateTime start && InitialCustomEnd is DateTime end)
+        {
+            _selected = DateRangeHelper.CustomRangeKey;
+            _customRange = new DateRange(start.Date, end.Date);
+        }
+        else if (_presets.Any(p => p.Key == StartingOption))
+        {
             _selected = StartingOption;
+        }
     }
 
     private Task OpenCustomDateRangePicker() =>

@@ -61,7 +61,9 @@ public partial class Dashboard : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        var (Start, End) = DateRangeHelper.GetCurrentMonthRange();
+        // A rolling last-31-days window rather than the current calendar month, so charts always have
+        // ~a month of history — the current-month range is nearly empty on the 1st. #685
+        var (Start, End) = DateRangeHelper.GetLast31DaysRange(DateTime.UtcNow);
         StartDate = Start;
         EndDate = End;
 
