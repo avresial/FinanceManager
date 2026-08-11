@@ -52,8 +52,8 @@ public static class DateRangeHelper
     /// A rolling window ending at <paramref name="now"/> that covers the last 31 calendar days,
     /// counting today — opened on 10 Aug this yields 11 Jul 00:00 (UTC) → now. Start is anchored to
     /// midnight so the first day buckets whole. Unlike <see cref="GetCurrentMonthRange"/> this always
-    /// carries ~a month of history regardless of the day of the month, so charts are not nearly empty
-    /// at month boundaries.
+    /// carries about a month of history regardless of the day of the month, so charts are not nearly
+    /// empty at month boundaries.
     /// </summary>
     public static (DateTime Start, DateTime End) GetLast31DaysRange(DateTime now)
     {
