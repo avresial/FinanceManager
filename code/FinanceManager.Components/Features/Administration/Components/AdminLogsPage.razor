@@ -15,6 +15,11 @@
         <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
         <MudText Typo="Typo.h5">Application logs</MudText>
         <MudSpacer />
+        <MudTooltip Text="Export current page as JSON">
+            <MudIconButton Icon="@Icons.Material.Filled.FileDownload" Color="Color.Primary"
+                           Disabled="@(!CanExport)" OnClick="ExportPageAsync"
+                           Size="Size.Small" aria-label="Export current log page as JSON" />
+        </MudTooltip>
         <MudToggleGroup T="string" SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
                         Outlined="true" Dense="true" Value="@_levelFilter" ValueChanged="OnLevelChanged">
             <MudToggleItem Value="@("all")" title="All logs" aria-label="All logs">
@@ -74,6 +79,11 @@
                                      Style="overflow-wrap:anywhere;min-width:0">
                                 @entry.Category
                             </MudText>
+                            <MudTooltip Text="Copy log details">
+                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default"
+                                               OnClick="@(() => CopyDetailsAsync(entry))"
+                                               Size="Size.Small" aria-label="@($"Copy log details for entry {entry.Id}")" />
+                            </MudTooltip>
                         </MudStack>
 
                         <MudText Typo="Typo.body2" Style="overflow-wrap:anywhere;word-break:break-word">

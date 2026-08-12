@@ -6,10 +6,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Polly;
+using Polly.Timeout;
 
 namespace ServiceDefaults;
 // Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
@@ -27,6 +30,7 @@ public static class Extensions
 
         builder.AddDefaultHealthChecks();
 
+        builder.Services.AddTransient<ExternalDependencyLoggingHandler>();
         builder.Services.AddServiceDiscovery();
 
         builder.Services.ConfigureHttpClientDefaults(http =>
@@ -40,12 +44,41 @@ public static class Extensions
             circuitBreakerSamplingSeconds = Math.Max(attemptTimeoutSeconds * 2, circuitBreakerSamplingSeconds);
 
             // Turn on resilience by default
-            http.AddStandardResilienceHandler(options =>
-            {
-                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(attemptTimeoutSeconds);
-                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(totalRequestTimeoutSeconds);
-                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(circuitBreakerSamplingSeconds);
-            });
+            http.AddHttpMessageHandler<ExternalDependencyLoggingHandler>()
+                .AddStandardResilienceHandler(options =>
+                {
+                    options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(attemptTimeoutSeconds);
+                    options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(totalRequestTimeoutSeconds);
+                    options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(circuitBreakerSamplingSeconds);
+                })
+                .Configure((options, services) =>
+                {
+                    var logger = services.GetRequiredService<ILogger<ExternalDependencyLoggingHandler>>();
+                    options.Retry.OnRetry = args =>
+                    {
+                        var request = args.Context.GetRequestMessage();
+                        var result = args.Outcome.Result is { } response
+                            ? ((int)response.StatusCode).ToString()
+                            : args.Outcome.Exception?.GetType().Name ?? "unknown";
+
+                        logger.LogWarning(
+                            "External dependency retry. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Result: {Result}; Attempt: {Attempt}; Execution Time: {ExecutionTimeMs}ms; Retry Delay: {RetryDelayMs}ms.",
+                            ExternalDependencyLogging.GetService(request),
+                            ExternalDependencyLogging.GetHost(request),
+                            ExternalDependencyLogging.GetMethod(request),
+                            ExternalDependencyLogging.GetPath(request),
+                            result,
+                            args.AttemptNumber,
+                            args.Duration.TotalMilliseconds,
+                            args.RetryDelay.TotalMilliseconds);
+
+                        return ValueTask.CompletedTask;
+                    };
+                    options.AttemptTimeout.OnTimeout = args =>
+                        LogTimeout(logger, args, "attempt");
+                    options.TotalRequestTimeout.OnTimeout = args =>
+                        LogTimeout(logger, args, "total request");
+                });
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();
@@ -58,6 +91,25 @@ public static class Extensions
         // });
 
         return builder;
+    }
+
+    private static ValueTask LogTimeout(
+        ILogger logger,
+        OnTimeoutArguments args,
+        string timeoutType)
+    {
+        var request = args.Context.GetRequestMessage();
+
+        logger.LogWarning(
+            "External dependency timeout. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Timeout Type: {TimeoutType}; Timeout: {TimeoutMs}ms.",
+            ExternalDependencyLogging.GetService(request),
+            ExternalDependencyLogging.GetHost(request),
+            ExternalDependencyLogging.GetMethod(request),
+            ExternalDependencyLogging.GetPath(request),
+            timeoutType,
+            args.Timeout.TotalMilliseconds);
+
+        return ValueTask.CompletedTask;
     }
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
