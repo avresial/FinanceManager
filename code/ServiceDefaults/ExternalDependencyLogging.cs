@@ -6,15 +6,15 @@ namespace ServiceDefaults;
 
 internal static class ExternalDependencyLogging
 {
-    private static readonly Regex QueryParameterRegex = new(
+    private static readonly Regex _queryParameterRegex = new(
         @"(?<prefix>[?&][^#\s&=]+)=(?<value>[^#\s&]*)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    private static readonly Regex SecretAssignmentRegex = new(
+    private static readonly Regex _secretAssignmentRegex = new(
         @"(?<prefix>\b(?:api[-_]?key|access[-_]?token|refresh[-_]?token|client[-_]?secret|password|secret|token)\b\s*[=:]\s*)(?<value>[^\s,;&]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-    private static readonly Regex AuthorizationValueRegex = new(
+    private static readonly Regex _authorizationValueRegex = new(
         @"(?<prefix>\b(?:bearer|basic)\s+)(?<value>[^\s,;&]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
@@ -77,9 +77,9 @@ internal static class ExternalDependencyLogging
         if (string.IsNullOrEmpty(value))
             return value ?? string.Empty;
 
-        var redacted = QueryParameterRegex.Replace(value, "${prefix}=[REDACTED]");
-        redacted = SecretAssignmentRegex.Replace(redacted, "${prefix}[REDACTED]");
-        return AuthorizationValueRegex.Replace(redacted, "${prefix}[REDACTED]");
+        var redacted = _queryParameterRegex.Replace(value, "${prefix}=[REDACTED]");
+        redacted = _secretAssignmentRegex.Replace(redacted, "${prefix}[REDACTED]");
+        return _authorizationValueRegex.Replace(redacted, "${prefix}[REDACTED]");
     }
 
     public static Exception RedactException(Exception exception) =>
