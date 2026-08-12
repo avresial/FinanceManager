@@ -1,0 +1,209 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using ServiceDefaults;
+using System.Net;
+
+namespace FinanceManager.Tests.Unit.ServiceDefaults;
+
+[Trait("Category", "Unit")]
+public class ExternalDependencyLoggingHandlerTests
+{
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task SendAsync_NonSuccessResponse_LogsMappedServiceWithoutQueryString(HttpStatusCode statusCode)
+    {
+        var logger = new RecordingLogger<ExternalDependencyLoggingHandler>();
+        using var handler = new ExternalDependencyLoggingHandler(logger)
+        {
+            InnerHandler = new StubHandler(_ => new HttpResponseMessage(statusCode)
+            {
+                ReasonPhrase = statusCode.ToString()
+            })
+        };
+        using var client = new HttpClient(handler);
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value&symbol=IBM",
+            TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Warning, log.Level);
+        Assert.Contains("Twelve Data", log.Message);
+        Assert.Contains("/time_series", log.Message);
+        Assert.Contains(((int)statusCode).ToString(), log.Message);
+        Assert.DoesNotContain("secret-value", log.Message);
+    }
+
+    [Fact]
+    public async Task SendAsync_ExpectedNotFound_IsNotPersistedAsWarning()
+    {
+        var logger = new RecordingLogger<ExternalDependencyLoggingHandler>();
+        using var handler = new ExternalDependencyLoggingHandler(logger)
+        {
+            InnerHandler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound))
+        };
+        using var client = new HttpClient(handler);
+
+        using var response = await client.GetAsync(
+            "https://api.nbp.pl/api/exchangerates/rates/a/usd/2024-01-01",
+            TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Information, log.Level);
+        Assert.Contains("NBP", log.Message);
+        Assert.Contains("404", log.Message);
+    }
+
+    [Theory]
+    [InlineData("https://eodhd.com/api/eod/AAPL.US")]
+    [InlineData("https://api.eodhd.com/api/eod/AAPL.US")]
+    public async Task SendAsync_EodhdHosts_AreMappedToEodhd(string uri)
+    {
+        var logger = new RecordingLogger<ExternalDependencyLoggingHandler>();
+        using var handler = new ExternalDependencyLoggingHandler(logger)
+        {
+            InnerHandler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest))
+        };
+        using var client = new HttpClient(handler);
+
+        using var response = await client.GetAsync(uri, TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(logger.Entries);
+        Assert.Contains("Service: EODHD", log.Message);
+    }
+
+    [Fact]
+    public async Task SendAsync_TransportFailure_LogsMappedServiceAndException()
+    {
+        var logger = new RecordingLogger<ExternalDependencyLoggingHandler>();
+        var expectedException = new HttpRequestException(
+            "Request https://api.openfigi.com/v3/mapping?apiKey=secret-value&token=another-secret failed with Authorization: Bearer bearer-secret");
+        using var handler = new ExternalDependencyLoggingHandler(logger)
+        {
+            InnerHandler = new StubHandler(_ => throw expectedException)
+        };
+        using var client = new HttpClient(handler);
+
+        var actualException = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.GetAsync(
+                "https://api.openfigi.com/v3/mapping?apiKey=secret-value",
+                TestContext.Current.CancellationToken));
+
+        var log = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, log.Level);
+        Assert.Contains("OpenFIGI", log.Message);
+        Assert.Contains("/v3/mapping", log.Message);
+        Assert.DoesNotContain("secret-value", log.Message);
+        Assert.NotNull(log.Exception);
+        Assert.Contains("HttpRequestException", log.Exception!.ToString());
+        Assert.DoesNotContain("secret-value", log.Exception.ToString());
+        Assert.DoesNotContain("another-secret", log.Exception.ToString());
+        Assert.DoesNotContain("bearer-secret", log.Exception.ToString());
+        Assert.NotSame(actualException, log.Exception);
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_UsesExternalDependencyLoggingHandler()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)));
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(entries, entry => entry.Message.Contains("External dependency request", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Warning, log.Level);
+        Assert.Contains("Service: Twelve Data", log.Message);
+        Assert.Contains("Path: /time_series", log.Message);
+        Assert.DoesNotContain("secret-value", log.Message);
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_RetryLogIdentifiesProvider()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new SequenceHandler(
+                new HttpResponseMessage(HttpStatusCode.GatewayTimeout),
+                new HttpResponseMessage(HttpStatusCode.OK)));
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var retryLog = Assert.Single(entries, entry => entry.Message.StartsWith("External dependency retry", StringComparison.Ordinal));
+        Assert.Contains("Service: Twelve Data", retryLog.Message);
+        Assert.Contains("Path: /time_series", retryLog.Message);
+        Assert.Contains("Result: 504", retryLog.Message);
+        Assert.DoesNotContain("secret-value", retryLog.Message);
+    }
+
+    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responseFactory) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(responseFactory(request));
+    }
+
+    private sealed class SequenceHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
+    {
+        private readonly Queue<HttpResponseMessage> _responses = new(responses);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(_responses.Dequeue());
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public RecordingLogger(List<LogRecord>? entries = null) => Entries = entries ?? [];
+
+        public List<LogRecord> Entries { get; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Entries.Add(new LogRecord(logLevel, formatter(state, exception), exception));
+    }
+
+    private sealed class RecordingLoggerProvider(List<LogRecord> entries) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new RecordingLogger<ExternalDependencyLoggingHandler>(entries);
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed record LogRecord(LogLevel Level, string Message, Exception? Exception);
+}

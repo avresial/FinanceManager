@@ -7,7 +7,9 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.JSInterop;
 using MudBlazor;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Administration.Components;
 
@@ -22,15 +24,22 @@ public partial class AdminLogsPage : ComponentBase, IAsyncDisposable
     private string? _loadError;
     private HubConnection? _hubConnection;
     private readonly HashSet<int> _expanded = [];
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
 
     [Inject] public required AdminLogsHttpClient AdminLogsHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required IJSRuntime JSRuntime { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
 
     private int CurrentPage => _totalCount == 0 ? 1 : (_skip / _take) + 1;
     private int TotalPages => _totalCount == 0 ? 1 : (int)Math.Ceiling(_totalCount / (double)_take);
     private int FromDisplay() => _totalCount == 0 ? 0 : _skip + 1;
     private int ToDisplay() => Math.Min(_skip + _take, _totalCount);
+    private bool CanExport => _loadError is null && !_loading && _page.Count > 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,6 +97,53 @@ public partial class AdminLogsPage : ComponentBase, IAsyncDisposable
     {
         if (!_expanded.Add(id))
             _expanded.Remove(id);
+    }
+
+    private async Task CopyDetailsAsync(LogEntryDto entry)
+    {
+        try
+        {
+            var details = JsonSerializer.Serialize(entry, _jsonOptions);
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", details);
+            Snackbar.Add("Log details copied to clipboard.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Snackbar.Add($"Could not copy log details: {exception.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExportPageAsync()
+    {
+        if (!CanExport)
+            return;
+
+        try
+        {
+            var exportedAtUtc = DateTime.UtcNow;
+            var export = new
+            {
+                exportedAtUtc,
+                filter = _levelFilter,
+                page = CurrentPage,
+                pageSize = _take,
+                totalCount = _totalCount,
+                items = _page
+            };
+            var json = JsonSerializer.Serialize(export, _jsonOptions);
+            var fileName = $"finance-manager-logs-page-{CurrentPage}-{exportedAtUtc:yyyyMMdd-HHmmss}.json";
+            await JSRuntime.InvokeVoidAsync(
+                "financeManager.downloadTextFile",
+                fileName,
+                "application/json",
+                json);
+
+            Snackbar.Add("Current log page exported as JSON.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Snackbar.Add($"Could not export logs: {exception.Message}", Severity.Error);
+        }
     }
 
     private async Task ConnectHub()

@@ -257,29 +257,11 @@
                 addField('__RequestVerificationToken', csrfToken);
                 document.body.appendChild(form);
                 form.submit();
-            },
-            downloadFileFromBase64: function (fileName, contentType, base64Content) {
-                const byteCharacters = atob(base64Content);
-                const byteNumbers = new Array(byteCharacters.length);
-
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: contentType });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = fileName;
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
             }
         };
     </script>
+
+    <script src="js/finance-manager.js"></script>
 
     <div id="app">
         <div class="boot-screen" role="status" aria-label="Finance manager is loading">
