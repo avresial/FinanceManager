@@ -56,13 +56,17 @@ Three account types are fully supported, each with dedicated views:
 | Account type | What it tracks |
 |---|---|
 | **Currency** | Cash balances and everyday transactions |
-| **Stock** | Equity holdings with live price updates |
+| **Investment** | Stocks and other listed instruments with live price updates |
 | **Bond** | Fixed-income securities, including inflation-linked bonds |
+
+### Subscriptions
+- Detect recurring charges from transaction history
+- Review upcoming payments, price changes, monthly and annual costs
+- Flag subscriptions for review or mark them as muted, cancelled, or active
 
 ### Data Management
 - **CSV Import / Export** — bring in transaction history from external sources; map custom CSV headers; resolve import conflicts
-- **Bulk stock price import** — seed historical price data in one operation
-- **Multi-account import** — import several accounts in a single workflow
+- **Investment catalogue import** — maintain the instruments available to investment accounts
 
 ### Real-Time Market Data
 - Live stock prices via the **Alpha Vantage** API
@@ -72,11 +76,13 @@ Three account types are fully supported, each with dedicated views:
 ### AI-Powered Features
 - **Financial Insights** — large-language-model analysis of your transaction history delivered as actionable cards
 - **Automatic account labelling** — AI suggests category labels (Cash, Stock, Bond, Crypto, Loan, Real Estate, …) for new accounts
+- **MCP integration** — connect ChatGPT, Claude, and other MCP clients through OAuth without copying an API key or password
 - Configurable **provider chain** with automatic fallback: OpenRouter → GitHub Models → Ollama / LM Studio (local)
 
 ### User & Admin
-- JWT-based authentication with registration and login
-- Role-based admin panel for managing users, AI provider configuration, stock catalogue, and bond data
+- JWT-based authentication with registration, login, and password recovery
+- User settings for profile details, preferred currency, investment benchmark, password, and subscription plan
+- Role-based admin panel for managing users, AI providers, service keys, investment instruments, bond data, and application logs
 
 ---
 
@@ -134,7 +140,7 @@ dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
 dotnet run --project code/FinanceManager.Api
 ```
 
-Then open `https://localhost:5001` in your browser.
+Then open the application URL printed by `dotnet run` (the HTTPS launch profile uses `https://localhost:5001`).
 
 For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
 
@@ -144,13 +150,12 @@ Run from inside the `code/` directory so the test runner can locate `global.json
 cd code
 
 # All tests
-dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
-dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
+dotnet test --project ./FinanceManager.slnx
 
 # Unit tests only
 dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
 
-# Integration tests (uses in-memory DB)
+# Integration tests (uses an in-memory database in the test host)
 UseInMemoryDatabase=true dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
