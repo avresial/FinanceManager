@@ -8,6 +8,11 @@ namespace FinanceManager.Components.Shared.Models;
 /// </summary>
 public abstract class SnapshotBase
 {
+    public const int CurrentSchemaVersion = 1;
+
+    /// <summary>Version of the persisted shape, used to reject incompatible browser data.</summary>
+    public int SchemaVersion { get; set; }
+
     /// <summary>When the snapshot was captured. Metadata only — not part of the rendered content.</summary>
     public DateTime FetchedAtUtc { get; set; } = DateTime.UtcNow;
 }

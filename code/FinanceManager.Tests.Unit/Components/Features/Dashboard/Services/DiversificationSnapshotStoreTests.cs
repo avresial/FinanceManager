@@ -12,7 +12,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Services;
 public class DiversificationSnapshotStoreTests
 {
     private static readonly DateTime _asOfDate = new(2026, 7, 29, 12, 0, 0, DateTimeKind.Utc);
-    private const string _key = "diversification-score:1:2026-07-29";
+    private const string _key = "diversification-score:1";
     private readonly Mock<ISnapshotService> _snapshots = new();
 
     private DiversificationSnapshotStore CreateStore() =>
@@ -38,7 +38,7 @@ public class DiversificationSnapshotStoreTests
     }
 
     [Fact]
-    public async Task Changed_WritesUserAndDayScopedSnapshot()
+    public async Task Changed_WritesUserScopedSnapshot()
     {
         var result = await Refresh(Score(67));
 
@@ -50,10 +50,10 @@ public class DiversificationSnapshotStoreTests
     }
 
     [Fact]
-    public async Task SnapshotFromAnotherDay_IsNotPainted()
+    public async Task SnapshotFromDistantDate_PaintsBeforeRefresh()
     {
         _snapshots.Setup(x => x.GetAsync<DiversificationScoreSnapshot>(_key))
-            .ReturnsAsync(Snapshot(Score(50), _asOfDate.AddDays(-1)));
+            .ReturnsAsync(Snapshot(Score(50), _asOfDate.AddMonths(-3)));
         var painted = false;
 
         var result = await Refresh(Score(50), _ =>
@@ -62,9 +62,9 @@ public class DiversificationSnapshotStoreTests
             return Task.CompletedTask;
         });
 
-        Assert.False(painted);
-        Assert.False(result.SnapshotPainted);
-        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.True(painted);
+        Assert.True(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Unchanged, result.Outcome);
     }
 
     [Fact]

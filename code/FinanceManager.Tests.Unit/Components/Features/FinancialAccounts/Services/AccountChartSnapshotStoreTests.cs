@@ -11,9 +11,9 @@ namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.Servic
 [Trait("Category", "Unit")]
 public class AccountChartSnapshotStoreTests
 {
-    private const string _currencyKey = "account-chart:currency:1:2:3:Month";
-    private const string _bondKey = "account-chart:bond:1:2:3:Month";
-    private const string _investmentKey = "account-chart:investment:1:2:3:42:3M";
+    private const string _currencyKey = "account-chart:currency:1:2:3";
+    private const string _bondKey = "account-chart:bond:1:2:3";
+    private const string _investmentKey = "account-chart:investment:1:2:3:42";
     private static readonly DateTime _start = new(2026, 1, 1);
     private static readonly DateTime _end = new(2026, 2, 1);
     private readonly Mock<ISnapshotService> _snapshots = new();
@@ -109,7 +109,7 @@ public class AccountChartSnapshotStoreTests
     }
 
     [Fact]
-    public async Task Currency_SnapshotForAnotherRange_IsNeitherReadNorPainted()
+    public async Task Currency_SnapshotForAnotherRange_IsRejectedThenReplacedAtStableKey()
     {
         // A "Month" snapshot must not paint into a "1Y" view: the series covers the wrong window,
         // and painting it would fight the range the user just selected.
@@ -134,8 +134,8 @@ public class AccountChartSnapshotStoreTests
         Assert.False(painted);
         Assert.False(result.SnapshotPainted);
         Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
-        _snapshots.Verify(x => x.GetAsync<AccountChartSnapshot>(_currencyKey), Times.Never);
-        _snapshots.Verify(x => x.SetAsync("account-chart:currency:1:2:3:1Y", It.IsAny<AccountChartSnapshot>()), Times.Once);
+        _snapshots.Verify(x => x.GetAsync<AccountChartSnapshot>(_currencyKey), Times.Once);
+        _snapshots.Verify(x => x.SetAsync(_currencyKey, It.Is<AccountChartSnapshot>(snapshot => snapshot.RangeKey == "1Y")), Times.Once);
     }
 
     [Fact]
@@ -143,6 +143,35 @@ public class AccountChartSnapshotStoreTests
     {
         Assert.Equal("Month", AccountChartSnapshotStore.BuildRangeKey("Month", _start, _end));
         Assert.Equal("Custom:20260101:20260201", AccountChartSnapshotStore.BuildRangeKey("Custom", _start, _end));
+    }
+
+    [Fact]
+    public async Task Currency_CustomDateChanges_ReuseStableKey()
+    {
+        var firstRange = AccountChartSnapshotStore.BuildRangeKey("Custom", _start, _end);
+        var laterRange = AccountChartSnapshotStore.BuildRangeKey("Custom", _start.AddMonths(3), _end.AddMonths(3));
+        _snapshots.Setup(x => x.GetAsync<AccountChartSnapshot>(_currencyKey))
+            .ReturnsAsync(new AccountChartSnapshot
+            {
+                Variant = "currency",
+                UserId = 1,
+                AccountId = 2,
+                CurrencyId = 3,
+                RangeKey = firstRange,
+                Model = StandardModel(10m)
+            });
+
+        await CreateStore().RefreshCurrencyAsync(
+            1,
+            2,
+            3,
+            laterRange,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<AccountChartModel?>(StandardModel(20m)));
+
+        _snapshots.Verify(x => x.GetAsync<AccountChartSnapshot>(_currencyKey), Times.Once);
+        _snapshots.Verify(x => x.SetAsync(_currencyKey, It.Is<AccountChartSnapshot>(snapshot => snapshot.RangeKey == laterRange)), Times.Once);
     }
 
     [Fact]

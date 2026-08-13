@@ -62,11 +62,15 @@ if (result.IsBlockingFailure)
 
 ### Keys
 
-Scope the key to the owning user and to whatever else changes *what is rendered* — currency,
-account id. Do **not** put the selected date range in the key: one surface keeps one snapshot that
-each save overwrites, rather than accumulating an entry per range the user has ever picked. Store
-the range inside the snapshot instead when the view needs to know what produced it (the dashboard
-does this so amounts and their period label stay paired during a reload).
+Scope the key to the owning user and to stable context such as currency, account id, or benchmark.
+Do **not** put dates, times, or a selected date range in the key: one logical surface keeps one
+snapshot that each save overwrites. Store the range inside the snapshot when the view needs to know
+what produced it. A caller can then reject a snapshot whose range does not match the active user
+selection, while still replacing that single stable entry after the fresh request completes.
+
+Every snapshot also carries an explicit schema version. `LocalStorageSnapshotService` evicts a
+snapshot when that version differs from the current version, making schema incompatibility an
+intentional invalidation event. Age alone never invalidates a UI snapshot.
 
 The same rule holds for the time-based cache, for a different reason: a key that moves per visit means
 `GetOrRefreshAsync` never finds what the last visit wrote, so the cache never hits *and* local storage

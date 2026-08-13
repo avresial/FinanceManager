@@ -21,7 +21,7 @@ public class LocalStorageSnapshotServiceTests
     [Fact]
     public async Task GetAsync_PrefixesKey_AndReturnsStoredSnapshot()
     {
-        var stored = new TestSnapshot { Payload = "hello" };
+        var stored = new TestSnapshot { Payload = "hello", SchemaVersion = SnapshotBase.CurrentSchemaVersion };
         var localStorage = new Mock<ILocalStorageService>();
         localStorage
             .Setup(s => s.GetItemAsync<TestSnapshot>(_storageKey, It.IsAny<CancellationToken>()))
@@ -51,6 +51,23 @@ public class LocalStorageSnapshotServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_OnIncompatibleSchema_EvictsAndReturnsNull()
+    {
+        var stored = new TestSnapshot { Payload = "old", SchemaVersion = 0 };
+        var localStorage = new Mock<ILocalStorageService>();
+        localStorage
+            .Setup(s => s.GetItemAsync<TestSnapshot>(_storageKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+
+        var service = new LocalStorageSnapshotService(localStorage.Object, NullLogger<LocalStorageSnapshotService>.Instance);
+
+        var result = await service.GetAsync<TestSnapshot>(_key);
+
+        Assert.Null(result);
+        localStorage.Verify(s => s.RemoveItemAsync(_storageKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SetAsync_PersistsUnderPrefixedKey()
     {
         var snapshot = new TestSnapshot { Payload = "world" };
@@ -60,6 +77,7 @@ public class LocalStorageSnapshotServiceTests
 
         await service.SetAsync(_key, snapshot);
 
+        Assert.Equal(SnapshotBase.CurrentSchemaVersion, snapshot.SchemaVersion);
         localStorage.Verify(s => s.SetItemAsync(_storageKey, snapshot, It.IsAny<CancellationToken>()), Times.Once);
     }
 

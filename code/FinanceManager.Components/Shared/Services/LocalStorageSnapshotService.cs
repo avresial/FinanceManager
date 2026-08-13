@@ -20,7 +20,19 @@ public class LocalStorageSnapshotService(
         var storageKey = BuildStorageKey(key);
         try
         {
-            return await localStorageService.GetItemAsync<T>(storageKey);
+            var snapshot = await localStorageService.GetItemAsync<T>(storageKey);
+            if (snapshot is not null && snapshot.SchemaVersion != SnapshotBase.CurrentSchemaVersion)
+            {
+                logger.LogWarning(
+                    "Incompatible {SnapshotType} snapshot schema {ActualVersion}; expected {ExpectedVersion}. Evicting.",
+                    typeof(T).Name,
+                    snapshot.SchemaVersion,
+                    SnapshotBase.CurrentSchemaVersion);
+                await localStorageService.RemoveItemAsync(storageKey);
+                return null;
+            }
+
+            return snapshot;
         }
         catch (JsonException ex)
         {
@@ -32,7 +44,10 @@ public class LocalStorageSnapshotService(
     }
 
     public Task SetAsync<T>(string key, T snapshot) where T : SnapshotBase
-        => localStorageService.SetItemAsync(BuildStorageKey(key), snapshot).AsTask();
+    {
+        snapshot.SchemaVersion = SnapshotBase.CurrentSchemaVersion;
+        return localStorageService.SetItemAsync(BuildStorageKey(key), snapshot).AsTask();
+    }
 
     public Task RemoveAsync(string key)
         => localStorageService.RemoveItemAsync(BuildStorageKey(key)).AsTask();

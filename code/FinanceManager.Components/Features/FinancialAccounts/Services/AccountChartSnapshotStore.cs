@@ -61,7 +61,7 @@ public sealed class AccountChartSnapshotStore(ISnapshotRefreshCoordinator coordi
         Func<InvestmentAccountChartModel, Task>? onRefreshed = null) =>
         coordinator.RunAsync(new SnapshotRefreshRequest<InvestmentAccountChartSnapshot, InvestmentAccountChartModel>
         {
-            Key = $"account-chart:investment:{userId}:{accountId}:{currencyId}:{benchmarkListingId?.ToString() ?? "inflation"}:{rangeKey}",
+            Key = $"account-chart:investment:{userId}:{accountId}:{currencyId}:{benchmarkListingId?.ToString() ?? "inflation"}",
             Gate = gate,
             ClaimedVersion = claimedVersion,
             ToModel = snapshot => snapshot.UserId == userId
@@ -100,7 +100,7 @@ public sealed class AccountChartSnapshotStore(ISnapshotRefreshCoordinator coordi
         Func<AccountChartModel, Task>? onRefreshed) =>
         coordinator.RunAsync(new SnapshotRefreshRequest<AccountChartSnapshot, AccountChartModel>
         {
-            Key = $"account-chart:{variant}:{userId}:{accountId}:{currencyId}:{rangeKey}",
+            Key = $"account-chart:{variant}:{userId}:{accountId}:{currencyId}",
             Gate = gate,
             ClaimedVersion = claimedVersion,
             ToModel = snapshot => snapshot.Variant == variant
