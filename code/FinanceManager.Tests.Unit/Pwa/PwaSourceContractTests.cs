@@ -16,29 +16,31 @@ public class PwaSourceContractTests
 
         string indexHtmlContent = File.ReadAllText(indexHtmlPath);
 
-        // Contract 1a: index.html must link to the web app manifest file
-        bool hasManifestLink = Regex.IsMatch(
+        Match manifestLink = Regex.Match(
             indexHtmlContent,
-            @"<link\s+[^>]*rel=[""']manifest[""'][^>]*href=[""'][^""']+[""']",
-            RegexOptions.IgnoreCase) || Regex.IsMatch(
-            indexHtmlContent,
-            @"<link\s+[^>]*href=[""'][^""']+[""'][^>]*rel=[""']manifest[""']",
+            @"<link\s+[^>]*rel=[""']manifest[""'][^>]*href=[""'](?<href>[^""']+)[""']",
             RegexOptions.IgnoreCase);
-
-        Assert.True(
-            hasManifestLink,
-            "index.html must contain a <link rel=\"manifest\" href=\"...\"> tag to be a valid PWA.");
-
-        // Contract 1b: manifest.json (or manifest.webmanifest) must exist in wwwroot
-        string manifestPath = Path.Combine(wwwroot, "manifest.json");
-        if (!File.Exists(manifestPath))
+        if (!manifestLink.Success)
         {
-            manifestPath = Path.Combine(wwwroot, "manifest.webmanifest");
+            manifestLink = Regex.Match(
+                indexHtmlContent,
+                @"<link\s+[^>]*href=[""'](?<href>[^""']+)[""'][^>]*rel=[""']manifest[""']",
+                RegexOptions.IgnoreCase);
         }
 
         Assert.True(
+            manifestLink.Success,
+            "index.html must contain a <link rel=\"manifest\" href=\"...\"> tag to be a valid PWA.");
+
+        Uri manifestUri = new(new Uri("https://localhost/"), manifestLink.Groups["href"].Value);
+        Assert.Equal("localhost", manifestUri.Host);
+
+        string manifestPath = Path.Combine(
+            wwwroot,
+            Uri.UnescapeDataString(manifestUri.AbsolutePath).TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(
             File.Exists(manifestPath),
-            "A Web App Manifest file (manifest.json or manifest.webmanifest) must exist in wwwroot.");
+            $"The web app manifest referenced by index.html must exist at {manifestPath}.");
 
         string manifestJson = File.ReadAllText(manifestPath);
         using JsonDocument doc = JsonDocument.Parse(manifestJson);
