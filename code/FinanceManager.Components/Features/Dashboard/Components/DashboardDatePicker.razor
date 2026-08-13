@@ -31,6 +31,12 @@
                         DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
 </div>
 
+@* The pill above is position:fixed and reserves no layout space, so on mobile it overlaps the
+   bottom of the page. This normal-flow spacer (rendered at the end of the page, where the picker
+   is placed) reserves enough height on mobile for content to scroll clear of the fixed pill and
+   the device safe-area inset. It collapses to zero height on desktop/tablet-wide viewports. *@
+<div class="fm-dashboard-datepicker-spacer" aria-hidden="true"></div>
+
 @code {
     private static readonly (string Key, string Label)[] _presets =
     [

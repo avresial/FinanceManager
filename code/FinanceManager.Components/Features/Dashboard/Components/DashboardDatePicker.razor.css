@@ -5,3 +5,18 @@
 .fm-dashboard-custom-range-picker ::deep .mud-picker > .mud-input-control {
     display: none;
 }
+
+/* Reserve space at the bottom of the page so content can scroll clear of the fixed date-range
+   pill on mobile. Zero height on wider viewports so desktop/tablet layouts are unaffected.
+   The mobile breakpoint (959.98px) matches the app's own xs/sm "mobile" definition used by
+   MainLayout, and the height clears the pill's ~48px plus its 3vh bottom offset and the device
+   safe-area inset. */
+.fm-dashboard-datepicker-spacer {
+    height: 0;
+}
+
+@media (max-width: 959.98px) {
+    .fm-dashboard-datepicker-spacer {
+        height: calc(3vh + 56px + env(safe-area-inset-bottom, 0px));
+    }
+}
