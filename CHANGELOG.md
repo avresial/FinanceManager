@@ -63,7 +63,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
-- FinanceManager can now be installed as an app, keeps its application shell available offline, and reliably activates newly deployed versions after all older tabs close. #690
+- Returning after a long break now restores the last compatible dashboard and account-chart state immediately, then refreshes it in the background instead of losing it to date-based snapshot keys. #691
 - On mobile, the fixed date-range picker at the bottom of the dashboard, assets, and liabilities pages no longer permanently hides the last page content. Those pages now reserve enough bottom space (including the device safe-area inset) for content to scroll fully clear of the picker, while desktop and tablet-wide layouts are unchanged. #688
 - Expected cancellation during imports and provider calls is now separated from genuine failures, and exchange-rate ranges report transport failures on the affected dates. #681
 - Being throttled or locked out on the sign-in form no longer shows "Incorrect username or password." A "too many requests" response now shows a "too many attempts, try again in N seconds" message using the server's retry hint, and a temporarily locked account shows the lockout message — so a throttled user no longer keeps retyping a correct password, which only extended the block. Genuine wrong credentials still show the usual message. #668

@@ -18,10 +18,10 @@ public sealed class DiversificationSnapshotStore(ISnapshotRefreshCoordinator coo
         Func<DiversificationScore, Task>? onRefreshed = null) =>
         coordinator.RunAsync(new SnapshotRefreshRequest<DiversificationScoreSnapshot, DiversificationScore>
         {
-            Key = $"diversification-score:{userId}:{asOfDate:yyyy-MM-dd}",
+            Key = $"diversification-score:{userId}",
             Gate = gate,
             ClaimedVersion = claimedVersion,
-            ToModel = snapshot => snapshot.UserId == userId && snapshot.AsOfDate.Date == asOfDate.Date
+            ToModel = snapshot => snapshot.UserId == userId
                 ? snapshot.Score
                 : null,
             FetchAsync = fetchAsync,
