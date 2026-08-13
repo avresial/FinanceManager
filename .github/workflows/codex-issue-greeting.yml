@@ -1,0 +1,59 @@
+name: Codex issue greeting
+
+on:
+  issues:
+    types: [opened]
+
+# Only the cloud job needs a GitHub write permission. The local job receives none.
+permissions: {}
+
+jobs:
+  greet:
+    name: Add greeting comment
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add greeting comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh api \
+            --method POST \
+            "/repos/${REPOSITORY}/issues/${ISSUE_NUMBER}/comments" \
+            --field body='hi im codex'
+
+  local-codex:
+    name: Run local LM Studio Codex
+    # This repository is public. Only the repository owner may execute the
+    # persistent local runner; every issue still receives the cloud greeting.
+    if: github.actor == github.repository_owner
+    runs-on: [self-hosted, macOS, ARM64, codex-lmstudio]
+    timeout-minutes: 15
+    concurrency:
+      group: codex-lmstudio-financemanager
+      cancel-in-progress: false
+    permissions: {}
+    env:
+      CODEX_HOME: /Users/a2485/.codex
+      PATH: /opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+    steps:
+      # Do not check out the repository or pass issue content to the local
+      # process. This runner is reserved for a fixed, read-only Codex call.
+      - name: Invoke Codex with the local LM Studio profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          codex -a never \
+            --profile lmstudio \
+            exec \
+            --ephemeral \
+            --sandbox read-only \
+            --skip-git-repo-check \
+            --cd "$RUNNER_TEMP" \
+            --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
+            'Reply with exactly: hi im codex. Do not use tools, access files, or access the network.' \
+            </dev/null
+          test "$(tr -d '\r\n' < "$RUNNER_TEMP/codex-last-message.txt")" = 'hi im codex'
