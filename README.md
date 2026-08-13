@@ -1,3 +1,5 @@
+
+
 <p align="center">
   <a href="https://github.com/avresial/FinanceManager/stargazers"><img src="https://img.shields.io/github/stars/avresial/FinanceManager" alt="GitHub stars"/></a>
   <a href="https://github.com/avresial/FinanceManager/issues"><img src="https://img.shields.io/github/issues/avresial/FinanceManager" alt="GitHub issues"/></a>
@@ -137,15 +139,19 @@ Then open `https://localhost:5001` in your browser.
 For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
 
 ### Run tests
+Run from inside the `code/` directory so the test runner can locate `global.json`, and use `--project` as required by the Microsoft Testing Platform.
 ```bash
+cd code
+
 # All tests
-dotnet test ./code/FinanceManager.slnx
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
+dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 
 # Unit tests only
-dotnet test ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj
 
 # Integration tests (uses in-memory DB)
-UseInMemoryDatabase=true dotnet test ./code/FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
+UseInMemoryDatabase=true dotnet test --project ./FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj
 ```
 
 ### External API keys (optional)
