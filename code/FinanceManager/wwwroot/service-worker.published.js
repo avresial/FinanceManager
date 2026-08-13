@@ -9,9 +9,9 @@ self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // Scope: boot assets only (#554) — the WASM runtime and assemblies, boot scripts,
-// configuration, styles/fonts and index.html. Images (beyond the favicon) and other
-// media are intentionally left to the regular browser cache.
-const offlineAssetsInclude = [/\.dll$/, /\.wasm$/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff2?$/, /\.dat$/, /\.blat$/, /\.ico$/];
+// configuration, styles/fonts, index.html and the PWA installation metadata. Other
+// images and media are intentionally left to the regular browser cache.
+const offlineAssetsInclude = [/\.dll$/, /\.wasm$/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff2?$/, /\.dat$/, /\.blat$/, /\.ico$/, /manifest\.webmanifest$/, /android-chrome-\d+x\d+\.png$/];
 const offlineAssetsExclude = [/^service-worker\.js$/];
 
 // Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.

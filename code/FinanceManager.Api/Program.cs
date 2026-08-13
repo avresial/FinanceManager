@@ -109,7 +109,16 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        if (context.File.Name is "service-worker.js" or "service-worker-assets.js" or "manifest.webmanifest")
+        {
+            context.Context.Response.Headers.CacheControl = "no-cache";
+        }
+    }
+});
 
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
