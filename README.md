@@ -1,3 +1,5 @@
+
+
 <p align="center">
   <a href="https://github.com/avresial/FinanceManager/stargazers"><img src="https://img.shields.io/github/stars/avresial/FinanceManager" alt="GitHub stars"/></a>
   <a href="https://github.com/avresial/FinanceManager/issues"><img src="https://img.shields.io/github/issues/avresial/FinanceManager" alt="GitHub issues"/></a>
@@ -143,6 +145,7 @@ Then open the application URL printed by `dotnet run` (the HTTPS launch profile 
 For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
 
 ### Run tests
+Run from inside the `code/` directory so the test runner can locate `global.json`, and use `--project` as required by the Microsoft Testing Platform.
 ```bash
 cd code
 
