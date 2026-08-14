@@ -1,5 +1,6 @@
 @page "/Liabilities"
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities
+@using FinanceManager.Components.Shared.Helpers
 
 <PageTitle>Liabilities</PageTitle>
 
@@ -16,4 +17,5 @@
 </MudContainer>
 
 
-<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />
+<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

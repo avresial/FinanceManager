@@ -69,6 +69,14 @@ public class DateRangeHelperTests
         Assert.Equal(_now, range.End);
     }
 
+    // Dashboard, Assets and Liabilities all seed their initial range from this one entry point,
+    // so it must resolve to the same window for every caller. #700
+    [Fact]
+    public void GetDefaultOverviewRange_MatchesLast31DaysRange()
+    {
+        Assert.Equal(DateRangeHelper.GetLast31DaysRange(_now), DateRangeHelper.GetDefaultOverviewRange(_now));
+    }
+
     [Fact]
     public void GetExpandedStart_ReturnsOnlyOlderEntry()
     {
