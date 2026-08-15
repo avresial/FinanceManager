@@ -1,5 +1,6 @@
 @page "/Assets"
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets
+@using FinanceManager.Components.Shared.Helpers
 
 <PageTitle>Assets</PageTitle>
 <MudContainer Class="py-2">
@@ -27,4 +28,5 @@
     </MudGrid>
 </MudContainer>
 
-<DashboardDatePicker DateChanged=DateChanged StartingOption="ThisMonth" />
+<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

@@ -12,7 +12,8 @@ public partial class AssetsPage : ComponentBase
 
     protected override void OnInitialized()
     {
-        var (Start, End) = DateRangeHelper.GetCurrentMonthRange();
+        // Same default range as the Dashboard, from the one shared entry point. #700
+        var (Start, End) = DateRangeHelper.GetDefaultOverviewRange(DateTime.UtcNow);
 
         StartDate = Start;
         EndDate = End;
