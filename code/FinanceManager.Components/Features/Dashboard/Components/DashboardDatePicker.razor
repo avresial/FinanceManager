@@ -1,30 +1,41 @@
 @using FinanceManager.Components.Shared.Helpers
 
-<MudPaper Elevation="3" Class="rounded-pill px-1 py-1" Style="right: 30px; position: fixed; bottom: 3vh; z-index: 2;">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
-        @foreach (var (key, label) in _presets)
-        {
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="rounded-pill px-3"
-                       Color="@(_selected == key ? Color.Primary : Color.Default)"
-                       Style="@($"font-weight: {(_selected == key ? 700 : 500)};")"
-                       OnClick="@(() => SelectPreset(key))">@label</MudButton>
-        }
+<div class="fm-dashboard-datepicker-container">
+    <MudPaper Elevation="3" Class="rounded-pill fm-dashboard-datepicker-pill">
+        <MudMenu Label="@CurrentDisplayLabel"
+                 AriaLabel="@($"Date range: {CurrentDisplayLabel}")"
+                 StartIcon="@Icons.Material.Filled.CalendarMonth"
+                 EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                 Variant="Variant.Text"
+                 Color="Color.Default"
+                 Open="_isMenuOpen"
+                 OpenChanged="OnMenuOpenChanged"
+                 Dense="true"
+                 AnchorOrigin="Origin.TopRight"
+                 TransformOrigin="Origin.BottomRight"
+                 Class="fm-dashboard-datepicker-menu"
+                 PopoverClass="fm-dashboard-datepicker-popover"
+                 aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
+            <ChildContent>
+                @foreach (var (key, label) in _presets)
+                {
+                    <MudMenuItem OnClick="@(() => SelectPreset(key))"
+                                 Icon="@(_selected == key ? Icons.Material.Filled.Check : null)">
+                        <span class="@(_selected == key ? "fm-dashboard-datepicker-option-selected" : null)">@label</span>
+                    </MudMenuItem>
+                }
 
-        @if (_selected == DateRangeHelper.CustomRangeKey && _customRange is { Start: DateTime customStart, End: DateTime customEnd })
-        {
-            <MudText Typo="Typo.caption" Color="Color.Primary" Class="px-2"
-                     Style="font-weight: 700; white-space: nowrap;">
-                @customStart.ToString("dd MMM") &ndash; @customEnd.ToString("dd MMM")
-            </MudText>
-        }
+                <MudDivider />
+                <MudMenuItem OnClick="OpenCustomDateRangePicker"
+                             Icon="@(_selected == DateRangeHelper.CustomRangeKey ? Icons.Material.Filled.Check : Icons.Material.Filled.DateRange)">
+                    <span class="@(_selected == DateRangeHelper.CustomRangeKey ? "fm-dashboard-datepicker-option-selected" : null)">Custom range…</span>
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </MudPaper>
+</div>
 
-        <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small"
-                       Color="@(_selected == DateRangeHelper.CustomRangeKey ? Color.Primary : Color.Default)"
-                       OnClick="OpenCustomDateRangePicker" aria-label="Select custom date range" />
-    </MudStack>
-</MudPaper>
-
-@* Hidden picker opened programmatically by the calendar icon; the Dialog variant matches
+@* Hidden picker opened programmatically by the Custom range option; the Dialog variant matches
    the custom-range picker on the account details pages. *@
 <div class="fm-dashboard-custom-range-picker">
     <MudDateRangePicker @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="dd/MM/yyyy"
@@ -48,6 +59,7 @@
     private string _selected = "ThisMonth";
     private DateRange? _customRange;
     private MudDateRangePicker? _customDateRangePicker;
+    private bool _isMenuOpen;
 
     [Parameter] public string StartingOption { get; set; } = "ThisMonth";
 
@@ -56,6 +68,14 @@
     [Parameter] public DateTime? InitialCustomStart { get; set; }
     [Parameter] public DateTime? InitialCustomEnd { get; set; }
     [Parameter] public required Action<(DateTime Start, DateTime End)> DateChanged { get; set; }
+
+    private string CurrentDisplayLabel => _selected switch
+    {
+        DateRangeHelper.CustomRangeKey when _customRange is { Start: DateTime start, End: DateTime end } =>
+            $"{start:dd MMM} \u2013 {end:dd MMM}",
+        DateRangeHelper.CustomRangeKey => "Custom range",
+        _ => _presets.FirstOrDefault(preset => preset.Key == _selected).Label ?? "Select range"
+    };
 
     protected override void OnInitialized()
     {
@@ -73,6 +93,8 @@
 
     private Task OpenCustomDateRangePicker() =>
         _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
+
+    private void OnMenuOpenChanged(bool isOpen) => _isMenuOpen = isOpen;
 
     private void SelectPreset(string key)
     {

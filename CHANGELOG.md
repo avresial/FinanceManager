@@ -32,6 +32,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The dashboard, Assets, and Liabilities date-range picker now stays as one compact pill showing only the active preset or custom dates; opening it reveals the other presets and custom calendar without occupying persistent mobile screen space. #701
 - The dashboard now opens on a rolling **last 31 days** range instead of the current calendar month, so its charts always show about a month of history even at the start of a month; the presets (This month / This quarter / This year) and custom date selection continue to work, and the initial state is shown as a custom range rather than highlighting This month. #685
 - Authentication rate-limit budget raised from 10 to 20 requests per 60-second window, reducing false positives for legitimate login and token-refresh traffic. #669
 - The Financial Insights card now uses available vertical space for insight messages instead of a fixed four-line clamp, while keeping the card height stable. #663

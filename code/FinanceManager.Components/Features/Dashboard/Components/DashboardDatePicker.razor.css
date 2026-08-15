@@ -1,7 +1,42 @@
-/* The custom date-range picker is driven entirely by the calendar icon button and
-   opened programmatically as a dialog. Hide only its own inline input field so just
-   the icon acts as the trigger. The dialog overlay is rendered separately when opened
-   and is unaffected by this rule. */
+/* Keep the collapsed picker compact and inside the viewport, including safe areas. */
+.fm-dashboard-datepicker-container {
+    position: fixed;
+    right: 30px;
+    bottom: calc(3vh + env(safe-area-inset-bottom, 0px));
+    z-index: var(--mud-zindex-fab, 1050);
+    max-width: calc(100vw - 32px);
+}
+
+.fm-dashboard-datepicker-pill {
+    display: inline-flex;
+    max-width: 100%;
+    padding: 4px;
+}
+
+.fm-dashboard-datepicker-menu {
+    max-width: 100%;
+}
+
+.fm-dashboard-datepicker-menu ::deep .mud-button-root {
+    max-width: 100%;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: none;
+}
+
+.fm-dashboard-datepicker-menu ::deep .mud-button-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-dashboard-datepicker-option-selected {
+    font-weight: 700;
+}
+
+/* The custom date-range picker is driven entirely by the menu option and
+   opened programmatically as a dialog. Hide its inline input field because the compact
+   menu option is the only visible trigger. The dialog overlay is rendered separately. */
 .fm-dashboard-custom-range-picker ::deep .mud-picker > .mud-input-control {
     display: none;
 }
@@ -16,7 +51,12 @@
 }
 
 @media (max-width: 959.98px) {
+    .fm-dashboard-datepicker-container {
+        right: max(16px, env(safe-area-inset-right, 0px));
+        bottom: calc(2vh + env(safe-area-inset-bottom, 0px));
+    }
+
     .fm-dashboard-datepicker-spacer {
-        height: calc(3vh + 56px + env(safe-area-inset-bottom, 0px));
+        height: calc(2vh + 56px + env(safe-area-inset-bottom, 0px));
     }
 }
