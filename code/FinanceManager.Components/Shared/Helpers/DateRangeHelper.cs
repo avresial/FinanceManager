@@ -61,6 +61,14 @@ public static class DateRangeHelper
         return (start, now);
     }
 
+    /// <summary>
+    /// The range the overview pages — Dashboard, Assets and Liabilities — open with. It names the
+    /// policy separately from the window it currently resolves to, so all three pages share one
+    /// entry point and changing the default stays a single edit here rather than three. #700
+    /// </summary>
+    public static (DateTime Start, DateTime End) GetDefaultOverviewRange(DateTime now) =>
+        GetLast31DaysRange(now);
+
     public static (DateTime Start, DateTime End) GetCurrentQuarterRange()
     {
         var now = DateTime.UtcNow;
