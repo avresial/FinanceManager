@@ -72,7 +72,9 @@
     private string CurrentDisplayLabel => _selected switch
     {
         DateRangeHelper.CustomRangeKey when _customRange is { Start: DateTime start, End: DateTime end } =>
-            $"{start:dd MMM} \u2013 {end:dd MMM}",
+            start.Year == end.Year
+                ? $"{start:dd MMM} \u2013 {end:dd MMM yyyy}"
+                : $"{start:dd MMM yyyy} \u2013 {end:dd MMM yyyy}",
         DateRangeHelper.CustomRangeKey => "Custom range",
         _ => _presets.FirstOrDefault(preset => preset.Key == _selected).Label ?? "Select range"
     };
