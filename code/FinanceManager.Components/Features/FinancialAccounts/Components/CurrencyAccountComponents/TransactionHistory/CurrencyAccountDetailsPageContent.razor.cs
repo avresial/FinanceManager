@@ -249,7 +249,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     {
         if (_user is null) return null;
 
-        if (_selectedRange != AccountDetailsHero.CustomRangeKey)
+        if (_selectedRange != AccountHistoryToolbar.CustomRangeKey)
             _dateEnd = DateTime.UtcNow;
 
         return initialLoad
@@ -376,7 +376,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private async Task OnCustomDateRangeChanged(DateRange? range)
     {
         _customDateRange = range;
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         SetDateRangeForSelection();
         IsLoading = true;
         StateHasChanged();
@@ -455,7 +455,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         var expandedStart = DateRangeHelper.GetExpandedStart(selectedStart, Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate);
         if (expandedStart is not DateTime oldest) return;
 
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         _dateStart = oldest;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }

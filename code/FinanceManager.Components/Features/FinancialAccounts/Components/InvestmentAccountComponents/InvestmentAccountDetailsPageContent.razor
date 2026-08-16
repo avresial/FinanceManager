@@ -23,8 +23,7 @@ else
     <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
                         ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
-                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
-                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                        SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
                         ChartData="@ChartData" BenchmarkData="@BenchmarkData" BenchmarkName="@_benchmarkName"
                         IsMobile="@_isMobile" />
 
@@ -33,7 +32,10 @@ else
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@AccountId" SearchText="@_searchText"
                                        SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
-                                       ActiveFilterChanged="OnTxFilterChanged" OnAddEntry="ShowAdd"
+                                       ActiveFilterChanged="OnTxFilterChanged"
+                                       SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
+                                       CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                                       OnAddEntry="ShowAdd"
                                        ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer" IsMobile="@_isMobile" />
 
                 @{

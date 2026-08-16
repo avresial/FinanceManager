@@ -16,10 +16,11 @@ public partial class AccountDetailsHero
     [Parameter] public decimal? BalanceChangePercent { get; set; }
     [Parameter] public string ChangeLabel { get; set; } = "Change";
     [Parameter] public bool ShowChangeRange { get; set; } = true;
+    /// <summary>
+    /// Label of the range currently on screen. The hero only reports it beside the balance
+    /// change — the range is picked in <see cref="AccountHistoryToolbar"/> below the chart. #706
+    /// </summary>
     [Parameter] public string SelectedRange { get; set; } = "3M";
-    [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
-    [Parameter] public DateRange? CustomDateRange { get; set; }
-    [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
 
     // Some account types (investments) only know their balance/appreciation after an async
@@ -32,12 +33,6 @@ public partial class AccountDetailsHero
     [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
 
-    // Must match the key DateRangeHelper.GetAccountDetailsRange resolves the custom
-    // range with; a diverging literal here made custom ranges fall back to the default.
-    public const string CustomRangeKey = DateRangeHelper.CustomRangeKey;
-
-    private readonly string[] _ranges = ["Month", "1M", "3M", "6M", "YTD"];
-
     // Floating y-axis labels are right-aligned at this offset from the plot's left edge, so
     // the value has to clear the widest label rather than the narrowest: the dashboard's 24
     // suits "31k" but leaves a decimal tick like "301.03" flush against the page edge, and
@@ -48,11 +43,6 @@ public partial class AccountDetailsHero
 
     /// <summary>Legend/series name for the account's own balance series.</summary>
     public const string BalanceSeriesName = "Balance";
-
-    private MudDateRangePicker? _customDateRangePicker;
-
-    private Task OpenCustomDateRangePicker() =>
-        _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
 
     // The y-axis is scaled to the series actually on screen (see ApplyYScale), so the options
     // object is per-instance rather than a shared static one.
@@ -207,17 +197,4 @@ public partial class AccountDetailsHero
     };
 
     private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" : AccountName.Trim()[..1].ToUpperInvariant();
-
-    private async Task OnRangeChanged(string value)
-    {
-        SelectedRange = value;
-        await SelectedRangeChanged.InvokeAsync(value);
-    }
-
-    private async Task OnCustomDateRangeChanged(DateRange? value)
-    {
-        CustomDateRange = value;
-        SelectedRange = CustomRangeKey;
-        await CustomDateRangeChanged.InvokeAsync(value);
-    }
 }
