@@ -43,8 +43,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
-    private string? _selectedCategory;
-    private IEnumerable<string> _availableCategories = [];
+    private HashSet<string> _selectedLabels = new(StringComparer.OrdinalIgnoreCase);
+    private IEnumerable<string> _availableLabels = [];
 
     private decimal _currentBalance;
     private decimal _balanceChange;
@@ -162,12 +162,13 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         if (refreshChart)
             QueueChartDataRefresh();
 
-        _availableCategories = Account.Entries
+        _availableLabels = Account.Entries
             .SelectMany(e => e.Labels ?? [])
             .Where(l => l is not null)
             .Select(l => l.Name)
-            .Distinct()
-            .OrderBy(n => n)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
@@ -241,7 +242,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     {
         if (_user is null) return null;
 
-        if (_selectedRange != AccountDetailsHero.CustomRangeKey)
+        if (_selectedRange != AccountHistoryToolbar.CustomRangeKey)
             _dateEnd = DateTime.UtcNow;
 
         return initialLoad
@@ -370,7 +371,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private async Task OnCustomDateRangeChanged(DateRange? range)
     {
         _customDateRange = range;
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         SetDateRangeForSelection();
         IsLoading = true;
         StateHasChanged();
@@ -399,15 +400,15 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         StateHasChanged();
     }
 
-    private async Task OnCategoryChanged(string? value)
+    private async Task OnLabelsChanged(HashSet<string> value)
     {
-        _selectedCategory = value;
+        _selectedLabels = new HashSet<string>(value, StringComparer.OrdinalIgnoreCase);
         await UpdateInfo(refreshChart: false);
         StateHasChanged();
     }
 
     private bool HasActiveFilter =>
-        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedCategory is not null;
+        !string.IsNullOrWhiteSpace(_searchText) || _activeFilter.HasValue || _selectedLabels.Count > 0;
 
     private List<BondAccountEntry> GetFilteredEntries()
     {
@@ -420,9 +421,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         else if (_activeFilter == AccountHistoryToolbar.TxFilter.Expense)
             entries = entries.Where(x => x.ValueChange < 0);
 
-        if (!string.IsNullOrWhiteSpace(_selectedCategory))
+        if (_selectedLabels.Count > 0)
             entries = entries.Where(x => x.Labels is not null
-                && x.Labels.Any(l => string.Equals(l.Name, _selectedCategory, StringComparison.OrdinalIgnoreCase)));
+                && x.Labels.Any(l => _selectedLabels.Contains(l.Name)));
 
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
@@ -451,7 +452,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         var expandedStart = DateRangeHelper.GetExpandedStart(selectedStart, Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate);
         if (expandedStart is not DateTime oldest) return;
 
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         _dateStart = oldest;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }

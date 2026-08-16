@@ -53,7 +53,7 @@ public class DateRangeHelperTests
     {
         var start = _now.AddMonths(-4);
         var range = DateRangeHelper.GetAccountDetailsRange(
-            AccountDetailsHero.CustomRangeKey, start, _now, _now.AddMonths(-3), _now.AddYears(-1), _now);
+            AccountHistoryToolbar.CustomRangeKey, start, _now, _now.AddMonths(-3), _now.AddYears(-1), _now);
 
         Assert.Equal(start, range.Start);
     }

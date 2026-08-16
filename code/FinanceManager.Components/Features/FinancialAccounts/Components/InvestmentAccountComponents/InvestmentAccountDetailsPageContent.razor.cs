@@ -461,7 +461,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private void OnCustomDateRangeChanged(DateRange? range)
     {
         _customDateRange = range;
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         SetDateRangeForSelection();
         UpdateInfo();
         StateHasChanged();
@@ -497,7 +497,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         var expandedStart = DateRangeHelper.GetExpandedStart(_dateStart, oldestTradeDate);
         if (expandedStart is not DateTime oldestStart) return;
 
-        _selectedRange = AccountDetailsHero.CustomRangeKey;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
         _dateStart = oldestStart;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }

@@ -10,3 +10,48 @@
     border-color: var(--mud-palette-lines-inputs) !important;
     color: var(--mud-palette-text-secondary) !important;
 }
+
+/* The toolbar has to survive a narrow phone viewport in one row, so the type filter runs
+   tighter than the MudBlazor dense default: smaller text, no uppercasing (which costs
+   ~40px across the three labels) and no shrinking, which would clip "Expense". */
+.fm-tx-toolbar ::deep .mud-toggle-group {
+    flex-shrink: 0;
+}
+
+.fm-tx-toolbar ::deep .mud-toggle-item {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+/* Same reason: the split add-entry button keeps the icon and its chevron tight.
+   !important because MudBlazor's own button-group rule is more specific. */
+.fm-tx-toolbar ::deep .mud-button-group-root .mud-icon-button {
+    padding: 3px 5px !important;
+}
+
+/* Keeps the range label ("3M", "01/02 – 28/02") on one line and its chevron tight to it. */
+.fm-tx-toolbar ::deep .fm-range-button {
+    text-transform: none;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    padding: 4px 0 4px 4px;
+    min-width: 0;
+}
+
+.fm-tx-toolbar ::deep .fm-range-button .mud-button-icon-end {
+    margin-left: 0;
+}
+
+.fm-tx-toolbar ::deep .fm-range-button .mud-icon-root {
+    font-size: 1.125rem;
+}
+
+/* The custom date-range picker is driven entirely by the date-range menu and opened
+   programmatically as a dialog. Hide only its own inline input field so the menu item
+   acts as the trigger. The dialog overlay is rendered separately when opened and is
+   unaffected by this rule. */
+.fm-custom-range-picker ::deep .mud-picker > .mud-input-control {
+    display: none;
+}

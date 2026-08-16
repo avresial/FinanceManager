@@ -13,7 +13,7 @@
     @if (!IsMobile)
     {
         <MudStack Spacing="4">
-            @* Row 1: avatar + name (left) | range selector (right) *@
+            @* Row 1: avatar + name. The range selector lives in the transactions toolbar below. *@
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                     <MudAvatar Color="MudBlazor.Color.Primary" Variant="Variant.Filled" Size="MudBlazor.Size.Large">
@@ -25,21 +25,6 @@
                         <MudText Typo="Typo.h5">@AccountName</MudText>
                     </MudStack>
                 </MudStack>
-
-                @* Range selector — top right *@
-                <div class="d-flex align-center" style="gap: 2px;">
-                    @foreach (var range in _ranges)
-                    {
-                        <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
-                                   Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                                   Style="@($"min-width: 40px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
-                                   OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
-                    }
-                    <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
-                                   Color="@(SelectedRange == CustomRangeKey ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                                   OnClick="OpenCustomDateRangePicker"
-                                   aria-label="Select custom date range" />
-                </div>
             </MudStack>
 
             @* Row 2: balance (left) | change (right) *@
@@ -109,28 +94,4 @@
         }
     </div>
 
-    @* On mobile show the range strip below the chart *@
-    @if (IsMobile)
-    {
-        <div class="d-flex justify-center align-center flex-wrap mt-1 pb-1" style="gap: 2px;">
-            @foreach (var range in _ranges)
-            {
-                <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small"
-                           Color="@(SelectedRange == range ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                           Style="@($"min-width: 44px; font-weight: {(SelectedRange == range ? 700 : 500)};")"
-                           OnClick="@(() => OnRangeChanged(range))">@range</MudButton>
-            }
-            <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="MudBlazor.Size.Small"
-                           Color="@(SelectedRange == CustomRangeKey ? MudBlazor.Color.Primary : MudBlazor.Color.Default)"
-                           OnClick="OpenCustomDateRangePicker"
-                           aria-label="Select custom date range" />
-        </div>
-    }
-
-    @* Hidden picker opened programmatically by the calendar icon; Dialog variant avoids
-       the broken nested-popover behaviour of embedding the picker inside a MudMenu. *@
-    <div class="fm-custom-range-picker">
-        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange" DateFormat="dd/MM/yyyy"
-                            DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
-    </div>
 </MudPaper>

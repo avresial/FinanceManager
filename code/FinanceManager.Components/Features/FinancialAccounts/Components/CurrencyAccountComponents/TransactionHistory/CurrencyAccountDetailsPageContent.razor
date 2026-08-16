@@ -9,8 +9,7 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged" IsChartLoading="@_isChartLoading"
-                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                        SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
 
     <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
@@ -19,7 +18,10 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
                 <AccountHistoryToolbar AccountId="@Account.AccountId" SearchText="@_searchText"
                                        SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
                                        ActiveFilterChanged="OnTxFilterChanged" AvailableLabels="@_availableLabels"
-                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged" OnAddEntry="ShowAddOverlay"
+                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged"
+                                       SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
+                                       CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
+                                       OnAddEntry="ShowAddOverlay"
                                        ShowInsightsButton="@_isMobile" OnInsightsClick="ToggleInsightsDrawer" IsMobile="@_isMobile" />
 
                 @{
