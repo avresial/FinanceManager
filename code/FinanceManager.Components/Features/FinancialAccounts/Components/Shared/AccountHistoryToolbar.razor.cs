@@ -51,7 +51,7 @@ public partial class AccountHistoryToolbar : ComponentBase
     private string CategoryButtonText => SelectedLabels.Count switch
     {
         0 => "Filter by category",
-        1 => SelectedLabels.First(),
+        1 => $"Category: {SelectedLabels.First()}",
         _ => $"{SelectedLabels.Count} categories"
     };
 

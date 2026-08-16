@@ -19,7 +19,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@Account.AccountId" SearchText="@_searchText"
                                        SearchTextChanged="OnSearchChanged" ActiveFilter="@_activeFilter"
-                                       ActiveFilterChanged="OnTxFilterChanged"
+                                       ActiveFilterChanged="OnTxFilterChanged" AvailableLabels="@_availableLabels"
+                                       SelectedLabels="@_selectedLabels" SelectedLabelsChanged="OnLabelsChanged"
                                        SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
                                        CustomDateRange="@_customDateRange" CustomDateRangeChanged="OnCustomDateRangeChanged"
                                        OnAddEntry="ShowAddOverlay" ShowInsightsButton="@_isMobile"
