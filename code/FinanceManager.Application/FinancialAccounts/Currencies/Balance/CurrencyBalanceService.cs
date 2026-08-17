@@ -53,7 +53,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        Dictionary<DateTime, decimal> result = [];
+        var result = InitializeDailyResult(start, end);
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
@@ -61,17 +61,12 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
             if (account?.Entries is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
-            for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
+            foreach (var entry in account.Entries)
             {
-                if (!result.ContainsKey(date)) result.Add(date, 0);
+                var day = entry.PostingDate.Date;
+                if (day < start.Date || day > end.Date || !predicate(entry)) continue;
 
-                var entries = account.Get(date);
-                foreach (var entry in entries.Select(x => x as FinancialEntryBase).Where(x => x is not null))
-                {
-                    if (entry!.PostingDate.Date != date.Date) continue;
-                    if (!predicate(entry)) continue;
-                    result[date] += entry.ValueChange;
-                }
+                result[day] += entry.ValueChange;
             }
         }
 
@@ -82,23 +77,44 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        Dictionary<DateTime, decimal> result = [];
+        var result = InitializeDailyResult(start, end);
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
-            for (var date = end.Date; date >= start.Date; date = date.Add(-_oneDay))
+            var orderedEntries = account.Entries.OrderBy(entry => entry.PostingDate).ToList();
+            var runningBalance = account.NextOlderEntry?.Value ?? 0;
+            var entryIndex = 0;
+
+            while (entryIndex < orderedEntries.Count && orderedEntries[entryIndex].PostingDate.Date < start.Date)
             {
-                if (!result.ContainsKey(date)) result.Add(date, 0);
+                runningBalance = orderedEntries[entryIndex].Value;
+                entryIndex++;
+            }
 
-                var entry = account.GetThisOrNextOlder(date);
-                if (entry is null) continue;
+            for (var date = start.Date; date <= end.Date; date = date.Add(_oneDay))
+            {
+                while (entryIndex < orderedEntries.Count && orderedEntries[entryIndex].PostingDate.Date <= date)
+                {
+                    runningBalance = orderedEntries[entryIndex].Value;
+                    entryIndex++;
+                }
 
-                result[date] += entry.Value;
+                result[date] += runningBalance;
             }
         }
+
+        return result;
+    }
+
+    private static Dictionary<DateTime, decimal> InitializeDailyResult(DateTime start, DateTime end)
+    {
+        Dictionary<DateTime, decimal> result = [];
+
+        for (var date = start.Date; date <= end.Date; date = date.Add(_oneDay))
+            result[date] = 0;
 
         return result;
     }
