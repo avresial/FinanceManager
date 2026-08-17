@@ -1,22 +1,22 @@
 # Default: treat unknown files as text, normalize to LF in repo
 * text=auto eol=lf
 
-# C# / .NET source — CRLF in working tree (matches code/.editorconfig)
-*.cs        text eol=crlf
-*.razor     text eol=crlf
-*.cshtml    text eol=crlf
-*.csproj    text eol=crlf
-*.props     text eol=crlf
-*.targets   text eol=crlf
-*.slnx      text eol=crlf
-*.sln       text eol=crlf
-*.editorconfig text eol=crlf
+# C# / .NET source — LF in the repository and working tree
+*.cs        text eol=lf
+*.razor     text eol=lf
+*.cshtml    text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.slnx      text eol=lf
+*.sln       text eol=lf
+*.editorconfig text eol=lf
 
 # Web assets
-*.html      text eol=crlf
-*.css       text eol=crlf
-*.js        text eol=crlf
-*.map       text eol=crlf
+*.html      text eol=lf
+*.css       text eol=lf
+*.js        text eol=lf
+*.map       text eol=lf
 
 # Config / data — LF
 *.json      text eol=lf
@@ -30,7 +30,7 @@
 *.gitattributes text eol=lf
 
 # Scripts
-*.ps1       text eol=crlf
+*.ps1       text eol=lf
 *.sh        text eol=lf
 
 # Binary
