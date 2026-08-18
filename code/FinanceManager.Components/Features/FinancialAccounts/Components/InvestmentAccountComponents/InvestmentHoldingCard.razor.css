@@ -42,7 +42,6 @@
 .fm-field-label,
 .fm-field-value {
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
 .fm-holding-ticker {
