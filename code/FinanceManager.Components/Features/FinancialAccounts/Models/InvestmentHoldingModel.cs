@@ -1,3 +1,5 @@
+using FinanceManager.Domain.Assets.Entities;
+
 namespace FinanceManager.Components.Features.FinancialAccounts.Models;
 
 public sealed record InvestmentHoldingModel(
@@ -7,4 +9,5 @@ public sealed record InvestmentHoldingModel(
     string Currency,
     decimal Quantity,
     decimal LatestPrice,
-    decimal Value);
+    decimal Value,
+    AssetType AssetType = AssetType.Other);

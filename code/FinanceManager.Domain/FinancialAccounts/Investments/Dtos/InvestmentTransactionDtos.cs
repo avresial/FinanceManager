@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -16,7 +17,8 @@ public record InvestmentTransactionDto(
     decimal? Fee,
     string? Notes,
     string Ticker = "",
-    string ExchangeName = "");
+    string ExchangeName = "",
+    AssetType AssetType = AssetType.Other);
 
 /// <summary>Request to add a new investment transaction. The owning user is derived from the account, not this payload.</summary>
 public record AddInvestmentTransactionRequest(

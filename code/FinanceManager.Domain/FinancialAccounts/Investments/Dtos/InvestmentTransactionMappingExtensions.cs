@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -17,7 +18,8 @@ public static class InvestmentTransactionMappingExtensions
         transaction.Fee,
         transaction.Notes,
         transaction.AssetListing?.Ticker ?? string.Empty,
-        transaction.AssetListing?.ExchangeName ?? string.Empty);
+        transaction.AssetListing?.ExchangeName ?? string.Empty,
+        transaction.AssetListing?.Asset?.Type ?? AssetType.Other);
 
     /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
     public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, long assetListingId) => new()

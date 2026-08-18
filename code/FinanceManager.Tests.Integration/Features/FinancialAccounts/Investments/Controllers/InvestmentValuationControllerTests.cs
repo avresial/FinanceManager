@@ -70,6 +70,12 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         var context = _testDatabase!.Context;
 
         context.Currencies.Add(new Currency(_usdCurrencyId, "USD", "$"));
+        context.Assets.Add(new Asset
+        {
+            Id = 1,
+            Name = "iShares Core S&P 500 UCITS ETF",
+            Type = AssetType.ETF
+        });
         context.AssetListings.Add(new AssetListing
         {
             Id = _listingId,

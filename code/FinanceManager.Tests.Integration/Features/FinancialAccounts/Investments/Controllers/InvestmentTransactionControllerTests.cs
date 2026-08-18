@@ -75,6 +75,17 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     private async Task SeedListing()
     {
         if (_testDatabase is null) return;
+        if (!await _testDatabase.Context.Assets.AnyAsync(a => a.Id == 1, TestContext.Current.CancellationToken))
+        {
+            _testDatabase.Context.Assets.Add(new Asset
+            {
+                Id = 1,
+                Name = "iShares Core S&P 500 UCITS ETF",
+                Type = AssetType.ETF
+            });
+            await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
         if (await _testDatabase.Context.AssetListings.AnyAsync(l => l.Id == _listingId, TestContext.Current.CancellationToken)) return;
         _testDatabase.Context.AssetListings.Add(new AssetListing
         {
@@ -278,6 +289,18 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var transactions = await client.GetByAccountAsync(_testAccountId);
 
         Assert.Equal(2, transactions.Count);
+    }
+
+    [Fact]
+    public async Task GetByAccount_ReturnsAssetType()
+    {
+        await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+
+        var transaction = Assert.Single(await client.GetByAccountAsync(_testAccountId));
+
+        Assert.Equal(AssetType.ETF, transaction.AssetType);
     }
 
     [Fact]

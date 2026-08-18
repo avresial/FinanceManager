@@ -1,0 +1,66 @@
+@namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
+@using FinanceManager.Components.Features.FinancialAccounts.Models
+@using FinanceManager.Domain.Assets.Entities
+
+<MudCard Outlined="true" Class="fm-holdings-card" Style="background-color: transparent;">
+    <MudCardHeader Class="py-2 px-4">
+        <CardHeaderContent>
+            <MudText Typo="Typo.subtitle2">Holdings</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        @if (Holdings.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
+        }
+        else
+        {
+            <div class="fm-holdings-list" role="list" aria-label="Holdings">
+                @foreach (var holding in Holdings)
+                {
+                    <article class="fm-holding-item pa-3" role="listitem" @key="holding.ListingId">
+                        <div class="fm-holding-header">
+                            <div class="fm-holding-title-group">
+                                <MudText Typo="Typo.subtitle2" Class="fm-holding-ticker">@holding.Ticker</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fm-holding-exchange">
+                                    Exchange · @(string.IsNullOrWhiteSpace(holding.ExchangeName) ? "Not specified" : holding.ExchangeName)
+                                </MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default"
+                                     Class="fm-holding-type-chip">
+                                @FormatAssetType(holding.AssetType)
+                            </MudChip>
+                        </div>
+
+                        <div class="fm-holding-grid mt-2">
+                            <div class="fm-holding-field">
+                                <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Units</MudText>
+                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.Quantity.ToString("N4")</MudText>
+                            </div>
+                            <div class="fm-holding-field">
+                                <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Current price</MudText>
+                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.LatestPrice.ToString("N2") @holding.Currency</MudText>
+                            </div>
+                            <div class="fm-holding-field">
+                                <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Current value</MudText>
+                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.Value.ToString("N2") @holding.Currency</MudText>
+                            </div>
+                        </div>
+                    </article>
+                    <MudDivider />
+                }
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<InvestmentHoldingModel> Holdings { get; set; } = [];
+
+    private static string FormatAssetType(AssetType type) => type switch
+    {
+        AssetType.MutualFund => "Mutual fund",
+        AssetType.ETF => "ETF",
+        _ => type.ToString()
+    };
+}
