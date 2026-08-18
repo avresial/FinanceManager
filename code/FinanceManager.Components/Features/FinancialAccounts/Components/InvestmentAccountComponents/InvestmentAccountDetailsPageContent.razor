@@ -71,7 +71,7 @@ else
                         <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
                                                    Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
-                        @HoldingsCard
+                        <InvestmentHoldingCard Holdings="@_holdings" />
 
                         <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
                     </MudStack>
@@ -95,7 +95,7 @@ else
                 <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
                                            Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
-                @HoldingsCard
+                <InvestmentHoldingCard Holdings="@_holdings" />
 
                 <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
             </MudStack>
@@ -110,42 +110,3 @@ else
     <MudFab Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.KeyboardArrowUp"
             aria-label="Scroll to top" />
 </MudScrollToTop>
-
-@code {
-    private RenderFragment HoldingsCard => __builder =>
-    {
-        <MudCard Outlined="true" Style="background-color: transparent;">
-            <MudCardHeader Class="py-2 px-4">
-                <CardHeaderContent><MudText Typo="Typo.subtitle2">Holdings</MudText></CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent Class="pa-0">
-                @if (_holdings.Count == 0)
-                {
-                    <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
-                }
-                else
-                {
-                    <MudSimpleTable Hover="true" Dense="true" Striped="true">
-                        <thead>
-                            <tr><th>Instrument</th><th class="text-right">Units</th><th class="text-right">Price</th><th class="text-right">Value</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var h in _holdings)
-                            {
-                                <tr>
-                                    <td>
-                                        <MudText Typo="Typo.body2">@h.Ticker</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@h.ExchangeName</MudText>
-                                    </td>
-                                    <td class="text-right">@h.Quantity.ToString("N4")</td>
-                                    <td class="text-right">@h.LatestPrice.ToString("N2") @h.Currency</td>
-                                    <td class="text-right">@h.Value.ToString("N2") @h.Currency</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </MudSimpleTable>
-                }
-            </MudCardContent>
-        </MudCard>
-    };
-}

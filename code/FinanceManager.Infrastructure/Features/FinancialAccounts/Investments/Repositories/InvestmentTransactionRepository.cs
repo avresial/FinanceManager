@@ -10,11 +10,13 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     public Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default) =>
         context.InvestmentTransactions
             .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
             .Where(x => x.AccountId == accountId)
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);

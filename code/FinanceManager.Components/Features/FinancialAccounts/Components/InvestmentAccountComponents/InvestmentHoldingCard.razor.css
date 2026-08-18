@@ -1,0 +1,84 @@
+.fm-holdings-card,
+.fm-holdings-list,
+.fm-holding-item {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+}
+
+.fm-holdings-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.fm-holdings-list > hr:last-child {
+    display: none;
+}
+
+.fm-holding-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.fm-holding-header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.fm-holding-title-group {
+    display: flex;
+    flex: 1 1 10rem;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fm-holding-ticker,
+.fm-holding-exchange,
+.fm-field-label,
+.fm-field-value {
+    overflow-wrap: anywhere;
+}
+
+.fm-holding-ticker {
+    font-weight: 600;
+}
+
+.fm-holding-type-chip {
+    align-self: flex-start;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.fm-holding-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+    width: 100%;
+}
+
+.fm-holding-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fm-field-label {
+    line-height: 1.2;
+    margin-bottom: 0.125rem;
+}
+
+.fm-field-value {
+    line-height: 1.3;
+}
+
+@media (max-width: 320px) {
+    .fm-holding-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -418,7 +418,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                 latest.Currency,
                 quantity,
                 latest.UnitPrice,
-                quantity * latest.UnitPrice));
+                quantity * latest.UnitPrice,
+                latest.AssetType));
         }
         return [.. rows.OrderByDescending(h => h.Value)];
     }
