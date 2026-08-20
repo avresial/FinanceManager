@@ -3,6 +3,14 @@
     @* overflow-x is the safety valve for viewports narrower than the controls: the row scrolls
        itself instead of pushing the page into horizontal overflow. *@
     <div class="d-flex align-center" style="@($"min-height: 40px; overflow-x: auto; gap: {(IsMobile ? "2px" : "8px")};")">
+        @* Search — collapsed to an icon; the input lives in the panel below *@
+        <MudIconButton Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
+                       Size="Size.Small" Color="@(_isSearchExpanded || !string.IsNullOrWhiteSpace(SearchText) ? Color.Primary : Color.Default)"
+                       OnClick="ToggleSearch" Style="flex-shrink: 0;"
+                       aria-label="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
+                       title="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
+                       aria-expanded="@_isSearchExpanded" aria-controls="@_searchPanelId" />
+
         @* Income / Expense toggle group *@
         <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
                         SelectionMode="SelectionMode.ToggleSelection" Color="Color.Default" Dense="true" Size="Size.Small" Outlined
@@ -54,9 +62,16 @@
             <ActivatorContent>
                 <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                            EndIcon="@Icons.Material.Filled.KeyboardArrowDown" OnClick="ToggleRangeMenu"
-                           aria-label="@($"Date range: {RangeButtonText}")" aria-haspopup="menu"
+                           aria-label="@RangeButtonAccessibleText" title="@RangeButtonAccessibleText" aria-haspopup="menu"
                            Class="fm-range-button">
-                    @RangeButtonText
+                    @if (IsCustomRange)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" />
+                    }
+                    else
+                    {
+                        @RangeButtonText
+                    }
                 </MudButton>
             </ActivatorContent>
             <ChildContent>
@@ -82,14 +97,6 @@
         </MudMenu>
 
         <MudSpacer />
-
-        @* Search — collapsed to an icon; the input lives in the panel below *@
-        <MudIconButton Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
-                       Size="Size.Small" Color="@(_isSearchExpanded || !string.IsNullOrWhiteSpace(SearchText) ? Color.Primary : Color.Default)"
-                       OnClick="ToggleSearch" Style="flex-shrink: 0;"
-                       aria-label="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
-                       title="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
-                       aria-expanded="@_isSearchExpanded" aria-controls="@_searchPanelId" />
 
         @* Add entry split button — plus icon + Import / Export / Manage in the dropdown *@
         <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Style="flex-shrink: 0;">
