@@ -56,20 +56,45 @@ public partial class AccountHistoryToolbar : ComponentBase
     };
 
     /// <summary>
-    /// Label on the date-range dropdown: the preset key, or the picked days for a custom range
-    /// so the button still says which window is on screen.
+    /// True when the active selection is the custom range, whether or not dates are present.
+    /// Custom-state checks must use this rather than comparing <see cref="RangeButtonText"/>
+    /// values, which may render the short form on mobile or when dates are missing.
     /// </summary>
-    private string RangeButtonText
+    internal bool IsCustomRange => SelectedRange == CustomRangeKey;
+
+    /// <summary>
+    /// Label on the date-range dropdown: the exact preset key, or the picked days for a custom
+    /// range so the button still says which window is on screen.
+    /// </summary>
+    internal string RangeButtonText
     {
         get
         {
-            if (SelectedRange != CustomRangeKey) return SelectedRange;
+            if (!IsCustomRange) return SelectedRange;
             if (CustomDateRange is not { Start: DateTime start, End: DateTime end }) return "Custom";
 
             // A dated label is ~45px wider than the phone row can spare once the type filter,
             // category, search and add controls have taken their share, so mobile keeps the
             // short form — the picked days are still shown in the picker and the change card.
             return IsMobile ? "Custom" : $"{start:dd/MM} – {end:dd/MM}";
+        }
+    }
+
+    /// <summary>
+    /// Accessible description of the active date range. Presets keep their exact label; a
+    /// complete custom range spells out both dates so a screen reader hears the window; a
+    /// custom selection without dates falls back to an honest "custom range" rather than
+    /// inventing one.
+    /// </summary>
+    internal string RangeButtonAccessibleText
+    {
+        get
+        {
+            if (!IsCustomRange) return $"Date range: {SelectedRange}";
+
+            return CustomDateRange is { Start: DateTime start, End: DateTime end }
+                ? $"Date range: {start:dd/MM/yyyy} to {end:dd/MM/yyyy}"
+                : "Date range: custom range";
         }
     }
 
