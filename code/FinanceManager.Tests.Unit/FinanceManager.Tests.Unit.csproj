@@ -12,6 +12,7 @@
 	</PropertyGroup>
 	
 	<ItemGroup>
+		<PackageReference Include="bunit" />
 		<PackageReference Include="coverlet.collector">
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>

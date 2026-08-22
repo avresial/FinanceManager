@@ -1,6 +1,18 @@
+using Blazored.LocalStorage;
+using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
+using FinanceManager.Components.Features.Dashboard.Services;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using MudBlazor;
+using MudBlazor.Services;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Cards.Assets;
 
@@ -12,7 +24,9 @@ public class InvestmentRateCardTests
     {
         var january = new InvestmentRate { Start = new DateTime(2026, 1, 1) };
         var february = new InvestmentRate { Start = new DateTime(2026, 2, 1) };
-        var card = CreateCard(new DateTime(2026, 2, 20, 0, 0, 0, DateTimeKind.Utc));
+        using var context = CreateContext();
+        var card = RenderCard(context);
+        card.AsOfDate = new DateTime(2026, 2, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [january, february];
 
         Assert.True(card.SelectMonth(0));
@@ -29,7 +43,9 @@ public class InvestmentRateCardTests
         // the average — otherwise it reads as if the salary had already been received.
         var june = new InvestmentRate { Start = new DateTime(2026, 6, 1), Salary = 9456.88m, InvestmentsChange = 4000m };
         var july = new InvestmentRate { Start = new DateTime(2026, 7, 1), Salary = 0m, InvestmentsChange = 5523.17m };
-        var card = CreateCard(new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc));
+        using var context = CreateContext();
+        var card = RenderCard(context);
+        card.AsOfDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [june, july];
 
         card.BuildDerivedState();
@@ -44,7 +60,9 @@ public class InvestmentRateCardTests
     public void BuildDerivedState_CurrentMonthWithSalary_ReportsRate()
     {
         var july = new InvestmentRate { Start = new DateTime(2026, 7, 1), Salary = 10_000m, InvestmentsChange = 5000m };
-        var card = CreateCard(new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc));
+        using var context = CreateContext();
+        var card = RenderCard(context);
+        card.AsOfDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [july];
 
         card.BuildDerivedState();
@@ -54,12 +72,34 @@ public class InvestmentRateCardTests
         Assert.Equal(50m, card.Series[0].Percentage);
     }
 
-    // The component is never rendered here, so field initialisers and injected dependencies are not
-    // needed — only the state the derived-value calculations read.
-    private static InvestmentRateCard CreateCard(DateTime asOfDate)
+    private static InvestmentRateCard RenderCard(BunitContext context)
     {
-        var card = (InvestmentRateCard)RuntimeHelpers.GetUninitializedObject(typeof(InvestmentRateCard));
-        card.AsOfDate = asOfDate;
-        return card;
+        var cut = context.Render<InvestmentRateCard>();
+        Assert.Contains("Investment rate", cut.Markup);
+        return cut.Instance;
+    }
+
+    private static BunitContext CreateContext()
+    {
+        var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(service => service.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.PLN);
+        context.Services.AddSingleton(settings.Object);
+
+        var login = new Mock<ILoginService>();
+        login.Setup(service => service.GetLoggedUser()).ReturnsAsync((UserSession?)null);
+        context.Services.AddSingleton(login.Object);
+
+        context.Services.AddSingleton(new InvestmentRateCacheService(
+            Mock.Of<ILocalStorageService>(),
+            new MemoryCache(new MemoryCacheOptions()),
+            new MoneyFlowHttpClient(new HttpClient()),
+            NullLogger<InvestmentRateCacheService>.Instance));
+
+        return context;
     }
 }
