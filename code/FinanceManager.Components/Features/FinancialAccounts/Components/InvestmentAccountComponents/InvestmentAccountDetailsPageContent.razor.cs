@@ -138,16 +138,18 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             return;
         }
 
-        _loadedAccountId = AccountId;
+        var accountId = AccountId;
+        _loadedAccountId = accountId;
         var detailsVersion = _detailsGate.Claim();
         var snapshotPainted = false;
         var coreDetailsApplied = false;
 
         var result = await DetailsSnapshotStore.RefreshAsync(
             _user.UserId,
-            AccountId,
+            accountId,
             _detailsGate,
             fetchAsync: () => FetchDetailsAsync(
+                accountId,
                 detailsVersion,
                 async model =>
                 {
@@ -192,6 +194,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     // and trades as soon as the two core requests finish; valuation enrichment continues in parallel
     // and updates the same rows when it arrives, so chart loading does not inherit its latency.
     private async Task<InvestmentAccountDetailsModel?> FetchDetailsAsync(
+        int accountId,
         int version,
         Func<InvestmentAccountDetailsModel, Task> onCoreDetailsReady)
     {
@@ -199,7 +202,6 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
         // Pinned before the first await so every request, and the model they produce, belong to the
         // same account even if the parameter moves under a rapid navigation between two accounts.
-        var accountId = AccountId;
         var userId = _user.UserId;
         var currencyTask = SettingsService.GetCurrencyAsync();
 

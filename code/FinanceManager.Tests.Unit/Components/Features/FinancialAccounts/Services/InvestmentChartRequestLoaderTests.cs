@@ -25,7 +25,7 @@ public class InvestmentChartRequestLoaderTests
         var loadTask = InvestmentChartRequestLoader.LoadAsync(
             () => WaitForRelease<IReadOnlyDictionary<DateTime, decimal>>(new Dictionary<DateTime, decimal>()),
             () => WaitForRelease<IReadOnlyDictionary<long, decimal>>(new Dictionary<long, decimal>()),
-            () => WaitForRelease<IReadOnlyList<UnrealizedGainLossAccountResult>>(new List<UnrealizedGainLossAccountResult>()),
+            () => WaitForRelease<IReadOnlyList<UnrealizedGainLossAccountResult>>([]),
             () => WaitForRelease<IReadOnlyDictionary<DateTime, decimal>>(new Dictionary<DateTime, decimal>()));
 
         await allStarted.Task.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);

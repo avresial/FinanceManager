@@ -54,6 +54,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private Currency _currency = DefaultCurrency.PLN;
     private readonly string _accountTypeLabel = "Bond account";
     private readonly List<BondDetails> _bondDetails = [];
+    private BondDetailsRequestLoader? _bondDetailsRequestLoader;
     private UserSession? _user;
     private bool _isChartLoading;
     private readonly RefreshVersionGate _chartGate = new();
@@ -150,11 +151,11 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             .Where(id => _bondDetails.All(x => x.Id != id))
             .ToList();
         var bondTasks = missingBondIds
-            .Select(id => BondDetailsHttpClient.GetById(id))
+            .Select(LoadBondDetailsAsync)
             .ToList();
         foreach (var bond in await Task.WhenAll(bondTasks))
         {
-            if (bond is not null)
+            if (bond is not null && _bondDetails.All(x => x.Id != bond.Id))
                 _bondDetails.Add(bond);
         }
 
@@ -176,6 +177,9 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
+    private Task<BondDetails?> LoadBondDetailsAsync(int bondDetailsId) =>
+        (_bondDetailsRequestLoader ??= new(id => BondDetailsHttpClient.GetById(id))).LoadAsync(bondDetailsId);
 
     protected override async Task OnInitializedAsync()
     {
