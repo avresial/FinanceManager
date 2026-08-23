@@ -141,11 +141,19 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
             return;
         }
 
-        foreach (var id in Account.GetStoredBondsIds())
-        {
-            if (_bondDetails.Any(x => x.Id == id)) continue;
+        // The chart only needs the account id, range and currency. Queue it before the optional
+        // display metadata so bond history is not held behind one request per bond definition.
+        if (refreshChart)
+            QueueChartDataRefresh();
 
-            var bond = await BondDetailsHttpClient.GetById(id);
+        var missingBondIds = Account.GetStoredBondsIds()
+            .Where(id => _bondDetails.All(x => x.Id != id))
+            .ToList();
+        var bondTasks = missingBondIds
+            .Select(id => BondDetailsHttpClient.GetById(id))
+            .ToList();
+        foreach (var bond in await Task.WhenAll(bondTasks))
+        {
             if (bond is not null)
                 _bondDetails.Add(bond);
         }
@@ -158,9 +166,6 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                                  .OrderBy(x => x.ValueChange)
                                  .Take(5)
                                  .ToList();
-
-        if (refreshChart)
-            QueueChartDataRefresh();
 
         _availableLabels = Account.Entries
             .SelectMany(e => e.Labels ?? [])

@@ -30,11 +30,13 @@ public sealed class InvestmentAccountDetailsSnapshotStore(ISnapshotRefreshCoordi
         Func<Task<InvestmentAccountDetailsModel?>> fetchAsync,
         Func<InvestmentAccountDetailsModel, Task>? onSnapshotPainted = null,
         Func<Task>? onSnapshotMissing = null,
-        Func<InvestmentAccountDetailsModel, Task>? onRefreshed = null)
+        Func<InvestmentAccountDetailsModel, Task>? onRefreshed = null,
+        int? claimedVersion = null)
         => coordinator.RunAsync(new SnapshotRefreshRequest<InvestmentAccountDetailsSnapshot, InvestmentAccountDetailsModel>
         {
             Key = BuildKey(userId, accountId),
             Gate = gate,
+            ClaimedVersion = claimedVersion,
 
             // A snapshot stored for another user or account is unusable; rejecting it falls back to a plain load.
             ToModel = snapshot => snapshot.UserId == userId && snapshot.AccountId == accountId
