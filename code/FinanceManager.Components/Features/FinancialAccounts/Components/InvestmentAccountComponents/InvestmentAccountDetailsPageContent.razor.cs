@@ -141,6 +141,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         var accountId = AccountId;
         _loadedAccountId = accountId;
         var detailsVersion = _detailsGate.Claim();
+        _chartGate.Claim();
         var snapshotPainted = false;
         var coreDetailsApplied = false;
 
