@@ -138,18 +138,46 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             return;
         }
 
-        _loadedAccountId = AccountId;
+        var accountId = AccountId;
+        _loadedAccountId = accountId;
+        var detailsVersion = _detailsGate.Claim();
+        _chartGate.Claim();
+        var snapshotPainted = false;
+        var coreDetailsApplied = false;
 
         var result = await DetailsSnapshotStore.RefreshAsync(
             _user.UserId,
-            AccountId,
+            accountId,
             _detailsGate,
-            fetchAsync: FetchDetailsAsync,
+            fetchAsync: () => FetchDetailsAsync(
+                accountId,
+                detailsVersion,
+                async model =>
+                {
+                    if (!_detailsGate.IsCurrent(detailsVersion)) return;
+
+                    // A chart refresh already started from a snapshot is still valid when the
+                    // fresh account has the same chart inputs. Otherwise the fresh trades must
+                    // supersede it, even though their valuation enrichment is not ready yet.
+                    var refreshChart = !snapshotPainted || !HasSameChartInputs(model);
+                    coreDetailsApplied = true;
+                    await ApplyDetails(model, initialLoad, refreshChart);
+                }),
 
             // A reload triggered by the user's own edit must not repaint the stored snapshot: it
             // still holds the pre-edit trades and would flash the change back out for a moment.
-            onSnapshotPainted: initialLoad ? model => ApplyDetails(model, expandRange: true) : null,
-            onRefreshed: model => ApplyDetails(model, expandRange: initialLoad));
+            onSnapshotPainted: initialLoad
+                ? model =>
+                {
+                    snapshotPainted = true;
+                    return ApplyDetails(model, expandRange: true);
+                }
+        : null,
+            onRefreshed: model => ApplyDetails(
+                model,
+                expandRange: initialLoad,
+                refreshChart: !coreDetailsApplied),
+            claimedVersion: detailsVersion);
 
         // A failed refresh behind painted content leaves it on screen; only a page with nothing to
         // show reports the failure the user can act on.
@@ -163,31 +191,56 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         StateHasChanged();
     }
 
-    // The account name, the trades and the server-priced valuations are three independent requests,
-    // so they run together rather than in a chain: the trade list is not made to wait on the pricing
-    // round-trip that only enriches it.
-    private async Task<InvestmentAccountDetailsModel?> FetchDetailsAsync()
+    // Account metadata, trades and valuation enrichment are independent requests. Paint the account
+    // and trades as soon as the two core requests finish; valuation enrichment continues in parallel
+    // and updates the same rows when it arrives, so chart loading does not inherit its latency.
+    private async Task<InvestmentAccountDetailsModel?> FetchDetailsAsync(
+        int accountId,
+        int version,
+        Func<InvestmentAccountDetailsModel, Task> onCoreDetailsReady)
     {
         if (_user is null) return null;
 
         // Pinned before the first await so every request, and the model they produce, belong to the
         // same account even if the parameter moves under a rapid navigation between two accounts.
-        var accountId = AccountId;
-        var currency = await SettingsService.GetCurrencyAsync();
+        var userId = _user.UserId;
+        var currencyTask = SettingsService.GetCurrencyAsync();
 
         var accountTask = InvestmentAccountHttpClient.GetAccountAsync(accountId);
         var transactionsTask = TransactionHttpClient.GetByAccountAsync(accountId);
+        var currency = await currencyTask;
         var valuationsTask = FetchValuationsAsync(accountId, currency);
 
-        await Task.WhenAll(accountTask, transactionsTask, valuationsTask);
+        await Task.WhenAll(accountTask, transactionsTask);
+
+        var account = await accountTask;
+        var transactions = (await transactionsTask).ToList();
+        IReadOnlyList<InvestmentTransactionValuationDto> retainedValuations = _applied is { } applied
+            && applied.AccountId == accountId
+            && applied.Currency.Id == currency.Id
+            ? applied.Valuations
+            : [];
+
+        if (_detailsGate.IsCurrent(version))
+        {
+            await onCoreDetailsReady(new InvestmentAccountDetailsModel(
+                userId,
+                accountId,
+                account?.Name ?? _defaultAccountName,
+                currency,
+                transactions,
+                [.. retainedValuations]));
+        }
+
+        var valuations = await valuationsTask;
 
         return new InvestmentAccountDetailsModel(
-            _user.UserId,
+            userId,
             accountId,
-            (await accountTask)?.Name ?? _defaultAccountName,
+            account?.Name ?? _defaultAccountName,
             currency,
-            [.. await transactionsTask],
-            [.. await valuationsTask]);
+            transactions,
+            [.. valuations]);
     }
 
     // Per-transaction purchase value / current valuation / gain-loss is priced server-side (needs
@@ -220,7 +273,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     // Renders one version of the trade list — a painted snapshot or a fresh response — and queues
     // the chart, holdings and appreciation figures that go with it.
-    private Task ApplyDetails(InvestmentAccountDetailsModel model, bool expandRange)
+    private Task ApplyDetails(InvestmentAccountDetailsModel model, bool expandRange, bool refreshChart = true)
     {
         _applied = model;
         _accountName = model.Name;
@@ -234,9 +287,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         if (expandRange)
             ApplyAutomaticCustomRange();
 
-        UpdateInfo();
+        UpdateInfo(refreshChart);
         return InvokeAsync(StateHasChanged);
     }
+
+    private bool HasSameChartInputs(InvestmentAccountDetailsModel model) =>
+        _currency.Id == model.Currency.Id && _transactions.SequenceEqual(model.Transactions);
 
     // Recomputes the in-range movers and, unless suppressed, queues a fresh chart + holdings refresh.
     private void UpdateInfo(bool refreshChart = true)
@@ -323,10 +379,23 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         InstrumentSearchResultDto? benchmark,
         string benchmarkName)
     {
-        var series = await ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd);
-        var holdings = await ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd);
-        var appreciation = (await AssetsHttpClient.GetUnrealizedGainLossPerAccount(userId, currency, dateEnd))
-            .SingleOrDefault(x => x.AccountId == accountId);
+        // These requests use separate API scopes and have no data dependency on one another. Keep
+        // them on the same critical path only at the join so one slow valuation cannot serialize the
+        // other chart inputs or delay the first render unnecessarily.
+        var chartRequests = await InvestmentChartRequestLoader.LoadAsync(
+            () => ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd),
+            () => ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd),
+            async () => await AssetsHttpClient.GetUnrealizedGainLossPerAccount(userId, currency, dateEnd),
+            () => ValuationHttpClient.GetBenchmarkSeriesAsync(
+                accountId,
+                currency.Id,
+                dateStart,
+                dateEnd,
+                benchmark?.ListingId));
+
+        var series = chartRequests.Series;
+        var holdings = chartRequests.Holdings;
+        var appreciation = chartRequests.Appreciation.SingleOrDefault(x => x.AccountId == accountId);
 
         // Keep the full ordered series for balance maths; trim only leading zeros for the chart so
         // a range that starts before the first holding still reports the true change from zero.
@@ -336,12 +405,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             .ToList();
         // The benchmark tracks the account's own contributions, so it is asked for the whole range
         // and starts itself on the day the account first holds something — no base point to seed.
-        var benchmarkSeries = await ValuationHttpClient.GetBenchmarkSeriesAsync(
-            accountId,
-            currency.Id,
-            dateStart,
-            dateEnd,
-            benchmark?.ListingId);
+        var benchmarkSeries = chartRequests.BenchmarkSeries;
         var currentBalance = orderedSeries.LastOrDefault()?.Value ?? 0;
 
         // Capital value (remaining buy cost) and current valuation are the two source-of-truth
