@@ -4,7 +4,8 @@ on:
   issues:
     types: [opened]
 
-# Only the cloud job needs a GitHub write permission. The local job receives none.
+# The cloud job posts the greeting. The local job receives only the GitHub access
+# required to triage the opened issue.
 permissions: {}
 
 jobs:
@@ -26,34 +27,41 @@ jobs:
             --field body='hi im codex'
 
   local-codex:
-    name: Run local LM Studio Codex
+    name: Triage issue with local Qwen Codex
     # This repository is public. Only the repository owner may execute the
     # persistent local runner; every issue still receives the cloud greeting.
     if: github.actor == github.repository_owner
     runs-on: [self-hosted, macOS, ARM64, codex-lmstudio]
-    timeout-minutes: 15
+    timeout-minutes: 360
     concurrency:
-      group: codex-lmstudio-financemanager
+      group: codex-qwen-financemanager
       cancel-in-progress: false
-    permissions: {}
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     env:
       CODEX_HOME: /Users/a2485/.codex
       PATH: /opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      REPOSITORY: ${{ github.repository }}
     steps:
       # Do not check out the repository or pass issue content to the local
-      # process. This runner is reserved for a fixed, read-only Codex call.
-      - name: Invoke Codex with the local LM Studio profile
+      # process. The triage skill reads the live issue through GitHub APIs.
+      - name: Invoke the issue triage skill with the Qwen profile
         shell: bash
         run: |
           set -euo pipefail
           codex -a never \
-            --profile lmstudio \
+            --profile qwen \
             exec \
             --ephemeral \
             --sandbox read-only \
             --skip-git-repo-check \
             --cd "$RUNNER_TEMP" \
             --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
-            'Reply with exactly: hi im codex. Do not use tools, access files, or access the network.' \
+            "Use the \$gh-triage-issues skill to triage issue #${ISSUE_NUMBER} in ${REPOSITORY}. Read the complete issue conversation and the repository guidance, labels, linked dependencies, branches, and pull requests through GitHub APIs. Apply the repository's issue lifecycle and type or area labels when supported, preserve human labels and ownership, avoid duplicate comments, and report the resulting state. Process only this FinanceManager issue. Do not implement code, create branches or pull requests, or modify the local working directory." \
             </dev/null
-          test "$(tr -d '\r\n' < "$RUNNER_TEMP/codex-last-message.txt")" = 'hi im codex'
+          test -s "$RUNNER_TEMP/codex-last-message.txt"
