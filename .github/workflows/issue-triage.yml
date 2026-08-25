@@ -1,35 +1,14 @@
-name: Codex issue greeting
+name: Issue triage
 
 on:
   issues:
     types: [opened]
 
-# The cloud job posts the greeting. The local job receives only the GitHub access
-# required to triage the opened issue.
 permissions: {}
 
 jobs:
-  greet:
-    name: Add greeting comment
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - name: Add greeting comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          gh api \
-            --method POST \
-            "/repos/${REPOSITORY}/issues/${ISSUE_NUMBER}/comments" \
-            --field body='hi im codex'
-
   local-codex:
     name: Triage issue with local Qwen Codex
-    # This repository is public. Only the repository owner may execute the
-    # persistent local runner; every issue still receives the cloud greeting.
     if: github.actor == github.repository_owner
     runs-on: [self-hosted, macOS, ARM64, codex-lmstudio]
     timeout-minutes: 360
@@ -50,7 +29,14 @@ jobs:
     steps:
       # Do not check out the repository or pass issue content to the local
       # process. The triage skill reads the live issue through GitHub APIs.
-      - name: Invoke the issue triage skill with the Qwen profile
+      - name: Verify the Qwen Codex profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v codex
+          test -f "$CODEX_HOME/qwen.config.toml"
+
+      - name: Triage the opened issue with Qwen Codex
         shell: bash
         run: |
           set -euo pipefail
@@ -63,5 +49,5 @@ jobs:
             --cd "$RUNNER_TEMP" \
             --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
             "Use the \$gh-triage-issues skill to triage issue #${ISSUE_NUMBER} in ${REPOSITORY}. Read the complete issue conversation and the repository guidance, labels, linked dependencies, branches, and pull requests through GitHub APIs. Apply the repository's issue lifecycle and type or area labels when supported, preserve human labels and ownership, avoid duplicate comments, and report the resulting state. Process only this FinanceManager issue. Do not implement code, create branches or pull requests, or modify the local working directory." \
-            </dev/null
+            < /dev/null
           test -s "$RUNNER_TEMP/codex-last-message.txt"
