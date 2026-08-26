@@ -3,6 +3,12 @@ name: Issue triage
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: FinanceManager issue number to triage
+        required: true
+        type: number
 
 permissions: {}
 
@@ -24,7 +30,7 @@ jobs:
       PATH: /opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
       REPOSITORY: ${{ github.repository }}
     steps:
       # Do not check out the repository or pass issue content to the local
