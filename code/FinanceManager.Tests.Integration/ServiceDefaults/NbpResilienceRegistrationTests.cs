@@ -8,8 +8,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using ServiceDefaults;
 using System.Net;
+using Xunit;
 
-namespace FinanceManager.Tests.Unit.ServiceDefaults;
+namespace FinanceManager.Tests.Integration.ServiceDefaults;
 
 [Trait("Category", "Unit")]
 public class NbpResilienceRegistrationTests
