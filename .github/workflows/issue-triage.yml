@@ -27,7 +27,7 @@ jobs:
       pull-requests: read
     env:
       CODEX_HOME: /Users/a2485/.codex
-      PATH: /opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PATH: /Applications/ChatGPT.app/Contents/Resources:/opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
