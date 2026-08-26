@@ -28,6 +28,10 @@ public static class Extensions
     {
         builder.ConfigureOpenTelemetry();
 
+        // Polly's built-in log payload includes raw exception messages and the original exception.
+        // Request-scoped callbacks below provide the redacted admin-visible records; metrics remain enabled.
+        builder.Logging.AddFilter("Polly", LogLevel.None);
+
         builder.AddDefaultHealthChecks();
 
         builder.Services.AddTransient<ExternalDependencyLoggingHandler>();
@@ -62,7 +66,8 @@ public static class Extensions
                             : args.Outcome.Exception?.GetType().Name ?? "unknown";
 
                         logger.LogWarning(
-                            "External dependency retry. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Result: {Result}; Attempt: {Attempt}; Execution Time: {ExecutionTimeMs}ms; Retry Delay: {RetryDelayMs}ms.",
+                            "External dependency retry. Operation: {Operation}; Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Result: {Result}; Attempt: {Attempt}; Execution Time: {ExecutionTimeMs}ms; Retry Delay: {RetryDelayMs}ms.",
+                            ExternalDependencyLogging.GetOperationKey(request),
                             ExternalDependencyLogging.GetService(request),
                             ExternalDependencyLogging.GetHost(request),
                             ExternalDependencyLogging.GetMethod(request),
@@ -101,7 +106,8 @@ public static class Extensions
         var request = args.Context.GetRequestMessage();
 
         logger.LogWarning(
-            "External dependency timeout. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Timeout Type: {TimeoutType}; Timeout: {TimeoutMs}ms.",
+            "External dependency timeout. Operation: {Operation}; Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Timeout Type: {TimeoutType}; Timeout: {TimeoutMs}ms.",
+            ExternalDependencyLogging.GetOperationKey(request),
             ExternalDependencyLogging.GetService(request),
             ExternalDependencyLogging.GetHost(request),
             ExternalDependencyLogging.GetMethod(request),

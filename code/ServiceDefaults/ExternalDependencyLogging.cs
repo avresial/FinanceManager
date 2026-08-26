@@ -54,9 +54,14 @@ internal static class ExternalDependencyLogging
     public static string GetMethod(HttpRequestMessage? request) =>
         request?.Method.Method ?? "UNKNOWN";
 
+    // Keep the operation key useful for resilience telemetry without including
+    // request-specific values such as query strings, paths, or correlation IDs.
+    public static string GetOperationKey(HttpRequestMessage? request) =>
+        $"{GetService(request)} {GetMethod(request)} {GetHost(request)}";
+
     // Query strings are intentionally excluded because provider URLs can contain API keys.
     public static string GetPath(HttpRequestMessage? request) =>
-        request?.RequestUri?.AbsolutePath ?? "(unknown)";
+        RedactText(request?.RequestUri?.AbsolutePath ?? "(unknown)");
 
     public static bool IsExpectedNotFound(HttpRequestMessage? request, HttpStatusCode statusCode)
     {

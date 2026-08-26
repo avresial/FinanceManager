@@ -159,6 +159,196 @@ public class ExternalDependencyLoggingHandlerTests
         Assert.DoesNotContain("secret-value", retryLog.Message);
     }
 
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_PollyRecordsAreReplacedBySafeRequestRecords()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new SequenceHandler(
+                new HttpResponseMessage(HttpStatusCode.GatewayTimeout),
+                new HttpResponseMessage(HttpStatusCode.OK)));
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken);
+
+        var resilienceLogs = entries
+            .Where(entry => entry.Message.StartsWith("Execution attempt.", StringComparison.Ordinal)
+                || entry.Message.StartsWith("Resilience event occurred.", StringComparison.Ordinal))
+            .ToList();
+        var retryLog = Assert.Single(
+            entries,
+            entry => entry.Message.StartsWith("External dependency retry", StringComparison.Ordinal));
+
+        Assert.Empty(resilienceLogs);
+        Assert.Contains("Operation: Twelve Data GET api.twelvedata.com", retryLog.Message);
+        Assert.Contains("Service: Twelve Data", retryLog.Message);
+        Assert.Contains("Path: /time_series", retryLog.Message);
+        Assert.DoesNotContain("secret-value", retryLog.Message);
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_Terminal504LogsSafeRequestIdentity()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new StubHandler(_ =>
+                new HttpResponseMessage(HttpStatusCode.GatewayTimeout)));
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken);
+
+        var terminalLog = Assert.Single(
+            entries,
+            entry => entry.Message.StartsWith("External dependency request returned", StringComparison.Ordinal));
+
+        Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
+        Assert.Contains("Operation: Twelve Data GET api.twelvedata.com", terminalLog.Message);
+        Assert.Contains("Service: Twelve Data", terminalLog.Message);
+        Assert.Contains("Host: api.twelvedata.com", terminalLog.Message);
+        Assert.Contains("Method: GET", terminalLog.Message);
+        Assert.Contains("Path: /time_series", terminalLog.Message);
+        Assert.Contains("Result: 504", terminalLog.Message);
+        Assert.DoesNotContain("secret-value", terminalLog.Message);
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_TimeoutLogUsesSafeOperationKey()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["HttpClientResilience:AttemptTimeoutSeconds"] = "1";
+        builder.Configuration["HttpClientResilience:TotalRequestTimeoutSeconds"] = "1";
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new CancellationAwareHandler());
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken));
+
+        var timeoutLogs = entries
+            .Where(entry => entry.Message.StartsWith("External dependency timeout", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.NotEmpty(timeoutLogs);
+        Assert.All(timeoutLogs, log =>
+        {
+            Assert.Contains("Operation: Twelve Data GET api.twelvedata.com", log.Message);
+            Assert.Contains("Service: Twelve Data", log.Message);
+            Assert.Contains("Path: /time_series", log.Message);
+            Assert.DoesNotContain("secret-value", log.Message);
+        });
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_TransportFailureRecordsRedactExceptionSecrets()
+    {
+        var entries = new List<LogRecord>();
+        var builder = Host.CreateApplicationBuilder();
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => new TransportFailureHandler());
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(
+            "https://api.openfigi.com/v3/mapping?apiKey=query-secret",
+            TestContext.Current.CancellationToken));
+
+        var capturedText = string.Join(
+            Environment.NewLine,
+            entries.SelectMany(entry => new[] { entry.Message, entry.Exception?.ToString() ?? string.Empty }));
+
+        Assert.False(capturedText.Contains("query-secret", StringComparison.Ordinal), capturedText);
+        Assert.False(capturedText.Contains("exception-secret", StringComparison.Ordinal), capturedText);
+
+        var resilienceLogs = entries
+            .Where(entry => entry.Message.StartsWith("Execution attempt.", StringComparison.Ordinal)
+                || entry.Message.StartsWith("Resilience event occurred.", StringComparison.Ordinal))
+            .ToList();
+
+        var retryLogs = entries
+            .Where(entry => entry.Message.StartsWith("External dependency retry", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Empty(resilienceLogs);
+        Assert.NotEmpty(retryLogs);
+        Assert.All(retryLogs, log =>
+        {
+            Assert.Contains("Operation: OpenFIGI GET api.openfigi.com", log.Message);
+            Assert.DoesNotContain("query-secret", log.Message);
+            Assert.DoesNotContain("exception-secret", log.Message);
+        });
+    }
+
+    [Fact]
+    public async Task SendAsync_NonSuccessResponse_RedactsSecretAssignmentsInPath()
+    {
+        var logger = new RecordingLogger<ExternalDependencyLoggingHandler>();
+        using var handler = new ExternalDependencyLoggingHandler(logger)
+        {
+            InnerHandler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest))
+        };
+        using var client = new HttpClient(handler);
+
+        using var response = await client.GetAsync(
+            "https://api.openfigi.com/v3/mapping/token=path-secret?apiKey=query-secret",
+            TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(logger.Entries);
+        Assert.Contains("Path: /v3/mapping/token=[REDACTED]", log.Message);
+        Assert.DoesNotContain("path-secret", log.Message);
+        Assert.DoesNotContain("query-secret", log.Message);
+    }
+
+    private sealed class CancellationAwareHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+    }
+
+    private sealed class TransportFailureHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(new HttpRequestException(
+                "Request https://api.openfigi.com/v3/mapping?apiKey=exception-secret failed with Authorization: Bearer exception-secret"));
+    }
+
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responseFactory) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
