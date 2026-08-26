@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace ServiceDefaults;
 
@@ -12,6 +13,19 @@ public sealed class ExternalDependencyLoggingHandler(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        var resilienceContext = request.GetResilienceContext();
+        var ownsResilienceContext = resilienceContext is null;
+
+        if (ownsResilienceContext)
+        {
+            resilienceContext = ResilienceContextPool.Shared.Get(
+                ExternalDependencyLogging.GetOperationKey(request),
+                cancellationToken);
+            request.SetResilienceContext(resilienceContext);
+        }
+
+        resilienceContext!.SetRequestMessage(request);
+
         try
         {
             var response = await base.SendAsync(request, cancellationToken);
@@ -24,7 +38,8 @@ public sealed class ExternalDependencyLoggingHandler(
 
                 logger.Log(
                     logLevel,
-                    "External dependency request returned a non-success response. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Result: {StatusCode}; Reason: {ReasonPhrase}.",
+                    "External dependency request returned a non-success response. Operation: {Operation}; Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}; Result: {StatusCode}; Reason: {ReasonPhrase}.",
+                    ExternalDependencyLogging.GetOperationKey(request),
                     ExternalDependencyLogging.GetService(request),
                     ExternalDependencyLogging.GetHost(request),
                     ExternalDependencyLogging.GetMethod(request),
@@ -44,13 +59,22 @@ public sealed class ExternalDependencyLoggingHandler(
         {
             logger.LogError(
                 ExternalDependencyLogging.RedactException(exception),
-                "External dependency request failed. Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}.",
+                "External dependency request failed. Operation: {Operation}; Service: {Service}; Host: {Host}; Method: {Method}; Path: {Path}.",
+                ExternalDependencyLogging.GetOperationKey(request),
                 ExternalDependencyLogging.GetService(request),
                 ExternalDependencyLogging.GetHost(request),
                 ExternalDependencyLogging.GetMethod(request),
                 ExternalDependencyLogging.GetPath(request));
 
             throw;
+        }
+        finally
+        {
+            if (ownsResilienceContext)
+            {
+                request.SetResilienceContext(null!);
+                ResilienceContextPool.Shared.Return(resilienceContext!);
+            }
         }
     }
 
