@@ -44,7 +44,7 @@ jobs:
             --profile qwen \
             exec \
             --ephemeral \
-            --sandbox read-only \
+            --sandbox danger-full-access \
             --skip-git-repo-check \
             --cd "$RUNNER_TEMP" \
             --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
