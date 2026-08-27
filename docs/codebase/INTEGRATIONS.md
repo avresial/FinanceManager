@@ -35,9 +35,10 @@
 
 ### 4) Reliability and Failure Behavior
 
-- Retry/backoff behavior: shared HTTP clients get the standard .NET resilience handler via `ServiceDefaults`, but individual external adapters often just log and return empty/null results
-- Timeout policy: `HttpClientResilience` timeouts are configurable in appsettings and applied in `ServiceDefaults`; OpenRouter timeout is separately configurable in `OpenRouterOptions`
-- Circuit-breaker or fallback behavior: HTTP circuit-breaker sampling is configured in `ServiceDefaults`; AI calls are wired through a fallback chain in config and DI; stock price reads first check repository/cache before hitting Alpha Vantage
+- Retry/backoff behavior: shared HTTP clients use the standard .NET resilience handler via `ServiceDefaults`. Only idempotent HTTP methods are retried, and transient outcomes are HTTP 408/429/5xx responses, transport exceptions, and resilience timeouts. Production allows at most three retries (four attempts total), with exponential jitter starting at two seconds; `Retry-After` is not allowed to extend the configured budget. `MaxRetryAttempts` and `RetryDelaySeconds` are bounded configuration values.
+- Timeout policy: `HttpClientResilience` attempt and total-request timeouts are configurable in appsettings and bounded by `ServiceDefaults` (30 seconds per attempt and 90 seconds total by default, with caps of 120 and 300 seconds). Provider-specific `HttpClient.Timeout` values, such as OpenRouter's `RequestTimeoutSeconds`, remain separate upper bounds for those clients.
+- Circuit-breaker or fallback behavior: HTTP circuit-breaker sampling is configured in `ServiceDefaults`; AI calls are wired through a fallback chain in config and DI; stock-price and exchange-rate reads try providers in priority order and continue on provider failures. Caller cancellation is rethrown instead of being treated as a degraded provider result.
+- Terminal outcomes and observability: retry and timeout callbacks log safe operation/provider/host/method/path fields for intermediate events. After retries are exhausted, adapters return an explicit empty/failed outcome so the fallback chain can continue or report an actionable failure; raw exception text, credentials, query strings, and request payloads are not persisted.
 - Fawaz currency data is free, requires no API key, and has no provider request-rate limit. It is published as daily date-versioned npm packages beginning on `2024-03-02`; earlier dates return `OutOfRange` without an HTTP request so another configured provider can resolve them.
 
 ### 5) Observability for Integrations

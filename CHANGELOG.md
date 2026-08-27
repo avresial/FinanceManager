@@ -69,6 +69,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- External provider retries are now bounded and degraded outcomes remain distinct from caller cancellation after transient failures. #719
 - Admin logs for resilient external requests now retain a safe provider, host, method, path, and operation identity; generic resilience entries no longer persist raw exception text or duplicate uncontextualized failures. #718
 - Returning after a long break now restores the last compatible dashboard and account-chart state immediately, then refreshes it in the background instead of losing it to date-based snapshot keys. #691
 - On mobile, the fixed date-range picker at the bottom of the dashboard, assets, and liabilities pages no longer permanently hides the last page content. Those pages now reserve enough bottom space (including the device safe-area inset) for content to scroll fully clear of the picker, while desktop and tablet-wide layouts are unchanged. #688

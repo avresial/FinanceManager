@@ -28,15 +28,38 @@ public sealed class FallbackStockPriceSource(
             var source = ordered[i];
             ct.ThrowIfCancellationRequested();
 
-            var prices = await source.GetDailySeries(symbol, isin, start, end, currency, ct);
-            if (prices.Count > 0)
+            try
             {
-                if (i > 0)
-                    logger.LogInformation("Price source {Source} served {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
-                return prices;
-            }
+                var prices = await source.GetDailySeries(symbol, isin, start, end, currency, ct);
+                if (prices.Count > 0)
+                {
+                    if (i > 0)
+                        logger.LogInformation("Price source {Source} served {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
+                    return prices;
+                }
 
-            logger.LogDebug("Price source {Source} returned no data for {Symbol}; trying next.", source.Name, Sanitize(symbol));
+                logger.LogDebug("Price source {Source} returned no data for {Symbol}; trying next.", source.Name, Sanitize(symbol));
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} timed out while retrieving daily series for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} failed while retrieving daily series for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
         }
 
         return [];
@@ -48,17 +71,50 @@ public sealed class FallbackStockPriceSource(
         Currency currency,
         CancellationToken ct = default)
     {
-        foreach (var source in sources.OrderBy(x => x.Priority))
+        var ordered = sources.OrderBy(x => x.Priority).ToList();
+        for (var i = 0; i < ordered.Count; i++)
         {
-            var quote = await source.GetLatestQuote(symbol, isin, currency, ct);
-            if (quote is not null)
-                return quote;
+            var source = ordered[i];
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                var quote = await source.GetLatestQuote(symbol, isin, currency, ct);
+                if (quote is not null)
+                {
+                    if (i > 0)
+                        logger.LogInformation("Price source {Source} served latest quote for {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
+                    return quote;
+                }
+
+                logger.LogDebug("Price source {Source} returned no quote for {Symbol}; trying next.", source.Name, Sanitize(symbol));
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} timed out while retrieving latest quote for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} failed while retrieving latest quote for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
         }
 
         return null;
     }
 
-    public Task<IReadOnlyList<StockPrice>> GetDailySeries(
+    public async Task<IReadOnlyList<StockPrice>> GetDailySeries(
         MarketDataProvider provider,
         string symbol,
         string isin,
@@ -72,9 +128,35 @@ public sealed class FallbackStockPriceSource(
             .OrderBy(x => x.Priority)
             .FirstOrDefault();
 
-        return source is null
-            ? Task.FromResult<IReadOnlyList<StockPrice>>([])
-            : source.GetDailySeries(symbol, isin, start, end, currency, ct);
+        if (source is null)
+            return [];
+
+        try
+        {
+            return await source.GetDailySeries(symbol, isin, start, end, currency, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogWarning(
+                "Price source {Source} timed out while retrieving daily series for {Symbol}. Failure: {FailureType}.",
+                source.Name,
+                Sanitize(symbol),
+                ex.GetType().Name);
+            return [];
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                "Price source {Source} failed while retrieving daily series for {Symbol}. Failure: {FailureType}.",
+                source.Name,
+                Sanitize(symbol),
+                ex.GetType().Name);
+            return [];
+        }
     }
 
     public int GetPriority(MarketDataProvider provider) =>

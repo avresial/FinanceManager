@@ -160,6 +160,35 @@ public class ExternalDependencyLoggingHandlerTests
     }
 
     [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_DoesNotRetryUnsafeMethods()
+    {
+        var entries = new List<LogRecord>();
+        var primaryHandler = new CountingResponseHandler(HttpStatusCode.ServiceUnavailable);
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["HttpClientResilience:MaxRetryAttempts"] = "5";
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.AddServiceDefaults();
+        builder.Services.AddHttpClient("external")
+            .ConfigurePrimaryHttpMessageHandler(() => primaryHandler);
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.PostAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            new StringContent("request-body"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(1, primaryHandler.CallCount);
+        Assert.DoesNotContain(
+            entries,
+            entry => entry.Message.StartsWith("External dependency retry", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AddServiceDefaults_HttpClientFactory_PollyRecordsAreReplacedBySafeRequestRecords()
     {
         var entries = new List<LogRecord>();
@@ -365,6 +394,19 @@ public class ExternalDependencyLoggingHandlerTests
             HttpRequestMessage request,
             CancellationToken cancellationToken) =>
             Task.FromResult(_responses.Dequeue());
+    }
+
+    private sealed class CountingResponseHandler(HttpStatusCode statusCode) : HttpMessageHandler
+    {
+        public int CallCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            CallCount++;
+            return Task.FromResult(new HttpResponseMessage(statusCode));
+        }
     }
 
     private sealed class RecordingLogger<T> : ILogger<T>

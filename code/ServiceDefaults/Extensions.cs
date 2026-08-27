@@ -23,6 +23,16 @@ public static class Extensions
     private const string _healthEndpointPath = "/health";
     private const string _alivenessEndpointPath = "/alive";
     private const string _healthDetailEndpointPath = "/health/detail";
+    private const int _defaultAttemptTimeoutSeconds = 30;
+    private const int _maxAttemptTimeoutSeconds = 120;
+    private const int _defaultTotalRequestTimeoutSeconds = 90;
+    private const int _maxTotalRequestTimeoutSeconds = 300;
+    private const int _defaultCircuitBreakerSamplingSeconds = 1200;
+    private const int _maxCircuitBreakerSamplingSeconds = 3600;
+    private const int _defaultMaxRetryAttempts = 3;
+    private const int _maxRetryAttempts = 5;
+    private const int _defaultRetryDelaySeconds = 2;
+    private const int _maxRetryDelaySeconds = 10;
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -39,13 +49,36 @@ public static class Extensions
 
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            var attemptTimeoutSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:AttemptTimeoutSeconds") ?? 600;
-            var totalRequestTimeoutSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:TotalRequestTimeoutSeconds") ?? 900;
-            var circuitBreakerSamplingSeconds = builder.Configuration.GetValue<int?>("HttpClientResilience:CircuitBreakerSamplingDurationSeconds") ?? 1200;
-
-            attemptTimeoutSeconds = Math.Max(1, attemptTimeoutSeconds);
-            totalRequestTimeoutSeconds = Math.Max(attemptTimeoutSeconds, totalRequestTimeoutSeconds);
-            circuitBreakerSamplingSeconds = Math.Max(attemptTimeoutSeconds * 2, circuitBreakerSamplingSeconds);
+            var attemptTimeoutSeconds = GetBoundedSetting(
+                builder.Configuration,
+                "HttpClientResilience:AttemptTimeoutSeconds",
+                _defaultAttemptTimeoutSeconds,
+                1,
+                _maxAttemptTimeoutSeconds);
+            var totalRequestTimeoutSeconds = GetBoundedSetting(
+                builder.Configuration,
+                "HttpClientResilience:TotalRequestTimeoutSeconds",
+                _defaultTotalRequestTimeoutSeconds,
+                attemptTimeoutSeconds,
+                _maxTotalRequestTimeoutSeconds);
+            var circuitBreakerSamplingSeconds = GetBoundedSetting(
+                builder.Configuration,
+                "HttpClientResilience:CircuitBreakerSamplingDurationSeconds",
+                _defaultCircuitBreakerSamplingSeconds,
+                attemptTimeoutSeconds * 2,
+                _maxCircuitBreakerSamplingSeconds);
+            var maxRetryAttempts = GetBoundedSetting(
+                builder.Configuration,
+                "HttpClientResilience:MaxRetryAttempts",
+                _defaultMaxRetryAttempts,
+                0,
+                _maxRetryAttempts);
+            var retryDelaySeconds = GetBoundedSetting(
+                builder.Configuration,
+                "HttpClientResilience:RetryDelaySeconds",
+                _defaultRetryDelaySeconds,
+                1,
+                _maxRetryDelaySeconds);
 
             // Turn on resilience by default
             http.AddHttpMessageHandler<ExternalDependencyLoggingHandler>()
@@ -54,6 +87,12 @@ public static class Extensions
                     options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(attemptTimeoutSeconds);
                     options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(totalRequestTimeoutSeconds);
                     options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(circuitBreakerSamplingSeconds);
+                    options.Retry.MaxRetryAttempts = maxRetryAttempts;
+                    options.Retry.Delay = TimeSpan.FromSeconds(retryDelaySeconds);
+                    options.Retry.BackoffType = DelayBackoffType.Exponential;
+                    options.Retry.UseJitter = true;
+                    options.Retry.ShouldRetryAfterHeader = false;
+                    options.Retry.DisableForUnsafeHttpMethods();
                 })
                 .Configure((options, services) =>
                 {
@@ -96,6 +135,16 @@ public static class Extensions
         // });
 
         return builder;
+    }
+
+    private static int GetBoundedSetting(
+        IConfiguration configuration,
+        string key,
+        int fallback,
+        int minimum,
+        int maximum)
+    {
+        return Math.Clamp(configuration.GetValue<int?>(key) ?? fallback, minimum, maximum);
     }
 
     private static ValueTask LogTimeout(

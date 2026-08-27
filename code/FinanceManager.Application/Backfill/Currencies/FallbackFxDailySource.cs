@@ -15,12 +15,23 @@ public sealed class FallbackFxDailySource(IReadOnlyList<IFxDailySource> sources)
         foreach (var source in sources.OrderBy(x => x.Priority))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await source.GetDailyRatesAsync(fromCurrency, toCurrency, cancellationToken);
-            if (result.Status == FxDailyStatus.Ok)
-                return result;
+            try
+            {
+                var result = await source.GetDailyRatesAsync(fromCurrency, toCurrency, cancellationToken);
+                if (result.Status == FxDailyStatus.Ok)
+                    return result;
 
-            rateLimited |= result.Status == FxDailyStatus.RateLimited;
-            failed |= result.Status == FxDailyStatus.Error;
+                rateLimited |= result.Status == FxDailyStatus.RateLimited;
+                failed |= result.Status == FxDailyStatus.Error;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                failed = true;
+            }
         }
 
         return rateLimited ? FxDailyResult.RateLimited : failed ? FxDailyResult.Failed : FxDailyResult.Empty;
