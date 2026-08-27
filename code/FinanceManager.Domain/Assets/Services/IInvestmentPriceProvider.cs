@@ -13,6 +13,16 @@ namespace FinanceManager.Domain.Assets.Services;
 public interface IInvestmentPriceProvider
 {
     /// <summary>
+    /// Resolves a price while preserving a safe retry message when today's UTC exchange rate has
+    /// not been published yet.
+    /// </summary>
+    Task<InvestmentPriceResult> GetPricePerUnitResultAsync(
+        long assetListingId,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Get the normalised price per unit for <paramref name="assetListingId"/> converted to
     /// <paramref name="targetCurrency"/> as of <paramref name="asOf"/>. Uses the most recent quote
     /// on or before that date, fetching from the provider when the cache has nothing. A weekend

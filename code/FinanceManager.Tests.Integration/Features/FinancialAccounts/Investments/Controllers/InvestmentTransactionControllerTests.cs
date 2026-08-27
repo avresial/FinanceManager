@@ -130,8 +130,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
         _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(321.45m);
+            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(InvestmentPriceResult.Success(321.45m));
 
         var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
 
@@ -147,14 +147,39 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var tradeDate = new DateOnly(2024, 6, 1);
         _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
                 tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(300m);
+            .ReturnsAsync(InvestmentPriceResult.Success(300m));
 
         var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
 
         Assert.NotNull(result);
         Assert.Equal(300m, result.LatestPrice);
+    }
+
+    [Fact]
+    public async Task ListingPrice_WhenPriceIsPending_ReturnsSafeRetryMessage()
+    {
+        await SeedListing();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var retryAtUtc = DateTime.UtcNow.Date.AddDays(1);
+        var pending = InvestmentPriceResult.NotYetPublished(
+            "The exchange rate for today is not published yet.",
+            retryAtUtc);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitResultAsync(
+                _listingId,
+                It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pending);
+
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
+
+        Assert.NotNull(result);
+        Assert.Null(result.LatestPrice);
+        Assert.Equal(pending.Message, result.Message);
+        Assert.Equal(retryAtUtc, result.RetryAtUtc);
     }
 
     [Fact]

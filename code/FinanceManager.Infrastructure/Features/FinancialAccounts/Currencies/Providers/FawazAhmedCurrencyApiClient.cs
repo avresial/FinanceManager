@@ -2,6 +2,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
@@ -10,7 +11,8 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Pr
 
 internal sealed class FawazAhmedCurrencyApiClient(
     HttpClient httpClient,
-    ILogger<FawazAhmedCurrencyApiClient> logger) : ICurrencyExchangeRateProvider
+    ILogger<FawazAhmedCurrencyApiClient> logger,
+    IDateTimeProvider dateTimeProvider) : ICurrencyExchangeRateProvider
 {
     // The npm-backed API has no date-versioned releases before its migration on 2024-03-02.
     private static readonly DateOnly _firstAvailableDate = new(2024, 3, 2);
@@ -25,6 +27,18 @@ internal sealed class FawazAhmedCurrencyApiClient(
             using var response = await httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ShortName.ToLowerInvariant()}.json");
             if (!response.IsSuccessStatusCode)
             {
+                if (response.StatusCode == HttpStatusCode.NotFound && DateOnly.FromDateTime(date) == DateOnly.FromDateTime(dateTimeProvider.UtcNow))
+                {
+                    var retryAtUtc = DateTime.SpecifyKind(date.Date.AddDays(1), DateTimeKind.Utc);
+                    logger.LogInformation(
+                        "Currency API has not published the exchange rate for {FromCurrency} to {ToCurrency} on {Date:yyyy-MM-dd}; it is safe to retry after {RetryAtUtc:O}.",
+                        fromCurrency,
+                        toCurrency,
+                        date,
+                        retryAtUtc);
+                    return new(CurrencyExchangeRateProviderStatus.NotYetPublished, RetryAtUtc: retryAtUtc);
+                }
+
                 var errorMessage = await response.Content.ReadAsStringAsync();
                 logger.LogWarning("Currency API returned {StatusCode} for {FromCurrency} to {ToCurrency} on {Date}: {Message}", response.StatusCode, fromCurrency, toCurrency, date, errorMessage.Trim());
                 return new(response.StatusCode == HttpStatusCode.NotFound

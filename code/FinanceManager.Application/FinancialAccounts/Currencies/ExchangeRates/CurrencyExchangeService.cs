@@ -90,8 +90,17 @@ internal class CurrencyExchangeService(
                 var knownAscending = rates.Where(x => x.Value is not null).OrderBy(x => x.Date).ToList();
                 var knownIndex = 0;
                 decimal? carried = null;
+                var todayUtc = DateTime.UtcNow.Date;
                 foreach (var date in missingDates.Skip(toResolve.Count))
                 {
+                    // A current-day rate is deliberately never forward-filled. The caller must
+                    // receive the publication-window outcome instead of a previous day's value.
+                    if (date.Date == todayUtc)
+                    {
+                        rates.Add((date, null));
+                        continue;
+                    }
+
                     while (knownIndex < knownAscending.Count && knownAscending[knownIndex].Date <= date)
                         carried = knownAscending[knownIndex++].Value;
 
@@ -103,70 +112,77 @@ internal class CurrencyExchangeService(
         return rates.OrderBy(x => x.Date).ToList();
     }
 
-    public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
-    {
-        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders = [];
-        var rate = await ResolveDirectAsync(fromCurrency, toCurrency, date, outOfRangeProviders);
-        if (rate is not null) return rate;
+    public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
+        (await GetExchangeRateResultAsync(fromCurrency, toCurrency, date)).Value;
 
-        return await ResolveViaUsdAsync(fromCurrency, toCurrency, date, outOfRangeProviders);
+    public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    {
+        var state = new ResolutionState();
+        var direct = await ResolveDirectAsync(fromCurrency, toCurrency, date, state);
+        if (direct.IsSuccess || direct.Status == CurrencyExchangeRateStatus.NotYetPublished)
+            return direct;
+
+        return await ResolveViaUsdAsync(fromCurrency, toCurrency, date, state);
     }
 
     // Cheapest sources first: the application's own database, then the configured providers
     // (local CSV files, then external APIs). External hits are persisted so the same pair and
     // date never leave the app twice.
-    private async Task<decimal?> ResolveDirectAsync(
+    private async Task<CurrencyExchangeRateResult> ResolveDirectAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime date,
-        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders)
+        ResolutionState state)
     {
         var stored = await exchangeRateRepository.Get(fromCurrency.ShortName, toCurrency.ShortName, date);
-        if (stored is not null) return stored;
+        if (stored is decimal storedRate) return CurrencyExchangeRateResult.Success(storedRate);
 
         var storedInverse = await exchangeRateRepository.Get(toCurrency.ShortName, fromCurrency.ShortName, date);
-        if (storedInverse is decimal inverse && inverse != 0) return 1m / inverse;
+        if (storedInverse is decimal inverse && inverse != 0)
+            return CurrencyExchangeRateResult.Success(1m / inverse);
 
         foreach (var provider in providers)
         {
-            if (outOfRangeProviders.Contains(provider))
+            if (state.OutOfRangeProviders.Contains(provider))
                 continue;
 
             var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
             if (result.Status == CurrencyExchangeRateProviderStatus.OutOfRange)
             {
-                outOfRangeProviders.Add(provider);
+                state.OutOfRangeProviders.Add(provider);
                 continue;
             }
 
             if (result is { Status: CurrencyExchangeRateProviderStatus.Success, Value: decimal rate })
             {
                 await exchangeRateRepository.Add(fromCurrency.ShortName, toCurrency.ShortName, date, rate);
-                return rate;
+                return CurrencyExchangeRateResult.Success(rate);
             }
+
+            state.Observe(result, date);
         }
 
-        return null;
+        return state.Build(date);
     }
 
     // When no source knows the pair directly, cross through USD (from → USD → to) so values can
     // still be expressed in the requested currency.
-    private async Task<decimal?> ResolveViaUsdAsync(
+    private async Task<CurrencyExchangeRateResult> ResolveViaUsdAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime date,
-        HashSet<ICurrencyExchangeRateProvider> outOfRangeProviders)
+        ResolutionState state)
     {
         var usd = DefaultCurrency.USD;
-        if (IsUsd(fromCurrency) || IsUsd(toCurrency)) return null;
+        if (IsUsd(fromCurrency) || IsUsd(toCurrency)) return state.Build(date);
 
-        var fromToUsd = await ResolveDirectAsync(fromCurrency, usd, date, outOfRangeProviders);
-        if (fromToUsd is null) return null;
+        var fromToUsd = await ResolveDirectAsync(fromCurrency, usd, date, state);
+        if (!fromToUsd.IsSuccess) return state.Build(date);
 
-        var usdToTarget = await ResolveDirectAsync(usd, toCurrency, date, outOfRangeProviders);
-        if (usdToTarget is null) return null;
+        var usdToTarget = await ResolveDirectAsync(usd, toCurrency, date, state);
+        if (!usdToTarget.IsSuccess) return state.Build(date);
 
-        return fromToUsd * usdToTarget;
+        return CurrencyExchangeRateResult.Success(fromToUsd.Value!.Value * usdToTarget.Value!.Value);
     }
 
     private static bool IsUsd(Currency currency) =>
@@ -175,4 +191,39 @@ internal class CurrencyExchangeService(
     private static string Normalize(string currency) => currency.Trim().ToUpperInvariant();
 
     private static DateTime NormalizeDate(DateTime date) => DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+
+    private sealed class ResolutionState
+    {
+        public HashSet<ICurrencyExchangeRateProvider> OutOfRangeProviders { get; } = [];
+
+        private bool HasFailure { get; set; }
+
+        private DateTime? PendingRetryAtUtc { get; set; }
+
+        public void Observe(CurrencyExchangeRateProviderResult result, DateTime requestedDate)
+        {
+            if (result.Status == CurrencyExchangeRateProviderStatus.Failed)
+                HasFailure = true;
+
+            if (result.Status != CurrencyExchangeRateProviderStatus.NotYetPublished)
+                return;
+
+            var retryAtUtc = result.RetryAtUtc ?? requestedDate.Date.AddDays(1);
+            PendingRetryAtUtc = PendingRetryAtUtc is null
+                ? DateTime.SpecifyKind(retryAtUtc, DateTimeKind.Utc)
+                : DateTime.SpecifyKind(
+                    retryAtUtc < PendingRetryAtUtc.Value ? retryAtUtc : PendingRetryAtUtc.Value,
+                    DateTimeKind.Utc);
+        }
+
+        public CurrencyExchangeRateResult Build(DateTime requestedDate)
+        {
+            if (PendingRetryAtUtc is DateTime retryAtUtc)
+                return CurrencyExchangeRateResult.NotYetPublished(requestedDate, retryAtUtc);
+
+            return HasFailure
+                ? CurrencyExchangeRateResult.Failed()
+                : CurrencyExchangeRateResult.NotFound();
+        }
+    }
 }

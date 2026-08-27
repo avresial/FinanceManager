@@ -224,8 +224,8 @@ public class InvestmentTransactionController(
         if (listing is null) return NotFound();
         var currency = new Currency(0, listing.TradingCurrency, listing.TradingCurrency);
         var priceDate = asOf?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow;
-        var price = await priceProvider.GetPricePerUnitAsync(listingId, currency, priceDate, cancellationToken);
-        return Ok(new ListingPriceDto(price > 0 ? price : null, listing.TradingCurrency));
+        var result = await priceProvider.GetPricePerUnitResultAsync(listingId, currency, priceDate, cancellationToken);
+        return Ok(new ListingPriceDto(result.Price > 0 ? result.Price : null, listing.TradingCurrency, result.Message, result.RetryAtUtc));
     }
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>

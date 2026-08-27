@@ -2,10 +2,12 @@ using FinanceManager.Application.Assets.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -172,8 +174,8 @@ public class InvestmentPriceProviderTests
             .ReturnsAsync([Price(500m, asOf)]); // 500 GBX
         // Normalised 5 GBP → USD at 1.25 = 6.25
         _currencyExchangeService
-            .Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "GBP"), It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>()))
-            .ReturnsAsync(1.25m);
+            .Setup(x => x.GetExchangeRateResultAsync(It.Is<Currency>(c => c.ShortName == "GBP"), It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>()))
+            .ReturnsAsync(CurrencyExchangeRateResult.Success(1.25m));
 
         var result = await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken);
 
@@ -183,6 +185,44 @@ public class InvestmentPriceProviderTests
         Assert.Equal("GBP", stored.Currency);
         Assert.Equal(500m, stored.RawPrice);
         Assert.Equal("GBX", stored.RawCurrency);
+    }
+
+    [Fact]
+    public async Task GetPricePerUnitResult_WhenTodayRateIsNotPublished_ReturnsRetryMessageWithoutUsdFallback()
+    {
+        var todayUtc = DateTime.UtcNow.Date;
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing("GBP"));
+        _priceQuoteRepository.Seed(new PriceQuote
+        {
+            AssetListingId = 10,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 100m,
+            Currency = "GBP",
+            PriceTime = new DateTimeOffset(MarketCalendar.LastMarketDay(todayUtc), TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        });
+
+        var pending = CurrencyExchangeRateResult.NotYetPublished(todayUtc, todayUtc.AddDays(1));
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateResultAsync(
+                It.Is<Currency>(c => c.ShortName == "GBP"),
+                _usd,
+                todayUtc))
+            .ReturnsAsync(pending);
+
+        var result = await CreateSut().GetPricePerUnitResultAsync(
+            10,
+            _usd,
+            todayUtc,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(InvestmentPriceStatus.NotYetPublished, result.Status);
+        Assert.Null(result.Price);
+        Assert.Equal(pending.Message, result.Message);
+        Assert.Equal(todayUtc.AddDays(1), result.RetryAtUtc);
+        _currencyExchangeService.Verify(
+            x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
+            Times.Once);
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
+using FinanceManager.Tests.Unit.Shared.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -22,6 +23,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     private readonly ListLogger<FawazAhmedCurrencyApiClient> _logger = new();
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock = new();
     private readonly Mock<IExchangeRateRepository> _exchangeRateRepositoryMock = new();
+    private readonly FakeDateTimeProvider _dateTimeProvider = new(new DateTime(2024, 4, 1, 12, 0, 0, DateTimeKind.Utc));
     private readonly HttpClient _httpClient;
 
     public CurrencyExchangeServiceTests()
@@ -128,6 +130,23 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         // Assert
         Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, result.Status);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_CurrentDateNotPublished_ReturnsRetryWindow()
+    {
+        var todayUtc = new DateTime(2024, 4, 1, 7, 12, 0, DateTimeKind.Utc);
+        _dateTimeProvider.SetUtcNow(todayUtc);
+        SetupHttpResponse(HttpStatusCode.NotFound, "Not published");
+
+        var result = await CreateProvider().GetExchangeRateAsync(
+            new Currency(1, "USD", "$"),
+            new Currency(2, "EUR", "€"),
+            todayUtc.Date);
+
+        Assert.Equal(CurrencyExchangeRateProviderStatus.NotYetPublished, result.Status);
+        Assert.Equal(todayUtc.Date.AddDays(1), result.RetryAtUtc);
+        VerifyNoWarningOrErrorLogs();
     }
 
     [Fact]
@@ -453,6 +472,33 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetExchangeRateResultAsync_CurrentDateNotPublished_ReturnsMessageWithoutUsdCross()
+    {
+        var todayUtc = _dateTimeProvider.UtcNow.Date;
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider
+            .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), todayUtc))
+            .ReturnsAsync(new CurrencyExchangeRateProviderResult(
+                CurrencyExchangeRateProviderStatus.NotYetPublished,
+                RetryAtUtc: todayUtc.AddDays(1)));
+        var service = CreateService([provider.Object]);
+
+        var result = await service.GetExchangeRateResultAsync(
+            new Currency(1, "GBP", "£"),
+            new Currency(2, "PLN", "zł"),
+            todayUtc);
+
+        Assert.Equal(CurrencyExchangeRateStatus.NotYetPublished, result.Status);
+        Assert.Equal(todayUtc.AddDays(1), result.RetryAtUtc);
+        Assert.Equal(
+            "The exchange rate for 2024-04-01 UTC has not been published yet. It is safe to retry after 2024-04-02T00:00:00Z.",
+            result.Message);
+        provider.Verify(
+            x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetExchangeRateAsync_FullyStoredRange_UsesBulkReadAndNoProviderCalls()
     {
         // Arrange
@@ -609,7 +655,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     private CurrencyExchangeService CreateService(ICurrencyExchangeRateProvider[] providers) =>
         new(_exchangeRateRepositoryMock.Object, providers);
 
-    private FawazAhmedCurrencyApiClient CreateProvider() => new(_httpClient, _logger);
+    private FawazAhmedCurrencyApiClient CreateProvider() => new(_httpClient, _logger, _dateTimeProvider);
 
     private void VerifyNoWarningOrErrorLogs() =>
         Assert.DoesNotContain(_logger.Levels, level => level >= LogLevel.Warning);

@@ -24,18 +24,20 @@ internal sealed class CachedCurrencyExchangeService(
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
     };
 
-    public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
-    {
-        var key = $"EXCHANGE_RATE_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
+    public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
+        (await GetExchangeRateResultAsync(fromCurrency, toCurrency, date)).Value;
 
-        if (cache.TryGetValue(key, out decimal? cached))
+    public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    {
+        var key = $"EXCHANGE_RATE_RESULT_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
+
+        if (cache.TryGetValue(key, out CurrencyExchangeRateResult? cached) && cached is not null)
             return cached;
 
-        var rate = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+        var result = await inner.GetExchangeRateResultAsync(fromCurrency, toCurrency, date);
+        cache.Set(key, result, result.Status == CurrencyExchangeRateStatus.Success ? _cacheOptions : _missCacheOptions);
 
-        cache.Set(key, rate, rate is null ? _missCacheOptions : _cacheOptions);
-
-        return rate;
+        return result;
     }
 
     public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
