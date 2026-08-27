@@ -90,7 +90,8 @@ public static class ServiceCollectionExtension
         [
             sp.GetRequiredService<AlphaVantageFxClient>(),
             sp.GetRequiredService<TwelveDataClient>()
-        ]));
+        ],
+            sp.GetRequiredService<ILogger<FallbackFxDailySource>>()));
         services.AddHttpClient<IInflationIndexProvider, EurostatInflationIndexProvider>(client =>
             client.BaseAddress = new Uri("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"));
 

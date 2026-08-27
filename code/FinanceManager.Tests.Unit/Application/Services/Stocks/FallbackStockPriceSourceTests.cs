@@ -212,6 +212,32 @@ public class FallbackStockPriceSourceTests
         Assert.Equal(0, alphaVantage.CallCount);
     }
 
+    [Fact]
+    public async Task GetDailySeries_WithProviderAndNoMatchingSource_CallerCancellation_ThrowsOperationCanceledException()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var alphaVantage = new FakeSource(
+            "AlphaVantage",
+            [Price(100m)],
+            MarketDataProvider.AlphaVantage,
+            priority: 100);
+        var sut = Create(alphaVantage);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.GetDailySeries(
+                MarketDataProvider.TwelveData,
+                "AAPL",
+                "US0378331005",
+                _start,
+                _end,
+                _usd,
+                cts.Token));
+
+        Assert.Equal(0, alphaVantage.CallCount);
+    }
+
     private static StockPrice Price(decimal value) => new()
     {
         Isin = "US0378331005",

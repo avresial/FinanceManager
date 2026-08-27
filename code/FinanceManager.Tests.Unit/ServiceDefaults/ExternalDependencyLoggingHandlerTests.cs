@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Logging;
 using ServiceDefaults;
+using System.Globalization;
 using System.Net;
 
 namespace FinanceManager.Tests.Unit.ServiceDefaults;
@@ -157,6 +159,46 @@ public class ExternalDependencyLoggingHandlerTests
         Assert.Contains("Path: /time_series", retryLog.Message);
         Assert.Contains("Result: 504", retryLog.Message);
         Assert.DoesNotContain("secret-value", retryLog.Message);
+    }
+
+    [Fact]
+    public async Task AddServiceDefaults_HttpClientFactory_ExponentialRetryDelaysStayWithinMaximum()
+    {
+        var entries = new List<LogRecord>();
+        var timeProvider = new RetryImmediateTimeProvider();
+        var primaryHandler = new CountingResponseHandler(HttpStatusCode.ServiceUnavailable);
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration["HttpClientResilience:AttemptTimeoutSeconds"] = "120";
+        builder.Configuration["HttpClientResilience:TotalRequestTimeoutSeconds"] = "300";
+        builder.Configuration["HttpClientResilience:MaxRetryAttempts"] = "3";
+        builder.Configuration["HttpClientResilience:RetryDelaySeconds"] = "10";
+        builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(new RecordingLoggerProvider(entries));
+        builder.Services.AddSingleton<TimeProvider>(timeProvider);
+        builder.AddServiceDefaults();
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+            options.Retry.Randomizer = () => 0.5);
+        builder.Services.AddHttpClient("external", client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(() => primaryHandler);
+
+        using var host = builder.Build();
+        var clientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+        using var client = clientFactory.CreateClient("external");
+
+        using var response = await client.GetAsync(
+            "https://api.twelvedata.com/time_series?apikey=secret-value",
+            TestContext.Current.CancellationToken);
+
+        var retryLogs = entries
+            .Where(entry => entry.Message.StartsWith("External dependency retry", StringComparison.Ordinal))
+            .ToList();
+        var retryDelays = retryLogs.Select(ParseRetryDelayMilliseconds).ToList();
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(4, primaryHandler.CallCount);
+        Assert.Equal(3, retryLogs.Count);
+        Assert.All(retryDelays, delay => Assert.InRange(delay, 0m, 10_000m));
+        Assert.Contains(10_000m, retryDelays);
     }
 
     [Fact]
@@ -409,6 +451,20 @@ public class ExternalDependencyLoggingHandlerTests
         }
     }
 
+    private sealed class RetryImmediateTimeProvider : TimeProvider
+    {
+        public override ITimer CreateTimer(
+            TimerCallback? callback,
+            object? state,
+            TimeSpan dueTime,
+            TimeSpan period) =>
+            new Timer(callback ?? IgnoreTimerCallback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+
+        private static void IgnoreTimerCallback(object? state)
+        {
+        }
+    }
+
     private sealed class RecordingLogger<T> : ILogger<T>
     {
         public RecordingLogger(List<LogRecord>? entries = null) => Entries = entries ?? [];
@@ -438,4 +494,13 @@ public class ExternalDependencyLoggingHandlerTests
     }
 
     private sealed record LogRecord(LogLevel Level, string Message, Exception? Exception);
+
+    private static decimal ParseRetryDelayMilliseconds(LogRecord entry)
+    {
+        const string prefix = "Retry Delay: ";
+        const string suffix = "ms.";
+        var start = entry.Message.IndexOf(prefix, StringComparison.Ordinal) + prefix.Length;
+        var end = entry.Message.IndexOf(suffix, start, StringComparison.Ordinal);
+        return decimal.Parse(entry.Message[start..end], CultureInfo.InvariantCulture);
+    }
 }

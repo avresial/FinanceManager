@@ -123,6 +123,7 @@ public sealed class FallbackStockPriceSource(
         Currency currency,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var source = sources
             .Where(x => x.Provider == provider)
             .OrderBy(x => x.Priority)

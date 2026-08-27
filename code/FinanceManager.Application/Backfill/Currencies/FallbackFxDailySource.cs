@@ -1,6 +1,10 @@
+using Microsoft.Extensions.Logging;
+
 namespace FinanceManager.Application.Backfill.Currencies;
 
-public sealed class FallbackFxDailySource(IReadOnlyList<IFxDailySource> sources) : IFxDailySource
+public sealed class FallbackFxDailySource(
+    IReadOnlyList<IFxDailySource> sources,
+    ILogger<FallbackFxDailySource> logger) : IFxDailySource
 {
     public string Name => "Fallback";
     public int Priority => 0;
@@ -28,8 +32,14 @@ public sealed class FallbackFxDailySource(IReadOnlyList<IFxDailySource> sources)
             {
                 throw;
             }
-            catch
+            catch (Exception ex)
             {
+                logger.LogWarning(
+                    ex,
+                    "FX source {Source} failed while retrieving rates for {FromCurrency}/{ToCurrency}; trying next.",
+                    source.Name,
+                    fromCurrency,
+                    toCurrency);
                 failed = true;
             }
         }

@@ -89,6 +89,7 @@ public static class Extensions
                     options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(circuitBreakerSamplingSeconds);
                     options.Retry.MaxRetryAttempts = maxRetryAttempts;
                     options.Retry.Delay = TimeSpan.FromSeconds(retryDelaySeconds);
+                    options.Retry.MaxDelay = TimeSpan.FromSeconds(_maxRetryDelaySeconds);
                     options.Retry.BackoffType = DelayBackoffType.Exponential;
                     options.Retry.UseJitter = true;
                     options.Retry.ShouldRetryAfterHeader = false;

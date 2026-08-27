@@ -1,4 +1,6 @@
 using FinanceManager.Application.Backfill.Currencies;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FinanceManager.Tests.Unit.Application.Backfill;
 
@@ -13,7 +15,7 @@ public class FallbackFxDailySourceTests
             [new DateTime(2024, 1, 1)] = 1.1m
         }));
         var primary = new FakeSource("Primary", 100, FxDailyResult.Empty);
-        var source = new FallbackFxDailySource([secondary, primary]);
+        var source = Create(secondary, primary);
 
         var result = await source.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
 
@@ -30,7 +32,7 @@ public class FallbackFxDailySourceTests
         {
             [new DateTime(2024, 1, 1)] = 1.1m
         }));
-        var source = new FallbackFxDailySource([secondary, primary]);
+        var source = Create(secondary, primary);
 
         var result = await source.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
 
@@ -44,7 +46,7 @@ public class FallbackFxDailySourceTests
     {
         var primary = new FakeSource("Primary", 100, FxDailyResult.Failed);
         var secondary = new FakeSource("Secondary", 200, FxDailyResult.Failed);
-        var source = new FallbackFxDailySource([primary, secondary]);
+        var source = Create(primary, secondary);
 
         var result = await source.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
 
@@ -58,7 +60,7 @@ public class FallbackFxDailySourceTests
     {
         var primary = new FakeSource("Primary", 100, FxDailyResult.RateLimited);
         var secondary = new FakeSource("Secondary", 200, FxDailyResult.Empty);
-        var source = new FallbackFxDailySource([primary, secondary]);
+        var source = Create(primary, secondary);
 
         var result = await source.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
 
@@ -75,7 +77,7 @@ public class FallbackFxDailySourceTests
 
         var primary = new FakeSource("Primary", 100, FxDailyResult.Empty);
         var secondary = new FakeSource("Secondary", 200, FxDailyResult.Empty);
-        var source = new FallbackFxDailySource([primary, secondary]);
+        var source = Create(primary, secondary);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             source.GetDailyRatesAsync("EUR", "USD", cts.Token));
@@ -83,6 +85,26 @@ public class FallbackFxDailySourceTests
         Assert.Equal(0, primary.CallCount);
         Assert.Equal(0, secondary.CallCount);
     }
+
+    [Fact]
+    public async Task LogsProviderExceptionBeforeFallingBack()
+    {
+        var entries = new List<LogEntry>();
+        var primary = new FakeSource("Primary", 100, FxDailyResult.Failed, throwException: true);
+        var secondary = new FakeSource("Secondary", 200, FxDailyResult.Empty);
+        var source = new FallbackFxDailySource([primary, secondary], new RecordingLogger(entries));
+
+        await source.GetDailyRatesAsync("EUR", "USD", TestContext.Current.CancellationToken);
+
+        var log = Assert.Single(entries);
+        Assert.Equal(LogLevel.Warning, log.Level);
+        Assert.Contains("FX source Primary failed", log.Message);
+        Assert.Contains("EUR/USD", log.Message);
+        Assert.IsType<HttpRequestException>(log.Exception);
+    }
+
+    private static FallbackFxDailySource Create(params IFxDailySource[] sources) =>
+        new(sources, NullLogger<FallbackFxDailySource>.Instance);
 
     private sealed class FakeSource(
         string name,
@@ -106,4 +128,21 @@ public class FallbackFxDailySourceTests
             return Task.FromResult(result);
         }
     }
+
+    private sealed class RecordingLogger(List<LogEntry> entries) : ILogger<FallbackFxDailySource>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
 }
