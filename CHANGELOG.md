@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Authorized maintenance workers can now query bounded, read-only application log history with time, level, and text filters. #722
 - External dependency failures now identify the provider and redacted request path in application logs; admins can copy individual log details or export the currently open log page as JSON for sharing with an agent.
 - Investment transactions now search existing and external instruments together and add external master data only when the transaction saves successfully. #651
 - Twelve Data can now supply daily stock and ETF prices, latest quotes, and daily forex rates through the existing market-data fallback flows. Provider priority, timeout, enabled state, and per-minute/daily credit budgets are configurable under `TwelveData`; provider-specific symbols stay on instrument listings, existing observations remain idempotently skipped, and Alpha Vantage remains available as an alternative. #643
