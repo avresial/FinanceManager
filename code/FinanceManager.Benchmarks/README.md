@@ -42,7 +42,8 @@ BenchmarkDotNet category:
 | `MoneyFlow` | net worth (point and series), inflow, outflow, net cash flow, closing balance, labels value, investment rate | Re-fired every time a user changes the date range; felt as chart lag. |
 | `Assets` | asset existence, end assets per account and per type, time series, paycheck estimate, unrealized gain/loss per account and per instrument | The heaviest reads in the app — transactions joined to listings joined to daily price quotes, then currency-converted. |
 | `Analysis` | expense distribution, essential spending, diversification score and breakdown, liabilities | One per dashboard card. |
-| `Accounts` | currency/investment/bond account lists and details, full-range vs paged entry reads, holdings and valuation | Drill-down pages. The range-vs-page contrast shows whether paging is actually saving the user anything. |
+| `Accounts` | currency/investment/bond account lists and details, holdings and valuation | Account-page setup before entry history is loaded. |
+| `FinancialAccountEntries` | currency and bond entry history over the full range plus 50-entry pages in both directions | The range-vs-page contrast shows whether paging saves work; forward and backward pages catch direction-specific query costs. |
 | `Supporting` | user record, currency list, label count/page/by-account, recent transaction log | Called from layout and navigation, so their cost lands on *every* interaction. |
 | `Writes` | append a currency entry, recalculate account balances | A slow write is felt directly, and an over-broad cache invalidation makes the *next* read slow too. |
 
