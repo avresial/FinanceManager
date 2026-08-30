@@ -118,6 +118,36 @@ public class CachedAccountEntryRepositoryTests
     }
 
     [Fact]
+    public async Task EntryPage_SecondCall_ServedFromCache_InnerCalledOnce()
+    {
+        const int count = 50;
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.Setup(r => r.Get(_accountId, _date, count, true)).ReturnsAsync([Entry(2), Entry(1)]);
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+
+        var first = await sut.Get(_accountId, _date, count, true);
+        var second = await sut.Get(_accountId, _date, count, true);
+
+        Assert.Equal([2, 1], first.Select(entry => entry.EntryId));
+        Assert.Equal([2, 1], second.Select(entry => entry.EntryId));
+        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Once);
+    }
+
+    [Fact]
+    public async Task EntryPage_DirectionAndPageSize_UseDifferentCacheKeys()
+    {
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.Setup(r => r.Get(_accountId, _date, 25, true)).ReturnsAsync([Entry(1)]);
+        inner.Setup(r => r.Get(_accountId, _date, 50, true)).ReturnsAsync([Entry(2)]);
+        inner.Setup(r => r.Get(_accountId, _date, 25, false)).ReturnsAsync([Entry(3)]);
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+
+        Assert.Equal(1, Assert.Single(await sut.Get(_accountId, _date, 25, true)).EntryId);
+        Assert.Equal(2, Assert.Single(await sut.Get(_accountId, _date, 50, true)).EntryId);
+        Assert.Equal(3, Assert.Single(await sut.Get(_accountId, _date, 25, false)).EntryId);
+    }
+
+    [Fact]
     public async Task GetYoungest_WhenOwnerUnresolved_BypassesCache()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
@@ -260,5 +290,27 @@ public class CachedAccountEntryRepositoryTests
         Assert.Equal(100m, before!.Value);
         Assert.Equal(175m, after!.Value);
         inner.Verify(r => r.GetYoungest(_accountId), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Update_BustsCachedEntryPage_NextReadHitsInnerAgain()
+    {
+        const int count = 50;
+        var cache = CreateCache();
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.SetupSequence(r => r.Get(_accountId, _date, count, true))
+            .ReturnsAsync([Entry(1, 100m)])
+            .ReturnsAsync([Entry(1, 175m)]);
+        inner.Setup(r => r.Update(It.IsAny<CurrencyAccountEntry>())).ReturnsAsync(true);
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), new CacheInvalidator(cache), cache);
+
+        var before = Assert.Single(await sut.Get(_accountId, _date, count, true));
+        await sut.Get(_accountId, _date, count, true);
+        await sut.Update(Entry(1, 175m));
+        var after = Assert.Single(await sut.Get(_accountId, _date, count, true));
+
+        Assert.Equal(100m, before.Value);
+        Assert.Equal(175m, after.Value);
+        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Exactly(2));
     }
 }

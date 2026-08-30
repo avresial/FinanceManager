@@ -33,6 +33,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Repeatedly paging through cash and bond account transaction history now reuses recent page results, making back-and-forth scrolling respond faster.
 - Investment and bond account charts now begin loading independently of transaction enrichment, so account details render faster. #715
 - The account transactions toolbar now places the search button as its first control on the left, and the date-range dropdown displays a calendar icon when a custom date range is active. #712
 - Investment account holdings now use responsive, always-visible cards for instrument, market, type, units, current price, and current value, and the Top movers combined filter is shortened to **All**. #705
