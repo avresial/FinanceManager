@@ -195,8 +195,8 @@ public class ExternalDependencyLoggingHandlerTests
         var retryDelays = retryLogs.Select(ParseRetryDelayMilliseconds).ToList();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.InRange(primaryHandler.CallCount, 3, 4);
-        Assert.Equal(primaryHandler.CallCount - 1, retryLogs.Count);
+        Assert.Equal(4, primaryHandler.CallCount);
+        Assert.Equal(3, retryLogs.Count);
         Assert.All(retryDelays, delay => Assert.InRange(delay, 0m, 10_000m));
         Assert.Contains(10_000m, retryDelays);
     }
@@ -453,12 +453,18 @@ public class ExternalDependencyLoggingHandlerTests
 
     private sealed class RetryImmediateTimeProvider : TimeProvider
     {
+        private static readonly TimeSpan _maxImmediateDelay = TimeSpan.FromSeconds(10);
+
         public override ITimer CreateTimer(
             TimerCallback? callback,
             object? state,
             TimeSpan dueTime,
             TimeSpan period) =>
-            new Timer(callback ?? IgnoreTimerCallback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            new Timer(
+                callback ?? IgnoreTimerCallback,
+                state,
+                dueTime >= TimeSpan.Zero && dueTime <= _maxImmediateDelay ? TimeSpan.Zero : dueTime,
+                period);
 
         private static void IgnoreTimerCallback(object? state)
         {
