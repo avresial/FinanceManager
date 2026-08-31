@@ -19,10 +19,16 @@
     box-sizing: border-box;
 }
 
-.fm-tx-toolbar ::deep .mud-toggle-item,
+.fm-tx-toolbar ::deep .mud-toggle-group,
 .fm-tx-toolbar ::deep .fm-range-button,
-.fm-tx-toolbar ::deep .mud-button-group-root > .mud-button-root {
+.fm-tx-toolbar ::deep .mud-button-group-root {
     height: var(--fm-toolbar-control-height);
+    box-sizing: border-box;
+}
+
+.fm-tx-toolbar ::deep .mud-toggle-item,
+.fm-tx-toolbar ::deep .mud-button-group-root > .mud-button-root {
+    height: 100%;
     box-sizing: border-box;
 }
 
