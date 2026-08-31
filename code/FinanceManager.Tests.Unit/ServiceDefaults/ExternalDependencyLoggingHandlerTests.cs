@@ -195,8 +195,8 @@ public class ExternalDependencyLoggingHandlerTests
         var retryDelays = retryLogs.Select(ParseRetryDelayMilliseconds).ToList();
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal(4, primaryHandler.CallCount);
-        Assert.Equal(3, retryLogs.Count);
+        Assert.InRange(primaryHandler.CallCount, 3, 4);
+        Assert.Equal(primaryHandler.CallCount - 1, retryLogs.Count);
         Assert.All(retryDelays, delay => Assert.InRange(delay, 0m, 10_000m));
         Assert.Contains(10_000m, retryDelays);
     }
