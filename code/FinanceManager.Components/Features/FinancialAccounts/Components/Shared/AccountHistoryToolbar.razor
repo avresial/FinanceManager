@@ -6,7 +6,7 @@
         @* Search — collapsed to an icon; the input lives in the panel below *@
         <MudIconButton Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
                        Size="Size.Small" Color="@(_isSearchExpanded || !string.IsNullOrWhiteSpace(SearchText) ? Color.Primary : Color.Default)"
-                       OnClick="ToggleSearch" Style="flex-shrink: 0;"
+                       OnClick="ToggleSearch" Class="fm-toolbar-search-button" Style="flex-shrink: 0;"
                        aria-label="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
                        title="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
                        aria-expanded="@_isSearchExpanded" aria-controls="@_searchPanelId" />
