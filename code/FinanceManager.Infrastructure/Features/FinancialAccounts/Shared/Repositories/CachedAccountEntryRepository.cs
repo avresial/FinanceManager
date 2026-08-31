@@ -206,11 +206,32 @@ public class CachedAccountEntryRepository<T>(
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
     public Task RecalculateValues(int accountId, int entryId) => RecalculateValues(accountId, entryId, CancellationToken.None);
-    public Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken) =>
-        inner.RecalculateValues(accountId, entryId, cancellationToken);
+
+    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await inner.RecalculateValues(accountId, entryId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], cancellationToken);
+        }
+    }
+
     public Task RecalculateValues(int accountId) => RecalculateValues(accountId, CancellationToken.None);
-    public Task RecalculateValues(int accountId, CancellationToken cancellationToken) =>
-        inner.RecalculateValues(accountId, cancellationToken);
+
+    public async Task RecalculateValues(int accountId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await inner.RecalculateValues(accountId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], cancellationToken);
+        }
+    }
 
     // ----- Mutating methods: invalidate the owning user's cache at the write boundary -----
 

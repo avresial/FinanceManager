@@ -313,4 +313,33 @@ public class CachedAccountEntryRepositoryTests
         Assert.Equal(175m, after.Value);
         inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Exactly(2));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RecalculateValues_BustsCachedEntryPage_NextReadHitsInnerAgain(bool fromEntry)
+    {
+        const int count = 50;
+        const int entryId = 1;
+        var cache = CreateCache();
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.SetupSequence(r => r.Get(_accountId, _date, count, true))
+            .ReturnsAsync([Entry(entryId, 100m)])
+            .ReturnsAsync([Entry(entryId, 175m)]);
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), new CacheInvalidator(cache), cache);
+
+        var before = Assert.Single(await sut.Get(_accountId, _date, count, true));
+        await sut.Get(_accountId, _date, count, true);
+
+        if (fromEntry)
+            await sut.RecalculateValues(_accountId, entryId, TestContext.Current.CancellationToken);
+        else
+            await sut.RecalculateValues(_accountId, TestContext.Current.CancellationToken);
+
+        var after = Assert.Single(await sut.Get(_accountId, _date, count, true));
+
+        Assert.Equal(100m, before.Value);
+        Assert.Equal(175m, after.Value);
+        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Exactly(2));
+    }
 }

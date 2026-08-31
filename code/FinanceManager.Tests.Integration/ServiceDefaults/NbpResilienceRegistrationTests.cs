@@ -1,11 +1,13 @@
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.Shared.Services;
 using FinanceManager.Infrastructure;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using ServiceDefaults;
 using System.Net;
 using Xunit;
@@ -43,6 +45,7 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 
         builder.Services.ConfigureHttpClientDefaults(http =>
@@ -81,6 +84,7 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 
         builder.Services.ConfigureHttpClientDefaults(http =>
@@ -112,6 +116,7 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 
         builder.Services.ConfigureHttpClientDefaults(http =>
