@@ -5,6 +5,33 @@
     color: var(--mud-palette-text-secondary) !important;
 }
 
+/* Keep every compact toolbar action the same height. MudBlazor gives small icon,
+   toggle, regular, and grouped buttons slightly different padding by default. */
+.fm-tx-toolbar {
+    --fm-toolbar-control-height: 32px;
+}
+
+.fm-tx-toolbar ::deep .fm-toolbar-search-button {
+    width: var(--fm-toolbar-control-height);
+    height: var(--fm-toolbar-control-height);
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    box-sizing: border-box;
+}
+
+.fm-tx-toolbar ::deep .mud-toggle-group,
+.fm-tx-toolbar ::deep .fm-range-button,
+.fm-tx-toolbar ::deep .mud-button-group-root {
+    height: var(--fm-toolbar-control-height);
+    box-sizing: border-box;
+}
+
+.fm-tx-toolbar ::deep .mud-toggle-item,
+.fm-tx-toolbar ::deep .mud-button-group-root > .mud-button-root {
+    height: 100%;
+    box-sizing: border-box;
+}
+
 ::deep .mud-button-group-outlined .mud-button-root,
 ::deep .mud-toggle-group-outlined {
     border-color: var(--mud-palette-lines-inputs) !important;
