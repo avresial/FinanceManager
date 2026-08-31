@@ -453,12 +453,18 @@ public class ExternalDependencyLoggingHandlerTests
 
     private sealed class RetryImmediateTimeProvider : TimeProvider
     {
+        private static readonly TimeSpan _maxImmediateDelay = TimeSpan.FromSeconds(10);
+
         public override ITimer CreateTimer(
             TimerCallback? callback,
             object? state,
             TimeSpan dueTime,
             TimeSpan period) =>
-            new Timer(callback ?? IgnoreTimerCallback, state, TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+            new Timer(
+                callback ?? IgnoreTimerCallback,
+                state,
+                dueTime >= TimeSpan.Zero && dueTime <= _maxImmediateDelay ? TimeSpan.Zero : dueTime,
+                period);
 
         private static void IgnoreTimerCallback(object? state)
         {

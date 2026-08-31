@@ -12,11 +12,11 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Reposi
 /// (<see cref="GetYoungest"/>, <see cref="GetOldest"/>, <see cref="GetCount"/>,
 /// <see cref="GetPostingDates"/>, and date-boundary reads), keyed per account and tagged per owning user
 /// (<c>global:u{userId}</c>).
-/// Also caches range reads (<see cref="Get(int,DateTime,DateTime)"/>, <see cref="GetRange"/>) using
+/// Also caches relative page reads and range reads (<see cref="Get(int,DateTime,DateTime)"/>, <see cref="GetRange"/>) using
 /// calendar-month buckets, inflated to whole-month boundaries on every miss, within a rolling
-/// 12-month horizon. Any write to an account busts the owner's cache through
-/// <see cref="ICacheInvalidator"/>, clearing both the entry tag and the derived dashboard tag
-/// (<c>dash:u{userId}</c>). See issues #455 and #456.
+/// 12-month horizon. Relative pages use an account tag so they can be invalidated without another owner
+/// lookup. Any write clears that tag and busts the owner's cache through <see cref="ICacheInvalidator"/>,
+/// including the derived dashboard tag (<c>dash:u{userId}</c>). See issues #455 and #456.
 /// </summary>
 public class CachedAccountEntryRepository<T>(
     IAccountEntryRepository<T> inner,
@@ -182,9 +182,17 @@ public class CachedAccountEntryRepository<T>(
             .ToList();
     }
 
-    // ----- Pass-through reads (relative / single-entry; not range reads) -----
+    // ----- Cached relative page reads -----
 
-    public Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) => inner.Get(accountId, date, count, olderThenDate);
+    public async Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) =>
+        (await cache.GetOrCreateAsync(
+            $"a{accountId}:{typeof(T).Name}:page:{date.Ticks}:{count}:{olderThenDate}",
+            _ => new ValueTask<List<T>>(inner.Get(accountId, date, count, olderThenDate)),
+            _pointReadOptions,
+            tags: [AccountTag(accountId)]))!;
+
+    // ----- Pass-through reads (single-entry and batch queries) -----
+
     public Task<T?> Get(int accountId, int entryId) => inner.Get(accountId, entryId);
     public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
@@ -198,11 +206,32 @@ public class CachedAccountEntryRepository<T>(
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
     public Task RecalculateValues(int accountId, int entryId) => RecalculateValues(accountId, entryId, CancellationToken.None);
-    public Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken) =>
-        inner.RecalculateValues(accountId, entryId, cancellationToken);
+
+    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await inner.RecalculateValues(accountId, entryId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], cancellationToken);
+        }
+    }
+
     public Task RecalculateValues(int accountId) => RecalculateValues(accountId, CancellationToken.None);
-    public Task RecalculateValues(int accountId, CancellationToken cancellationToken) =>
-        inner.RecalculateValues(accountId, cancellationToken);
+
+    public async Task RecalculateValues(int accountId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await inner.RecalculateValues(accountId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateAccounts([accountId], cancellationToken);
+        }
+    }
 
     // ----- Mutating methods: invalidate the owning user's cache at the write boundary -----
 
@@ -351,6 +380,7 @@ public class CachedAccountEntryRepository<T>(
 
     private static string Key(int userId, int accountId, string read) => $"global:u{userId}:a{accountId}:{read}";
     private static string Tag(int userId) => $"global:u{userId}";
+    private static string AccountTag(int accountId) => $"global:a{accountId}";
 
     protected async Task<TResult> GetCached<TResult>(
         int accountId,
@@ -372,6 +402,8 @@ public class CachedAccountEntryRepository<T>(
         var invalidatedUsers = new HashSet<int>();
         foreach (var accountId in accountIds.Distinct())
         {
+            await cache.RemoveByTagAsync(AccountTag(accountId), cancellationToken);
+
             if (await userResolver.GetUserId(accountId, cancellationToken) is int userId && invalidatedUsers.Add(userId))
                 await cacheInvalidator.InvalidateUser(userId, cancellationToken);
         }
