@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
 - Authorized maintenance workers can now query bounded, read-only application log history with time, level, and text filters. #722
 - External dependency failures now identify the provider and redacted request path in application logs; admins can copy individual log details or export the currently open log page as JSON for sharing with an agent.
 - Investment transactions now search existing and external instruments together and add external master data only when the transaction saves successfully. #651
@@ -33,6 +34,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The Investment paycheck card's detailed information panel is replaced by the standard card information tooltip. #730
 - Repeatedly paging through cash and bond account transaction history now reuses recent page results, making back-and-forth scrolling respond faster.
 - Investment and bond account charts now begin loading independently of transaction enrichment, so account details render faster. #715
 - The account transactions toolbar now places the search button as its first control on the left, and the date-range dropdown displays a calendar icon when a custom date range is active. #712

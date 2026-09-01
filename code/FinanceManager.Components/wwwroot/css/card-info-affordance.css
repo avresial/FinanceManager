@@ -1,0 +1,70 @@
+/* Shared card information affordance (CardInfoTooltip component).
+   Linked from index.html as a plain global stylesheet, because the popover
+   surface is portaled to <body> and scoped .razor.css selectors cannot reach it. */
+
+/* Every card establishes a positioning context so the affordance pins to the
+   card's own top-right corner, independent of headers, padding and flex
+   wrapping inside the card. position:relative without offsets does not move
+   the card or its content. */
+.mud-card {
+    position: relative;
+}
+
+/* The affordance icon, pinned to the host card's top-right corner. The wrapper
+   is the MudTooltip root element (mud-tooltip-root) receiving this class via
+   its RootClass parameter. */
+.fm-card-info-anchor {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+}
+
+/* Reserved for rows whose own content reaches the top-right corner (a value
+   readout, a toggle, a chip, ...): keeps that content clear of the pinned
+   icon zone (8px inset + 24px icon button + 4px gap). Applied to the row, so
+   it stacks on top of the row's own padding and never covers content. */
+.fm-card-info-space {
+    padding-right: 36px;
+}
+
+/* Rich tooltip body for cards that need a glossary instead of a single line
+   (applied to the popover surface via CardInfoTooltip's TooltipClass). */
+.fm-card-info-glossary {
+    max-width: 340px;
+    max-height: min(420px, 70vh);
+    overflow-y: auto;
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 400;
+}
+
+.fm-card-info-glossary .fm-card-info-glossary-head {
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--mud-palette-text-secondary);
+    margin-bottom: 10px;
+}
+
+.fm-card-info-glossary dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.fm-card-info-glossary dt {
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--mud-palette-primary);
+    margin-bottom: 2px;
+}
+
+.fm-card-info-glossary dd {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mud-palette-text-secondary);
+}

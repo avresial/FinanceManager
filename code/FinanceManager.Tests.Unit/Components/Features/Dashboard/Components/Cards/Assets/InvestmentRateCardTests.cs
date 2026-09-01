@@ -20,11 +20,11 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 public class InvestmentRateCardTests
 {
     [Fact]
-    public void SelectMonth_UpdatesSelectionAndIgnoresPlaceholderBars()
+    public async Task SelectMonth_UpdatesSelectionAndIgnoresPlaceholderBars()
     {
         var january = new InvestmentRate { Start = new DateTime(2026, 1, 1) };
         var february = new InvestmentRate { Start = new DateTime(2026, 2, 1) };
-        using var context = CreateContext();
+        await using var context = CreateContext();
         var card = RenderCard(context);
         card.AsOfDate = new DateTime(2026, 2, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [january, february];
@@ -36,14 +36,14 @@ public class InvestmentRateCardTests
     }
 
     [Fact]
-    public void BuildDerivedState_CurrentMonthWithoutSalary_ReportsNoRate()
+    public async Task BuildDerivedState_CurrentMonthWithoutSalary_ReportsNoRate()
     {
         // The salary for the current month has not arrived yet, but investments were made. The card
         // must not show a rate for that month, must not plot a bar for it, and must keep it out of
         // the average — otherwise it reads as if the salary had already been received.
         var june = new InvestmentRate { Start = new DateTime(2026, 6, 1), Salary = 9456.88m, InvestmentsChange = 4000m };
         var july = new InvestmentRate { Start = new DateTime(2026, 7, 1), Salary = 0m, InvestmentsChange = 5523.17m };
-        using var context = CreateContext();
+        await using var context = CreateContext();
         var card = RenderCard(context);
         card.AsOfDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [june, july];
@@ -57,10 +57,10 @@ public class InvestmentRateCardTests
     }
 
     [Fact]
-    public void BuildDerivedState_CurrentMonthWithSalary_ReportsRate()
+    public async Task BuildDerivedState_CurrentMonthWithSalary_ReportsRate()
     {
         var july = new InvestmentRate { Start = new DateTime(2026, 7, 1), Salary = 10_000m, InvestmentsChange = 5000m };
-        using var context = CreateContext();
+        await using var context = CreateContext();
         var card = RenderCard(context);
         card.AsOfDate = new DateTime(2026, 7, 20, 0, 0, 0, DateTimeKind.Utc);
         card.MonthlyInvestmentRates = [july];
@@ -84,6 +84,9 @@ public class InvestmentRateCardTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        // CardInfoTooltip renders a MudTooltip, which resolves MudBlazor.PopoverService — a
+        // service that only implements IAsyncDisposable. Callers must dispose the context
+        // with `await using`, or the synchronous container disposal throws.
         context.Services.AddMudServices();
 
         var settings = new Mock<ISettingsService>();

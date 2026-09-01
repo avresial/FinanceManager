@@ -7,6 +7,10 @@
         <CardHeaderContent>
             <MudText Typo="Typo.subtitle2">Holdings</MudText>
         </CardHeaderContent>
+        <CardHeaderActions>
+            <CardInfoTooltip Text="Every open holding with its units, latest price and current value."
+                             AriaLabel="About holdings card" />
+        </CardHeaderActions>
     </MudCardHeader>
     <MudCardContent Class="pa-0">
         @if (Holdings.Count == 0)

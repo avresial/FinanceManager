@@ -18,11 +18,15 @@
                 <MudText Class="fm-card-total">@TotalLiabilities.ToString("0.00") @CurrencyShortName</MudText>
             }
         </div>
-        <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
-                        Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
-            <MudToggleItem Value="@_viewByType" Text="Type" />
-            <MudToggleItem Value="@_viewByAccount" Text="Account" />
-        </MudToggleGroup>
+        <div class="d-flex align-center gap-2 flex-shrink-0 fm-card-info-space">
+            <CardInfoTooltip Text="How your liabilities split across accounts or types."
+                             AriaLabel="About liabilities distribution card" />
+            <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
+                            Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
+                <MudToggleItem Value="@_viewByType" Text="Type" />
+                <MudToggleItem Value="@_viewByAccount" Text="Account" />
+            </MudToggleGroup>
+        </div>
     </MudPaper>
 
     <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center" Elevation="0">

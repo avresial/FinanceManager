@@ -4,10 +4,12 @@
 <MudCard Outlined>
     <MudCardContent>
         <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="fm-card-info-space">
                 <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" />
                 <MudText>AI label setter</MudText>
                 <MudSpacer />
+                <CardInfoTooltip Text="Progress of the AI job that assigns labels to uncategorised entries."
+                                 AriaLabel="About AI label setter card" />
                 @if (_snapshot is not null && _snapshot.QueuedJobsCount > 0)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">

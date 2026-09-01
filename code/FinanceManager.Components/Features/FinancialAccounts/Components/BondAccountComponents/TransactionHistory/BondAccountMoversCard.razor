@@ -5,13 +5,17 @@
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
                 <MudText Typo="Typo.subtitle2">Top movers</MudText>
-                <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
-                                SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
-                                Outlined="true" Dense="true">
-                    <MudToggleItem Value="@MoverMode.Combined" Text="Combined" />
-                    <MudToggleItem Value="@MoverMode.Top" Text="Top" />
-                    <MudToggleItem Value="@MoverMode.Bottom" Text="Bottom" />
-                </MudToggleGroup>
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-space">
+                    <CardInfoTooltip Text="The largest bond entries in the selected period — the biggest buys and sells."
+                                     AriaLabel="About top movers card" />
+                    <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
+                                    SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
+                                    Outlined="true" Dense="true">
+                        <MudToggleItem Value="@MoverMode.Combined" Text="Combined" />
+                        <MudToggleItem Value="@MoverMode.Top" Text="Top" />
+                        <MudToggleItem Value="@MoverMode.Bottom" Text="Bottom" />
+                    </MudToggleGroup>
+                </MudStack>
             </MudStack>
         </CardHeaderContent>
     </MudCardHeader>

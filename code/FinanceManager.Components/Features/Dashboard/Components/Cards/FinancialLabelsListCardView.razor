@@ -7,13 +7,17 @@
             <MudText Typo="Typo.caption" Class="fm-muted">@PeriodLabel</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
-            @if (!IsLoading && !HasError && Data.Any())
-            {
-                <div class="d-flex flex-column align-end mr-2">
-                    <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Net</MudText>
-                    <MudText Typo="Typo.subtitle1" Class="@($"fm-amount fm-tight {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
-                </div>
-            }
+            <div class="d-flex align-center gap-2 fm-card-info-space">
+                <CardInfoTooltip Text="Your money grouped by label for the selected period, split into income and spending."
+                                 AriaLabel="About money by label card" />
+                @if (!IsLoading && !HasError && Data.Any())
+                {
+                    <div class="d-flex flex-column align-end mr-2">
+                        <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Net</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="@($"fm-amount fm-tight {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
+                    </div>
+                }
+            </div>
         </CardHeaderActions>
     </MudCardHeader>
     <MudDivider Class="flex-grow-0" />

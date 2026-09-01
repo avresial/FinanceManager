@@ -15,6 +15,8 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total users count</MudText>
+                    <CardInfoTooltip Text="All registered user accounts on the platform."
+                                     AriaLabel="About total users count card" />
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_userCount.HasValue)
@@ -43,6 +45,8 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Accounts count</MudText>
+                    <CardInfoTooltip Text="All financial accounts created across all users."
+                                     AriaLabel="About accounts count card" />
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_accountsCount.HasValue)
@@ -71,6 +75,8 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Total tracked money</MudText>
+                    <CardInfoTooltip Text="Combined balance of all tracked accounts across all users."
+                                     AriaLabel="About total tracked money card" />
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_totalTrackedMoney.HasValue)
@@ -99,6 +105,8 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <MudText>Todays new visitors</MudText>
+                    <CardInfoTooltip Text="New users who signed up today."
+                                     AriaLabel="About todays new visitors card" />
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         @if (_newVisitorsToday.HasValue)
                         {
@@ -124,6 +132,8 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>Daily active users</MudText>
+                <CardInfoTooltip Text="Users who signed in, counted once per day."
+                                 AriaLabel="About daily active users card" />
                 @if (_dailyActiveUsers is not null)
                 {
                     <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
@@ -149,6 +159,8 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudText>New users</MudText>
+                <CardInfoTooltip Text="New user signups per day."
+                                 AriaLabel="About new users card" />
                 @if (_newUsers is not null)
                 {
                     <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">

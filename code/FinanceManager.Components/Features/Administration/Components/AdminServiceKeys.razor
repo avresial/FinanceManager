@@ -41,13 +41,17 @@ else
                                         </MudStack>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@service.Description</MudText>
                                     </MudStack>
-                                    <MudTooltip Text="Documentation">
-                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                                       Size="Size.Small"
-                                                       Href="@service.DocsUrl"
-                                                       Target="_blank"
-                                                       aria-label="@($"Open {service.DisplayName} documentation")" />
-                                    </MudTooltip>
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-space">
+                                        <CardInfoTooltip Text="Connection settings for this service: base URL and API key."
+                                                         AriaLabel="@($"About {service.DisplayName} card")" />
+                                        <MudTooltip Text="Documentation">
+                                            <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                           Size="Size.Small"
+                                                           Href="@service.DocsUrl"
+                                                           Target="_blank"
+                                                           aria-label="@($"Open {service.DisplayName} documentation")" />
+                                        </MudTooltip>
+                                    </MudStack>
                                 </MudStack>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -116,7 +120,7 @@ else
         <MudCard Outlined>
             <MudCardContent>
                 <MudStack Spacing="3">
-                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-space">
                         @if (_maintenanceKeyStatus?.HasKey == true)
                         {
                             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
@@ -129,6 +133,8 @@ else
                             <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
                             <MudText Typo="Typo.body2" Color="Color.Warning">No key generated — maintenance endpoints are disabled</MudText>
                         }
+                        <CardInfoTooltip Text="Shared secret that authorises scheduled maintenance calls, such as the weekly price backfill."
+                                         AriaLabel="About maintenance API key card" />
                     </MudStack>
 
                     @if (_generatedMaintenanceKey is not null)
