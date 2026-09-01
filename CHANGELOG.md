@@ -73,6 +73,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- The administration dashboard's new-visitors information control now has a grammatically correct screen-reader label. #730
 - Account transaction toolbar controls now share a consistent height, and the search button matches their outlined styling. #726
 - External provider retries are now bounded and degraded outcomes remain distinct from caller cancellation after transient failures. #719
 - Admin logs for resilient external requests now retain a safe provider, host, method, path, and operation identity; generic resilience entries no longer persist raw exception text or duplicate uncontextualized failures. #718
