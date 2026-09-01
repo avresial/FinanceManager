@@ -86,7 +86,7 @@ public class CardInfoTooltipTests
     }
 
     [Fact]
-    public async Task RichChildContent_RendersInTooltipBodyInsteadOfTextSummary()
+    public async Task RichTooltipContent_RendersInTooltipBodyInsteadOfTextSummary()
     {
         await using var context = CreateContext();
         // Popover bodies render through the popover provider, so the test hosts one.
@@ -115,7 +115,10 @@ public class CardInfoTooltipTests
         provider.Render();
 
         // The supplied tooltip body is preserved with the supplied popover class, and the
-        // short summary is suppressed when rich content is present.
+        // shared visual treatment is present while the short summary is suppressed.
+        Assert.Contains("fm-card-info-tooltip-panel", provider.Markup);
+        Assert.Contains("fm-card-info-tooltip-kicker", provider.Markup);
+        Assert.Contains("About this card", provider.Markup);
         Assert.Contains("fm-card-info-glossary", provider.Markup);
         Assert.Contains("What's in this card", provider.Markup);
         Assert.DoesNotContain("Short summary", provider.Markup);
