@@ -34,6 +34,25 @@ public class CardInfoAffordanceCoverageTests
     }
 
     [Fact]
+    public void CardScopeValidation_IgnoresCommentedTooltips()
+    {
+        const string razorText = """
+            <MudCard>
+                @* <CardInfoTooltip Text="Commented Razor tooltip" /> *@
+            </MudCard>
+            <MudCard>
+                <!-- <CardInfoTooltip Text="Commented HTML tooltip" /> -->
+                <CardInfoTooltip Text="Rendered" />
+            </MudCard>
+            """;
+
+        var mismatches = FindCardCoverageMismatches(razorText);
+
+        Assert.Single(mismatches);
+        Assert.Contains("card 1", mismatches[0]);
+    }
+
+    [Fact]
     public void EveryMudCard_HasExactlyOneCardInfoTooltip()
     {
         var componentsRoot = GetComponentsRoot();
@@ -66,12 +85,13 @@ public class CardInfoAffordanceCoverageTests
 
     private static CardCoverage AnalyzeCardCoverage(string razorText)
     {
+        var markup = RemoveCommentsPreservingLineNumbers(razorText);
         var cards = new List<CardSurface>();
         var openCards = new Stack<CardSurface>();
         var tooltipTotal = 0;
         var orphanTooltipTotal = 0;
 
-        foreach (Match token in _cardMarkupTokenPattern.Matches(razorText))
+        foreach (Match token in _cardMarkupTokenPattern.Matches(markup))
         {
             if (token.Value.StartsWith("</MudCard", StringComparison.Ordinal))
             {
@@ -98,7 +118,7 @@ public class CardInfoAffordanceCoverageTests
                 continue;
             }
 
-            var cardSurface = new CardSurface(GetLineNumber(razorText, token.Index));
+            var cardSurface = new CardSurface(GetLineNumber(markup, token.Index));
             cards.Add(cardSurface);
             if (!token.Value.TrimEnd().EndsWith("/>", StringComparison.Ordinal))
             {
@@ -123,6 +143,10 @@ public class CardInfoAffordanceCoverageTests
 
         return new CardCoverage(cards, tooltipTotal, mismatches);
     }
+
+    private static string RemoveCommentsPreservingLineNumbers(string text) =>
+        _commentPattern.Replace(text, match => new string(match.Value.Select(character =>
+            character is '\n' or '\r' ? character : ' ').ToArray()));
 
     private static IReadOnlyList<string> FindCardCoverageMismatches(string razorText) =>
         AnalyzeCardCoverage(razorText).Mismatches;
@@ -151,6 +175,10 @@ public class CardInfoAffordanceCoverageTests
 
     private static readonly Regex _cardMarkupTokenPattern = new(
         @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])",
+        RegexOptions.Compiled);
+
+    private static readonly Regex _commentPattern = new(
+        @"@\*[\s\S]*?\*@|<!--[\s\S]*?-->",
         RegexOptions.Compiled);
 
     private sealed class CardSurface(int lineNumber)

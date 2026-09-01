@@ -9,6 +9,11 @@
     min-width: 0;
 }
 
+.fm-card-info-centered {
+    width: 100%;
+    text-align: center;
+}
+
 /* The card title is the affordance. A quiet dotted cue appears only while the
    title is interactive, so the card stays calm at rest without hiding the hint. */
 .fm-card-info-trigger {
@@ -26,14 +31,14 @@
 
 .fm-card-info-trigger:hover {
     color: var(--mud-palette-primary);
-    border-bottom-color: currentColor;
+    border-bottom-color: currentcolor;
 }
 
 .fm-card-info-trigger:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
     outline-offset: 3px;
     border-radius: 2px;
-    border-bottom-color: currentColor;
+    border-bottom-color: currentcolor;
 }
 
 /* Shared header primitives for cards that use a custom header row. */

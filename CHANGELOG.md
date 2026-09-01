@@ -35,6 +35,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Card explanations now open from card header labels with polished, viewport-aware tooltip surfaces and no standalone info icons. #730
+- Landing and welcome card titles now stay centered across their full header while remaining tooltip triggers. #730
 - The Investment paycheck card's detailed information panel is replaced by the standard card information tooltip. #730
 - Repeatedly paging through cash and bond account transaction history now reuses recent page results, making back-and-forth scrolling respond faster.
 - Investment and bond account charts now begin loading independently of transaction enrichment, so account details render faster. #715
