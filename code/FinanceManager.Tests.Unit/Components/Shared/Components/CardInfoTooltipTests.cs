@@ -1,5 +1,6 @@
 using Bunit;
 using FinanceManager.Components.Shared.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,33 +13,38 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Components;
 public class CardInfoTooltipTests
 {
     [Fact]
-    public async Task Renders_OutlinedInformationIconButton()
+    public async Task Renders_HeaderLabelAsTooltipTrigger()
     {
         await using var context = CreateContext();
         var cut = context.Render<CardInfoTooltip>(parameters => parameters
             .Add(p => p.Text, "What this card shows")
-            .Add(p => p.AriaLabel, "About this card"));
+            .Add(p => p.AriaLabel, "About this card")
+            .AddChildContent(builder =>
+            {
+                builder.OpenElement(0, "span");
+                builder.AddContent(1, "Net cash flow");
+                builder.CloseElement();
+            }));
 
-        var button = cut.Find("button");
-        Assert.Contains("mud-icon-button", button.ClassList);
-        var svg = cut.Find("button svg");
-        Assert.Contains("mud-icon-root", svg.ClassList);
-        Assert.Contains("mud-svg-icon", svg.ClassList);
-        // The material outlined "i" glyph is rendered verbatim from the package constant.
-        Assert.Contains(Icons.Material.Outlined.Info, cut.Markup);
+        var trigger = cut.Find(".fm-card-info-trigger");
+        Assert.Equal("0", trigger.GetAttribute("tabindex"));
+        Assert.Equal("About this card", trigger.GetAttribute("aria-label"));
+        Assert.Contains("Net cash flow", trigger.TextContent);
+        Assert.DoesNotContain("mud-icon-button", cut.Markup);
+        Assert.DoesNotContain("HelpOutline", cut.Markup);
     }
 
     [Fact]
-    public async Task PinsIconToCardCornerViaAnchorClass()
+    public async Task RendersTriggerInNormalFlowViaRootClass()
     {
         await using var context = CreateContext();
         var cut = context.Render<CardInfoTooltip>(parameters => parameters
             .Add(p => p.Text, "What this card shows"));
 
-        // The MudTooltip root element carries the global anchor class that pins the
-        // icon to the host card's top-right corner (card-info-affordance.css).
-        var anchor = Assert.Single(cut.FindAll("div.mud-tooltip-root"));
-        Assert.Contains("fm-card-info-anchor", anchor.ClassList);
+        // The MudTooltip root carries the global class used by the in-flow header affordance.
+        var root = Assert.Single(cut.FindAll("div.mud-tooltip-root"));
+        Assert.Contains("fm-card-info-root", root.ClassList);
+        Assert.DoesNotContain("fm-card-info-anchor", root.ClassList);
     }
 
     [Fact]
@@ -49,7 +55,7 @@ public class CardInfoTooltipTests
             .Add(p => p.Text, "What this card shows")
             .Add(p => p.AriaLabel, "About investment rate card"));
 
-        Assert.Equal("About investment rate card", cut.Find("button").GetAttribute("aria-label"));
+        Assert.Equal("About investment rate card", cut.Find(".fm-card-info-trigger").GetAttribute("aria-label"));
     }
 
     [Fact]
@@ -59,7 +65,7 @@ public class CardInfoTooltipTests
         var cut = context.Render<CardInfoTooltip>(parameters => parameters
             .Add(p => p.Text, "What this card shows"));
 
-        Assert.Equal("About this card", cut.Find("button").GetAttribute("aria-label"));
+        Assert.Equal("About this card", cut.Find(".fm-card-info-trigger").GetAttribute("aria-label"));
     }
 
     [Fact]
@@ -70,11 +76,12 @@ public class CardInfoTooltipTests
             .Add(p => p.Text, "What share of your salary you invest each month.")
             .Add(p => p.AriaLabel, "About investment rate card"));
 
-        // MudTooltip keeps its Text parameter on the instance; the popover anchor is rendered
-        // because the tooltip has text to show.
+        // The tooltip body is rendered through a RenderFragment so every explanation shares the
+        // same polished heading and spacing.
         var tooltip = Assert.Single(cut.FindComponents<MudTooltip>());
-        Assert.Equal("What share of your salary you invest each month.", tooltip.Instance.Text);
-        Assert.Equal(Placement.Left, tooltip.Instance.Placement);
+        Assert.Equal(string.Empty, tooltip.Instance.Text);
+        Assert.NotNull(tooltip.Instance.TooltipContent);
+        Assert.Equal(Placement.Bottom, tooltip.Instance.Placement);
         Assert.True(cut.FindAll("div.mud-popover-cascading-value").Count > 0);
     }
 
@@ -91,18 +98,24 @@ public class CardInfoTooltipTests
             .AddChildContent(builder =>
             {
                 builder.OpenElement(0, "div");
+                builder.AddContent(1, "Investment paycheck");
+                builder.CloseElement();
+            })
+            .Add(p => p.TooltipContent, (RenderFragment)(builder =>
+            {
+                builder.OpenElement(0, "div");
                 builder.AddAttribute(1, "class", "fm-card-info-glossary-head");
                 builder.AddContent(2, "What's in this card");
                 builder.CloseElement();
-            }));
+            })));
 
         await cut.Find("div.mud-tooltip-root").TriggerEventAsync("onpointerenter", new PointerEventArgs());
         // The service notifies the provider asynchronously; let the update settle.
         await Task.Delay(50, Xunit.TestContext.Current.CancellationToken);
         provider.Render();
 
-        // When child content is supplied the popover body is that content (with the
-        // supplied popover class), and the Text summary is suppressed.
+        // The supplied tooltip body is preserved with the supplied popover class, and the
+        // short summary is suppressed when rich content is present.
         Assert.Contains("fm-card-info-glossary", provider.Markup);
         Assert.Contains("What's in this card", provider.Markup);
         Assert.DoesNotContain("Short summary", provider.Markup);

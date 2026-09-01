@@ -4,18 +4,22 @@
 <MudCard Outlined>
     <MudCardContent>
         <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="fm-card-info-space">
-                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" />
-                <MudText>AI label setter</MudText>
-                <MudSpacer />
-                <CardInfoTooltip Text="Progress of the AI job that assigns labels to uncategorised entries."
-                                 AriaLabel="About AI label setter card" />
-                @if (_snapshot is not null && _snapshot.QueuedJobsCount > 0)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                        @_snapshot.QueuedJobsCount queued
-                    </MudChip>
-                }
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="fm-card-info-header">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" />
+                    <CardInfoTooltip Text="Progress of the AI job that assigns labels to uncategorised entries."
+                                     AriaLabel="About AI label setter card">
+                        <MudText>AI label setter</MudText>
+                    </CardInfoTooltip>
+                </MudStack>
+                <div class="fm-card-info-actions">
+                    @if (_snapshot is not null && _snapshot.QueuedJobsCount > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                            @_snapshot.QueuedJobsCount queued
+                        </MudChip>
+                    }
+                </div>
             </MudStack>
 
             @if (_loadError is not null)

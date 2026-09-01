@@ -4,10 +4,11 @@
     <MudCardHeader Class="py-2 px-4">
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="w-100">
-                <MudText Typo="Typo.subtitle2">Top movers</MudText>
-                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-space">
-                    <CardInfoTooltip Text="The largest entries in the selected period — the biggest income and expenses."
-                                     AriaLabel="About top movers card" />
+                <CardInfoTooltip Text="The largest entries in the selected period — the biggest income and expenses."
+                                 AriaLabel="About top movers card">
+                    <MudText Typo="Typo.subtitle2">Top movers</MudText>
+                </CardInfoTooltip>
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-actions">
                     <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
                                     SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
                                     Outlined="true" Dense="true">

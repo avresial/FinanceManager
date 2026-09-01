@@ -7,11 +7,14 @@
     <MudCardHeader Class="py-1 px-4">
         <CardHeaderContent>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
-                    <MudText Typo="Typo.subtitle2">@DayDateTime.ToString("dd MMM")</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Default">@DayDateTime.ToString("dddd")</MudText>
-                </MudStack>
-                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-space">
+                <CardInfoTooltip Text="All trades made on this day, with the day's net effect."
+                                 AriaLabel="@($"About {DayDateTime:dd MMM yyyy} card")">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                        <MudText Typo="Typo.subtitle2">@DayDateTime.ToString("dd MMM")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default">@DayDateTime.ToString("dddd")</MudText>
+                    </MudStack>
+                </CardInfoTooltip>
+                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-actions">
                     <MudText Typo="Typo.caption" Color="Color.Default">@TransactionList.Count @(TransactionList.Count == 1 ? "trade" : "trades")</MudText>
                     @if (IsSingleCurrency)
                     {
@@ -25,8 +28,6 @@
                         <MudText Typo="Typo.caption" Color="Color.Default">Mixed currencies</MudText>
                     }
                 </MudStack>
-                <CardInfoTooltip Text="All trades made on this day, with the day's net effect."
-                                 AriaLabel="@($"About {DayDateTime:dd MMM yyyy} card")" />
             </MudStack>
         </CardHeaderContent>
     </MudCardHeader>

@@ -6,13 +6,17 @@
 <MudCard Outlined>
     <MudCardContent>
         <MudPaper Class="d-flex justify-start gap-2 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="fm-card-info-space">
-                <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
-                <MudText>Recent warnings & errors</MudText>
-                <MudSpacer />
-                <CardInfoTooltip Text="Recent warning and error events recorded by the application."
-                                 AriaLabel="About recent warnings and errors card" />
-                <MudLink Href="Admin/Logs">View all</MudLink>
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="fm-card-info-header">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
+                    <CardInfoTooltip Text="Recent warning and error events recorded by the application."
+                                     AriaLabel="About recent warnings and errors card">
+                        <MudText>Recent warnings & errors</MudText>
+                    </CardInfoTooltip>
+                </MudStack>
+                <div class="fm-card-info-actions">
+                    <MudLink Href="Admin/Logs">View all</MudLink>
+                </div>
             </MudStack>
 
             @if (_loadError is not null)

@@ -34,16 +34,17 @@ else
                                 <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                                     <MudStack Spacing="0">
                                         <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudText Typo="Typo.h6">@provider.DisplayName</MudText>
+                                            <CardInfoTooltip Text="Where AI requests are sent for this provider: endpoint, models, API key and timeout."
+                                                             AriaLabel="@($"About {provider.DisplayName} card")">
+                                                <MudText Typo="Typo.h6">@provider.DisplayName</MudText>
+                                            </CardInfoTooltip>
                                             <MudSwitch T="bool" Value="@provider.IsEnabled"
                                                        ValueChanged="@(v => provider.IsEnabled = v)"
                                                        Color="Color.Primary" />
                                         </MudStack>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@provider.Description</MudText>
                                     </MudStack>
-                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-space">
-                                        <CardInfoTooltip Text="Where AI requests are sent for this provider: endpoint, models, API key and timeout."
-                                                         AriaLabel="@($"About {provider.DisplayName} card")" />
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-actions">
                                         <MudTooltip Text="Documentation">
                                             <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
                                                            Size="Size.Small"

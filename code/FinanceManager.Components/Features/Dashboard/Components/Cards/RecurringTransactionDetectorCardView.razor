@@ -1,36 +1,43 @@
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex align-center flex-grow-0 px-4 pt-3 pb-1 fm-card-info-space" Elevation="0">
+    <MudPaper Class="d-flex align-center flex-grow-0 px-4 pt-3 pb-1 fm-card-info-header" Elevation="0">
         <div class="flex-grow-1" style="min-width:0;">
-        @if (SelectedItem is null)
-        {
-            <MudText Typo=Typo.h5>Recurring transactions</MudText>
-            @if (IsLoading)
-            {
-                <MudText Typo=Typo.subtitle1 Class="text-muted">
-                    <StringSpinner CharactersCount="4" />
-                </MudText>
-            }
-            else if (Data.Count > 0)
-            {
-                <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") @Currency/mo</MudText>
-            }
-        }
-        else
-        {
             <div class="d-flex align-center gap-1">
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="OnBack" aria-label="Back to recurring transactions" />
-                <MudText Typo=Typo.h5>@SelectedItem.Name</MudText>
+                @if (SelectedItem is not null)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="OnBack" aria-label="Back to recurring transactions" />
+                }
+                <CardInfoTooltip Text="Transactions that repeat on a schedule, with their monthly cost. Select one to see its entries."
+                                 AriaLabel="About recurring transactions card">
+                    @if (SelectedItem is null)
+                    {
+                        <MudText Typo=Typo.h5>Recurring transactions</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo=Typo.h5>@SelectedItem.Name</MudText>
+                    }
+                </CardInfoTooltip>
             </div>
-            @if (DetailEntries.Count > 0)
+            @if (SelectedItem is null)
+            {
+                @if (IsLoading)
+                {
+                    <MudText Typo=Typo.subtitle1 Class="text-muted">
+                        <StringSpinner CharactersCount="4" />
+                    </MudText>
+                }
+                else if (Data.Count > 0)
+                {
+                    <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") @Currency/mo</MudText>
+                }
+            }
+            else if (DetailEntries.Count > 0)
             {
                 <MudText Typo=Typo.caption Class="text-muted">@DetailEntries.First().PostingDate.Year</MudText>
             }
-        }
         </div>
-        <CardInfoTooltip Text="Transactions that repeat on a schedule, with their monthly cost. Select one to see its entries."
-                         AriaLabel="About recurring transactions card" />
     </MudPaper>
 
     <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">

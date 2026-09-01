@@ -70,8 +70,8 @@ public partial class TimeSeriesValueCard
     [Parameter] public string Height { get; set; } = "250px";
 
     private string InfoText =>
-        $"{(string.IsNullOrWhiteSpace(Title) ? "The value of this series" : $"The {Title}")} for the selected period; " +
-        "hover a point to see its value on that date.";
+        $"{(string.IsNullOrWhiteSpace(Title) ? "The value of this series" : $"The {Title}")} for the selected period. " +
+        "Hover a point to see its value on that date.";
 
     private LoadState State =>
         IsLoading ? LoadState.Loading

@@ -106,11 +106,12 @@
                             <MudCard>
                                 <MudCardContent>
                                 <MudStack Spacing="1">
-                                    <div class="fm-card-info-space">
-                                        <MudText Typo="Typo.subtitle1"><b>@suggestion.Name</b></MudText>
+                                    <div class="fm-card-info-header">
+                                        <CardInfoTooltip Text="A label the AI suggests for this sample, with the reason and example entries."
+                                                         AriaLabel="@($"About suggested label {suggestion.Name}")">
+                                            <MudText Typo="Typo.subtitle1"><b>@suggestion.Name</b></MudText>
+                                        </CardInfoTooltip>
                                     </div>
-                                    <CardInfoTooltip Text="A label the AI suggests for this sample, with the reason and example entries."
-                                                     AriaLabel="@($"About suggested label {suggestion.Name}")" />
                                     <MudText Typo="Typo.body2">@suggestion.Rationale</MudText>
                                         @if (suggestion.ExampleDescriptions.Count > 0)
                                         {

@@ -1,11 +1,12 @@
 <MudCard Outlined="true" Style="background-color: transparent;">
     <MudCardContent>
-        <div class="d-flex align-center justify-space-between" style="gap:8px;">
-            <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-card-info-space">
-                @Label@(ShowRange ? $" · {RangeLabel}" : null)
-            </MudText>
+        <div class="d-flex align-center justify-space-between fm-card-info-header" style="gap:8px;">
             <CardInfoTooltip Text="@InfoText"
-                             AriaLabel="@($"About {Label} card")" />
+                             AriaLabel="@($"About {Label} card")">
+                <MudText Typo="Typo.overline" Color="Color.Default">
+                    @Label@(ShowRange ? $" · {RangeLabel}" : null)
+                </MudText>
+            </CardInfoTooltip>
         </div>
         <MudText Typo="Typo.h3" Class="fm-tabular"
                  Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">

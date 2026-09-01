@@ -11,9 +11,27 @@ namespace FinanceManager.Tests.Unit.Components;
 [Trait("Category", "Unit")]
 public class CardInfoAffordanceCoverageTests
 {
-    private static readonly Regex CardAndTooltipTagPattern = new(
-        "</?MudCard(?=[\\s>/])[^>]*>|<CardInfoTooltip(?=[\\s>/])[^>]*>",
-        RegexOptions.Compiled);
+    [Fact]
+    public void CardScopeValidation_RejectsBalancedButMisallocatedTooltips()
+    {
+        const string razorText = """
+            <MudCard>
+                <CardInfoTooltip Text="First" />
+                <CardInfoTooltip Text="Duplicate" />
+            </MudCard>
+            <MudCard></MudCard>
+            <MudCard></MudCard>
+            <CardInfoTooltip Text="Orphan" />
+            """;
+
+        var mismatches = FindCardCoverageMismatches(razorText);
+
+        Assert.Equal(4, mismatches.Count);
+        Assert.Contains("card 1", mismatches[0]);
+        Assert.Contains("card 2", mismatches[1]);
+        Assert.Contains("card 3", mismatches[2]);
+        Assert.Contains("outside a MudCard", mismatches[3]);
+    }
 
     [Fact]
     public void EveryMudCard_HasExactlyOneCardInfoTooltip()
@@ -24,45 +42,38 @@ public class CardInfoAffordanceCoverageTests
             .ToList();
         Assert.True(razorFiles.Count > 0, $"No Razor files found under {componentsRoot} — path resolution is wrong.");
 
-        var mismatches = new List<string>();
+        List<string> mismatches = [];
+        var cardTotal = 0;
         var tooltipTotal = 0;
 
         foreach (var file in razorFiles)
         {
             var text = File.ReadAllText(file);
-            tooltipTotal += CountTags(text, "CardInfoTooltip");
-            var fileMismatches = FindAffordanceMismatches(text);
-            if (fileMismatches.Count > 0)
+            var coverage = AnalyzeCardCoverage(text);
+            cardTotal += coverage.Cards.Count;
+            tooltipTotal += coverage.TooltipCount;
+            if (coverage.Mismatches.Count > 0)
             {
                 var relative = Path.GetRelativePath(componentsRoot, file);
-                mismatches.Add($"{relative}: {string.Join("; ", fileMismatches)}");
+                mismatches.AddRange(coverage.Mismatches.Select(mismatch => $"{relative}: {mismatch}"));
             }
         }
 
+        Assert.True(cardTotal > 0, "No MudCard tags found — path resolution is wrong or all cards were removed?");
         Assert.True(tooltipTotal > 0, "No CardInfoTooltip usages found — the affordance was removed?");
         Assert.Empty(mismatches);
     }
 
-    [Fact]
-    public void FindAffordanceMismatches_ReportsOrphanAndMissingTooltip_WhenFileTotalsMatch()
+    private static CardCoverage AnalyzeCardCoverage(string razorText)
     {
-        const string razor = "<MudCard><CardInfoTooltip /></MudCard><MudCard></MudCard><CardInfoTooltip />";
+        var cards = new List<CardSurface>();
+        var openCards = new Stack<CardSurface>();
+        var tooltipTotal = 0;
+        var orphanTooltipTotal = 0;
 
-        var mismatches = FindAffordanceMismatches(razor);
-
-        Assert.Contains("MudCard #2 contains 0 CardInfoTooltip instances", mismatches);
-        Assert.Contains("1 orphan CardInfoTooltip instance", mismatches);
-    }
-
-    private static List<string> FindAffordanceMismatches(string razorText)
-    {
-        var tooltipCounts = new List<int>();
-        var openCards = new Stack<int>();
-        var orphanTooltipCount = 0;
-
-        foreach (Match match in CardAndTooltipTagPattern.Matches(razorText))
+        foreach (Match token in _cardMarkupTokenPattern.Matches(razorText))
         {
-            if (match.Value.StartsWith("</", StringComparison.Ordinal))
+            if (token.Value.StartsWith("</MudCard", StringComparison.Ordinal))
             {
                 if (openCards.Count > 0)
                 {
@@ -72,49 +83,62 @@ public class CardInfoAffordanceCoverageTests
                 continue;
             }
 
-            if (match.Value.StartsWith("<MudCard", StringComparison.Ordinal))
+            if (token.Value.StartsWith("<CardInfoTooltip", StringComparison.Ordinal))
             {
-                tooltipCounts.Add(0);
-                openCards.Push(tooltipCounts.Count - 1);
-
-                if (match.Value.EndsWith("/>", StringComparison.Ordinal))
+                tooltipTotal++;
+                if (openCards.TryPeek(out var card))
                 {
-                    openCards.Pop();
+                    card.TooltipCount++;
+                }
+                else
+                {
+                    orphanTooltipTotal++;
                 }
 
                 continue;
             }
 
-            if (openCards.TryPeek(out var cardIndex))
+            var cardSurface = new CardSurface(GetLineNumber(razorText, token.Index));
+            cards.Add(cardSurface);
+            if (!token.Value.TrimEnd().EndsWith("/>", StringComparison.Ordinal))
             {
-                tooltipCounts[cardIndex]++;
-            }
-            else
-            {
-                orphanTooltipCount++;
+                openCards.Push(cardSurface);
             }
         }
 
-        var mismatches = tooltipCounts
-            .Select((tooltipCount, index) => new { tooltipCount, index })
-            .Where(card => card.tooltipCount != 1)
-            .Select(card => $"MudCard #{card.index + 1} contains {card.tooltipCount} CardInfoTooltip instances")
-            .ToList();
-
-        if (orphanTooltipCount > 0)
+        List<string> mismatches = [];
+        for (var index = 0; index < cards.Count; index++)
         {
-            mismatches.Add($"{orphanTooltipCount} orphan CardInfoTooltip instance{(orphanTooltipCount == 1 ? string.Empty : "s")}");
+            var card = cards[index];
+            if (card.TooltipCount != 1)
+            {
+                mismatches.Add($"card {index + 1} at line {card.LineNumber}: {card.TooltipCount} CardInfoTooltip");
+            }
         }
 
-        return mismatches;
+        if (orphanTooltipTotal > 0)
+        {
+            mismatches.Add($"{orphanTooltipTotal} CardInfoTooltip outside a MudCard");
+        }
+
+        return new CardCoverage(cards, tooltipTotal, mismatches);
     }
 
-    // Matches component opening tags (<MudCard, <MudCard ...>, <MudCard/>) while ignoring
-    // closing tags and look-alike tags such as <MudCardHeader>.
-    private static int CountTags(string razorText, string tagName)
+    private static IReadOnlyList<string> FindCardCoverageMismatches(string razorText) =>
+        AnalyzeCardCoverage(razorText).Mismatches;
+
+    private static int GetLineNumber(string text, int index)
     {
-        var pattern = new Regex($"<{tagName}(?=[\\s>/])", RegexOptions.Compiled);
-        return pattern.Matches(razorText).Count;
+        var lineNumber = 1;
+        for (var position = 0; position < index; position++)
+        {
+            if (text[position] == '\n')
+            {
+                lineNumber++;
+            }
+        }
+
+        return lineNumber;
     }
 
     private static string GetComponentsRoot()
@@ -124,4 +148,20 @@ public class CardInfoAffordanceCoverageTests
             AppContext.BaseDirectory, "..", "..", "..", "..", "FinanceManager.Components"));
         return root;
     }
+
+    private static readonly Regex _cardMarkupTokenPattern = new(
+        @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])",
+        RegexOptions.Compiled);
+
+    private sealed class CardSurface(int lineNumber)
+    {
+        public int LineNumber { get; } = lineNumber;
+
+        public int TooltipCount { get; set; }
+    }
+
+    private sealed record CardCoverage(
+        IReadOnlyList<CardSurface> Cards,
+        int TooltipCount,
+        IReadOnlyList<string> Mismatches);
 }

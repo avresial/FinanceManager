@@ -8,10 +8,11 @@
 
 <MudCard Outlined="true" Style="background-color: transparent;">
     <MudCardContent>
-        <div class="d-flex align-center justify-space-between" style="gap:8px;">
-            <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-card-info-space">@Label</MudText>
+        <div class="d-flex align-center justify-space-between fm-card-info-header" style="gap:8px;">
             <CardInfoTooltip Text="What you put in, what it's worth now, and the gain or loss between."
-                             AriaLabel="@($"About {Label} card")" />
+                             AriaLabel="@($"About {Label} card")">
+                <MudText Typo="Typo.overline" Color="Color.Default">@Label</MudText>
+            </CardInfoTooltip>
         </div>
 
         <MudStack Spacing="1" Class="mt-2">
