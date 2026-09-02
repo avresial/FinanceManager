@@ -63,6 +63,18 @@ public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueS
             : await balanceService.GetNetCashFlow(userId, currency, start, end));
     }
 
+    [HttpGet("GetCapital/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
+    public async Task<IActionResult> GetCapital(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
+
+        var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
+        return Ok(accountIds is { Count: > 0 }
+            ? await balanceService.GetCapital(userId, currency, start, end, accountIds)
+            : await balanceService.GetCapital(userId, currency, start, end));
+    }
+
     [HttpGet("GetClosingBalance/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetClosingBalance(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)

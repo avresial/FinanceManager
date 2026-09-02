@@ -596,6 +596,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         now => $"api/MoneyFlow/GetInflow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetOutflow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetNetCashFlow/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
+        now => $"api/MoneyFlow/GetCapital/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetClosingBalance/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetLabelsValue?userId=2&start={now.AddDays(-7):O}&end={now:O}",
         now => $"api/MoneyFlow/GetInvestmentRate?userId=2&currencyId={DefaultCurrency.USD.Id}&start={now.AddDays(-7):O}&end={now:O}",
@@ -713,6 +714,25 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(1000m, inflow.Sum(x => x.Value));
         Assert.Equal(-500m, outflow.Sum(x => x.Value));
         Assert.Equal(-500m, netCashFlow.Single(x => x.DateTime == day0.AddDays(1)).Value);
+    }
+
+    [Fact]
+    public async Task GetCapital_IncludesInvestmentAccountTrades()
+    {
+        var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        await SeedCashAndInvestmentAccounts(day0);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new MoneyFlowHttpClient(Client).GetCapital(
+            1,
+            DefaultCurrency.USD,
+            day0,
+            day0.AddDays(2),
+            [51]);
+
+        Assert.Equal(0m, result.Single(x => x.DateTime == day0).Value);
+        Assert.Equal(500m, result.Single(x => x.DateTime == day0.AddDays(1)).Value);
+        Assert.Equal(500m, result.Single(x => x.DateTime == day0.AddDays(2)).Value);
     }
 
     public override void Dispose()

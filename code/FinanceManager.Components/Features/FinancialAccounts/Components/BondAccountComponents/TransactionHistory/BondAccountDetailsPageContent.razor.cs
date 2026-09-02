@@ -63,6 +63,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     public BondAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
+    public List<TimeSeriesModel> CapitalData { get; set; } = [];
 
     [Parameter] public required int AccountId { get; set; }
 
@@ -286,9 +287,14 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                     version,
                     async () =>
                     {
-                        var series = (await MoneyFlowHttpClient.GetClosingBalance(userId, currency, dateStart, dateEnd, [accountId]))
+                        var balanceTask = MoneyFlowHttpClient.GetClosingBalance(userId, currency, dateStart, dateEnd, [accountId]);
+                        var capitalTask = MoneyFlowHttpClient.GetCapital(userId, currency, dateStart, dateEnd, [accountId]);
+                        await Task.WhenAll(balanceTask, capitalTask);
+
+                        var series = (await balanceTask)
                             .SkipWhile(x => x.Value == 0)
                             .ToList();
+                        var capitalSeries = await capitalTask;
                         var currentBalance = series.LastOrDefault()?.Value ?? 0;
                         var balanceChange = series.Count >= 2 ? series.Last().Value - series.First().Value : 0;
                         var startBalance = currentBalance - balanceChange;
@@ -299,7 +305,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                             series,
                             currentBalance,
                             balanceChange,
-                            startBalance == 0 ? null : balanceChange / startBalance * 100m);
+                            startBalance == 0 ? null : balanceChange / startBalance * 100m,
+                            capitalSeries);
                     },
                     onSnapshotPainted: ApplyChartModel,
                     onSnapshotMissing: ShowChartLoading,
@@ -330,6 +337,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     {
         ChartData.Clear();
         ChartData.AddRange(model.Series);
+        CapitalData.Clear();
+        CapitalData.AddRange(model.CapitalSeries ?? []);
         _currentBalance = model.CurrentBalance;
         _balanceChange = model.BalanceChange;
         _balanceChangePercent = model.BalanceChangePercent;
@@ -340,6 +349,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private Task ShowChartLoading()
     {
         ChartData.Clear();
+        CapitalData.Clear();
         _isChartLoading = true;
         return InvokeAsync(StateHasChanged);
     }

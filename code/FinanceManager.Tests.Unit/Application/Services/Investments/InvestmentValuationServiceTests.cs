@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.MoneyFlow.Services;
@@ -17,20 +18,29 @@ public class InvestmentValuationServiceTests
     private readonly Mock<IInvestmentTransactionRepository> _transactionRepository = new();
     private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
     private readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
 
     private InvestmentValuationService CreateSut() =>
-        new(_transactionRepository.Object, _priceProvider.Object, _inflationIndexProvider.Object);
+        new(_transactionRepository.Object, _priceProvider.Object, _inflationIndexProvider.Object, _currencyExchangeService.Object);
 
-    private static InvestmentTransaction Tx(long listingId, InvestmentTransactionType type, decimal qty, DateOnly tradeDate, int accountId = _accountId) =>
+    private static InvestmentTransaction Tx(
+        long listingId,
+        InvestmentTransactionType type,
+        decimal qty,
+        DateOnly tradeDate,
+        int accountId = _accountId,
+        decimal unitPrice = 1m,
+        decimal? fee = null) =>
         new()
         {
             AccountId = accountId,
             AssetListingId = listingId,
             Type = type,
             Quantity = qty,
-            UnitPrice = 1m,
+            UnitPrice = unitPrice,
             Currency = "USD",
-            TradeDate = tradeDate
+            TradeDate = tradeDate,
+            Fee = fee
         };
 
     [Fact]
@@ -255,6 +265,82 @@ public class InvestmentValuationServiceTests
 
         // The listing shared by both accounts is priced once across the whole set.
         _priceProvider.Verify(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCapitalSeries_AccumulatesBuysAndSells_CarriesOpeningCapital_AndCombinesSameDayFlows()
+    {
+        var start = new DateTime(2024, 1, 2);
+        var end = new DateTime(2024, 1, 4);
+        SetupTransactions(
+            Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2024, 1, 1), unitPrice: 10m, fee: 2m),
+            Tx(1, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 2), unitPrice: 10m, fee: 1m),
+            Tx(1, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 2), unitPrice: 5m),
+            Tx(1, InvestmentTransactionType.Sell, 1m, new DateOnly(2024, 1, 3), unitPrice: 15m, fee: 1m));
+
+        var series = await CreateSut().GetCapitalSeriesAsync(
+            [_accountId], _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(128m, series[_accountId][start]);
+        Assert.Equal(114m, series[_accountId][start.AddDays(1)]);
+        Assert.Equal(114m, series[_accountId][end]);
+        Assert.Equal(114m, series[_accountId][start.AddDays(2)]);
+    }
+
+    [Fact]
+    public async Task GetCapitalSeries_ConvertsEachCashFlowUsingOneHistoricalRateRange()
+    {
+        var start = new DateTime(2024, 1, 2);
+        var end = new DateTime(2024, 1, 3);
+        var eur = new Currency(2, "EUR", "€");
+        var transactions = new[]
+        {
+            Tx(1, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 2), unitPrice: 100m),
+            Tx(1, InvestmentTransactionType.Sell, 1m, new DateOnly(2024, 1, 3), unitPrice: 50m)
+        };
+        foreach (var transaction in transactions)
+            transaction.Currency = eur.ShortName;
+        SetupTransactions(transactions);
+
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(currency => currency.ShortName == "EUR"),
+                It.Is<Currency>(currency => currency.ShortName == "PLN"),
+                start,
+                end))
+            .ReturnsAsync([
+                (start, (decimal?)2m),
+                (end, (decimal?)3m)
+            ]);
+
+        var series = await CreateSut().GetCapitalSeriesAsync(
+            [_accountId], DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(400m, series[_accountId][start]);
+        Assert.Equal(250m, series[_accountId][end]);
+        _currencyExchangeService.Verify(
+            x => x.GetExchangeRateAsync(
+                It.Is<Currency>(currency => currency.ShortName == "EUR"),
+                It.Is<Currency>(currency => currency.ShortName == "PLN"),
+                start,
+                end),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetCapitalSeries_IgnoresUnknownFutureTransactionTypes()
+    {
+        var transactions = new[]
+        {
+            Tx(1, (InvestmentTransactionType)999, 5m, new DateOnly(2024, 1, 1), unitPrice: 100m)
+        };
+        SetupTransactions(transactions);
+
+        var series = await CreateSut().GetCapitalSeriesAsync(
+            [_accountId], _usd, new DateTime(2024, 1, 1), new DateTime(2024, 1, 2), TestContext.Current.CancellationToken);
+
+        Assert.Empty(series);
+        _currencyExchangeService.VerifyNoOtherCalls();
     }
 
     [Fact]

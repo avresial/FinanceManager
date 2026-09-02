@@ -30,6 +30,8 @@ public class BalanceAggregationServiceTests
         mock.Setup(x => x.GetOutflow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetNetCashFlow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
         mock.Setup(x => x.GetNetCashFlow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
+        mock.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
+        mock.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetClosingBalance(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
         mock.Setup(x => x.GetClosingBalance(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
     }
@@ -44,6 +46,21 @@ public class BalanceAggregationServiceTests
                  .ReturnsAsync([new(date, 15)]);
 
         var result = await _balanceService.GetClosingBalance(1, DefaultCurrency.PLN, date, date);
+
+        Assert.Single(result);
+        Assert.Equal(25, result[0].Value);
+    }
+
+    [Fact]
+    public async Task GetCapital_AggregatesValuesFromTypedServices()
+    {
+        var date = new DateTime(2024, 1, 1);
+        _service1.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                 .ReturnsAsync([new(date, 10)]);
+        _service2.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                 .ReturnsAsync([new(date, 15)]);
+
+        var result = await _balanceService.GetCapital(1, DefaultCurrency.PLN, date, date);
 
         Assert.Single(result);
         Assert.Equal(25, result[0].Value);

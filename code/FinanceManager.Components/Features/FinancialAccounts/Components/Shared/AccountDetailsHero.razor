@@ -90,6 +90,11 @@
                     <ApexPointSeries TItem="TimeSeriesModel" Items="BenchmarkData" Name="@BenchmarkName" SeriesType="SeriesType.Line"
                                      XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
                 }
+                @if (CapitalData.Count > 0)
+                {
+                    <ApexPointSeries TItem="TimeSeriesModel" Items="CapitalData" Name="@CapitalSeriesName" SeriesType="SeriesType.Line"
+                                     XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
+                }
             </ApexChart>
         }
     </div>

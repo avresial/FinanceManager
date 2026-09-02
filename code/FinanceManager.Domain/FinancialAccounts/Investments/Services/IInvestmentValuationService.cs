@@ -68,6 +68,19 @@ public interface IInvestmentValuationService
         CancellationToken ct = default);
 
     /// <summary>
+    /// Cumulative net cash paid into each investment account over [<paramref name="start"/>,
+    /// <paramref name="end"/>]. The current investment model stores Buy and Sell rows as its
+    /// account-level cash-impact records, so buys increase capital and sells reduce it. Activity
+    /// before the range is carried into the first visible point; no market prices are used.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetCapitalSeriesAsync(
+        IReadOnlyCollection<int> accountIds,
+        Currency targetCurrency,
+        DateTime start,
+        DateTime end,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Daily value of a shadow portfolio that receives the same contributions as
     /// <paramref name="accountId"/> but invests them in the benchmark instead, in
     /// <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>].

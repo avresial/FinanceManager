@@ -12,23 +12,27 @@ public static class InvestmentChartRequestLoader
         IReadOnlyDictionary<DateTime, decimal> Series,
         IReadOnlyDictionary<long, decimal> Holdings,
         IReadOnlyList<UnrealizedGainLossAccountResult> Appreciation,
-        IReadOnlyDictionary<DateTime, decimal> BenchmarkSeries)> LoadAsync(
+        IReadOnlyDictionary<DateTime, decimal> BenchmarkSeries,
+        IReadOnlyList<TimeSeriesModel> CapitalSeries)> LoadAsync(
         Func<Task<IReadOnlyDictionary<DateTime, decimal>>> fetchSeries,
         Func<Task<IReadOnlyDictionary<long, decimal>>> fetchHoldings,
         Func<Task<IReadOnlyList<UnrealizedGainLossAccountResult>>> fetchAppreciation,
-        Func<Task<IReadOnlyDictionary<DateTime, decimal>>> fetchBenchmarkSeries)
+        Func<Task<IReadOnlyDictionary<DateTime, decimal>>> fetchBenchmarkSeries,
+        Func<Task<IReadOnlyList<TimeSeriesModel>>> fetchCapitalSeries)
     {
         var seriesTask = fetchSeries();
         var holdingsTask = fetchHoldings();
         var appreciationTask = fetchAppreciation();
         var benchmarkSeriesTask = fetchBenchmarkSeries();
+        var capitalSeriesTask = fetchCapitalSeries();
 
-        await Task.WhenAll(seriesTask, holdingsTask, appreciationTask, benchmarkSeriesTask);
+        await Task.WhenAll(seriesTask, holdingsTask, appreciationTask, benchmarkSeriesTask, capitalSeriesTask);
 
         return (
             await seriesTask,
             await holdingsTask,
             await appreciationTask,
-            await benchmarkSeriesTask);
+            await benchmarkSeriesTask,
+            await capitalSeriesTask);
     }
 }
