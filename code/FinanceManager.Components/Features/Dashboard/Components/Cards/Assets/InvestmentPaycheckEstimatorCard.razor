@@ -4,34 +4,30 @@
     <MudCardContent Class="pc-card-content d-flex flex-column flex-grow-1">
         <div class="pc-head">
             <div class="pc-title-row">
-                <MudText Typo="Typo.h6" Class="pc-title">Investment paycheck</MudText>
-                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
-                         PopoverClass="pc-info-popover" Dense="true">
-                    <ActivatorContent Context="menuContext">
-                        <MudIconButton Icon="@Icons.Material.Outlined.Info" Size="Size.Small" Color="Color.Default"
-                                       aria-label="What do these numbers mean?" Class="pc-info-btn"
-                                       OnClick="@menuContext.ToggleAsync" />
-                    </ActivatorContent>
+                <CardInfoTooltip Text="What your portfolio could pay you each month if your salary stopped, at the chosen withdrawal rate."
+                                 AriaLabel="About investment paycheck card"
+                                 TooltipClass="fm-card-info-glossary">
                     <ChildContent>
-                        <div class="pc-info-pop">
-                            <div class="pc-info-head">What's in this card</div>
-                            <dl class="pc-info-list">
-                                <dt>Investment paycheck</dt>
-                                <dd>The monthly amount your portfolio could sustainably pay you if your salary stopped today.</dd>
-                                <dt>Withdrawal rate</dt>
-                                <dd>The annual share of your portfolio you'd draw down. 4% is the classic "safe withdrawal rate" — historically tested to last 30+ years of retirement.</dd>
-                                <dt>Conservative / Standard / Aggressive</dt>
-                                <dd>Presets at 3% / 4% / 5%. Lower rates reduce the risk of running out; higher rates pay more but deplete faster.</dd>
-                                <dt>Replacement %</dt>
-                                <dd>What share of your average monthly salary this paycheck would cover.</dd>
-                                <dt>Total investments value</dt>
-                                <dd>Current market value of your investable assets (stocks, bonds, funds). Cash and liabilities are excluded.</dd>
-                                <dt>@_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested months</dt>
-                                <dd>Months of salary history the average is calculated from.</dd>
-                            </dl>
-                        </div>
+                        <MudText Typo="Typo.h6" Class="pc-title">Investment paycheck</MudText>
                     </ChildContent>
-                </MudMenu>
+                    <TooltipContent>
+                        <div class="fm-card-info-glossary-head">What's in this card</div>
+                        <dl>
+                            <dt>Investment paycheck</dt>
+                            <dd>The monthly amount your portfolio could sustainably pay you if your salary stopped today.</dd>
+                            <dt>Withdrawal rate</dt>
+                            <dd>The annual share of your portfolio you'd draw down. 4% is the classic "safe withdrawal rate", historically tested to last 30+ years of retirement.</dd>
+                            <dt>Conservative / Standard / Aggressive</dt>
+                            <dd>Presets at 3% / 4% / 5%. Lower rates reduce the risk of running out. Higher rates pay more but deplete faster.</dd>
+                            <dt>Replacement %</dt>
+                            <dd>What share of your average monthly salary this paycheck would cover.</dd>
+                            <dt>Total investments value</dt>
+                            <dd>Current market value of your investable assets, including stocks, bonds and funds. Cash and liabilities are excluded.</dd>
+                            <dt>@_estimate.SalaryMonthsUsed of @_estimate.SalaryMonthsRequested months</dt>
+                            <dd>Months of salary history used to calculate the average.</dd>
+                        </dl>
+                    </TooltipContent>
+                </CardInfoTooltip>
             </div>
             <MudText Typo="Typo.body2" Class="pc-sub">
                 If you stopped earning today, your portfolio could pay you:

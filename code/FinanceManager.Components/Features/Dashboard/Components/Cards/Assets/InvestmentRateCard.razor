@@ -3,8 +3,13 @@
 <MudCard Outlined Class="rounded-lg d-flex flex-column investment-rate-card" Style="@($"height:{Height};overflow:hidden;")">
     <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
         <div class="mb-2">
-            <MudText Typo="Typo.h6">Investment rate</MudText>
-            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">Net investment purchases relative to salary.</MudText>
+            <div>
+                <CardInfoTooltip Text="What share of your salary you invest each month, and where the year is heading."
+                                 AriaLabel="About investment rate card">
+                    <MudText Typo="Typo.h6">Investment rate</MudText>
+                </CardInfoTooltip>
+                <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">Net investment purchases relative to salary.</MudText>
+            </div>
         </div>
 
         @if (_isLoading)

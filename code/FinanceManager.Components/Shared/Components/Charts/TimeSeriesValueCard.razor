@@ -6,9 +6,12 @@
 
     @* ---------- Header: title + caption (left), value + delta (right). Stacks on mobile. ---------- *@
     <div class="fm-tsvc-header">
-        <div class="fm-tsvc-header-row">
+        <div class="fm-tsvc-header-row fm-card-info-header">
             <div class="fm-tsvc-left">
-                <MudText Typo="Typo.h5" Class="fm-tsvc-title">@Title</MudText>
+                <CardInfoTooltip Text="@InfoText"
+                                 AriaLabel="@($"About {Title} card")">
+                    <MudText Typo="Typo.h5" Class="fm-tsvc-title">@Title</MudText>
+                </CardInfoTooltip>
                 <span class="fm-tsvc-caption">@CaptionText</span>
             </div>
 

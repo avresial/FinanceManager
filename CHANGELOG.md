@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
 - Authorized maintenance workers can now query bounded, read-only application log history with time, level, and text filters. #722
 - External dependency failures now identify the provider and redacted request path in application logs; admins can copy individual log details or export the currently open log page as JSON for sharing with an agent.
 - Investment transactions now search existing and external instruments together and add external master data only when the transaction saves successfully. #651
@@ -33,6 +34,9 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Card explanations now open from card header labels with polished, viewport-aware tooltip surfaces and no standalone info icons. #730
+- Landing and welcome card titles now stay centered across their full header while remaining tooltip triggers. #730
+- The Investment paycheck card's detailed information panel is replaced by the standard card information tooltip. #730
 - Repeatedly paging through cash and bond account transaction history now reuses recent page results, making back-and-forth scrolling respond faster.
 - Investment and bond account charts now begin loading independently of transaction enrichment, so account details render faster. #715
 - The account transactions toolbar now places the search button as its first control on the left, and the date-range dropdown displays a calendar icon when a custom date range is active. #712
@@ -71,6 +75,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- The administration dashboard's new-visitors information control now has a grammatically correct screen-reader label. #730
 - Account transaction toolbar controls now share a consistent height, and the search button matches their outlined styling. #726
 - External provider retries are now bounded and degraded outcomes remain distinct from caller cancellation after transient failures. #719
 - Admin logs for resilient external requests now retain a safe provider, host, method, path, and operation identity; generic resilience entries no longer persist raw exception text or duplicate uncontextualized failures. #718

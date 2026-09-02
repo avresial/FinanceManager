@@ -34,20 +34,25 @@ else
                                 <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                                     <MudStack Spacing="0">
                                         <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                            <MudText Typo="Typo.h6">@service.DisplayName</MudText>
+                                            <CardInfoTooltip Text="Connection settings for this service: base URL and API key."
+                                                             AriaLabel="@($"About {service.DisplayName} card")">
+                                                <MudText Typo="Typo.h6">@service.DisplayName</MudText>
+                                            </CardInfoTooltip>
                                             <MudSwitch T="bool" Value="@service.IsEnabled"
                                                        ValueChanged="@(v => service.IsEnabled = v)"
                                                        Color="Color.Primary" />
                                         </MudStack>
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@service.Description</MudText>
                                     </MudStack>
-                                    <MudTooltip Text="Documentation">
-                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
-                                                       Size="Size.Small"
-                                                       Href="@service.DocsUrl"
-                                                       Target="_blank"
-                                                       aria-label="@($"Open {service.DisplayName} documentation")" />
-                                    </MudTooltip>
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-actions">
+                                        <MudTooltip Text="Documentation">
+                                            <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                           Size="Size.Small"
+                                                           Href="@service.DocsUrl"
+                                                           Target="_blank"
+                                                           aria-label="@($"Open {service.DisplayName} documentation")" />
+                                        </MudTooltip>
+                                    </MudStack>
                                 </MudStack>
                             </CardHeaderContent>
                         </MudCardHeader>
@@ -114,6 +119,14 @@ else
         </MudText>
 
         <MudCard Outlined>
+            <MudCardHeader Class="py-2 px-4">
+                <CardHeaderContent>
+                    <CardInfoTooltip Text="Shared secret that authorises scheduled maintenance calls, such as the weekly price backfill."
+                                     AriaLabel="About maintenance API key card">
+                        <MudText Typo="Typo.subtitle1">Key status</MudText>
+                    </CardInfoTooltip>
+                </CardHeaderContent>
+            </MudCardHeader>
             <MudCardContent>
                 <MudStack Spacing="3">
                     <MudStack Row AlignItems="AlignItems.Center" Spacing="1">

@@ -1,0 +1,149 @@
+/* Shared card information affordance (CardInfoTooltip component).
+   Linked from index.html as a plain global stylesheet, because the popover
+   surface is portaled to <body> and scoped .razor.css selectors cannot reach it. */
+
+/* The MudTooltip root wraps the header label. It remains in normal document flow
+   so a card header reserves space for the interactive title. */
+.fm-card-info-root {
+    display: block;
+    min-width: 0;
+}
+
+.fm-card-info-centered {
+    width: 100%;
+    text-align: center;
+}
+
+/* The card title is the affordance. A quiet dotted cue appears only while the
+   title is interactive, so the card stays calm at rest without hiding the hint. */
+.fm-card-info-trigger {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 28px;
+    padding: 2px 0;
+    border: 0;
+    border-bottom: 1px dotted transparent;
+    background-color: transparent;
+    color: inherit;
+    cursor: help;
+}
+
+.fm-card-info-trigger:hover {
+    color: var(--mud-palette-primary);
+    border-bottom-color: currentcolor;
+}
+
+.fm-card-info-trigger:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 3px;
+    border-radius: 2px;
+    border-bottom-color: currentcolor;
+}
+
+/* Shared header primitives for cards that use a custom header row. */
+.fm-card-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.fm-card-info-header > :first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.fm-card-info-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+/* Tooltip surfaces use a compact, card-like treatment instead of MudBlazor's
+   plain browser-style text box. */
+.fm-card-info-tooltip {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    background: var(--mud-palette-surface);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    color: var(--mud-palette-text-primary);
+    padding: 0;
+}
+
+.fm-card-info-tooltip-panel {
+    padding: 13px 15px 14px;
+}
+
+.fm-card-info-tooltip-kicker {
+    margin-bottom: 6px;
+    color: var(--mud-palette-primary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.fm-card-info-tooltip-copy {
+    color: var(--mud-palette-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Rich tooltip body for cards that need a glossary instead of a single line
+   (applied to the popover surface via CardInfoTooltip's TooltipClass). */
+.fm-card-info-glossary {
+    width: min(320px, calc(100vw - 24px));
+    min-width: min(280px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: min(420px, 70vh);
+    overflow-y: auto;
+    text-align: left;
+    font-weight: 400;
+}
+
+/* Short explanations use the same viewport-aware width as the richer glossary
+   while allowing a slightly narrower minimum on very small screens. */
+.fm-card-info-tooltip:not(.fm-card-info-glossary) {
+    width: min(300px, calc(100vw - 24px));
+    min-width: min(280px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    padding: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+    line-height: 1.4;
+}
+
+.fm-card-info-glossary .fm-card-info-glossary-head {
+    font-weight: 500;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--mud-palette-text-secondary);
+    margin-bottom: 10px;
+}
+
+.fm-card-info-glossary dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.fm-card-info-glossary dt {
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--mud-palette-primary);
+    margin-bottom: 2px;
+}
+
+.fm-card-info-glossary dd {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mud-palette-text-secondary);
+}

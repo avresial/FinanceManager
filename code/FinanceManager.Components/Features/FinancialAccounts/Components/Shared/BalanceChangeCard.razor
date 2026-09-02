@@ -1,6 +1,13 @@
 <MudCard Outlined="true" Style="background-color: transparent;">
     <MudCardContent>
-        <MudText Typo="Typo.overline" Color="Color.Default">@Label@(ShowRange ? $" · {RangeLabel}" : null)</MudText>
+        <div class="d-flex align-center justify-space-between fm-card-info-header" style="gap:8px;">
+            <CardInfoTooltip Text="@InfoText"
+                             AriaLabel="@($"About {Label} card")">
+                <MudText Typo="Typo.overline" Color="Color.Default">
+                    @Label@(ShowRange ? $" · {RangeLabel}" : null)
+                </MudText>
+            </CardInfoTooltip>
+        </div>
         <MudText Typo="Typo.h3" Class="fm-tabular"
                  Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">
             @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
@@ -25,4 +32,7 @@
     [Parameter] public string RangeLabel { get; set; } = string.Empty;
     [Parameter] public DateTime FromDate { get; set; }
     [Parameter] public DateTime ToDate { get; set; }
+
+    private string InfoText =>
+        $"How much the balance changed between {FromDate:dd MMM yyyy} and {ToDate:dd MMM yyyy}.";
 }

@@ -14,7 +14,12 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <MudText>Total users count</MudText>
+                    <div class="fm-card-info-header">
+                        <CardInfoTooltip Text="All registered user accounts on the platform."
+                                         AriaLabel="About total users count card">
+                            <MudText>Total users count</MudText>
+                        </CardInfoTooltip>
+                    </div>
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_userCount.HasValue)
@@ -42,7 +47,12 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <MudText>Accounts count</MudText>
+                    <div class="fm-card-info-header">
+                        <CardInfoTooltip Text="All financial accounts created across all users."
+                                         AriaLabel="About accounts count card">
+                            <MudText>Accounts count</MudText>
+                        </CardInfoTooltip>
+                    </div>
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_accountsCount.HasValue)
@@ -70,7 +80,12 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <MudText>Total tracked money</MudText>
+                    <div class="fm-card-info-header">
+                        <CardInfoTooltip Text="Combined balance of all tracked accounts across all users."
+                                         AriaLabel="About total tracked money card">
+                            <MudText>Total tracked money</MudText>
+                        </CardInfoTooltip>
+                    </div>
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         <b>
                             @if (_totalTrackedMoney.HasValue)
@@ -98,7 +113,12 @@
         <MudCard Outlined>
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <MudText>Todays new visitors</MudText>
+                    <div class="fm-card-info-header">
+                        <CardInfoTooltip Text="New users who signed up today."
+                                         AriaLabel="About today's new visitors card">
+                            <MudText>Today's new visitors</MudText>
+                        </CardInfoTooltip>
+                    </div>
                     <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
                         @if (_newVisitorsToday.HasValue)
                         {
@@ -123,7 +143,12 @@
     <MudItem xs="12" md="6">
         <MudCard Outlined>
             <MudCardContent>
-                <MudText>Daily active users</MudText>
+                <div class="fm-card-info-header">
+                    <CardInfoTooltip Text="Users who signed in, counted once per day."
+                                     AriaLabel="About daily active users card">
+                        <MudText>Daily active users</MudText>
+                    </CardInfoTooltip>
+                </div>
                 @if (_dailyActiveUsers is not null)
                 {
                     <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
@@ -148,7 +173,12 @@
     <MudItem xs="12" md="6">
         <MudCard Outlined>
             <MudCardContent>
-                <MudText>New users</MudText>
+                <div class="fm-card-info-header">
+                    <CardInfoTooltip Text="New user signups per day."
+                                     AriaLabel="About new users card">
+                        <MudText>New users</MudText>
+                    </CardInfoTooltip>
+                </div>
                 @if (_newUsers is not null)
                 {
                     <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">

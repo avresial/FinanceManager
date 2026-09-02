@@ -7,16 +7,21 @@
 
         @* ---- Header ---- *@
         <div class="ins-head">
-            <span class="ins-eyebrow">Insights</span>
+            <CardInfoTooltip Text="Short AI-generated insights about your recent finances."
+                             AriaLabel="About insights card">
+                <span class="ins-eyebrow">Insights</span>
+            </CardInfoTooltip>
             <span class="ins-spacer"></span>
-            @if (!IsLoading && CurrentInsight is not null)
-            {
-                <span class="ins-time">@GetRelativeTime(CurrentInsight.CreatedAt)</span>
-            }
-            <span class="ins-ai-pill">
-                <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:12px;line-height:1" />
-                AI
-            </span>
+            <div class="fm-card-info-actions">
+                @if (!IsLoading && CurrentInsight is not null)
+                {
+                    <span class="ins-time">@GetRelativeTime(CurrentInsight.CreatedAt)</span>
+                }
+                <span class="ins-ai-pill">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:12px;line-height:1" />
+                    AI
+                </span>
+            </div>
         </div>
 
         @* ---- Story progress bar (carousel mode only) ---- *@

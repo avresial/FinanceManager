@@ -4,9 +4,12 @@
 @using FinanceManager.Domain.Shared.Charting
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex align-start justify-space-between gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
+    <MudPaper Class="d-flex fm-card-info-header gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
         <div>
-            <MudText Typo="Typo.h5">Assets distribution</MudText>
+            <CardInfoTooltip Text="How your total assets split across asset types or wallets."
+                             AriaLabel="About assets distribution card">
+                <MudText Typo="Typo.h5">Assets distribution</MudText>
+            </CardInfoTooltip>
             @if (IsLoading)
             {
                 <MudText Typo="Typo.h6" Class="text-muted">
@@ -18,11 +21,13 @@
                 <MudText Class="fm-card-total">@TotalAssets.ToString("0.00") @CurrencyShortName</MudText>
             }
         </div>
-        <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
-                        Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
-            <MudToggleItem Value="@_viewByType" Text="Type" />
-            <MudToggleItem Value="@_viewByWallet" Text="Wallet" />
-        </MudToggleGroup>
+        <div class="fm-card-info-actions">
+            <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
+                            Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
+                <MudToggleItem Value="@_viewByType" Text="Type" />
+                <MudToggleItem Value="@_viewByWallet" Text="Wallet" />
+            </MudToggleGroup>
+        </div>
     </MudPaper>
 
     <MudPaper Class="flex-grow-1 overflow-hidden d-flex align-center" Elevation="0">

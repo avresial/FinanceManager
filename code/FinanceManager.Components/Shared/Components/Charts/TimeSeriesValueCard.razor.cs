@@ -69,6 +69,10 @@ public partial class TimeSeriesValueCard
     /// <summary>Card height; fills its grid cell. Default 250px (issue #284).</summary>
     [Parameter] public string Height { get; set; } = "250px";
 
+    private string InfoText =>
+        $"{(string.IsNullOrWhiteSpace(Title) ? "The value of this series" : $"The {Title}")} for the selected period. " +
+        "Hover a point to see its value on that date.";
+
     private LoadState State =>
         IsLoading ? LoadState.Loading
         : HasError ? LoadState.Error

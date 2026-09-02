@@ -4,9 +4,12 @@
 @using FinanceManager.Domain.Shared.Charting
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex align-start justify-space-between gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
+    <MudPaper Class="d-flex fm-card-info-header gap-4 pa-3 pb-0 flex-shrink-0" Elevation="0">
         <div>
-            <MudText Typo="Typo.h5">Expense distribution</MudText>
+            <CardInfoTooltip Text="How your spending in the selected period splits across labels."
+                             AriaLabel="About expense distribution card">
+                <MudText Typo="Typo.h5">Expense distribution</MudText>
+            </CardInfoTooltip>
             @if (IsLoading)
             {
                 <MudText Typo="Typo.h6" Class="text-muted">
