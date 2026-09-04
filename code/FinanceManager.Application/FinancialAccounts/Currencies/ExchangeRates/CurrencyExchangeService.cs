@@ -14,6 +14,10 @@ internal class CurrencyExchangeService(
     // are persisted, so successive requests keep narrowing the gap until the range is covered.
     private const int _maxProviderResolutionsPerCall = 60;
 
+    // Keep provider range calls bounded even when the selected missing dates are sparse. NBP uses
+    // the same window internally and its documented table-A limit is larger than this value.
+    private const int _maxProviderRangeDays = 180;
+
     public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
     {
         if (dateStart == default || dateEnd == default) return [];
@@ -66,21 +70,47 @@ internal class CurrencyExchangeService(
                 ? missingDates
                 : missingDates.Take(_maxProviderResolutionsPerCall).ToList();
 
-            const int batchSize = 50;
-            for (var offset = 0; offset < toResolve.Count; offset += batchSize)
+            var directResults = await ResolveDirectRangeAsync(
+                fromCurrency,
+                toCurrency,
+                toResolve,
+                stored);
+            List<DateTime> unresolvedDirectDates = [];
+
+            foreach (var date in toResolve)
             {
-                var currentBatchSize = Math.Min(batchSize, toResolve.Count - offset);
-                List<Task<decimal?>> batchTasks = [];
-
-                for (var i = 0; i < currentBatchSize; i++)
+                var key = NormalizeDate(date);
+                var directResult = directResults[key];
+                if (directResult.IsSuccess)
                 {
-                    var date = toResolve[offset + i];
-                    batchTasks.Add(GetExchangeRateAsync(fromCurrency, toCurrency, date));
+                    rates.Add((date, directResult.Value));
                 }
+                else if (directResult.Status == CurrencyExchangeRateStatus.NotYetPublished)
+                {
+                    // The range API returns values only. Keep a current-day publication miss
+                    // unavailable rather than allowing the capped-tail carry-forward below to
+                    // turn it into a stale value.
+                    rates.Add((date, null));
+                }
+                else
+                {
+                    unresolvedDirectDates.Add(date);
+                }
+            }
 
-                var batchResults = await Task.WhenAll(batchTasks);
-                for (var i = 0; i < batchResults.Length; i++)
-                    rates.Add((toResolve[offset + i], batchResults[i]));
+            if (unresolvedDirectDates.Count > 0 && !IsUsd(fromCurrency) && !IsUsd(toCurrency))
+            {
+                var crossResults = await ResolveRangeViaUsdAsync(fromCurrency, toCurrency, unresolvedDirectDates);
+                foreach (var date in unresolvedDirectDates)
+                {
+                    var crossResult = crossResults[NormalizeDate(date)];
+                    rates.Add((date, crossResult.IsSuccess ? crossResult.Value : null));
+                }
+            }
+            else
+            {
+                foreach (var date in unresolvedDirectDates)
+                    rates.Add((date, null));
             }
 
             // Dates past the per-call resolution cap carry the nearest earlier known rate
@@ -110,6 +140,145 @@ internal class CurrencyExchangeService(
         }
 
         return rates.OrderBy(x => x.Date).ToList();
+    }
+
+    private async Task<Dictionary<DateTime, CurrencyExchangeRateResult>> ResolveDirectRangeAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        IReadOnlyCollection<DateTime> dates,
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal>? stored = null)
+    {
+        var orderedDates = dates
+            .Select(NormalizeDate)
+            .Distinct()
+            .OrderBy(date => date)
+            .ToList();
+        if (orderedDates.Count == 0) return [];
+
+        var normalizedFrom = Normalize(fromCurrency.ShortName);
+        var normalizedTo = Normalize(toCurrency.ShortName);
+        var existing = stored ?? await exchangeRateRepository.GetRange(
+            fromCurrency.ShortName,
+            toCurrency.ShortName,
+            orderedDates[0],
+            orderedDates[^1]) ?? new Dictionary<(string From, string To, DateTime Date), decimal>();
+        var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
+        var states = orderedDates.ToDictionary(date => date, _ => new ResolutionState());
+        List<DateTime> pendingDates = [];
+
+        foreach (var date in orderedDates)
+        {
+            var key = (normalizedFrom, normalizedTo, date);
+            if (existing.TryGetValue(key, out var rate))
+                results[date] = CurrencyExchangeRateResult.Success(rate);
+            else
+                pendingDates.Add(date);
+        }
+
+        List<(DateTime Date, decimal Rate)> ratesToPersist = [];
+        foreach (var provider in providers)
+        {
+            var unresolvedDates = pendingDates.Where(date => !results.ContainsKey(date)).ToList();
+            for (var offset = 0; offset < unresolvedDates.Count;)
+            {
+                var windowEnd = offset;
+                while (windowEnd + 1 < unresolvedDates.Count &&
+                       (unresolvedDates[windowEnd + 1] - unresolvedDates[offset]).Days < _maxProviderRangeDays)
+                {
+                    windowEnd++;
+                }
+
+                var windowStartDate = unresolvedDates[offset];
+                var windowEndDate = unresolvedDates[windowEnd];
+                var providerResults = await provider.GetExchangeRateAsync(
+                    fromCurrency,
+                    toCurrency,
+                    windowStartDate,
+                    windowEndDate);
+                var resultByDate = providerResults
+                    .GroupBy(x => NormalizeDate(x.Date))
+                    .ToDictionary(group => group.Key, group => group.Last().Result);
+
+                for (var index = offset; index <= windowEnd; index++)
+                {
+                    var date = unresolvedDates[index];
+                    if (results.ContainsKey(date) || !resultByDate.TryGetValue(date, out var providerResult))
+                        continue;
+
+                    if (providerResult.Status == CurrencyExchangeRateProviderStatus.OutOfRange)
+                    {
+                        states[date].OutOfRangeProviders.Add(provider);
+                        continue;
+                    }
+
+                    if (providerResult is { Status: CurrencyExchangeRateProviderStatus.Success, Value: decimal rate })
+                    {
+                        results[date] = CurrencyExchangeRateResult.Success(rate);
+                        ratesToPersist.Add((date, rate));
+                        continue;
+                    }
+
+                    states[date].Observe(providerResult, date);
+                }
+
+                offset = windowEnd + 1;
+            }
+        }
+
+        if (ratesToPersist.Count > 0)
+            await exchangeRateRepository.AddRange(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist);
+
+        foreach (var date in orderedDates)
+        {
+            if (!results.ContainsKey(date))
+                results[date] = states[date].Build(date);
+        }
+
+        return results;
+    }
+
+    private async Task<Dictionary<DateTime, CurrencyExchangeRateResult>> ResolveRangeViaUsdAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        IReadOnlyCollection<DateTime> dates)
+    {
+        if (dates.Count == 0 || IsUsd(fromCurrency) || IsUsd(toCurrency)) return [];
+
+        var usd = DefaultCurrency.USD;
+        var fromToUsd = await ResolveDirectRangeAsync(fromCurrency, usd, dates);
+        var targetDates = dates
+            .Where(date => fromToUsd[NormalizeDate(date)].IsSuccess)
+            .ToList();
+        var usdToTarget = await ResolveDirectRangeAsync(usd, toCurrency, targetDates);
+        var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
+        List<(DateTime Date, decimal Rate)> ratesToPersist = [];
+
+        foreach (var date in dates)
+        {
+            var key = NormalizeDate(date);
+            var fromResult = fromToUsd[key];
+            if (!fromResult.IsSuccess)
+            {
+                results[key] = fromResult;
+                continue;
+            }
+
+            var targetResult = usdToTarget[key];
+            if (!targetResult.IsSuccess)
+            {
+                results[key] = targetResult;
+                continue;
+            }
+
+            var rate = fromResult.Value!.Value * targetResult.Value!.Value;
+            results[key] = CurrencyExchangeRateResult.Success(rate);
+            ratesToPersist.Add((key, rate));
+        }
+
+        if (ratesToPersist.Count > 0)
+            await exchangeRateRepository.AddRange(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist);
+
+        return results;
     }
 
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>

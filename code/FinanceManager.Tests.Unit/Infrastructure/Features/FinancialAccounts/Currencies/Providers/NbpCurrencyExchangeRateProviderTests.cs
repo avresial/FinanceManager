@@ -25,7 +25,7 @@ public class NbpCurrencyExchangeRateProviderTests
         {"table":"A","currency":"dolar amerykański","code":"USD","rates":[{"no":"1/A/NBP/2024","effectiveDate":"2024-01-02","mid":4.0000},{"no":"2/A/NBP/2024","effectiveDate":"2024-01-03","mid":4.1000}]}
         """;
 
-    private static NbpCurrencyExchangeRateProvider CreateProvider(MockHttpMessageHandler handler, bool enabled = true) =>
+    private static NbpCurrencyExchangeRateProvider CreateProvider(HttpMessageHandler handler, bool enabled = true) =>
         new(new HttpClient(handler),
             Options.Create(new NbpOptions { BaseUrl = "https://api.nbp.pl/api", Enabled = enabled }),
             NullLogger<NbpCurrencyExchangeRateProvider>.Instance);
@@ -129,6 +129,26 @@ public class NbpCurrencyExchangeRateProviderTests
     }
 
     [Fact]
+    public async Task Range_UsesSequentialRequestsWithinTheConfiguredChunkLimit()
+    {
+        var handler = new TrackingHttpMessageHandler();
+        var provider = CreateProvider(handler);
+
+        var results = await provider.GetExchangeRateAsync(_usd, _pln, _date, _date.AddDays(360));
+
+        Assert.Equal(361, results.Count);
+        Assert.Equal(3, handler.RequestUris.Count);
+        Assert.Equal(1, handler.MaxConcurrency);
+        Assert.Equal(
+            [
+                "/api/exchangerates/rates/a/USD/2024-01-02/2024-06-29/",
+                "/api/exchangerates/rates/a/USD/2024-06-30/2024-12-26/",
+                "/api/exchangerates/rates/a/USD/2024-12-27/2024-12-27/",
+            ],
+            handler.RequestUris.Select(uri => uri.AbsolutePath));
+    }
+
+    [Fact]
     public async Task Range_Disabled_PlnToPln_ReturnsNotFound_WithoutCallingApi()
     {
         var handler = new MockHttpMessageHandler(_ => Ok(_usdRangeResponse));
@@ -152,6 +172,37 @@ public class NbpCurrencyExchangeRateProviderTests
         {
             CallCount++;
             return Task.FromResult(responder(request));
+        }
+    }
+
+    private sealed class TrackingHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly object _gate = new();
+        private int _activeRequests;
+
+        public List<Uri> RequestUris { get; } = [];
+
+        public int MaxConcurrency { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            lock (_gate)
+            {
+                RequestUris.Add(request.RequestUri!);
+                _activeRequests++;
+                MaxConcurrency = Math.Max(MaxConcurrency, _activeRequests);
+            }
+
+            try
+            {
+                await Task.Delay(1, cancellationToken);
+                return new(HttpStatusCode.OK) { Content = new StringContent(_usdMidResponse) };
+            }
+            finally
+            {
+                lock (_gate)
+                    _activeRequests--;
+            }
         }
     }
 }
