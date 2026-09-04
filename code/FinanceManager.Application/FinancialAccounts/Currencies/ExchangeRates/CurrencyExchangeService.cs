@@ -261,8 +261,10 @@ internal class CurrencyExchangeService(
             .ToList();
         var usdToTarget = await ResolveDirectRangeAsync(usd, toCurrency, targetDates, statesByDate: statesByDate);
         var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
-        List<(DateTime Date, decimal Rate)> ratesToPersist = [];
 
+        // Keep derived USD-cross rates request-scoped. The point-resolution path does not persist
+        // derived pairs either, so a transient direct-provider failure can retry the authoritative
+        // pair instead of being shadowed by an approximation in storage.
         foreach (var date in dates)
         {
             var key = NormalizeDate(date);
@@ -282,11 +284,7 @@ internal class CurrencyExchangeService(
 
             var rate = fromResult.Value!.Value * targetResult.Value!.Value;
             results[key] = CurrencyExchangeRateResult.Success(rate);
-            ratesToPersist.Add((key, rate));
         }
-
-        if (ratesToPersist.Count > 0)
-            await exchangeRateRepository.AddRange(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist);
 
         return results;
     }

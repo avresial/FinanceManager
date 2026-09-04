@@ -636,6 +636,70 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetExchangeRateAsync_RangeWithSparseMissingDates_UsesSeparateBoundedProviderWindows()
+    {
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var dateEnd = dateStart.AddDays(360);
+        var missingDates = new[] { dateStart, dateStart.AddDays(200) };
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            Enumerable.Range(0, (dateEnd - dateStart).Days + 1)
+                .Select(dayOffset => dateStart.AddDays(dayOffset))
+                .Where(date => !missingDates.Contains(date))
+                .ToDictionary(date => ("USD", "EUR", date), _ => 1m);
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new RecordingRangeProvider(_ =>
+            new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m));
+        var service = CreateService([provider]);
+
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+
+        Assert.Equal(361, result.Count);
+        Assert.Equal(0.915m, result[0].Value);
+        Assert.Equal(0.915m, result[200].Value);
+        Assert.Equal(
+            [
+                (dateStart, dateStart),
+                (dateStart.AddDays(200), dateStart.AddDays(200)),
+            ],
+            provider.RangeCalls);
+        Assert.Equal(0, provider.SingleCallCount);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_Range_DoesNotForwardFillCurrentUtcDayPastResolutionCap()
+    {
+        var todayUtc = DateTime.UtcNow.Date;
+        var dateStart = todayUtc.AddDays(-61);
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", dateStart), 0.92m },
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new RecordingRangeProvider(_ =>
+            new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m));
+        var service = CreateService([provider]);
+
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, todayUtc);
+
+        Assert.Equal(62, result.Count);
+        Assert.Equal(0.915m, result[^2].Value);
+        Assert.Null(result[^1].Value);
+        Assert.Equal((dateStart.AddDays(1), todayUtc.AddDays(-1)), Assert.Single(provider.RangeCalls));
+        Assert.Equal(0, provider.SingleCallCount);
+    }
+
+    [Fact]
     public async Task GetExchangeRateAsync_RangeUsesOrderedProviderFallbackAndPreservesMissingDays()
     {
         var fromCurrency = new Currency(1, "USD", "$");
@@ -705,6 +769,43 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(3, fallbackProvider.RangeCalls.Count);
         Assert.Equal(0, outOfRangeProvider.SingleCallCount);
         Assert.Equal(0, fallbackProvider.SingleCallCount);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateAsync_RangeUsdCross_DoesNotPersistDerivedRateAfterDirectFailure()
+    {
+        var fromCurrency = new Currency(1, "GBP", "£");
+        var toCurrency = new Currency(2, "PLN", "zł");
+        var date = new DateTime(2024, 3, 15);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates = new Dictionary<(string, string, DateTime), decimal>();
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+
+        var provider = new RecordingRangeProvider((from, to, _) =>
+            from.ShortName == "GBP" && to.ShortName == "PLN"
+                ? new(CurrencyExchangeRateProviderStatus.Failed)
+                : from.ShortName == "GBP" && to.ShortName == "USD"
+                    ? new(CurrencyExchangeRateProviderStatus.Success, 1.25m)
+                    : new(CurrencyExchangeRateProviderStatus.Success, 4m));
+        var service = CreateService([provider]);
+
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date, date);
+
+        Assert.Equal(5m, Assert.Single(result).Value);
+        _exchangeRateRepositoryMock.Verify(
+            x => x.AddRange(
+                "GBP",
+                "PLN",
+                It.IsAny<IReadOnlyCollection<(DateTime Date, decimal Rate)>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private CurrencyExchangeService CreateService()
