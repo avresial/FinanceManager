@@ -70,11 +70,13 @@ internal class CurrencyExchangeService(
                 ? missingDates
                 : missingDates.Take(_maxProviderResolutionsPerCall).ToList();
 
+            var statesByDate = toResolve.ToDictionary(date => NormalizeDate(date), _ => new ResolutionState());
             var directResults = await ResolveDirectRangeAsync(
                 fromCurrency,
                 toCurrency,
                 toResolve,
-                stored);
+                stored,
+                statesByDate);
             List<DateTime> unresolvedDirectDates = [];
 
             foreach (var date in toResolve)
@@ -100,7 +102,11 @@ internal class CurrencyExchangeService(
 
             if (unresolvedDirectDates.Count > 0 && !IsUsd(fromCurrency) && !IsUsd(toCurrency))
             {
-                var crossResults = await ResolveRangeViaUsdAsync(fromCurrency, toCurrency, unresolvedDirectDates);
+                var crossResults = await ResolveRangeViaUsdAsync(
+                    fromCurrency,
+                    toCurrency,
+                    unresolvedDirectDates,
+                    statesByDate);
                 foreach (var date in unresolvedDirectDates)
                 {
                     var crossResult = crossResults[NormalizeDate(date)];
@@ -146,7 +152,8 @@ internal class CurrencyExchangeService(
         Currency fromCurrency,
         Currency toCurrency,
         IReadOnlyCollection<DateTime> dates,
-        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal>? stored = null)
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal>? stored = null,
+        IReadOnlyDictionary<DateTime, ResolutionState>? statesByDate = null)
     {
         var orderedDates = dates
             .Select(NormalizeDate)
@@ -163,7 +170,7 @@ internal class CurrencyExchangeService(
             orderedDates[0],
             orderedDates[^1]) ?? new Dictionary<(string From, string To, DateTime Date), decimal>();
         var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
-        var states = orderedDates.ToDictionary(date => date, _ => new ResolutionState());
+        var states = statesByDate ?? orderedDates.ToDictionary(date => date, _ => new ResolutionState());
         List<DateTime> pendingDates = [];
 
         foreach (var date in orderedDates)
@@ -178,7 +185,9 @@ internal class CurrencyExchangeService(
         List<(DateTime Date, decimal Rate)> ratesToPersist = [];
         foreach (var provider in providers)
         {
-            var unresolvedDates = pendingDates.Where(date => !results.ContainsKey(date)).ToList();
+            var unresolvedDates = pendingDates
+                .Where(date => !results.ContainsKey(date) && !states[date].OutOfRangeProviders.Contains(provider))
+                .ToList();
             for (var offset = 0; offset < unresolvedDates.Count;)
             {
                 var windowEnd = offset;
@@ -240,16 +249,17 @@ internal class CurrencyExchangeService(
     private async Task<Dictionary<DateTime, CurrencyExchangeRateResult>> ResolveRangeViaUsdAsync(
         Currency fromCurrency,
         Currency toCurrency,
-        IReadOnlyCollection<DateTime> dates)
+        IReadOnlyCollection<DateTime> dates,
+        IReadOnlyDictionary<DateTime, ResolutionState> statesByDate)
     {
         if (dates.Count == 0 || IsUsd(fromCurrency) || IsUsd(toCurrency)) return [];
 
         var usd = DefaultCurrency.USD;
-        var fromToUsd = await ResolveDirectRangeAsync(fromCurrency, usd, dates);
+        var fromToUsd = await ResolveDirectRangeAsync(fromCurrency, usd, dates, statesByDate: statesByDate);
         var targetDates = dates
             .Where(date => fromToUsd[NormalizeDate(date)].IsSuccess)
             .ToList();
-        var usdToTarget = await ResolveDirectRangeAsync(usd, toCurrency, targetDates);
+        var usdToTarget = await ResolveDirectRangeAsync(usd, toCurrency, targetDates, statesByDate: statesByDate);
         var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
         List<(DateTime Date, decimal Rate)> ratesToPersist = [];
 

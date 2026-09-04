@@ -669,6 +669,44 @@ public class CurrencyExchangeServiceTests : IDisposable
         Assert.Equal(0, secondProvider.SingleCallCount);
     }
 
+    [Fact]
+    public async Task GetExchangeRateAsync_RangeOutOfRangeProvider_IsNotRetriedForUsdCross()
+    {
+        var fromCurrency = new Currency(1, "GBP", "£");
+        var toCurrency = new Currency(2, "PLN", "zł");
+        var date = new DateTime(2024, 3, 15);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates = new Dictionary<(string, string, DateTime), decimal>();
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+
+        var outOfRangeProvider = new RecordingRangeProvider((from, to, _) =>
+            from.ShortName == "GBP" && to.ShortName == "PLN"
+                ? new(CurrencyExchangeRateProviderStatus.OutOfRange)
+                : new(CurrencyExchangeRateProviderStatus.Success, 1m));
+        var fallbackProvider = new RecordingRangeProvider((from, to, _) =>
+            from.ShortName == "GBP" && to.ShortName == "PLN"
+                ? new(CurrencyExchangeRateProviderStatus.NotFound)
+                : from.ShortName == "GBP" && to.ShortName == "USD"
+                    ? new(CurrencyExchangeRateProviderStatus.Success, 1.25m)
+                    : new(CurrencyExchangeRateProviderStatus.Success, 4m));
+        var service = CreateService([outOfRangeProvider, fallbackProvider]);
+
+        var result = await service.GetExchangeRateAsync(fromCurrency, toCurrency, date, date);
+
+        Assert.Equal(5m, Assert.Single(result).Value);
+        Assert.Single(outOfRangeProvider.RangeCalls);
+        Assert.Equal(3, fallbackProvider.RangeCalls.Count);
+        Assert.Equal(0, outOfRangeProvider.SingleCallCount);
+        Assert.Equal(0, fallbackProvider.SingleCallCount);
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [CreateProvider()];
@@ -700,9 +738,18 @@ public class CurrencyExchangeServiceTests : IDisposable
             Levels.Add(logLevel);
     }
 
-    private sealed class RecordingRangeProvider(
-        Func<DateTime, CurrencyExchangeRateProviderResult> resultFactory) : ICurrencyExchangeRateProvider
+    private sealed class RecordingRangeProvider : ICurrencyExchangeRateProvider
     {
+        private readonly Func<Currency, Currency, DateTime, CurrencyExchangeRateProviderResult> _resultFactory;
+
+        public RecordingRangeProvider(Func<DateTime, CurrencyExchangeRateProviderResult> resultFactory)
+            : this((_, _, date) => resultFactory(date))
+        {
+        }
+
+        public RecordingRangeProvider(Func<Currency, Currency, DateTime, CurrencyExchangeRateProviderResult> resultFactory) =>
+            _resultFactory = resultFactory;
+
         public List<(DateTime Start, DateTime End)> RangeCalls { get; } = [];
 
         public int SingleCallCount { get; private set; }
@@ -725,7 +772,7 @@ public class CurrencyExchangeServiceTests : IDisposable
             RangeCalls.Add((start, end));
             List<(DateTime Date, CurrencyExchangeRateProviderResult Result)> results = [];
             for (var date = start; date <= end; date = date.AddDays(1))
-                results.Add((date, resultFactory(date)));
+                results.Add((date, _resultFactory(fromCurrency, toCurrency, date)));
 
             return Task.FromResult(results);
         }
