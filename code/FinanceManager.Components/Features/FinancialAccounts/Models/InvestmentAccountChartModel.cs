@@ -14,4 +14,5 @@ public sealed record InvestmentAccountChartModel(
     decimal CurrentValue,
     decimal BalanceChange,
     decimal? BalanceChangePercent,
-    List<InvestmentHoldingModel> Holdings);
+    List<InvestmentHoldingModel> Holdings,
+    List<TimeSeriesModel>? CapitalSeries = null);

@@ -9,4 +9,5 @@ public sealed record AccountChartModel(
     List<TimeSeriesModel> Series,
     decimal CurrentBalance,
     decimal BalanceChange,
-    decimal? BalanceChangePercent);
+    decimal? BalanceChangePercent,
+    List<TimeSeriesModel>? CapitalSeries = null);

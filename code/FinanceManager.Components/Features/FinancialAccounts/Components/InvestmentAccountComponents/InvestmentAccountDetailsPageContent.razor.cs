@@ -35,6 +35,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     [Inject] public required ILogger<InvestmentAccountDetailsPageContent> Logger { get; set; }
     [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
     [Inject] public required InvestmentAccountDetailsSnapshotStore DetailsSnapshotStore { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
 
     private const string _defaultAccountName = "Investments";
     private const string _defaultBenchmarkName = "Polish inflation";
@@ -75,6 +76,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private decimal? _balanceChangePercent;
     public List<TimeSeriesModel> ChartData { get; set; } = [];
     public List<TimeSeriesModel> BenchmarkData { get; set; } = [];
+    public List<TimeSeriesModel> CapitalData { get; set; } = [];
     private string _benchmarkName = _defaultBenchmarkName;
 
     // Toolbar filter state.
@@ -391,7 +393,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                 currency.Id,
                 dateStart,
                 dateEnd,
-                benchmark?.ListingId));
+                benchmark?.ListingId),
+            async () => await MoneyFlowHttpClient.GetCapital(userId, currency, dateStart, dateEnd, [accountId]));
 
         var series = chartRequests.Series;
         var holdings = chartRequests.Holdings;
@@ -426,7 +429,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             currentValue,
             balanceChange,
             capitalValue == 0m ? null : balanceChange / capitalValue * 100m,
-            BuildHoldings(transactions, holdings, dateEnd));
+            BuildHoldings(transactions, holdings, dateEnd),
+            [.. chartRequests.CapitalSeries]);
     }
 
     // Only chart data is restored. The selected range and its dates stay owned by the user's
@@ -439,6 +443,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         ChartData.AddRange(model.Series);
         BenchmarkData.Clear();
         BenchmarkData.AddRange(model.BenchmarkSeries);
+        CapitalData.Clear();
+        CapitalData.AddRange(model.CapitalSeries ?? []);
         _benchmarkName = model.BenchmarkName;
         _currentBalance = model.CurrentBalance;
         _capitalValue = model.CapitalValue;
@@ -454,6 +460,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     {
         ChartData.Clear();
         BenchmarkData.Clear();
+        CapitalData.Clear();
         _isChartLoading = true;
         return InvokeAsync(StateHasChanged);
     }

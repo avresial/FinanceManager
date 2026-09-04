@@ -48,6 +48,49 @@ internal class InvestmentBalanceService(
     public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
         Task.FromResult(new List<TimeSeriesModel>());
 
+    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
+        GetCapital(userId, currency, start, end, []);
+
+    public async Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    {
+        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        if (start == default || end == default || end.Date < start.Date) return [];
+
+        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        List<int> investmentAccountIds = [];
+
+        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
+        {
+            if (account is null) continue;
+            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+
+            investmentAccountIds.Add(account.AccountId);
+        }
+
+        if (investmentAccountIds.Count == 0) return [];
+
+        var seriesByAccount = await investmentValuationService.GetCapitalSeriesAsync(
+            investmentAccountIds, currency, start.Date, end.Date);
+        if (seriesByAccount.Count == 0) return [];
+
+        Dictionary<DateTime, decimal> values = [];
+        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+            values[date] = 0m;
+
+        foreach (var series in seriesByAccount.Values)
+        {
+            foreach (var (date, value) in series)
+            {
+                if (values.ContainsKey(date.Date))
+                    values[date.Date] += value;
+            }
+        }
+
+        return TimeBucketService.Get(values.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
+                                .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
+                                .ToList();
+    }
+
     public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
         GetClosingBalance(userId, currency, start, end, []);
 

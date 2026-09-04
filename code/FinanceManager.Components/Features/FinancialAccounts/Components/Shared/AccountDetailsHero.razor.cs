@@ -30,6 +30,7 @@ public partial class AccountDetailsHero
     [Parameter] public bool IsBalanceLoading { get; set; }
     [Parameter] public List<TimeSeriesModel> ChartData { get; set; } = [];
     [Parameter] public List<TimeSeriesModel> BenchmarkData { get; set; } = [];
+    [Parameter] public List<TimeSeriesModel> CapitalData { get; set; } = [];
     [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
 
@@ -43,6 +44,7 @@ public partial class AccountDetailsHero
 
     /// <summary>Legend/series name for the account's own balance series.</summary>
     public const string BalanceSeriesName = "Balance";
+    public const string CapitalSeriesName = "Capital";
 
     // The y-axis is scaled to the series actually on screen (see ApplyYScale), so the options
     // object is per-instance rather than a shared static one.
@@ -68,7 +70,8 @@ public partial class AccountDetailsHero
         // equal) and a renamed benchmark, which changes the legend without changing values.
         var points = ChartData
             .Select(p => (BalanceSeriesName, p.DateTime, p.Value))
-            .Concat(BenchmarkData.Select(p => (BenchmarkName, p.DateTime, p.Value)));
+            .Concat(BenchmarkData.Select(p => (BenchmarkName, p.DateTime, p.Value)))
+            .Concat(CapitalData.Select(p => (CapitalSeriesName, p.DateTime, p.Value)));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
             // A freshly mounted chart instance (first render, or remounted after the loading
@@ -93,9 +96,9 @@ public partial class AccountDetailsHero
         var axis = _heroChartOptions.Yaxis?.FirstOrDefault();
         if (axis is null) return;
 
-        // The benchmark line is rebased onto the portfolio, so both series share one axis and
-        // the padded bounds have to span them together or the rebased line clips.
-        var values = ChartData.Concat(BenchmarkData).Select(p => (double)p.Value).ToList();
+        // The non-balance lines share the balance axis, so the padded bounds have to span every
+        // displayed series or a rebased benchmark/capital line can clip.
+        var values = ChartData.Concat(BenchmarkData).Concat(CapitalData).Select(p => (double)p.Value).ToList();
         if (values.Count == 0) return;
 
         var bounds = ChartHelper.AddYRangePadding(values.Min(), values.Max());
@@ -122,7 +125,7 @@ public partial class AccountDetailsHero
             // Same draw animation as the dashboard time-series cards.
             Animations = new Animations { Enabled = true, Speed = 400 },
         },
-        Colors = ["#ffab00", "#42a5f5"],
+        Colors = ["#ffab00", "#42a5f5", "#66bb6a"],
         Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // Top-aligned so the legend does not compete with the x-axis label row below the plot.
@@ -134,14 +137,14 @@ public partial class AccountDetailsHero
             HorizontalAlign = ApexCharts.Align.Right,
         },
         // Fill types are matched to series by index. The balance area (index 0) fades out
-        // downwards; the benchmark line (index 1) must be solid, because ApexCharts strokes a
-        // line series with its fill — a gradient there renders the line invisible at the end
-        // where the gradient reaches zero opacity.
+        // downwards; the benchmark and capital lines (indices 1 and 2) must be solid, because
+        // ApexCharts strokes a line series with its fill — a gradient there renders the line
+        // invisible at the end where the gradient reaches zero opacity.
         Fill = new Fill
         {
-            Type = [FillType.Gradient, FillType.Solid],
+            Type = [FillType.Gradient, FillType.Solid, FillType.Solid],
             Gradient = new FillGradient { OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
-            Opacity = [1d, 1d],
+            Opacity = [1d, 1d, 1d],
         },
         Grid = new Grid
         {
@@ -193,7 +196,14 @@ public partial class AccountDetailsHero
                 },
             },
         ],
-        Tooltip = new Tooltip { Enabled = false },
+        Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Shared = true,
+            Intersect = false,
+            X = new TooltipX { Format = "dd MMM yyyy" },
+            Marker = new TooltipMarker { Show = true },
+        },
     };
 
     private string GetInitial() => string.IsNullOrWhiteSpace(AccountName) ? "?" : AccountName.Trim()[..1].ToUpperInvariant();

@@ -15,7 +15,7 @@ public class InvestmentChartRequestLoaderTests
 
         async Task<T> WaitForRelease<T>(T value)
         {
-            if (Interlocked.Increment(ref started) == 4)
+            if (Interlocked.Increment(ref started) == 5)
                 allStarted.TrySetResult(true);
 
             await release.Task;
@@ -26,7 +26,8 @@ public class InvestmentChartRequestLoaderTests
             () => WaitForRelease<IReadOnlyDictionary<DateTime, decimal>>(new Dictionary<DateTime, decimal>()),
             () => WaitForRelease<IReadOnlyDictionary<long, decimal>>(new Dictionary<long, decimal>()),
             () => WaitForRelease<IReadOnlyList<UnrealizedGainLossAccountResult>>([]),
-            () => WaitForRelease<IReadOnlyDictionary<DateTime, decimal>>(new Dictionary<DateTime, decimal>()));
+            () => WaitForRelease<IReadOnlyDictionary<DateTime, decimal>>(new Dictionary<DateTime, decimal>()),
+            () => WaitForRelease<IReadOnlyList<TimeSeriesModel>>([]));
 
         await allStarted.Task.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
         Assert.False(loadTask.IsCompleted);
@@ -38,5 +39,6 @@ public class InvestmentChartRequestLoaderTests
         Assert.Empty(result.Holdings);
         Assert.Empty(result.Appreciation);
         Assert.Empty(result.BenchmarkSeries);
+        Assert.Empty(result.CapitalSeries);
     }
 }

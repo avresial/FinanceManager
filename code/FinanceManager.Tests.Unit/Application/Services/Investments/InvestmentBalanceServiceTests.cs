@@ -59,6 +59,47 @@ public class InvestmentBalanceServiceTests
     }
 
     [Fact]
+    public async Task GetCapital_AggregatesCapitalSeriesAcrossInvestmentAccounts()
+    {
+        DateTime start = new(2024, 1, 1);
+        DateTime end = new(2024, 1, 3);
+
+        var account1 = new InvestmentAccount(_userId, 10, "Investments A");
+        var account2 = new InvestmentAccount(_userId, 20, "Investments B");
+
+        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                                   .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
+
+        _valuationService.Setup(x => x.GetCapitalSeriesAsync(
+                It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)),
+                DefaultCurrency.PLN,
+                start.Date,
+                end.Date,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>
+            {
+                [10] = new Dictionary<DateTime, decimal>
+                {
+                    [start] = 100,
+                    [start.AddDays(1)] = 100,
+                    [end] = 150
+                },
+                [20] = new Dictionary<DateTime, decimal>
+                {
+                    [start] = 25,
+                    [start.AddDays(1)] = 30,
+                    [end] = 30
+                }
+            });
+
+        var result = await _service.GetCapital(_userId, DefaultCurrency.PLN, start, end);
+
+        Assert.Equal(125, result.Single(x => x.DateTime == start).Value);
+        Assert.Equal(130, result.Single(x => x.DateTime == start.AddDays(1)).Value);
+        Assert.Equal(180, result.Single(x => x.DateTime == end).Value);
+    }
+
+    [Fact]
     public async Task GetClosingBalance_RespectsAccountIdFilter()
     {
         DateTime start = new(2024, 1, 1);

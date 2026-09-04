@@ -147,4 +147,19 @@ public class MoneyFlowControllerTests
         var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
         Assert.Single(returnValue);
     }
+
+    [Fact]
+    public async Task GetCapital_ReturnsSingleElement()
+    {
+        DateTime startDate = new(2000, 1, 1);
+        DateTime endDate = new(2000, 2, 1);
+        List<int> accountIds = [7];
+        _mockBalanceService.Setup(repo => repo.GetCapital(_testUserId, DefaultCurrency.PLN, startDate, endDate, accountIds)).ReturnsAsync([new()]);
+
+        var result = await _controller.GetCapital(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, accountIds, TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
+        Assert.Single(returnValue);
+    }
 }

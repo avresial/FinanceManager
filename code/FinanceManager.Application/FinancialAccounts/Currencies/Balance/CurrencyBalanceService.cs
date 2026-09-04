@@ -40,6 +40,14 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
         return BucketToSeries(result);
     }
 
+    // Capital is meaningful only for investment and bond account histories. Currency account
+    // entries remain ordinary money-flow records and must not be counted on an account-value chart.
+    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
+        Task.FromResult(new List<TimeSeriesModel>());
+
+    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
+        Task.FromResult(new List<TimeSeriesModel>());
+
     public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
         GetClosingBalance(userId, currency, start, end, []);
 

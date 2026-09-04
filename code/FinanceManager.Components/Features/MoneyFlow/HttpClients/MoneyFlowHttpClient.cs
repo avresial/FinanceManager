@@ -36,6 +36,16 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
+        GetCapital(userId, currency, start, end, []);
+
+    public async Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    {
+        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetCapital/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
+        return result ?? [];
+    }
+
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
         var result = await httpClient.GetFromJsonAsync<decimal?>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.Id}/{date:O}");
