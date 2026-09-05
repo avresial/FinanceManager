@@ -35,6 +35,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Historical exchange-rate range lookups now use bounded provider range requests, avoiding concurrent per-date NBP request bursts while preserving provider fallback and missing-day behavior. #728
 - Card explanations now open from card header labels with polished, viewport-aware tooltip surfaces and no standalone info icons. #730
 - Landing and welcome card titles now stay centered across their full header while remaining tooltip triggers. #730
 - The Investment paycheck card's detailed information panel is replaced by the standard card information tooltip. #730
