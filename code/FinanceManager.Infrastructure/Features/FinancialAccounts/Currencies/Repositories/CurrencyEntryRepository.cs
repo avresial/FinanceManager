@@ -526,6 +526,23 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetMostRecentByAccounts(
+        IReadOnlyCollection<int> accountIds,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || count <= 0)
+            return [];
+
+        return await context.CurrencyEntries
+            .AsNoTracking()
+            .Where(e => accountIds.Contains(e.AccountId))
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CurrencyAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default)
     {
         if (count <= 0) return [];

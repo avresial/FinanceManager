@@ -468,6 +468,23 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<BondAccountEntry>> GetMostRecentByAccounts(
+        IReadOnlyCollection<int> accountIds,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || count <= 0)
+            return [];
+
+        return await context.BondEntries
+            .AsNoTracking()
+            .Where(e => accountIds.Contains(e.AccountId))
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<IReadOnlyList<BondAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<BondAccountEntry>>([]);
 

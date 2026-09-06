@@ -54,8 +54,10 @@ public class TransactionLogServiceTests
         ]);
 
         SetupBondAccount(accountId: 20, "Bonds", [new BondAccountEntry(20, 3, new DateTime(2024, 3, 3), 10, 10, bondDetailsId: 7)]);
-        _bondDetailsRepository.Setup(r => r.GetByIdAsync(7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BondDetails("EDO0134", "Treasury", new DateOnly(2024, 1, 1), new DateOnly(2024, 12, 31), []));
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(7)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
 
         SetupInvestmentAccount(accountId: 30, "Broker", [new InvestmentTransaction
         {
@@ -148,6 +150,60 @@ public class TransactionLogServiceTests
     }
 
     [Fact]
+    public async Task GetLastTransactions_BatchesBondNameResolution_AndFallsBackForMissingDetails()
+    {
+        SetupBondAccount(accountId: 20, "Bonds", [
+            new BondAccountEntry(20, 2, new DateTime(2024, 3, 2), 10, 10, bondDetailsId: 8),
+            new BondAccountEntry(20, 1, new DateTime(2024, 3, 1), 10, 10, bondDetailsId: 7),
+        ]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
+
+        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["Bond", "EDO0134"], result.Select(entry => entry.Description));
+        _bondDetailsRepository.Verify(r => r.GetNamesByIdsAsync(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _bondDetailsRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetLastTransactions_PassesOnlyAvailableAccountIdsToBatchQueries()
+    {
+        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(ToAsyncEnumerable([
+                new AvailableAccount(10, "Bank"),
+                new AvailableAccount(11, "Savings"),
+            ]));
+        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(ToAsyncEnumerable([new AvailableAccount(20, "Bonds")]));
+        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
+                3,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
+                3,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        await _service.GetLastTransactions(_userId, 3, TestContext.Current.CancellationToken);
+
+        _currencyEntryRepository.Verify(r => r.GetMostRecentByAccounts(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
+            3,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _bondEntryRepository.Verify(r => r.GetMostRecentByAccounts(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
+            3,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task GetLastTransactions_DoesNotQueryEntries_WhileAccountStreamIsStillOpen()
     {
         // A scoped EF Core DbContext allows only one active query: issuing an entry
@@ -158,13 +214,19 @@ public class TransactionLogServiceTests
 
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(TrackedAsyncEnumerable([new AvailableAccount(10, "Bank")], currencyStreamOpen));
-        _currencyEntryRepository.Setup(r => r.Get(10, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .Callback(() => Assert.False(currencyStreamOpen.Value, "Entry query issued while the currency accounts stream was still open."))
             .ReturnsAsync([]);
 
         _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(TrackedAsyncEnumerable([new AvailableAccount(20, "Bonds")], bondStreamOpen));
-        _bondEntryRepository.Setup(r => r.Get(20, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .Callback(() => Assert.False(bondStreamOpen.Value, "Entry query issued while the bond accounts stream was still open."))
             .ReturnsAsync([]);
 
@@ -173,15 +235,24 @@ public class TransactionLogServiceTests
 
         // Assert
         Assert.Empty(result);
-        _currencyEntryRepository.Verify(r => r.Get(10, It.IsAny<DateTime>(), It.IsAny<int>(), true), Times.Once);
-        _bondEntryRepository.Verify(r => r.Get(20, It.IsAny<DateTime>(), It.IsAny<int>(), true), Times.Once);
+        _currencyEntryRepository.Verify(r => r.GetMostRecentByAccounts(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
+            10,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _bondEntryRepository.Verify(r => r.GetMostRecentByAccounts(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
+            10,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private void SetupCurrencyAccount(int accountId, string name, List<CurrencyAccountEntry> entries)
     {
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _currencyEntryRepository.Setup(r => r.Get(accountId, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);
     }
 
@@ -189,7 +260,10 @@ public class TransactionLogServiceTests
     {
         _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _bondEntryRepository.Setup(r => r.Get(accountId, It.IsAny<DateTime>(), It.IsAny<int>(), true))
+        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);
     }
 
