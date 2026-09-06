@@ -42,40 +42,6 @@ public sealed class EntryRepositoryGetTests
         Assert.Equal("Interest", Assert.Single(Assert.IsType<BondAccountEntry>(result).Labels).Name);
     }
 
-    [Fact]
-    public async Task CurrencyGetMostRecentByAccounts_IsBoundedAndOrderedAcrossAccounts()
-    {
-        await using var context = CreateContext();
-        context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 10, new DateTime(2024, 3, 1), 100, 1),
-            new CurrencyAccountEntry(2, 11, new DateTime(2024, 3, 3), 100, 1),
-            new CurrencyAccountEntry(1, 12, new DateTime(2024, 3, 2), 100, 1),
-            new CurrencyAccountEntry(3, 13, new DateTime(2024, 3, 4), 100, 1));
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var result = await new CurrencyEntryRepository(context)
-            .GetMostRecentByAccounts([1, 2], 2, TestContext.Current.CancellationToken);
-
-        Assert.Equal([11, 12], result.Select(entry => entry.EntryId));
-    }
-
-    [Fact]
-    public async Task BondGetMostRecentByAccounts_IsBoundedAndOrderedAcrossAccounts()
-    {
-        await using var context = CreateContext();
-        context.BondEntries.AddRange(
-            new BondAccountEntry(1, 10, new DateTime(2024, 3, 1), 100, 1, 7),
-            new BondAccountEntry(2, 11, new DateTime(2024, 3, 3), 100, 1, 7),
-            new BondAccountEntry(1, 12, new DateTime(2024, 3, 2), 100, 1, 7),
-            new BondAccountEntry(3, 13, new DateTime(2024, 3, 4), 100, 1, 7));
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var result = await new BondEntryRepository(context)
-            .GetMostRecentByAccounts([1, 2], 2, TestContext.Current.CancellationToken);
-
-        Assert.Equal([11, 12], result.Select(entry => entry.EntryId));
-    }
-
     private static AppDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

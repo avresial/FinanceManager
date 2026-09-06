@@ -23,7 +23,8 @@ public interface IAccountEntryRepository<T>
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
     /// <summary>
     /// Returns the most recent <paramref name="count"/> entries across the supplied accounts in one
-    /// bounded database query, ordered by posting date descending and entry id descending.
+    /// bounded database query, ordered by posting date descending and entry id descending. Implementations
+    /// may project the returned entities to the scalar fields needed by the recent-activity consumer.
     /// </summary>
     Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
