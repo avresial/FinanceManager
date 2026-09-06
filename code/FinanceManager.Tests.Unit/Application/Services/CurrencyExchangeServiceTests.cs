@@ -808,6 +808,104 @@ public class CurrencyExchangeServiceTests : IDisposable
             Times.Never);
     }
 
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_MarksResolvedValuesAndCarryForwardValues()
+    {
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 3, 2);
+        var dateEnd = dateStart.AddDays(99);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", dateStart), 0.92m }
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new RecordingRangeProvider(_ =>
+            new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m));
+        var service = CreateService([provider]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            fromCurrency,
+            toCurrency,
+            dateStart,
+            dateEnd);
+
+        Assert.Equal(100, result.Count);
+        Assert.Equal(0.92m, result[0].Value);
+        Assert.True(result[0].IsAuthoritative);
+        Assert.Equal(0.915m, result[1].Value);
+        Assert.True(result[1].IsAuthoritative);
+        Assert.Equal(0.915m, result[61].Value);
+        Assert.False(result[61].IsAuthoritative);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_DoesNotMarkUsdCrossAsAuthoritative()
+    {
+        var fromCurrency = new Currency(1, "GBP", "£");
+        var toCurrency = new Currency(2, "PLN", "zł");
+        var date = new DateTime(2024, 3, 15);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string From, string To, DateTime Date), decimal>();
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new RecordingRangeProvider((from, to, _) =>
+            from.ShortName == "GBP" && to.ShortName == "PLN"
+                ? new(CurrencyExchangeRateProviderStatus.NotFound)
+                : from.ShortName == "GBP" && to.ShortName == "USD"
+                    ? new(CurrencyExchangeRateProviderStatus.Success, 1.25m)
+                    : from.ShortName == "USD" && to.ShortName == "PLN"
+                        ? new(CurrencyExchangeRateProviderStatus.Success, 4m)
+                        : new(CurrencyExchangeRateProviderStatus.NotFound));
+        var service = CreateService([provider]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            fromCurrency,
+            toCurrency,
+            date,
+            date);
+
+        var entry = Assert.Single(result);
+        Assert.Equal(5m, entry.Value);
+        Assert.False(entry.IsAuthoritative);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_SameCurrencyIsAuthoritative()
+    {
+        var currency = new Currency(1, "USD", "$");
+        var dateStart = new DateTime(2024, 3, 15);
+        var dateEnd = dateStart.AddDays(1);
+        var service = CreateService([]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            currency,
+            currency,
+            dateStart,
+            dateEnd);
+
+        Assert.Equal([(dateStart, (decimal?)1m, true), (dateEnd, (decimal?)1m, true)], result);
+        _exchangeRateRepositoryMock.Verify(
+            x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [CreateProvider()];

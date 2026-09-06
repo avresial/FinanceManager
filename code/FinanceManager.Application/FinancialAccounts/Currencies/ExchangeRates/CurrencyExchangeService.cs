@@ -6,7 +6,7 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 
 internal class CurrencyExchangeService(
     IExchangeRateRepository exchangeRateRepository,
-    IEnumerable<ICurrencyExchangeRateProvider> providers) : ICurrencyExchangeService
+    IEnumerable<ICurrencyExchangeRateProvider> providers) : ICurrencyExchangeService, ICurrencyExchangeRateRangeService
 {
     // A wide range (years of chart history) can miss thousands of daily rates. Each provider
     // resolution is a chain of DB lookups plus external HTTP calls, so resolving every missing
@@ -18,7 +18,20 @@ internal class CurrencyExchangeService(
     // the same window internally and its documented table-A limit is larger than this value.
     private const int _maxProviderRangeDays = 180;
 
-    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) =>
+        (await GetExchangeRateRangeWithProvenanceAsync(fromCurrency, toCurrency, dateStart, dateEnd))
+            .Select(rate => (rate.Date, rate.Value))
+            .ToList();
+
+    public async Task<List<(DateTime Date, decimal? Value, bool IsAuthoritative)>> GetExchangeRateRangeWithProvenanceAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd)
     {
         if (dateStart == default || dateEnd == default) return [];
 
@@ -36,9 +49,9 @@ internal class CurrencyExchangeService(
 
         if (fromCurrency == toCurrency)
         {
-            List<(DateTime Date, decimal? Value)> sameCurrencyRates = [];
+            List<(DateTime Date, decimal? Value, bool IsAuthoritative)> sameCurrencyRates = [];
             for (var i = 0; i < totalDays; i++)
-                sameCurrencyRates.Add((start.AddDays(i), 1m));
+                sameCurrencyRates.Add((start.AddDays(i), 1m, true));
 
             return sameCurrencyRates;
         }
@@ -47,7 +60,7 @@ internal class CurrencyExchangeService(
         var normalizedFrom = Normalize(fromCurrency.ShortName);
         var normalizedTo = Normalize(toCurrency.ShortName);
 
-        List<(DateTime Date, decimal? Value)> rates = [];
+        List<(DateTime Date, decimal? Value, bool IsAuthoritative)> rates = [];
         List<DateTime> missingDates = [];
 
         for (var i = 0; i < totalDays; i++)
@@ -56,7 +69,7 @@ internal class CurrencyExchangeService(
             var key = (normalizedFrom, normalizedTo, NormalizeDate(date));
             if (stored.TryGetValue(key, out var rate))
             {
-                rates.Add((date, rate));
+                rates.Add((date, rate, true));
             }
             else
             {
@@ -85,14 +98,14 @@ internal class CurrencyExchangeService(
                 var directResult = directResults[key];
                 if (directResult.IsSuccess)
                 {
-                    rates.Add((date, directResult.Value));
+                    rates.Add((date, directResult.Value, true));
                 }
                 else if (directResult.Status == CurrencyExchangeRateStatus.NotYetPublished)
                 {
                     // The range API returns values only. Keep a current-day publication miss
                     // unavailable rather than allowing the capped-tail carry-forward below to
                     // turn it into a stale value.
-                    rates.Add((date, null));
+                    rates.Add((date, null, false));
                 }
                 else
                 {
@@ -110,13 +123,13 @@ internal class CurrencyExchangeService(
                 foreach (var date in unresolvedDirectDates)
                 {
                     var crossResult = crossResults[NormalizeDate(date)];
-                    rates.Add((date, crossResult.IsSuccess ? crossResult.Value : null));
+                    rates.Add((date, crossResult.IsSuccess ? crossResult.Value : null, false));
                 }
             }
             else
             {
                 foreach (var date in unresolvedDirectDates)
-                    rates.Add((date, null));
+                    rates.Add((date, null, false));
             }
 
             // Dates past the per-call resolution cap carry the nearest earlier known rate
@@ -133,14 +146,14 @@ internal class CurrencyExchangeService(
                     // receive the publication-window outcome instead of a previous day's value.
                     if (date.Date == todayUtc)
                     {
-                        rates.Add((date, null));
+                        rates.Add((date, null, false));
                         continue;
                     }
 
                     while (knownIndex < knownAscending.Count && knownAscending[knownIndex].Date <= date)
                         carried = knownAscending[knownIndex++].Value;
 
-                    rates.Add((date, carried));
+                    rates.Add((date, carried, false));
                 }
             }
         }

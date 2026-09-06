@@ -1,15 +1,12 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 
 internal sealed class CachedCurrencyExchangeService(
     ICurrencyExchangeService inner,
-    IMemoryCache cache) : ICurrencyExchangeService
+    IMemoryCache cache) : ICurrencyExchangeService, ICurrencyExchangeRateRangeService
 {
     private static readonly MemoryCacheEntryOptions _cacheOptions = new()
     {
@@ -29,7 +26,7 @@ internal sealed class CachedCurrencyExchangeService(
 
     public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
     {
-        var key = $"EXCHANGE_RATE_RESULT_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
+        var key = GetCacheKey(fromCurrency, toCurrency, date);
 
         if (cache.TryGetValue(key, out CurrencyExchangeRateResult? cached) && cached is not null)
             return cached;
@@ -40,19 +37,57 @@ internal sealed class CachedCurrencyExchangeService(
         return result;
     }
 
-    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd)
     {
-        var rates = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
-
-        foreach (var (date, value) in rates)
+        if (inner is ICurrencyExchangeRateRangeService rangeService)
         {
-            if (value is not null)
-            {
-                var key = $"EXCHANGE_RATE_{fromCurrency.ShortName}_{toCurrency.ShortName}_{date:yyyyMMdd}";
-                cache.Set(key, value, _cacheOptions);
-            }
+            var rangeResults = await rangeService.GetExchangeRateRangeWithProvenanceAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+            CacheAuthoritativeRates(fromCurrency, toCurrency, rangeResults);
+            return rangeResults.Select(r => (r.Date, r.Value)).ToList();
         }
 
-        return rates;
+        return await inner.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
     }
+
+    public async Task<List<(DateTime Date, decimal? Value, bool IsAuthoritative)>> GetExchangeRateRangeWithProvenanceAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd)
+    {
+        if (inner is ICurrencyExchangeRateRangeService rangeService)
+        {
+            var rangeResults = await rangeService.GetExchangeRateRangeWithProvenanceAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+            CacheAuthoritativeRates(fromCurrency, toCurrency, rangeResults);
+            return rangeResults;
+        }
+
+        var rates = await inner.GetExchangeRateAsync(fromCurrency, toCurrency, dateStart, dateEnd);
+        return rates.Select(r => (r.Date, r.Value, false)).ToList();
+    }
+
+    private void CacheAuthoritativeRates(
+        Currency fromCurrency,
+        Currency toCurrency,
+        IEnumerable<(DateTime Date, decimal? Value, bool IsAuthoritative)> rates)
+    {
+        foreach (var (date, value, isAuthoritative) in rates)
+        {
+            if (isAuthoritative && value is decimal rate)
+            {
+                var key = GetCacheKey(fromCurrency, toCurrency, date);
+                cache.Set(key, CurrencyExchangeRateResult.Success(rate), _cacheOptions);
+            }
+        }
+    }
+
+    private static string GetCacheKey(Currency fromCurrency, Currency toCurrency, DateTime date) =>
+        $"EXCHANGE_RATE_RESULT_{NormalizeCurrency(fromCurrency.ShortName)}_{NormalizeCurrency(toCurrency.ShortName)}_{date:yyyyMMdd}";
+
+    private static string NormalizeCurrency(string? currency) =>
+        string.IsNullOrWhiteSpace(currency) ? string.Empty : currency.Trim().ToUpperInvariant();
 }
