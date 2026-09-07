@@ -132,13 +132,24 @@ internal class InvestmentValuationService(
         var relevant = transactions.Where(t => t.TradeDate <= endDateOnly).ToList();
         if (relevant.Count == 0) return result;
 
+        // Retain each (account, listing) pair when its opening holding before the range is non-zero
+        // OR it has trades in the range. Exclude positions fully closed before the window so they
+        // never trigger unneeded price-series fetches.
+        var retainedTransactions = relevant
+            .GroupBy(t => (t.AccountId, t.AssetListingId))
+            .Where(group => group.Where(t => t.TradeDate < startDateOnly).Sum(t => t.SignedQuantity) != 0m
+                || group.Any(t => t.TradeDate >= startDateOnly))
+            .SelectMany(group => group)
+            .ToList();
+        if (retainedTransactions.Count == 0) return result;
+
         // One price-series fetch per distinct listing across all accounts (target currency already
         // applied). Accounts holding the same instrument share this series instead of re-fetching it.
         var priceSeries = new Dictionary<long, IReadOnlyDictionary<DateTime, decimal>>();
-        foreach (var listingId in relevant.Select(t => t.AssetListingId).Distinct())
+        foreach (var listingId in retainedTransactions.Select(t => t.AssetListingId).Distinct())
             priceSeries[listingId] = await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct);
 
-        foreach (var accountGroup in relevant.GroupBy(t => t.AccountId))
+        foreach (var accountGroup in retainedTransactions.GroupBy(t => t.AccountId))
         {
             var series = BuildAccountSeries(accountGroup, startDate, endDate, startDateOnly, priceSeries);
             if (series.Count > 0) result[accountGroup.Key] = series;

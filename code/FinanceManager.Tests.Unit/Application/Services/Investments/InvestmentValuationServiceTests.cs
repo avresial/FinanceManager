@@ -268,6 +268,139 @@ public class InvestmentValuationServiceTests
     }
 
     [Fact]
+    public async Task GetAccountValueSeries_SkipsPriceHistory_ForPositionClosedBeforeValuationWindow()
+    {
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 2);
+
+        // Position was bought and fully sold before the valuation window opened.
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
+                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20))
+            });
+
+        var series = await CreateSut().GetAccountValueSeriesAsync(_accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Empty(series);
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(10, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetAccountValueSeries_OnlyFetchesPriceHistoryForActiveListings_WhenAccountHasClosedPosition()
+    {
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 2);
+
+        // Listing 10 was fully closed before the window; Listing 20 is still held.
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
+                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20)),
+                Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 15))
+            });
+
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(20, _usd, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 50m,
+                [end] = 55m
+            });
+
+        var series = await CreateSut().GetAccountValueSeriesAsync(_accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(100m, series[start]); // 2 * 50
+        Assert.Equal(110m, series[end]);   // 2 * 55
+
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(10, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(20, _usd, start, end, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccountValueSeries_PreservesInWindowOpenAndClose()
+    {
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 3);
+
+        // Position opens on Day 2 and closes on Day 3 (both in-window). Opening holding is 0.
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 2, 2)),
+                Tx(10, InvestmentTransactionType.Sell, 3m, new DateOnly(2024, 2, 3))
+            });
+
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 10m,
+                [start.AddDays(1)] = 15m,
+                [end] = 20m
+            });
+
+        var series = await CreateSut().GetAccountValueSeriesAsync(_accountId, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(start, series.Keys);
+        Assert.Equal(45m, series[start.AddDays(1)]); // 3 * 15
+        Assert.DoesNotContain(end, series.Keys); // 0 holding after sell
+
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAccountValueSeries_EvaluatesAccountsIndependently_WithoutCrossAccountSuppression()
+    {
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 2);
+        int[] accountIds = [10, 20];
+
+        // Each account is evaluated independently: account 10 holds 5 units while account 20's
+        // -5-unit position offsets it globally. A global listing net would incorrectly skip both.
+        _transactionRepository
+            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                Tx(100, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10), accountId: 10),
+                Tx(100, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20), accountId: 20)
+            });
+
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(100, _usd, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [start] = 20m,
+                [end] = 25m
+            });
+
+        var byAccount = await CreateSut().GetAccountValueSeriesAsync(accountIds, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.True(byAccount.ContainsKey(10));
+        Assert.Equal(100m, byAccount[10][start]); // 5 * 20
+        Assert.Equal(125m, byAccount[10][end]);   // 5 * 25
+        Assert.Equal(-100m, byAccount[20][start]); // account 20's -5-unit position is independent
+        Assert.Equal(-125m, byAccount[20][end]);
+
+        _priceProvider.Verify(
+            x => x.GetPricePerUnitSeriesAsync(100, _usd, start, end, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GetCapitalSeries_AccumulatesBuysAndSells_CarriesOpeningCapital_AndCombinesSameDayFlows()
     {
         var start = new DateTime(2024, 1, 2);
