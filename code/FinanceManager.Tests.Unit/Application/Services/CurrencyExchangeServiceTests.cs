@@ -836,15 +836,15 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         Assert.Equal(100, result.Count);
         Assert.Equal(0.92m, result[0].Value);
-        Assert.True(result[0].IsAuthoritative);
+        Assert.Equal(CurrencyExchangeRateSource.Stored, result[0].Source);
         Assert.Equal(0.915m, result[1].Value);
-        Assert.True(result[1].IsAuthoritative);
+        Assert.Equal(CurrencyExchangeRateSource.Provider, result[1].Source);
         Assert.Equal(0.915m, result[61].Value);
-        Assert.False(result[61].IsAuthoritative);
+        Assert.Equal(CurrencyExchangeRateSource.CarriedForward, result[61].Source);
     }
 
     [Fact]
-    public async Task GetExchangeRateRangeWithProvenanceAsync_DoesNotMarkUsdCrossAsAuthoritative()
+    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesUsdCrossSource()
     {
         var fromCurrency = new Currency(1, "GBP", "£");
         var toCurrency = new Currency(2, "PLN", "zł");
@@ -878,11 +878,11 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         var entry = Assert.Single(result);
         Assert.Equal(5m, entry.Value);
-        Assert.False(entry.IsAuthoritative);
+        Assert.Equal(CurrencyExchangeRateSource.DerivedViaUsd, entry.Source);
     }
 
     [Fact]
-    public async Task GetExchangeRateRangeWithProvenanceAsync_SameCurrencyIsAuthoritative()
+    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesSameCurrencySource()
     {
         var currency = new Currency(1, "USD", "$");
         var dateStart = new DateTime(2024, 3, 15);
@@ -895,7 +895,7 @@ public class CurrencyExchangeServiceTests : IDisposable
             dateStart,
             dateEnd);
 
-        Assert.Equal([(dateStart, (decimal?)1m, true), (dateEnd, (decimal?)1m, true)], result);
+        Assert.Equal([(dateStart, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency), (dateEnd, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency)], result);
         _exchangeRateRepositoryMock.Verify(
             x => x.GetRange(
                 It.IsAny<string>(),

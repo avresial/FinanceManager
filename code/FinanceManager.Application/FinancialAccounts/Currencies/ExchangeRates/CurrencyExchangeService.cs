@@ -6,7 +6,7 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 
 internal class CurrencyExchangeService(
     IExchangeRateRepository exchangeRateRepository,
-    IEnumerable<ICurrencyExchangeRateProvider> providers) : ICurrencyExchangeService, ICurrencyExchangeRateRangeService
+    IEnumerable<ICurrencyExchangeRateProvider> providers) : ICurrencyExchangeService, ICurrencyExchangeRateResolutionService
 {
     // A wide range (years of chart history) can miss thousands of daily rates. Each provider
     // resolution is a chain of DB lookups plus external HTTP calls, so resolving every missing
@@ -27,11 +27,12 @@ internal class CurrencyExchangeService(
             .Select(rate => (rate.Date, rate.Value))
             .ToList();
 
-    public async Task<List<(DateTime Date, decimal? Value, bool IsAuthoritative)>> GetExchangeRateRangeWithProvenanceAsync(
+    public async Task<List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)>> GetExchangeRateRangeWithProvenanceAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime dateStart,
-        DateTime dateEnd)
+        DateTime dateEnd,
+        IReadOnlyDictionary<DateTime, CurrencyExchangeRateResolution>? cachedRates = null)
     {
         if (dateStart == default || dateEnd == default) return [];
 
@@ -49,27 +50,40 @@ internal class CurrencyExchangeService(
 
         if (fromCurrency == toCurrency)
         {
-            List<(DateTime Date, decimal? Value, bool IsAuthoritative)> sameCurrencyRates = [];
+            List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)> sameCurrencyRates = [];
             for (var i = 0; i < totalDays; i++)
-                sameCurrencyRates.Add((start.AddDays(i), 1m, true));
+                sameCurrencyRates.Add((start.AddDays(i), 1m, CurrencyExchangeRateSource.SameCurrency));
 
             return sameCurrencyRates;
         }
 
-        var stored = await exchangeRateRepository.GetRange(fromCurrency.ShortName, toCurrency.ShortName, start, end);
+        var uncachedDates = Enumerable.Range(0, totalDays)
+            .Select(i => start.AddDays(i))
+            .Where(date => cachedRates is null
+                || !cachedRates.TryGetValue(date, out var cached)
+                || !cached.CanReuseForRange)
+            .ToList();
+        var stored = uncachedDates.Count == 0
+            ? new Dictionary<(string From, string To, DateTime Date), decimal>()
+            : await exchangeRateRepository.GetRange(
+                fromCurrency.ShortName, toCurrency.ShortName, uncachedDates[0], uncachedDates[^1]);
         var normalizedFrom = Normalize(fromCurrency.ShortName);
         var normalizedTo = Normalize(toCurrency.ShortName);
 
-        List<(DateTime Date, decimal? Value, bool IsAuthoritative)> rates = [];
+        List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)> rates = [];
         List<DateTime> missingDates = [];
 
         for (var i = 0; i < totalDays; i++)
         {
             var date = start.AddDays(i);
             var key = (normalizedFrom, normalizedTo, NormalizeDate(date));
-            if (stored.TryGetValue(key, out var rate))
+            if (cachedRates is not null && cachedRates.TryGetValue(date, out var cached) && cached.CanReuseForRange)
             {
-                rates.Add((date, rate, true));
+                rates.Add((date, cached.Result.Value, cached.Source));
+            }
+            else if (stored.TryGetValue(key, out var rate))
+            {
+                rates.Add((date, rate, CurrencyExchangeRateSource.Stored));
             }
             else
             {
@@ -98,14 +112,14 @@ internal class CurrencyExchangeService(
                 var directResult = directResults[key];
                 if (directResult.IsSuccess)
                 {
-                    rates.Add((date, directResult.Value, true));
+                    rates.Add((date, directResult.Value, CurrencyExchangeRateSource.Provider));
                 }
                 else if (directResult.Status == CurrencyExchangeRateStatus.NotYetPublished)
                 {
                     // The range API returns values only. Keep a current-day publication miss
                     // unavailable rather than allowing the capped-tail carry-forward below to
                     // turn it into a stale value.
-                    rates.Add((date, null, false));
+                    rates.Add((date, null, CurrencyExchangeRateSource.Unavailable));
                 }
                 else
                 {
@@ -123,13 +137,14 @@ internal class CurrencyExchangeService(
                 foreach (var date in unresolvedDirectDates)
                 {
                     var crossResult = crossResults[NormalizeDate(date)];
-                    rates.Add((date, crossResult.IsSuccess ? crossResult.Value : null, false));
+                    rates.Add((date, crossResult.IsSuccess ? crossResult.Value : null,
+                        crossResult.IsSuccess ? CurrencyExchangeRateSource.DerivedViaUsd : CurrencyExchangeRateSource.Unavailable));
                 }
             }
             else
             {
                 foreach (var date in unresolvedDirectDates)
-                    rates.Add((date, null, false));
+                    rates.Add((date, null, CurrencyExchangeRateSource.Unavailable));
             }
 
             // Dates past the per-call resolution cap carry the nearest earlier known rate
@@ -146,14 +161,14 @@ internal class CurrencyExchangeService(
                     // receive the publication-window outcome instead of a previous day's value.
                     if (date.Date == todayUtc)
                     {
-                        rates.Add((date, null, false));
+                        rates.Add((date, null, CurrencyExchangeRateSource.Unavailable));
                         continue;
                     }
 
                     while (knownIndex < knownAscending.Count && knownAscending[knownIndex].Date <= date)
                         carried = knownAscending[knownIndex++].Value;
 
-                    rates.Add((date, carried, false));
+                    rates.Add((date, carried, carried is null ? CurrencyExchangeRateSource.Unavailable : CurrencyExchangeRateSource.CarriedForward));
                 }
             }
         }
@@ -276,7 +291,7 @@ internal class CurrencyExchangeService(
         var results = new Dictionary<DateTime, CurrencyExchangeRateResult>();
 
         // Keep derived USD-cross rates request-scoped. The point-resolution path does not persist
-        // derived pairs either, so a transient direct-provider failure can retry the authoritative
+        // derived pairs either, so a transient direct-provider failure can retry the direct
         // pair instead of being shadowed by an approximation in storage.
         foreach (var date in dates)
         {
@@ -305,14 +320,24 @@ internal class CurrencyExchangeService(
     public async Task<decimal?> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
         (await GetExchangeRateResultAsync(fromCurrency, toCurrency, date)).Value;
 
-    public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date) =>
+        (await GetExchangeRateWithSourceAsync(fromCurrency, toCurrency, date)).Result;
+
+    public async Task<CurrencyExchangeRateResolution> GetExchangeRateWithSourceAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date)
     {
+        if (fromCurrency == toCurrency)
+            return new(CurrencyExchangeRateResult.Success(1m), CurrencyExchangeRateSource.SameCurrency);
+
         var state = new ResolutionState();
         var direct = await ResolveDirectAsync(fromCurrency, toCurrency, date, state);
         if (direct.IsSuccess || direct.Status == CurrencyExchangeRateStatus.NotYetPublished)
-            return direct;
+            return new(direct, direct.IsSuccess ? state.Source : CurrencyExchangeRateSource.Unavailable);
 
-        return await ResolveViaUsdAsync(fromCurrency, toCurrency, date, state);
+        var cross = await ResolveViaUsdAsync(fromCurrency, toCurrency, date, state);
+        return new(cross, cross.IsSuccess ? CurrencyExchangeRateSource.DerivedViaUsd : CurrencyExchangeRateSource.Unavailable);
     }
 
     // Cheapest sources first: the application's own database, then the configured providers
@@ -325,11 +350,18 @@ internal class CurrencyExchangeService(
         ResolutionState state)
     {
         var stored = await exchangeRateRepository.Get(fromCurrency.ShortName, toCurrency.ShortName, date);
-        if (stored is decimal storedRate) return CurrencyExchangeRateResult.Success(storedRate);
+        if (stored is decimal storedRate)
+        {
+            state.Source = CurrencyExchangeRateSource.Stored;
+            return CurrencyExchangeRateResult.Success(storedRate);
+        }
 
         var storedInverse = await exchangeRateRepository.Get(toCurrency.ShortName, fromCurrency.ShortName, date);
         if (storedInverse is decimal inverse && inverse != 0)
+        {
+            state.Source = CurrencyExchangeRateSource.Stored;
             return CurrencyExchangeRateResult.Success(1m / inverse);
+        }
 
         foreach (var provider in providers)
         {
@@ -346,6 +378,7 @@ internal class CurrencyExchangeService(
             if (result is { Status: CurrencyExchangeRateProviderStatus.Success, Value: decimal rate })
             {
                 await exchangeRateRepository.Add(fromCurrency.ShortName, toCurrency.ShortName, date, rate);
+                state.Source = CurrencyExchangeRateSource.Provider;
                 return CurrencyExchangeRateResult.Success(rate);
             }
 
@@ -384,6 +417,8 @@ internal class CurrencyExchangeService(
 
     private sealed class ResolutionState
     {
+        public CurrencyExchangeRateSource Source { get; set; } = CurrencyExchangeRateSource.Unavailable;
+
         public HashSet<ICurrencyExchangeRateProvider> OutOfRangeProviders { get; } = [];
 
         private bool HasFailure { get; set; }
