@@ -6,7 +6,7 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 /// Resolves exact daily rates for a direct currency pair from one layer of the source chain.
 /// Dates that cannot be attempted within the layer's budget are omitted from the result.
 /// </summary>
-internal interface ICurrencyExchangeRateSource
+public interface ICurrencyExchangeRateSource
 {
     Task<IReadOnlyDictionary<DateTime, CurrencyExchangeRateResolution>> ResolveAsync(
         Currency fromCurrency,

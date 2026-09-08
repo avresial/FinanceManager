@@ -1,7 +1,7 @@
 namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 
 /// <summary>Describes how a range value was obtained, independently of cache policy.</summary>
-internal enum CurrencyExchangeRateSource
+public enum CurrencyExchangeRateSource
 {
     Unknown,
     Stored,

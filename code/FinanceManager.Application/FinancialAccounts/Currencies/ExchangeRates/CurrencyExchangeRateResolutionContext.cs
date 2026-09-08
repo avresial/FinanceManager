@@ -6,7 +6,7 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 /// Carries request-scoped provider state across direct and USD-cross lookups without sharing state
 /// between unrelated requests.
 /// </summary>
-internal sealed class CurrencyExchangeRateResolutionContext
+public sealed class CurrencyExchangeRateResolutionContext
 {
     private readonly Dictionary<DateTime, HashSet<ICurrencyExchangeRateProvider>> _outOfRangeProviders = [];
 
