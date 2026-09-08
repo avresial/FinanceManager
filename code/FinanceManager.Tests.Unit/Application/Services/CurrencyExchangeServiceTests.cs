@@ -824,9 +824,14 @@ public class CurrencyExchangeServiceTests : IDisposable
         _exchangeRateRepositoryMock
             .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedRates);
-        var provider = new RecordingRangeProvider(_ =>
-            new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m));
-        var service = CreateService([provider]);
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider.Setup(x => x.GetExchangeRateAsync(fromCurrency, toCurrency, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync((Currency from, Currency to, DateTime start, DateTime end) =>
+                Enumerable.Range(0, (end - start).Days + 1)
+                    .Select(i => (start.AddDays(i),
+                        new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m)))
+                    .ToList());
+        var service = CreateService([provider.Object]);
 
         var result = await service.GetExchangeRateRangeWithProvenanceAsync(
             fromCurrency,
@@ -860,15 +865,16 @@ public class CurrencyExchangeServiceTests : IDisposable
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedRates);
-        var provider = new RecordingRangeProvider((from, to, _) =>
-            from.ShortName == "GBP" && to.ShortName == "PLN"
-                ? new(CurrencyExchangeRateProviderStatus.NotFound)
-                : from.ShortName == "GBP" && to.ShortName == "USD"
-                    ? new(CurrencyExchangeRateProviderStatus.Success, 1.25m)
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider.Setup(x => x.GetExchangeRateAsync(
+            It.IsAny<Currency>(), It.IsAny<Currency>(), date, date))
+            .ReturnsAsync((Currency from, Currency to, DateTime start, DateTime end) =>
+                [(date, from.ShortName == "GBP" && to.ShortName == "USD"
+                    ? new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 1.25m)
                     : from.ShortName == "USD" && to.ShortName == "PLN"
-                        ? new(CurrencyExchangeRateProviderStatus.Success, 4m)
-                        : new(CurrencyExchangeRateProviderStatus.NotFound));
-        var service = CreateService([provider]);
+                        ? new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 4m)
+                        : new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound))]);
+        var service = CreateService([provider.Object]);
 
         var result = await service.GetExchangeRateRangeWithProvenanceAsync(
             fromCurrency,
