@@ -2,3 +2,4 @@ using System.Runtime.CompilerServices;
 
 // Allow unit test project to access internal types for testing
 [assembly: InternalsVisibleTo("FinanceManager.Tests.Unit")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

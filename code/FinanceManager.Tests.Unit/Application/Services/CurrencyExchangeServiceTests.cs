@@ -915,11 +915,16 @@ public class CurrencyExchangeServiceTests : IDisposable
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [CreateProvider()];
-        return new CurrencyExchangeService(_exchangeRateRepositoryMock.Object, providers);
+        return new(CreateSource(providers));
     }
 
     private CurrencyExchangeService CreateService(ICurrencyExchangeRateProvider[] providers) =>
-        new(_exchangeRateRepositoryMock.Object, providers);
+        new(CreateSource(providers));
+
+    private ICurrencyExchangeRateSource CreateSource(ICurrencyExchangeRateProvider[] providers) =>
+        new StoredCurrencyExchangeRateSource(
+            _exchangeRateRepositoryMock.Object,
+            new CurrencyExchangeRateProviderSource(providers));
 
     private FawazAhmedCurrencyApiClient CreateProvider() => new(_httpClient, _logger, _dateTimeProvider);
 
@@ -939,8 +944,10 @@ public class CurrencyExchangeServiceTests : IDisposable
             EventId eventId,
             TState state,
             Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
+            Func<TState, Exception?, string> formatter)
+        {
             Levels.Add(logLevel);
+        }
     }
 
     private sealed class RecordingRangeProvider : ICurrencyExchangeRateProvider

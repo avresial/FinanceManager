@@ -35,8 +35,13 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
 
     public void Dispose() => _cache.Dispose();
 
-    private CachedCurrencyExchangeService CreateSut() =>
-        new(new CurrencyExchangeService(_repository.Object, [_provider.Object]), _cache);
+    private CurrencyExchangeService CreateSut()
+    {
+        ICurrencyExchangeRateSource source = new CurrencyExchangeRateProviderSource([_provider.Object]);
+        source = new StoredCurrencyExchangeRateSource(_repository.Object, source);
+        source = new CachedCurrencyExchangeRateSource(source, _cache);
+        return new(source);
+    }
 
     [Fact]
     public async Task StoredPointResults_SatisfyRangeWithoutRepositoryOrProviderReads()

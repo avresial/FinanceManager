@@ -59,8 +59,10 @@ internal static class Registration
                 .AddScoped<ISeeder, BondDetailsSeeder>(sp => sp.GetRequiredService<BondDetailsSeeder>())
 
                 .AddScoped<ICurrencyExchangeRateProvider, CsvCurrencyExchangeProvider>()
-                .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>()
-                .Decorate<ICurrencyExchangeService, CachedCurrencyExchangeService>();
+                .AddScoped<ICurrencyExchangeRateSource, CurrencyExchangeRateProviderSource>()
+                .Decorate<ICurrencyExchangeRateSource, StoredCurrencyExchangeRateSource>()
+                .Decorate<ICurrencyExchangeRateSource, CachedCurrencyExchangeRateSource>()
+                .AddScoped<ICurrencyExchangeService, CurrencyExchangeService>();
 
         services.AddScoped<ImportAccountValidator>()
                 .AddScoped<ICsvHeaderMappingService, CsvHeaderMappingService>()
