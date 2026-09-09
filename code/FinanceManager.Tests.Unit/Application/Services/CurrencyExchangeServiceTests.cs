@@ -808,14 +808,123 @@ public class CurrencyExchangeServiceTests : IDisposable
             Times.Never);
     }
 
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_MarksResolvedValuesAndCarryForwardValues()
+    {
+        var fromCurrency = new Currency(1, "USD", "$");
+        var toCurrency = new Currency(2, "EUR", "€");
+        var dateStart = new DateTime(2024, 3, 2);
+        var dateEnd = dateStart.AddDays(99);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string, string, DateTime), decimal>
+            {
+                { ("USD", "EUR", dateStart), 0.92m }
+            };
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange("USD", "EUR", It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider.Setup(x => x.GetExchangeRateAsync(fromCurrency, toCurrency, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync((Currency from, Currency to, DateTime start, DateTime end) =>
+                Enumerable.Range(0, (end - start).Days + 1)
+                    .Select(i => (start.AddDays(i),
+                        new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 0.915m)))
+                    .ToList());
+        var service = CreateService([provider.Object]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            fromCurrency,
+            toCurrency,
+            dateStart,
+            dateEnd);
+
+        Assert.Equal(100, result.Count);
+        Assert.Equal(0.92m, result[0].Value);
+        Assert.Equal(CurrencyExchangeRateSource.Stored, result[0].Source);
+        Assert.Equal(0.915m, result[1].Value);
+        Assert.Equal(CurrencyExchangeRateSource.Provider, result[1].Source);
+        Assert.Equal(0.915m, result[61].Value);
+        Assert.Equal(CurrencyExchangeRateSource.CarriedForward, result[61].Source);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesUsdCrossSource()
+    {
+        var fromCurrency = new Currency(1, "GBP", "£");
+        var toCurrency = new Currency(2, "PLN", "zł");
+        var date = new DateTime(2024, 3, 15);
+        IReadOnlyDictionary<(string From, string To, DateTime Date), decimal> storedRates =
+            new Dictionary<(string From, string To, DateTime Date), decimal>();
+
+        _exchangeRateRepositoryMock
+            .Setup(x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedRates);
+        var provider = new Mock<ICurrencyExchangeRateProvider>();
+        provider.Setup(x => x.GetExchangeRateAsync(
+            It.IsAny<Currency>(), It.IsAny<Currency>(), date, date))
+            .ReturnsAsync((Currency from, Currency to, DateTime start, DateTime end) =>
+                [(date, from.ShortName == "GBP" && to.ShortName == "USD"
+                    ? new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 1.25m)
+                    : from.ShortName == "USD" && to.ShortName == "PLN"
+                        ? new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.Success, 4m)
+                        : new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound))]);
+        var service = CreateService([provider.Object]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            fromCurrency,
+            toCurrency,
+            date,
+            date);
+
+        var entry = Assert.Single(result);
+        Assert.Equal(5m, entry.Value);
+        Assert.Equal(CurrencyExchangeRateSource.DerivedViaUsd, entry.Source);
+    }
+
+    [Fact]
+    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesSameCurrencySource()
+    {
+        var currency = new Currency(1, "USD", "$");
+        var dateStart = new DateTime(2024, 3, 15);
+        var dateEnd = dateStart.AddDays(1);
+        var service = CreateService([]);
+
+        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+            currency,
+            currency,
+            dateStart,
+            dateEnd);
+
+        Assert.Equal([(dateStart, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency), (dateEnd, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency)], result);
+        _exchangeRateRepositoryMock.Verify(
+            x => x.GetRange(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private CurrencyExchangeService CreateService()
     {
         ICurrencyExchangeRateProvider[] providers = [CreateProvider()];
-        return new CurrencyExchangeService(_exchangeRateRepositoryMock.Object, providers);
+        return new(CreateSource(providers));
     }
 
     private CurrencyExchangeService CreateService(ICurrencyExchangeRateProvider[] providers) =>
-        new(_exchangeRateRepositoryMock.Object, providers);
+        new(CreateSource(providers));
+
+    private ICurrencyExchangeRateSource CreateSource(ICurrencyExchangeRateProvider[] providers) =>
+        new StoredCurrencyExchangeRateSource(
+            _exchangeRateRepositoryMock.Object,
+            new CurrencyExchangeRateProviderSource(providers));
 
     private FawazAhmedCurrencyApiClient CreateProvider() => new(_httpClient, _logger, _dateTimeProvider);
 
@@ -835,8 +944,10 @@ public class CurrencyExchangeServiceTests : IDisposable
             EventId eventId,
             TState state,
             Exception? exception,
-            Func<TState, Exception?, string> formatter) =>
+            Func<TState, Exception?, string> formatter)
+        {
             Levels.Add(logLevel);
+        }
     }
 
     private sealed class RecordingRangeProvider : ICurrencyExchangeRateProvider
