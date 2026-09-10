@@ -9,11 +9,11 @@ public class ChartHelperTests
     [Fact]
     public void EnsureSeriesEndsAt_CarriesCapitalThroughTheRequestedEndAfterFinalTransaction()
     {
-        var series = new List<TimeSeriesModel>
-        {
+        List<TimeSeriesModel> series =
+        [
             new(new DateTime(2026, 1, 1), 100m, "Capital"),
             new(new DateTime(2026, 2, 1), 125m, "Capital"),
-        };
+        ];
 
         var result = ChartHelper.EnsureSeriesEndsAt(series, new DateTime(2026, 3, 31));
 
@@ -29,11 +29,11 @@ public class ChartHelperTests
     [Fact]
     public void EnsureSeriesEndsAt_DoesNotAddDuplicateWhenEndAlreadyExists()
     {
-        var series = new List<TimeSeriesModel>
-        {
+        List<TimeSeriesModel> series =
+        [
             new(new DateTime(2026, 3, 30), 100m),
             new(new DateTime(2026, 3, 31), 125m),
-        };
+        ];
 
         var result = ChartHelper.EnsureSeriesEndsAt(series, new DateTime(2026, 3, 31, 23, 59, 59));
 
