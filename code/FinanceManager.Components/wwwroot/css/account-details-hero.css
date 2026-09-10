@@ -15,6 +15,12 @@
     stroke-linejoin: round;
 }
 
+/* ApexCharts defaults legend labels to a fixed dark grey. Use the active MudBlazor palette so
+   the Balance, benchmark, and Capital labels remain readable when the app switches to dark mode. */
+.fm-hero-chart .apexcharts-legend-text {
+    color: var(--mud-palette-text-primary) !important;
+}
+
 /* ApexCharts overlays a full-plot <foreignObject> (it only carries an injected <style>
    block) with pointer-events:auto, which sits on top of the series and swallows mousemove.
    The element is purely decorative, so disabling its pointer events lets the crosshair

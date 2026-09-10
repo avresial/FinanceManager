@@ -1,7 +1,27 @@
+using FinanceManager.Domain.MoneyFlow.Entities;
+
 namespace FinanceManager.Components.Shared.Helpers;
 
 public static class ChartHelper
 {
+    /// <summary>
+    /// Carries the final known value through the requested chart end date when a bucketed
+    /// cumulative series ends at the first date of its final bucket. The source sequence is not
+    /// mutated, and an empty series or one that already reaches the end is returned unchanged.
+    /// </summary>
+    public static List<TimeSeriesModel> EnsureSeriesEndsAt(IEnumerable<TimeSeriesModel> series, DateTime endDate)
+    {
+        var ordered = series.OrderBy(point => point.DateTime).ToList();
+        if (ordered.Count == 0) return ordered;
+
+        var targetDate = endDate.Date;
+        var last = ordered[^1];
+        if (last.DateTime.Date >= targetDate) return ordered;
+
+        ordered.Add(new TimeSeriesModel(targetDate, last.Value, last.Name));
+        return ordered;
+    }
+
     /// <summary>
     /// Compact currency tick labels for a y-axis: 2.5k / 7.5k / 10k / 13k. Shared by the
     /// dashboard time-series cards and the account details hero chart so both label their

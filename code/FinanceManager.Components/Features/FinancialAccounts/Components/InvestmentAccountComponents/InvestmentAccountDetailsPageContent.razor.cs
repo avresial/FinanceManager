@@ -408,7 +408,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             .ToList();
         // The benchmark tracks the account's own contributions, so it is asked for the whole range
         // and starts itself on the day the account first holds something — no base point to seed.
-        var benchmarkSeries = chartRequests.BenchmarkSeries;
+        var benchmarkSeries = chartRequests.BenchmarkSeries
+            .OrderBy(x => x.Key)
+            .Select(x => new TimeSeriesModel(x.Key, x.Value))
+            .ToList();
+        var capitalSeries = ChartHelper.EnsureSeriesEndsAt(chartRequests.CapitalSeries, dateEnd);
         var currentBalance = orderedSeries.LastOrDefault()?.Value ?? 0;
 
         // Capital value (remaining buy cost) and current valuation are the two source-of-truth
@@ -422,7 +426,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             dateStart,
             dateEnd,
             [.. orderedSeries.SkipWhile(x => x.Value == 0)],
-            [.. benchmarkSeries.OrderBy(x => x.Key).Select(x => new TimeSeriesModel(x.Key, x.Value))],
+            benchmarkSeries,
             benchmarkName,
             currentBalance,
             capitalValue,
@@ -430,7 +434,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             balanceChange,
             capitalValue == 0m ? null : balanceChange / capitalValue * 100m,
             BuildHoldings(transactions, holdings, dateEnd),
-            [.. chartRequests.CapitalSeries]);
+            capitalSeries);
     }
 
     // Only chart data is restored. The selected range and its dates stay owned by the user's
