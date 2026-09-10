@@ -10,6 +10,10 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Reposito
 
 public class BondEntryRepository(AppDbContext context) : IBondAccountEntryRepository<BondAccountEntry>
 {
+    // SQL Server permits at most 2,100 parameters per command. Keep room for the Take parameter and
+    // future predicates when a user has an unusually large number of accounts.
+    private const int _maxAccountIdsPerQuery = 2_000;
+
     private readonly BondEntryValueCalculator _valueCalculator = new(context);
     public Task<bool> Add(BondAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
@@ -466,6 +470,35 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .AsNoTracking()
             .Where(e => entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<BondAccountEntry>> GetMostRecentByAccounts(
+        IReadOnlyCollection<int> accountIds,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || count <= 0)
+            return [];
+
+        List<BondAccountEntry> results = [];
+        foreach (var accountIdChunk in accountIds.Distinct().Chunk(_maxAccountIdsPerQuery))
+        {
+            results.AddRange(await context.BondEntries
+                .AsNoTracking()
+                .Where(e => accountIdChunk.Contains(e.AccountId))
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                // The dashboard only needs account, ordering, value-change, and bond id fields.
+                .Select(e => new BondAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId))
+                .Take(count)
+                .ToListAsync(cancellationToken));
+        }
+
+        return results
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(count)
+            .ToList();
     }
 
     public Task<IReadOnlyList<BondAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) =>

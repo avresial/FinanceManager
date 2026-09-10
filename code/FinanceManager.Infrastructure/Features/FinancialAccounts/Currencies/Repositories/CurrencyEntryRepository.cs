@@ -9,6 +9,10 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Re
 
 public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryRepository<CurrencyAccountEntry>
 {
+    // SQL Server permits at most 2,100 parameters per command. Keep room for the Take parameter and
+    // future predicates when a user has an unusually large number of accounts.
+    private const int _maxAccountIdsPerQuery = 2_000;
+
     private readonly CurrencyEntryValueCalculator _valueCalculator = new(context);
     public Task<bool> Add(CurrencyAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
@@ -524,6 +528,40 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .Include(e => e.Labels)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetMostRecentByAccounts(
+        IReadOnlyCollection<int> accountIds,
+        int count,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || count <= 0)
+            return [];
+
+        List<CurrencyAccountEntry> results = [];
+        foreach (var accountIdChunk in accountIds.Distinct().Chunk(_maxAccountIdsPerQuery))
+        {
+            results.AddRange(await context.CurrencyEntries
+                .AsNoTracking()
+                .Where(e => accountIdChunk.Contains(e.AccountId))
+                .OrderByDescending(e => e.PostingDate)
+                .ThenByDescending(e => e.EntryId)
+                // The dashboard does not need Value or labels for this read. Materialise only the
+                // account, ordering, value-change, and description fields it projects into its DTO.
+                .Select(e => new CurrencyAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange)
+                {
+                    Description = e.Description,
+                    ContractorDetails = e.ContractorDetails,
+                })
+                .Take(count)
+                .ToListAsync(cancellationToken));
+        }
+
+        return results
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(count)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<CurrencyAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default)

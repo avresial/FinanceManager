@@ -17,8 +17,8 @@ namespace FinanceManager.Application.Dashboard;
 /// account of every type (currency, bond, investment) and interleaving them into a
 /// single newest-first list. The underlying repositories share a scoped EF Core
 /// DbContext, which allows only one active query at a time — so each account stream
-/// is fully buffered before the per-account entry queries run, and everything is
-/// awaited sequentially.
+/// is fully buffered before the bounded entry queries run, and everything is awaited
+/// sequentially.
 /// </summary>
 public class TransactionLogService(
     ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
@@ -37,22 +37,39 @@ public class TransactionLogService(
 
         List<TransactionLogEntryDto> result = [];
 
-        foreach (var account in await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken))
+        var currencyAccounts = await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        if (currencyAccounts.Count != 0)
         {
-            var entries = await currencyEntryRepository.Get(account.AccountId, DateTime.MaxValue, count);
+            var currencyAccountNames = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var entries = await currencyEntryRepository.GetMostRecentByAccounts(
+                [.. currencyAccountNames.Keys], count, cancellationToken);
+
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
-                account.AccountId, account.AccountName, AccountType.Currency, e.EntryId, e.PostingDate, e.ValueChange, GetCurrencyDescription(e))));
+                e.AccountId,
+                currencyAccountNames[e.AccountId],
+                AccountType.Currency,
+                e.EntryId,
+                e.PostingDate,
+                e.ValueChange,
+                GetCurrencyDescription(e))));
         }
 
-        foreach (var account in await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken))
+        var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        if (bondAccounts.Count != 0)
         {
-            var entries = await bondEntryRepository.Get(account.AccountId, DateTime.MaxValue, count);
-            foreach (var entry in entries)
-            {
-                var description = await GetBondDescription(entry, cancellationToken);
-                result.Add(new TransactionLogEntryDto(
-                    account.AccountId, account.AccountName, AccountType.Bond, entry.EntryId, entry.PostingDate, entry.ValueChange, description));
-            }
+            var bondAccountNames = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var entries = await bondEntryRepository.GetMostRecentByAccounts(
+                [.. bondAccountNames.Keys], count, cancellationToken);
+            var bondNames = await GetBondNames(entries, cancellationToken);
+
+            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
+                e.AccountId,
+                bondAccountNames[e.AccountId],
+                AccountType.Bond,
+                e.EntryId,
+                e.PostingDate,
+                e.ValueChange,
+                bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond")));
         }
 
         Dictionary<int, string> investmentAccounts = [];
@@ -95,14 +112,23 @@ public class TransactionLogService(
     private static string GetInvestmentDescription(InvestmentTransaction transaction) =>
         $"{transaction.Type} {transaction.Quantity:0.####} {transaction.AssetListing?.Ticker}".TrimEnd();
 
-    private async Task<string> GetBondDescription(BondAccountEntry entry, CancellationToken cancellationToken)
+    private async Task<IReadOnlyDictionary<int, string?>> GetBondNames(
+        IReadOnlyList<BondAccountEntry> entries,
+        CancellationToken cancellationToken)
     {
-        if (!_bondNamesCache.TryGetValue(entry.BondDetailsId, out var name))
+        var missingIds = entries
+            .Select(entry => entry.BondDetailsId)
+            .Distinct()
+            .Where(id => !_bondNamesCache.ContainsKey(id))
+            .ToList();
+
+        if (missingIds.Count != 0)
         {
-            name = (await bondDetailsRepository.GetByIdAsync(entry.BondDetailsId, cancellationToken))?.Name;
-            _bondNamesCache[entry.BondDetailsId] = name;
+            var names = await bondDetailsRepository.GetNamesByIdsAsync(missingIds, cancellationToken);
+            foreach (var id in missingIds)
+                _bondNamesCache[id] = names.TryGetValue(id, out var name) ? name : null;
         }
 
-        return name ?? "Bond";
+        return _bondNamesCache;
     }
 }
