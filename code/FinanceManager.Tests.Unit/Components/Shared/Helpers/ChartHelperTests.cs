@@ -1,10 +1,53 @@
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Helpers;
 
 [Trait("Category", "Unit")]
 public class ChartHelperTests
 {
+    [Fact]
+    public void EnsureSeriesEndsAt_CarriesCapitalThroughTheRequestedEndAfterFinalTransaction()
+    {
+        var series = new List<TimeSeriesModel>
+        {
+            new(new DateTime(2026, 1, 1), 100m, "Capital"),
+            new(new DateTime(2026, 2, 1), 125m, "Capital"),
+        };
+
+        var result = ChartHelper.EnsureSeriesEndsAt(series, new DateTime(2026, 3, 31));
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(new DateTime(2026, 3, 31), result[^1].DateTime);
+        Assert.Equal(125m, result[^1].Value);
+        Assert.Equal("Capital", result[^1].Name);
+        Assert.Equal(2, series.Count);
+        Assert.Equal(new DateTime(2026, 2, 1), series[^1].DateTime);
+        Assert.Equal(125m, series[^1].Value);
+    }
+
+    [Fact]
+    public void EnsureSeriesEndsAt_DoesNotAddDuplicateWhenEndAlreadyExists()
+    {
+        var series = new List<TimeSeriesModel>
+        {
+            new(new DateTime(2026, 3, 30), 100m),
+            new(new DateTime(2026, 3, 31), 125m),
+        };
+
+        var result = ChartHelper.EnsureSeriesEndsAt(series, new DateTime(2026, 3, 31, 23, 59, 59));
+
+        Assert.Equal(2, result.Count);
+        Assert.Same(series[0], result[0]);
+        Assert.Same(series[1], result[1]);
+    }
+
+    [Fact]
+    public void EnsureSeriesEndsAt_LeavesEmptySeriesEmpty()
+    {
+        Assert.Empty(ChartHelper.EnsureSeriesEndsAt([], new DateTime(2026, 3, 31)));
+    }
+
     [Fact]
     public void AddYRangePadding_AddsFivePercentBelowAndAboveDisplayedRange()
     {

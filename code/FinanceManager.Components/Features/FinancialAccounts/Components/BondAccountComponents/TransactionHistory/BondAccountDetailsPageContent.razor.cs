@@ -291,10 +291,10 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                         var capitalTask = MoneyFlowHttpClient.GetCapital(userId, currency, dateStart, dateEnd, [accountId]);
                         await Task.WhenAll(balanceTask, capitalTask);
 
-                        var series = (await balanceTask)
-                            .SkipWhile(x => x.Value == 0)
-                            .ToList();
-                        var capitalSeries = await capitalTask;
+                        var series = ChartHelper.EnsureSeriesEndsAt(
+                            (await balanceTask).SkipWhile(x => x.Value == 0),
+                            dateEnd);
+                        var capitalSeries = ChartHelper.EnsureSeriesEndsAt(await capitalTask, dateEnd);
                         var currentBalance = series.LastOrDefault()?.Value ?? 0;
                         var balanceChange = series.Count >= 2 ? series.Last().Value - series.First().Value : 0;
                         var startBalance = currentBalance - balanceChange;
