@@ -62,7 +62,7 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
         account.Add(entry1);
         account.Add(entry2);
 
-        var detailsList = new List<BondDetails> { bondDetails1, bondDetails2 };
+        List<BondDetails> detailsList = [bondDetails1, bondDetails2];
 
         // Act: Measure execution time and heap allocation for 1-year daily pricing
         var startAllocated = GC.GetAllocatedBytesForCurrentThread();
@@ -73,9 +73,9 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
 
         output.WriteLine($"[1-Year History] Elapsed: {stopwatch.ElapsedMilliseconds} ms, Allocated: {allocatedBytes:N0} bytes, Days: {dailyPrices.Count}");
 
-        // Assert: Performance bounds (non-flaky, sanity check only)
-        Assert.True(stopwatch.ElapsedMilliseconds >= 0);
-        Assert.True(allocatedBytes >= 0);
+        // Assert: Explicit budgets catch accidental regressions while leaving headroom for CI variance.
+        Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 1_000);
+        Assert.InRange(allocatedBytes, 0, 5_000_000);
 
         // Assert: Deterministic daily count and values
         var expectedDays = endDate.DayNumber - startDate.DayNumber + 1;
@@ -165,7 +165,7 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
         var entry3 = new BondAccountEntry(1, 3, new DateTime(2022, 7, 1, 0, 0, 0, DateTimeKind.Utc), 0, 500m, 1);
         account.Add(entry3);
 
-        var detailsList = new List<BondDetails> { bondDetails1, bondDetails2 };
+        List<BondDetails> detailsList = [bondDetails1, bondDetails2];
 
         // Act: Measure execution time and heap allocation for 5-year daily pricing
         var startAllocated = GC.GetAllocatedBytesForCurrentThread();
@@ -176,9 +176,9 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
 
         output.WriteLine($"[5-Year History] Elapsed: {stopwatch.ElapsedMilliseconds} ms, Allocated: {allocatedBytes:N0} bytes, Days: {dailyPrices.Count}");
 
-        // Assert: Performance bounds (non-flaky, sanity check only)
-        Assert.True(stopwatch.ElapsedMilliseconds >= 0);
-        Assert.True(allocatedBytes >= 0);
+        // Assert: Explicit budgets catch accidental regressions while leaving headroom for CI variance.
+        Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 2_500);
+        Assert.InRange(allocatedBytes, 0, 15_000_000);
 
         var expectedDays = endDate.DayNumber - startDate.DayNumber + 1;
         Assert.Equal(expectedDays, dailyPrices.Count);
@@ -194,8 +194,8 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
         }
 
         // Verify equivalence with independent point-in-time calculation across key milestones
-        var testCheckpoints = new[]
-        {
+        DateOnly[] testCheckpoints =
+        [
             startDate,
             new DateOnly(2020, 12, 31),
             new DateOnly(2021, 1, 1),   // Bond 2 addition
@@ -203,7 +203,7 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
             new DateOnly(2022, 7, 1),   // Bond 1 top-up
             new DateOnly(2023, 6, 15),
             endDate
-        };
+        ];
 
         foreach (var checkpoint in testCheckpoints)
         {
@@ -278,7 +278,7 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
         account.Add(entry2);
         account.Add(entry3);
 
-        var detailsList = new List<BondDetails> { bondDetails1, bondDetails2, bondDetails3 };
+        List<BondDetails> detailsList = [bondDetails1, bondDetails2, bondDetails3];
 
         // Act: Measure execution time and heap allocation for 10-year daily pricing
         var startAllocated = GC.GetAllocatedBytesForCurrentThread();
@@ -294,9 +294,9 @@ public class BondAccountAccrualPerformanceTests(ITestOutputHelper output)
 
         output.WriteLine($"[10-Year History] Elapsed: {stopwatch.ElapsedMilliseconds} ms, Allocated: {allocatedBytes:N0} bytes, Days: {totalDays}, Throughput: {throughputDaysPerMs:F2} days/ms");
 
-        // Assert: Non-flaky execution bounds
-        Assert.True(stopwatch.ElapsedMilliseconds >= 0);
-        Assert.True(allocatedBytes >= 0);
+        // Assert: Explicit budgets catch accidental regressions while leaving headroom for CI variance.
+        Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 5_000);
+        Assert.InRange(allocatedBytes, 0, 30_000_000);
 
         var expectedDays = endDate.DayNumber - startDate.DayNumber + 1;
         Assert.Equal(expectedDays, totalDays);
