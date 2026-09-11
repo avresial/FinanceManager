@@ -283,7 +283,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task GetUnrealizedGainLossForAccount_ForOtherUsersAccount_ReturnsForbidden()
+    public async Task GetUnrealizedGainLossForAccount_ForOtherUsersAccount_ReturnsNotFound()
     {
         await SeedInvestmentAccountWithHoldings(userId: 2, accountId: 21, listingId: 201);
         Authorize("TestUser", 1, UserRole.User);
@@ -292,9 +292,16 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             $"api/Assets/GetUnrealizedGainLossForAccount/1/21/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(1, 21, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken));
+        var result = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(
+            1,
+            21,
+            DefaultCurrency.USD,
+            _nowUtc,
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(result);
     }
 
     [Fact]

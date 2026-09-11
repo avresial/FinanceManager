@@ -67,6 +67,7 @@ public class AssetsServiceInvestmentTests
 
         var service = new AssetsServiceInvestment(
             accountRepository.Object,
+            Mock.Of<IAccountRepository<InvestmentAccount>>(),
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
@@ -125,6 +126,7 @@ public class AssetsServiceInvestmentTests
 
         var service = new AssetsServiceInvestment(
             accountRepository.Object,
+            Mock.Of<IAccountRepository<InvestmentAccount>>(),
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
@@ -143,18 +145,18 @@ public class AssetsServiceInvestmentTests
     public async Task GetForAccountAsync_OnlyReadsTheSelectedAccount()
     {
         var accountRepository = new Mock<IFinancialAccountRepository>();
+        var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var exchangeService = new Mock<ICurrencyExchangeService>();
         var valuationService = new Mock<IInvestmentValuationService>();
         var selectedAccount = new InvestmentAccount(1, 7, "Selected");
-        var otherAccount = new InvestmentAccount(1, 8, "Other");
         var listing = new AssetListing { Id = 11, Ticker = "CSPX" };
         var asOfDate = new DateTime(2026, 7, 23);
 
-        accountRepository
-            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, asOfDate, It.IsAny<bool>()))
-            .Returns(new[] { selectedAccount, otherAccount }.ToAsyncEnumerable());
+        investmentAccountRepository
+            .Setup(x => x.Get(selectedAccount.AccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(selectedAccount);
         transactionRepository
             .Setup(x => x.GetByAccount(selectedAccount.AccountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<InvestmentTransaction>
@@ -177,6 +179,7 @@ public class AssetsServiceInvestmentTests
 
         var service = new AssetsServiceInvestment(
             accountRepository.Object,
+            investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
@@ -194,14 +197,85 @@ public class AssetsServiceInvestmentTests
         Assert.Equal(250m, result.CurrentValue);
         Assert.Equal(200m, result.CostBasis);
         Assert.Equal(50m, result.UnrealizedGainLoss);
-        transactionRepository.Verify(x => x.GetByAccount(otherAccount.AccountId, It.IsAny<CancellationToken>()), Times.Never);
         priceProvider.Verify(x => x.GetPricePerUnitAsync(It.Is<long>(id => id != listing.Id), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetForAccountAsync_PropagatesCancellationToAccountAndExchangeLookups()
+    {
+        var accountRepository = new Mock<IFinancialAccountRepository>();
+        var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
+        var transactionRepository = new Mock<IInvestmentTransactionRepository>();
+        var priceProvider = new Mock<IInvestmentPriceProvider>();
+        var exchangeService = new Mock<ICurrencyExchangeService>();
+        var valuationService = new Mock<IInvestmentValuationService>();
+        var selectedAccount = new InvestmentAccount(1, 7, "Selected");
+        var listing = new AssetListing { Id = 11, Ticker = "CSPX" };
+        var tradeDate = new DateOnly(2026, 7, 1);
+        var asOfDate = new DateTime(2026, 7, 23);
+        using var cancellation = new CancellationTokenSource();
+
+        investmentAccountRepository
+            .Setup(x => x.Get(selectedAccount.AccountId, cancellation.Token))
+            .ReturnsAsync(selectedAccount);
+        transactionRepository
+            .Setup(x => x.GetByAccount(selectedAccount.AccountId, cancellation.Token))
+            .ReturnsAsync(new List<InvestmentTransaction>
+            {
+                new()
+                {
+                    AccountId = selectedAccount.AccountId,
+                    AssetListingId = listing.Id,
+                    AssetListing = listing,
+                    Type = InvestmentTransactionType.Buy,
+                    Quantity = 2m,
+                    UnitPrice = 100m,
+                    Currency = "USD",
+                    TradeDate = tradeDate,
+                },
+            });
+        priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, asOfDate, cancellation.Token))
+            .ReturnsAsync(125m);
+        exchangeService
+            .Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(currency => currency.ShortName == "USD"),
+                DefaultCurrency.PLN,
+                tradeDate.ToDateTime(TimeOnly.MinValue),
+                cancellation.Token))
+            .ReturnsAsync(4m);
+
+        var service = new AssetsServiceInvestment(
+            accountRepository.Object,
+            investmentAccountRepository.Object,
+            valuationService.Object,
+            transactionRepository.Object,
+            priceProvider.Object,
+            exchangeService.Object);
+
+        var result = await service.GetForAccountAsync(
+            1,
+            selectedAccount.AccountId,
+            DefaultCurrency.PLN,
+            asOfDate,
+            cancellation.Token);
+
+        Assert.NotNull(result);
+        investmentAccountRepository.Verify(x => x.Get(selectedAccount.AccountId, cancellation.Token), Times.Once);
+        transactionRepository.Verify(x => x.GetByAccount(selectedAccount.AccountId, cancellation.Token), Times.Once);
+        priceProvider.Verify(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, asOfDate, cancellation.Token), Times.Once);
+        exchangeService.Verify(x => x.GetExchangeRateAsync(
+            It.Is<Currency>(currency => currency.ShortName == "USD"),
+            DefaultCurrency.PLN,
+            tradeDate.ToDateTime(TimeOnly.MinValue),
+            cancellation.Token), Times.Once);
     }
 
     [Fact]
     public async Task GetForAccountAsync_ReturnsNullWhenAccountIsNotOwnedByUser()
     {
         var accountRepository = new Mock<IFinancialAccountRepository>();
+        var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var exchangeService = new Mock<ICurrencyExchangeService>();
@@ -209,12 +283,13 @@ public class AssetsServiceInvestmentTests
         var account = new InvestmentAccount(2, 7, "Other user's account");
         var asOfDate = new DateTime(2026, 7, 23);
 
-        accountRepository
-            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, asOfDate, It.IsAny<bool>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
+        investmentAccountRepository
+            .Setup(x => x.Get(account.AccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(account);
 
         var service = new AssetsServiceInvestment(
             accountRepository.Object,
+            investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
@@ -236,6 +311,7 @@ public class AssetsServiceInvestmentTests
     public async Task GetForAccountAsync_ReturnsNullWhenAccountHasNoHoldings()
     {
         var accountRepository = new Mock<IFinancialAccountRepository>();
+        var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var exchangeService = new Mock<ICurrencyExchangeService>();
@@ -243,15 +319,16 @@ public class AssetsServiceInvestmentTests
         var account = new InvestmentAccount(1, 7, "Empty account");
         var asOfDate = new DateTime(2026, 7, 23);
 
-        accountRepository
-            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, asOfDate, It.IsAny<bool>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
+        investmentAccountRepository
+            .Setup(x => x.Get(account.AccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(account);
         transactionRepository
             .Setup(x => x.GetByAccount(account.AccountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<InvestmentTransaction>());
 
         var service = new AssetsServiceInvestment(
             accountRepository.Object,
+            investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,

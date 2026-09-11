@@ -19,6 +19,7 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
 /// </summary>
 internal class AssetsServiceInvestment(
     IFinancialAccountRepository financialAccountRepository,
+    IAccountRepository<InvestmentAccount> investmentAccountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider,
@@ -113,18 +114,12 @@ internal class AssetsServiceInvestment(
         DateTime asOfDate,
         CancellationToken cancellationToken = default)
     {
-        InvestmentAccount? selectedAccount = null;
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            if (account.AccountId != accountId || account.UserId != userId) continue;
+        var selectedAccount = await investmentAccountRepository.Get(accountId, cancellationToken);
 
-            selectedAccount = account;
-            break;
-        }
-
-        // Account enumeration is already ownership-scoped. Returning null for a missing account or
-        // another user's account prevents this application boundary from leaking account existence.
-        if (selectedAccount is null) return null;
+        // The direct lookup avoids materialising the user's full portfolio. Returning null for a
+        // missing account or another user's account prevents this application boundary from leaking
+        // account existence.
+        if (selectedAccount is null || selectedAccount.UserId != userId) return null;
 
         var instruments = await GetUnrealizedGainLossInstrumentsAsync(
             selectedAccount,
@@ -173,7 +168,7 @@ internal class AssetsServiceInvestment(
             var missingExchangeRate = false;
             foreach (var buy in buys)
             {
-                var exchangeRate = await GetBuyExchangeRateAsync(buy, currency, asOfDate);
+                var exchangeRate = await GetBuyExchangeRateAsync(buy, currency, asOfDate, cancellationToken);
                 if (exchangeRate is not decimal rate || rate <= 0m)
                 {
                     missingExchangeRate = true;
@@ -242,17 +237,31 @@ internal class AssetsServiceInvestment(
     // capital value — and therefore its gain/loss — collapse to 0 even while the position was still
     // valued fine. Fall back to the as-of-date rate for the same pair so the position keeps a
     // best-effort capital value instead of being excluded.
-    private async Task<decimal?> GetBuyExchangeRateAsync(InvestmentTransaction buy, Currency targetCurrency, DateTime asOfDate)
+    private async Task<decimal?> GetBuyExchangeRateAsync(
+        InvestmentTransaction buy,
+        Currency targetCurrency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken)
     {
         if (string.Equals(buy.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
             return 1m;
 
         var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
-        var tradeDateRate = await currencyExchangeService.GetExchangeRateAsync(
-            sourceCurrency, targetCurrency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+        var tradeDateRate = cancellationToken.CanBeCanceled
+            ? await currencyExchangeService.GetExchangeRateAsync(
+                sourceCurrency,
+                targetCurrency,
+                buy.TradeDate.ToDateTime(TimeOnly.MinValue),
+                cancellationToken)
+            : await currencyExchangeService.GetExchangeRateAsync(
+                sourceCurrency,
+                targetCurrency,
+                buy.TradeDate.ToDateTime(TimeOnly.MinValue));
         if (tradeDateRate is decimal rate && rate > 0m)
             return rate;
 
-        return await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate);
+        return cancellationToken.CanBeCanceled
+            ? await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate, cancellationToken)
+            : await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate);
     }
 }

@@ -79,7 +79,7 @@ public class AssetsController(
             return NotFound();
 
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId) || account.UserId != userId)
-            return Forbid();
+            return NotFound();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null)

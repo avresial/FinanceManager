@@ -966,7 +966,24 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         public int SingleCallCount { get; private set; }
 
-        public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+        public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(
+            Currency fromCurrency,
+            Currency toCurrency,
+            DateTime date) =>
+            GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+        Task<CurrencyExchangeRateProviderResult> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+            Currency fromCurrency,
+            Currency toCurrency,
+            DateTime date,
+            CancellationToken cancellationToken) =>
+            GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+        private Task<CurrencyExchangeRateProviderResult> GetExchangeRateCoreAsync(
+            Currency fromCurrency,
+            Currency toCurrency,
+            DateTime date,
+            CancellationToken cancellationToken)
         {
             SingleCallCount++;
             return Task.FromException<CurrencyExchangeRateProviderResult>(
@@ -977,7 +994,23 @@ public class CurrencyExchangeServiceTests : IDisposable
             Currency fromCurrency,
             Currency toCurrency,
             DateTime dateStart,
-            DateTime dateEnd)
+            DateTime dateEnd) =>
+            GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+        Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+            Currency fromCurrency,
+            Currency toCurrency,
+            DateTime dateStart,
+            DateTime dateEnd,
+            CancellationToken cancellationToken) =>
+            GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+        private Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateRangeCoreAsync(
+            Currency fromCurrency,
+            Currency toCurrency,
+            DateTime dateStart,
+            DateTime dateEnd,
+            CancellationToken cancellationToken)
         {
             var start = dateStart.Date;
             var end = dateEnd.Date;

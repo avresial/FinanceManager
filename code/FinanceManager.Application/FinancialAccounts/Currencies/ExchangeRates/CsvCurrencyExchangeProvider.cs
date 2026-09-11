@@ -17,15 +17,33 @@ internal sealed class CsvCurrencyExchangeProvider(
 {
     private static readonly ConcurrentDictionary<string, List<(DateTime Date, decimal Close)>> _csvCache = new();
 
-    public async Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+    Task<CurrencyExchangeRateProviderResult> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    private async Task<CurrencyExchangeRateProviderResult> GetExchangeRateCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var csvDirectory = configuration["CurrencyExchangeRates:CsvDirectory"];
             if (string.IsNullOrWhiteSpace(csvDirectory))
                 return new(CurrencyExchangeRateProviderStatus.NotFound);
 
-            var direct = await TryLoadCsvAsync(csvDirectory, fromCurrency.ShortName, toCurrency.ShortName);
+            var direct = await TryLoadCsvAsync(csvDirectory, fromCurrency.ShortName, toCurrency.ShortName, cancellationToken);
             if (direct is not null)
             {
                 var entry = direct.FirstOrDefault(x => x.Date.Date <= date.Date);
@@ -33,7 +51,7 @@ internal sealed class CsvCurrencyExchangeProvider(
                     return new(CurrencyExchangeRateProviderStatus.Success, entry.Close);
             }
 
-            var inverse = await TryLoadCsvAsync(csvDirectory, toCurrency.ShortName, fromCurrency.ShortName);
+            var inverse = await TryLoadCsvAsync(csvDirectory, toCurrency.ShortName, fromCurrency.ShortName, cancellationToken);
             if (inverse is not null)
             {
                 var entry = inverse.FirstOrDefault(x => x.Date.Date <= date.Date);
@@ -42,6 +60,10 @@ internal sealed class CsvCurrencyExchangeProvider(
             }
 
             return new(CurrencyExchangeRateProviderStatus.NotFound);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (OperationCanceledException ex)
         {
@@ -55,7 +77,27 @@ internal sealed class CsvCurrencyExchangeProvider(
         }
     }
 
-    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+    Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+    private async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateRangeCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken)
     {
         var start = dateStart.Date;
         var end = dateEnd.Date;
@@ -66,14 +108,18 @@ internal sealed class CsvCurrencyExchangeProvider(
         for (var i = 0; i < totalDays; i++)
         {
             var date = start.AddDays(i);
-            var rate = await GetExchangeRateAsync(fromCurrency, toCurrency, date);
+            var rate = await GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
             rates.Add((date, rate));
         }
 
         return rates;
     }
 
-    private async Task<List<(DateTime Date, decimal Close)>?> TryLoadCsvAsync(string directory, string from, string to)
+    private async Task<List<(DateTime Date, decimal Close)>?> TryLoadCsvAsync(
+        string directory,
+        string from,
+        string to,
+        CancellationToken cancellationToken)
     {
         var filePath = Path.Combine(directory, $"{from.ToLowerInvariant()}{to.ToLowerInvariant()}_d.csv");
         if (!File.Exists(filePath))
@@ -82,12 +128,14 @@ internal sealed class CsvCurrencyExchangeProvider(
         if (_csvCache.TryGetValue(filePath, out var cached))
             return cached;
 
-        var rows = await LoadCsvRowsAsync(filePath);
+        var rows = await LoadCsvRowsAsync(filePath, cancellationToken);
         _csvCache[filePath] = rows;
         return rows;
     }
 
-    private static async Task<List<(DateTime Date, decimal Close)>> LoadCsvRowsAsync(string filePath)
+    private static async Task<List<(DateTime Date, decimal Close)>> LoadCsvRowsAsync(
+        string filePath,
+        CancellationToken cancellationToken)
     {
         using var reader = new StreamReader(filePath);
         using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -97,12 +145,14 @@ internal sealed class CsvCurrencyExchangeProvider(
             MissingFieldFound = null,
         });
 
+        cancellationToken.ThrowIfCancellationRequested();
         await csv.ReadAsync();
         csv.ReadHeader();
 
         var rows = new List<(DateTime Date, decimal Close)>();
         while (await csv.ReadAsync())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (csv.TryGetField<DateTime>("Date", out var d) && csv.TryGetField<decimal>("Close", out var c))
                 rows.Add((d, c));
         }

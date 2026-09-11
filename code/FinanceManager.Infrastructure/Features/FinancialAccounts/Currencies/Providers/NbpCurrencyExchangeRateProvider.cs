@@ -30,7 +30,24 @@ internal sealed class NbpCurrencyExchangeRateProvider(
 
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+    Task<CurrencyExchangeRateProviderResult> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    private async Task<CurrencyExchangeRateProviderResult> GetExchangeRateCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
         if (!options.Value.Enabled)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
@@ -42,7 +59,7 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
         var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{Iso(date)}/?format=json");
-        var (failed, rates) = await FetchSeriesAsync(url, foreignCode, date, date);
+        var (failed, rates) = await FetchSeriesAsync(url, foreignCode, date, date, cancellationToken);
         if (failed)
             return new(CurrencyExchangeRateProviderStatus.Failed);
 
@@ -54,7 +71,27 @@ internal sealed class NbpCurrencyExchangeRateProvider(
         return new(CurrencyExchangeRateProviderStatus.Success, invert ? 1m / mid : mid);
     }
 
-    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+    Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+    private async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateRangeCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken)
     {
         var start = dateStart.Date;
         var end = dateEnd.Date;
@@ -81,7 +118,7 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             if (chunkEnd > end) chunkEnd = end;
 
             var url = BuildUrl($"exchangerates/rates/a/{foreignCode}/{Iso(chunkStart)}/{Iso(chunkEnd)}/?format=json");
-            var (failed, rates) = await FetchSeriesAsync(url, foreignCode, chunkStart, chunkEnd);
+            var (failed, rates) = await FetchSeriesAsync(url, foreignCode, chunkStart, chunkEnd, cancellationToken);
             if (failed)
             {
                 failedDates.UnionWith(EnumerateDates(chunkStart, chunkEnd));
@@ -110,11 +147,15 @@ internal sealed class NbpCurrencyExchangeRateProvider(
     // it distinctly; a 404 (non-publication day or unknown currency) is not a failure and yields an empty
     // map so the date is simply reported as NotFound.
     private async Task<(bool Failed, Dictionary<DateTime, decimal> Rates)> FetchSeriesAsync(
-        string url, string code, DateTime start, DateTime end)
+        string url,
+        string code,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken)
     {
         try
         {
-            using var response = await httpClient.GetAsync(url);
+            using var response = await httpClient.GetAsync(url, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return (false, []);
 
@@ -124,8 +165,8 @@ internal sealed class NbpCurrencyExchangeRateProvider(
                 return (true, []);
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync();
-            var payload = await JsonSerializer.DeserializeAsync<NbpRatesResponse>(stream, _jsonOptions);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var payload = await JsonSerializer.DeserializeAsync<NbpRatesResponse>(stream, _jsonOptions, cancellationToken);
             if (payload?.Rates is null || payload.Rates.Count == 0)
                 return (false, []);
 
@@ -137,6 +178,10 @@ internal sealed class NbpCurrencyExchangeRateProvider(
             }
 
             return (false, rates);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (OperationCanceledException ex)
         {

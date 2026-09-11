@@ -17,14 +17,33 @@ internal sealed class FawazAhmedCurrencyApiClient(
     // The npm-backed API has no date-versioned releases before its migration on 2024-03-02.
     private static readonly DateOnly _firstAvailableDate = new(2024, 3, 2);
 
-    public async Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+    Task<CurrencyExchangeRateProviderResult> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    private async Task<CurrencyExchangeRateProviderResult> GetExchangeRateCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
         if (DateOnly.FromDateTime(date) < _firstAvailableDate)
             return new(CurrencyExchangeRateProviderStatus.OutOfRange);
 
         try
         {
-            using var response = await httpClient.GetAsync($"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ShortName.ToLowerInvariant()}.json");
+            using var response = await httpClient.GetAsync(
+                $"https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date:yyyy-MM-dd}/v1/currencies/{fromCurrency.ShortName.ToLowerInvariant()}.json",
+                cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 if (response.StatusCode == HttpStatusCode.NotFound && DateOnly.FromDateTime(date) == DateOnly.FromDateTime(dateTimeProvider.UtcNow))
@@ -39,15 +58,15 @@ internal sealed class FawazAhmedCurrencyApiClient(
                     return new(CurrencyExchangeRateProviderStatus.NotYetPublished, RetryAtUtc: retryAtUtc);
                 }
 
-                var errorMessage = await response.Content.ReadAsStringAsync();
+                var errorMessage = await response.Content.ReadAsStringAsync(cancellationToken);
                 logger.LogWarning("Currency API returned {StatusCode} for {FromCurrency} to {ToCurrency} on {Date}: {Message}", response.StatusCode, fromCurrency, toCurrency, date, errorMessage.Trim());
                 return new(response.StatusCode == HttpStatusCode.NotFound
                     ? CurrencyExchangeRateProviderStatus.NotFound
                     : CurrencyExchangeRateProviderStatus.Failed);
             }
 
-            await using var contentStream = await response.Content.ReadAsStreamAsync();
-            using var document = await JsonDocument.ParseAsync(contentStream);
+            await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(contentStream, cancellationToken: cancellationToken);
 
             if (document.RootElement.TryGetProperty(fromCurrency.ShortName.ToLowerInvariant(), out var fromCurrencyRates) &&
                 fromCurrencyRates.TryGetProperty(toCurrency.ShortName.ToLowerInvariant(), out var exchangeRate) &&
@@ -61,6 +80,10 @@ internal sealed class FawazAhmedCurrencyApiClient(
             logger.LogWarning(ex, "Currency API returned invalid JSON for {FromCurrency} to {ToCurrency} on {Date}", fromCurrency, toCurrency, date);
             return new(CurrencyExchangeRateProviderStatus.Failed);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (OperationCanceledException ex)
         {
             logger.LogDebug(ex, "Fawaz request cancelled or timed out for {FromCurrency} to {ToCurrency} on {Date}.", fromCurrency, toCurrency, date);
@@ -73,8 +96,27 @@ internal sealed class FawazAhmedCurrencyApiClient(
         }
     }
 
-    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
-        Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+    Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+    private async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateRangeCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken)
     {
         var start = dateStart.Date;
         var end = dateEnd.Date;
@@ -96,7 +138,7 @@ internal sealed class FawazAhmedCurrencyApiClient(
                 batchDates.Add(date);
                 batchTasks.Add(DateOnly.FromDateTime(date) < _firstAvailableDate
                     ? Task.FromResult(new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.OutOfRange))
-                    : GetExchangeRateAsync(fromCurrency, toCurrency, date));
+                    : GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken));
             }
 
             var batchResults = await Task.WhenAll(batchTasks);
