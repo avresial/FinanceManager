@@ -36,6 +36,8 @@ internal sealed class FawazAhmedCurrencyApiClient(
         DateTime date,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (DateOnly.FromDateTime(date) < _firstAvailableDate)
             return new(CurrencyExchangeRateProviderStatus.OutOfRange);
 
@@ -118,6 +120,8 @@ internal sealed class FawazAhmedCurrencyApiClient(
         DateTime dateEnd,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var start = dateStart.Date;
         var end = dateEnd.Date;
         var totalDays = (end - start).Days + 1;

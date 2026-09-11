@@ -42,6 +42,8 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         DateTime date,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!options.Value.Enabled)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
@@ -109,6 +111,8 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         DateTime dateEnd,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var start = dateStart.Date;
         var end = dateEnd.Date;
         if (start > end) (start, end) = (end, start);
