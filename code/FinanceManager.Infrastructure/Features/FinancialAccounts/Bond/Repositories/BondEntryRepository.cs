@@ -37,10 +37,11 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             context.BondEntries.Add(newEntry);
             await context.SaveChangesAsync(cancellationToken);
-            if (entry.EntryId == 0 && newEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
             await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            if (entry.EntryId == 0 && newEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
+            context.ChangeTracker.Clear();
         }
         else
         {
@@ -62,6 +63,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
                     await RecalculateValues(newEntry.AccountId, newEntry.EntryId, CancellationToken.None);
                 }
             }
+            context.ChangeTracker.Clear();
         }
         return true;
     }
@@ -106,13 +108,14 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             // Relational: transactional mutation + recalculation commit together atomically.
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
+            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             foreach (var (source, target) in pairs)
             {
                 if (source.EntryId == 0 && target.EntryId != 0)
                     _entryIdProperty?.SetValue(source, target.EntryId);
             }
-            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            context.ChangeTracker.Clear();
         }
         else
         {
@@ -136,6 +139,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
                     await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
                 }
             }
+            context.ChangeTracker.Clear();
         }
 
         return true;

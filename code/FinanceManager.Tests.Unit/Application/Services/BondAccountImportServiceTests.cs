@@ -106,6 +106,42 @@ public class BondAccountImportServiceTests
     }
 
     [Fact]
+    public async Task ImportEntries_WhenCallerCancelsAfterCommit_RecalculatesCommittedEntriesBeforePropagating()
+    {
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new BondAccount(userId, accountId, "TestBonds");
+        _mockAccountRepository.Setup(x => x.Get(accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+
+        using var cancellation = new CancellationTokenSource();
+        var date = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        List<BondEntryImport> entries = [new(date, 100m, 1)];
+
+        _mockBondEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((batch, _, _) =>
+            {
+                foreach (var entry in batch)
+                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 100);
+                cancellation.Cancel();
+            })
+            .ReturnsAsync(true);
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, It.Is<CancellationToken>(token => token == cancellation.Token)))
+            .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _service.ImportEntries(userId, accountId, entries, cancellation.Token));
+#pragma warning restore xUnit1051
+
+        _mockBondEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 100, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ImportEntries_AccountNotFound_ThrowsInvalidOperationException()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -359,10 +395,10 @@ public class BondAccountImportServiceTests
             .ReturnsAsync(true);
 
         // Internal OperationCanceledException (not from caller token)
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new OperationCanceledException());
         _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>()))
             .ThrowsAsync(new OperationCanceledException());
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), CancellationToken.None))
+            .Returns(Task.CompletedTask);
 
 #pragma warning disable xUnit1051
         var result = await _service.ImportEntries(userId, accountId, domainEntries, CancellationToken.None);
@@ -372,6 +408,9 @@ public class BondAccountImportServiceTests
         Assert.Equal(1, result.Failed);
         Assert.Single(result.Errors);
         Assert.Contains("Recalculation cancelled or timed out", result.Errors[0]);
+        _mockBondEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 77, CancellationToken.None),
+            Times.Once);
     }
 
     [Fact]

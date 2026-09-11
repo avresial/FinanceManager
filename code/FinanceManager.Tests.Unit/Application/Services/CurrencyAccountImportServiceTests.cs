@@ -8,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
@@ -134,6 +135,80 @@ public class CurrencyAccountImportServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             _service.ImportEntries(1, 1, [], cancellationToken: cancellation.Token));
 #pragma warning restore xUnit1051
+    }
+
+    [Fact]
+    public async Task ImportEntries_WhenCallerCancelsAfterCommit_RecalculatesCommittedEntriesBeforePropagating()
+    {
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+
+        using var cancellation = new CancellationTokenSource();
+        var date = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        List<CurrencyEntryImport> entries = [new(date, 100m)];
+
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((batch, _, _) =>
+            {
+                foreach (var entry in batch)
+                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 100);
+                cancellation.Cancel();
+            })
+            .ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, It.Is<CancellationToken>(token => token == cancellation.Token)))
+            .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _service.ImportEntries(userId, accountId, entries, cancellation.Token));
+#pragma warning restore xUnit1051
+
+        _mockAccountEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 100, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportEntries_RecalculationTimeout_RepairsCommittedEntriesBeforeReturning()
+    {
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+
+        var date = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        List<CurrencyEntryImport> entries = [new(date, 100m)];
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool>((batch, _) =>
+            {
+                foreach (var entry in batch)
+                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 77);
+            })
+            .ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 77))
+            .ThrowsAsync(new OperationCanceledException());
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 77, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+
+#pragma warning disable xUnit1051
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
+#pragma warning restore xUnit1051
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(1, result.Failed);
+        Assert.Contains("Recalculation cancelled or timed out", Assert.Single(result.Errors));
+        _mockAccountEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 77, CancellationToken.None),
+            Times.Once);
     }
 
     [Fact]

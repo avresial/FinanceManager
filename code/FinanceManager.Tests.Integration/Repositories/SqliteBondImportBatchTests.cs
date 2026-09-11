@@ -79,6 +79,7 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         Assert.Equal(2, dbEntries.Count);
         Assert.Equal(entry1.EntryId, dbEntries[0].EntryId);
         Assert.Equal(entry2.EntryId, dbEntries[1].EntryId);
+        Assert.Empty(_context.ChangeTracker.Entries());
     }
 
     [Fact]

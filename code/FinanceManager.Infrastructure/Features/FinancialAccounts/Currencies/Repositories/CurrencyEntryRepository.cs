@@ -35,10 +35,11 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             context.CurrencyEntries.Add(newAccountEntry);
             await context.SaveChangesAsync(cancellationToken);
-            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
             await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
+            context.ChangeTracker.Clear();
         }
         else
         {
@@ -60,6 +61,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
                     await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, CancellationToken.None);
                 }
             }
+            context.ChangeTracker.Clear();
         }
         return true;
     }
@@ -106,13 +108,14 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             // Relational: transactional mutation + recalculation commit together atomically.
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
+            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             foreach (var (source, target) in pairs)
             {
                 if (source.EntryId == 0 && target.EntryId != 0)
                     _entryIdProperty?.SetValue(source, target.EntryId);
             }
-            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            context.ChangeTracker.Clear();
         }
         else
         {
@@ -136,6 +139,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
                     await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
                 }
             }
+            context.ChangeTracker.Clear();
         }
         return true;
     }

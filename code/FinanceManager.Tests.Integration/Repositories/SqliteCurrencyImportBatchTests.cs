@@ -17,6 +17,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
     private readonly AppDbContext _context;
     private readonly CurrencyEntryRepository _repo;
 
+    // Ordered SQLite setup requires explicit constructor statements and cannot be expressed with a primary constructor.
     public SqliteCurrencyImportBatchTests()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
@@ -63,6 +64,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         Assert.Equal(2, dbEntries.Count);
         Assert.Equal(entry1.EntryId, dbEntries[0].EntryId);
         Assert.Equal(entry2.EntryId, dbEntries[1].EntryId);
+        Assert.Empty(_context.ChangeTracker.Entries());
     }
 
     [Fact]
