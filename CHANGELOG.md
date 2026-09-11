@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Configurable in-app financial alerts and watchlists now monitor balances, category and merchant spending, large transactions, and subscription price changes with dashboard status and duplicate-trigger suppression. #735
 - Investment and bond account charts now show cumulative user-paid capital alongside account value and the selected benchmark, including range-start carry-over, withdrawals, same-day events, and historical currency conversion. #729
 - Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
 - Authorized maintenance workers can now query bounded, read-only application log history with time, level, and text filters. #722
@@ -36,6 +37,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Investment account details now request and calculate appreciation only for the selected owned account instead of valuing the entire portfolio. #744
+- Dashboard bond valuation now loads only referenced bond definitions once per request and reuses matching daily prices across net-worth and balance aggregates. #747
 - Currency conversions and overlapping chart date ranges now reuse resolved daily exchange rates while continuing to refresh missing values. #743
 - Historical exchange-rate range lookups now use bounded provider range requests, avoiding concurrent per-date NBP request bursts while preserving provider fallback and missing-day behavior. #728
 - Card explanations now open from card header labels with polished, viewport-aware tooltip surfaces and no standalone info icons. #730

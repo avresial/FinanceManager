@@ -8,6 +8,7 @@ using FinanceManager.Application.FinancialAccounts.Bond.Details;
 using FinanceManager.Application.FinancialAccounts.Bond.Export;
 using FinanceManager.Application.FinancialAccounts.Bond.Import;
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Currencies.Assets;
 using FinanceManager.Application.FinancialAccounts.Currencies.Balance;
@@ -42,7 +43,8 @@ internal static class Registration
 {
     public static IServiceCollection AddFinancialAccountsApplication(this IServiceCollection services)
     {
-        services.AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
+        services.AddScoped<BondDashboardContext>()
+                .AddScoped<IBalanceServiceTyped, CurrencyBalanceService>()
                 .AddScoped<IBalanceServiceTyped, BondBalanceService>()
                 .AddScoped<IBalanceServiceTyped, InvestmentBalanceService>()
                 .AddScoped<IBalanceService, BalanceService>()

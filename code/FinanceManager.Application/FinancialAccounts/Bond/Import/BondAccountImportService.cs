@@ -14,6 +14,10 @@ public class BondAccountImportService(
     ImportAccountValidator importAccountValidator,
     ILogger<BondAccountImportService> logger) : IBondAccountImportService
 {
+    // Keep each persistence operation bounded so a large import can make progress across
+    // independently committed batches and does not create an unbounded EF change tracker.
+    private const int _persistenceBatchSize = 500;
+
     public Task<BondImportResult> ImportEntries(
         int userId,
         int accountId,
@@ -48,92 +52,138 @@ public class BondAccountImportService(
         var errors = new List<string>();
         var conflicts = new List<BondImportConflict>();
 
-        var existingAll = cancellationToken.CanBeCanceled
+        var existingEntries = cancellationToken.CanBeCanceled
             ? await bondAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
                 .ToListAsync(cancellationToken)
             : await bondAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
                 .ToListAsync();
-        for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
+        var importsByDay = entryList
+            .GroupBy(x => x.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var existingByDay = existingEntries
+            .GroupBy(e => e.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        BondAccountEntry? oldestInserted = null;
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
-            var existingThisDay = existingAll.Where(e => e.PostingDate.Date == day).ToList();
-
-            if (importsThisDay.Count == 0)
-                continue;
-
-            var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
-            var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
-            var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
-
-            if (exactMatches.Count != 0 || existingOnly.Count != 0)
+            for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
             {
-                conflicts.AddRange(exactMatches.Select(x => new BondImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                conflicts.AddRange(importsOnly.Select(x => new BondImportConflict(accountId, x, null, "Import not found in existing")));
-                conflicts.AddRange(existingOnly.Select(x => new BondImportConflict(accountId, null, x, "Existing not found in import")));
-                continue;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!importsByDay.TryGetValue(day, out var importsThisDay))
+                    continue;
+                var existingThisDay = existingByDay.GetValueOrDefault(day) ?? [];
+
+                var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+                var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+                var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
+
+                if (exactMatches.Count != 0 || existingOnly.Count != 0)
+                {
+                    conflicts.AddRange(exactMatches.Select(x => new BondImportConflict(accountId, x.Import, x.Existing, "Exact match")));
+                    conflicts.AddRange(importsOnly.Select(x => new BondImportConflict(accountId, x, null, "Import not found in existing")));
+                    conflicts.AddRange(existingOnly.Select(x => new BondImportConflict(accountId, null, x, "Existing not found in import")));
+                    continue;
+                }
+
+                var entriesToInsert = new List<BondAccountEntry>(importsThisDay.Count);
+                foreach (var import in importsThisDay)
+                {
+                    try
+                    {
+                        if (import.PostingDate.Kind != DateTimeKind.Utc)
+                            throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
+
+                        var newEntry = new BondAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
+                        entriesToInsert.Add(newEntry);
+                    }
+                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    {
+                        logger.LogDebug(ex, "Bond account import cancelled.");
+                        throw;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        failed++;
+                        errors.Add($"Cancellation while importing entry with date {import.PostingDate}.");
+                        logger.LogDebug(ex, "Bond account import entry cancelled or timed out for {PostingDate}; marking it failed.", import.PostingDate);
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        errors.Add(ex.Message);
+                    }
+                }
+
+                foreach (var batch in entriesToInsert.Chunk(_persistenceBatchSize))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var batchList = batch.ToList();
+                    try
+                    {
+                        var added = cancellationToken.CanBeCanceled
+                            ? await bondAccountEntryRepository.Add(batchList, recalculate: false, cancellationToken)
+                            : await bondAccountEntryRepository.Add(batchList, recalculate: false);
+
+                        if (added)
+                        {
+                            imported += batchList.Count;
+                            var batchOldest = batchList.MinBy(entry => (entry.PostingDate, entry.EntryId))!;
+                            if (oldestInserted is null || batchOldest.PostingDate < oldestInserted.PostingDate ||
+                                batchOldest.PostingDate == oldestInserted.PostingDate && batchOldest.EntryId < oldestInserted.EntryId)
+                                oldestInserted = batchOldest;
+                        }
+                        else
+                        {
+                            failed += batchList.Count;
+                            errors.AddRange(batchList.Select(entry => $"Failed to import entry with date {entry.PostingDate}."));
+                        }
+                    }
+                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    {
+                        logger.LogDebug(ex, "Bond account import cancelled.");
+                        throw;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        failed += batchList.Count;
+                        errors.AddRange(batchList.Select(entry => $"Cancellation while importing entry with date {entry.PostingDate}."));
+                        logger.LogDebug(ex, "Bond account import entries cancelled or timed out; marking them failed.");
+                    }
+                    catch (Exception ex)
+                    {
+                        failed += batchList.Count;
+                        errors.AddRange(batchList.Select(_ => ex.Message));
+                    }
+                }
             }
 
-            foreach (var import in importsThisDay)
+            if (imported > 0)
             {
                 try
                 {
-                    if (import.PostingDate.Kind != DateTimeKind.Utc)
-                        throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
-
-                    var newEntry = new BondAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
-                    var added = cancellationToken.CanBeCanceled
-                        ? await bondAccountEntryRepository.Add(newEntry, recalculate: false, cancellationToken)
-                        : await bondAccountEntryRepository.Add(newEntry, recalculate: false);
-                    if (added)
-                    {
-                        imported++;
-                        existingAll.Add(newEntry);
-                    }
-                    else
-                    {
-                        failed++;
-                        errors.Add($"Failed to import entry with date {import.PostingDate}.");
-                    }
+                    await RecalculateBonds(accountId, oldestInserted?.EntryId ?? 0, minDay, maxDay, cancellationToken);
                 }
                 catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
-                    logger.LogDebug(ex, "Bond account import cancelled.");
+                    logger.LogDebug(ex, "Bond account import recalculation cancelled.");
                     throw;
                 }
                 catch (OperationCanceledException ex)
                 {
+                    await RecalculateCommittedEntries(accountId, oldestInserted);
                     failed++;
-                    errors.Add($"Cancellation while importing entry with date {import.PostingDate}.");
-                    logger.LogDebug(ex, "Bond account import entry cancelled or timed out for {PostingDate}; marking it failed.", import.PostingDate);
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    errors.Add(ex.Message);
+                    errors.Add("Recalculation cancelled or timed out.");
+                    logger.LogDebug(ex, "Bond account import recalculation cancelled or timed out; marking it failed.");
                 }
             }
         }
-
-        if (imported > 0)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            try
-            {
-                await RecalculateBonds(accountId, minDay, maxDay, cancellationToken);
-            }
-            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-            {
-                logger.LogDebug(ex, "Bond account import recalculation cancelled.");
-                throw;
-            }
-            catch (OperationCanceledException ex)
-            {
-                failed++;
-                errors.Add("Recalculation cancelled or timed out.");
-                logger.LogDebug(ex, "Bond account import recalculation cancelled or timed out; marking it failed.");
-            }
+            await RecalculateCommittedEntries(accountId, oldestInserted);
+            throw;
         }
 
         return new(accountId, imported, failed, errors, conflicts);
@@ -183,8 +233,22 @@ public class BondAccountImportService(
         }
     }
 
-    private async Task RecalculateBonds(int accountId, DateTime minDay, DateTime maxDay, CancellationToken cancellationToken)
+    private Task RecalculateCommittedEntries(int accountId, BondAccountEntry? oldestInserted) =>
+        oldestInserted is null
+            ? Task.CompletedTask
+            : bondAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, CancellationToken.None);
+
+    private async Task RecalculateBonds(int accountId, int anchorEntryId, DateTime minDay, DateTime maxDay, CancellationToken cancellationToken)
     {
+        if (anchorEntryId != 0)
+        {
+            if (cancellationToken.CanBeCanceled)
+                await bondAccountEntryRepository.RecalculateValues(accountId, anchorEntryId, cancellationToken);
+            else
+                await bondAccountEntryRepository.RecalculateValues(accountId, anchorEntryId);
+            return;
+        }
+
         var entriesToRecalc = cancellationToken.CanBeCanceled
             ? await bondAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
@@ -193,17 +257,14 @@ public class BondAccountImportService(
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
                 .ToListAsync();
 
-        foreach (var bondGroup in entriesToRecalc.GroupBy(e => e.BondDetailsId))
-        {
-            var earliest = bondGroup.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).FirstOrDefault();
-            if (earliest is null)
-                continue;
+        var earliest = entriesToRecalc.OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).FirstOrDefault();
+        if (earliest is null)
+            return;
 
-            if (cancellationToken.CanBeCanceled)
-                await bondAccountEntryRepository.RecalculateValues(accountId, earliest.EntryId, cancellationToken);
-            else
-                await bondAccountEntryRepository.RecalculateValues(accountId, earliest.EntryId);
-        }
+        if (cancellationToken.CanBeCanceled)
+            await bondAccountEntryRepository.RecalculateValues(accountId, earliest.EntryId, cancellationToken);
+        else
+            await bondAccountEntryRepository.RecalculateValues(accountId, earliest.EntryId);
     }
 
     // Bond entries are compared on posting date (second precision), value change and bond details.
