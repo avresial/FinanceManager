@@ -15,6 +15,9 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     private const int _maxAccountIdsPerQuery = 2_000;
 
     private readonly BondEntryValueCalculator _valueCalculator = new(context);
+    private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
+        typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId));
+
     public Task<bool> Add(BondAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
 
@@ -25,14 +28,43 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
          0, entry.ValueChange, entry.BondDetailsId)
         {
-            Labels = entry.Labels,
+            Labels = await ResolveTrackedLabels(entry.Labels, cancellationToken),
         };
 
-        context.BondEntries.Add(newEntry);
-        await context.SaveChangesAsync(cancellationToken);
-
-        if (recalculate)
+        if (context.Database.IsRelational() && recalculate)
+        {
+            // Relational: transactional mutation + recalculation commit together atomically.
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            context.BondEntries.Add(newEntry);
+            await context.SaveChangesAsync(cancellationToken);
             await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            if (entry.EntryId == 0 && newEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
+            context.ChangeTracker.Clear();
+        }
+        else
+        {
+            // Non-relational or no recalculation: persist entry first.
+            context.BondEntries.Add(newEntry);
+            await context.SaveChangesAsync(cancellationToken);
+            if (entry.EntryId == 0 && newEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
+            if (recalculate)
+            {
+                // Post-commit repair: complete recalculation before propagating cancellation.
+                try
+                {
+                    await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
+                    await RecalculateValues(newEntry.AccountId, newEntry.EntryId, CancellationToken.None);
+                }
+            }
+            context.ChangeTracker.Clear();
+        }
         return true;
     }
     public Task<bool> Add(IEnumerable<BondAccountEntry> entries, bool recalculate = true) =>
@@ -43,27 +75,90 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         bool recalculate,
         CancellationToken cancellationToken)
     {
-        BondAccountEntry? firstEntry = null;
+        var entryList = entries as IList<BondAccountEntry> ?? entries.ToList();
+        if (entryList.Count == 0) return true;
 
-        foreach (var entry in entries)
+        var existingLabelIds = entryList.SelectMany(e => e.Labels).Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
+        var trackedById = existingLabelIds.Count == 0
+            ? []
+            : await context.FinancialLabels.Where(l => existingLabelIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
+
+        List<(BondAccountEntry Source, BondAccountEntry Target)> pairs = new(entryList.Count);
+        BondAccountEntry? oldestEntry = null;
+
+        foreach (var entry in entryList)
         {
             // Don't use entry.Value as it may be a placeholder
             // The correct value will be calculated during recalculation
             var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
              0, entry.ValueChange, entry.BondDetailsId)
             {
-                Labels = entry.Labels,
+                Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
-            if (firstEntry is null) firstEntry = newEntry;
+            pairs.Add((entry, newEntry));
+            if (oldestEntry is null || newEntry.PostingDate < oldestEntry.PostingDate)
+                oldestEntry = newEntry;
+
             context.BondEntries.Add(newEntry);
         }
 
-        await context.SaveChangesAsync(cancellationToken);
-        if (recalculate && firstEntry is not null)
-            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
+        if (context.Database.IsRelational() && recalculate && oldestEntry is not null)
+        {
+            // Relational: transactional mutation + recalculation commit together atomically.
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            foreach (var (source, target) in pairs)
+            {
+                if (source.EntryId == 0 && target.EntryId != 0)
+                    _entryIdProperty?.SetValue(source, target.EntryId);
+            }
+            context.ChangeTracker.Clear();
+        }
+        else
+        {
+            // Non-relational or no recalculation: persist entries first.
+            await context.SaveChangesAsync(cancellationToken);
+            foreach (var (source, target) in pairs)
+            {
+                if (source.EntryId == 0 && target.EntryId != 0)
+                    _entryIdProperty?.SetValue(source, target.EntryId);
+            }
+            if (recalculate && oldestEntry is not null)
+            {
+                // Post-commit repair: complete recalculation before propagating cancellation.
+                try
+                {
+                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
+                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
+                }
+            }
+            context.ChangeTracker.Clear();
+        }
 
         return true;
+    }
+
+    private async Task<List<FinancialLabel>> ResolveTrackedLabels(
+        ICollection<FinancialLabel> labels,
+        CancellationToken cancellationToken)
+    {
+        if (labels.Count == 0) return [];
+
+        var existingIds = labels.Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
+        var trackedById = existingIds.Count == 0
+            ? []
+            : await context.FinancialLabels.Where(l => existingIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
+
+        return labels
+            .Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l)
+            .ToList();
     }
 
     public Task<bool> Delete(int accountId, int entryId) =>
