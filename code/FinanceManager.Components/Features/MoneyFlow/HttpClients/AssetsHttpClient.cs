@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.MoneyFlow.HttpClients;
@@ -61,6 +62,23 @@ public class AssetsHttpClient(HttpClient httpClient)
     {
         var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossAccountResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerAccount/{userId}/{currency.Id}/{asOfDate:O}");
         return result ?? [];
+    }
+
+    public async Task<UnrealizedGainLossAccountResult?> GetUnrealizedGainLossForAccount(
+        int userId,
+        int accountId,
+        Currency currency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossForAccount/{userId}/{accountId}/{currency.Id}/{asOfDate:O}",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound) return null;
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
     }
 
     public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
