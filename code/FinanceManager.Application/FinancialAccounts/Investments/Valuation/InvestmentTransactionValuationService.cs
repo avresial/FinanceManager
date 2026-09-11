@@ -23,9 +23,15 @@ internal class InvestmentTransactionValuationService(
     public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForAccountAsync(
         int accountId,
         Currency targetCurrency,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyCollection<long>? transactionIds = null)
     {
         var transactions = await transactionRepository.GetByAccount(accountId, cancellationToken);
+        if (transactionIds is not null)
+        {
+            var requestedIds = transactionIds.ToHashSet();
+            transactions = transactions.Where(t => requestedIds.Contains(t.Id)).ToList();
+        }
 
         var now = DateTime.UtcNow;
         // Memoise the two external lookups so an account with many trades in the same instrument

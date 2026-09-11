@@ -49,4 +49,22 @@ public interface IInvestmentTransactionRepository
     /// backfill) that must cover every instrument anyone holds without materialising transactions.
     /// </summary>
     Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a bounded, deterministic page of investment transactions for an account, ordered by
+    /// <see cref="InvestmentTransaction.TradeDate"/> descending then <see cref="InvestmentTransaction.Id"/> descending.
+    /// Supports cursor continuation using (<paramref name="cursorTradeDate"/>, <paramref name="cursorId"/>)
+    /// and optional date range, transaction type, and text search filters applied at the database level.
+    /// Returns at most <paramref name="pageSize"/> items along with a boolean indicating whether more items exist.
+    /// </summary>
+    Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
+        int accountId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default);
 }

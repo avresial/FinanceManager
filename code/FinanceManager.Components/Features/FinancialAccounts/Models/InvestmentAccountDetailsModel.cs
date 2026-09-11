@@ -19,4 +19,6 @@ public sealed record InvestmentAccountDetailsModel(
     string Name,
     Currency Currency,
     List<InvestmentTransactionDto> Transactions,
-    List<InvestmentTransactionValuationDto> Valuations);
+    List<InvestmentTransactionValuationDto> Valuations,
+    string? HistoryNextCursor = null,
+    bool HistoryHasMore = false);

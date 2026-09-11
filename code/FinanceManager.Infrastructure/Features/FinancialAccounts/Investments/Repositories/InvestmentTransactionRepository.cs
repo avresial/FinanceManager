@@ -112,4 +112,61 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
+
+    public async Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
+        int accountId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageSize <= 0) return ([], false);
+
+        var query = context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
+            .Where(x => x.AccountId == accountId);
+
+        if (cursorTradeDate.HasValue && cursorId.HasValue)
+        {
+            var cd = cursorTradeDate.Value;
+            var cid = cursorId.Value;
+            query = query.Where(x => x.TradeDate < cd || (x.TradeDate == cd && x.Id < cid));
+        }
+
+        if (startDate.HasValue)
+            query = query.Where(x => x.TradeDate >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(x => x.TradeDate <= endDate.Value);
+
+        if (type.HasValue)
+            query = query.Where(x => x.Type == type.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            query = query.Where(x =>
+                (x.Notes != null && x.Notes.Contains(s)) ||
+                x.Currency.Contains(s) ||
+                x.AssetListing.Ticker.Contains(s) ||
+                x.AssetListing.ExchangeName.Contains(s) ||
+                x.AssetListing.Asset.Name.Contains(s) ||
+                (x.AssetListing.Asset.Isin != null && x.AssetListing.Asset.Isin.Contains(s)));
+        }
+
+        var rows = await query
+            .OrderByDescending(x => x.TradeDate)
+            .ThenByDescending(x => x.Id)
+            .Take(pageSize + 1)
+            .ToListAsync(cancellationToken);
+
+        var hasMore = rows.Count > pageSize;
+        var items = hasMore ? rows.Take(pageSize).ToList() : rows;
+        return (items, hasMore);
+    }
 }

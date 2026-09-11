@@ -156,4 +156,24 @@ public class InvestmentTransactionValuationServiceTests
         price.Verify(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
         fx.Verify(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "USD"), DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Once);
     }
+
+    [Fact]
+    public async Task RestrictsValuationsToRequestedTransactionIds()
+    {
+        var tradeDate = new DateOnly(2026, 1, 10);
+        var (repo, price, fx) = Mocks(
+            Buy(1m, 100m, "USD", tradeDate, id: 1),
+            Buy(2m, 100m, "USD", tradeDate, id: 2));
+        price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(110m);
+
+        var results = await Build(repo, price, fx).GetForAccountAsync(
+            _accountId,
+            DefaultCurrency.USD,
+            TestContext.Current.CancellationToken,
+            transactionIds: [2]);
+
+        var result = Assert.Single(results);
+        Assert.Equal(2L, result.TransactionId);
+    }
 }

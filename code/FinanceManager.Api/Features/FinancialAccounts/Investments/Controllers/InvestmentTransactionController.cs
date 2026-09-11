@@ -14,6 +14,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 
@@ -44,6 +45,76 @@ public class InvestmentTransactionController(
         var transactions = await transactionRepository.GetByAccount(accountId, cancellationToken);
         await RecoverMissingPricesAsync(transactions, account.UserId, cancellationToken);
         return Ok(transactions.Select(x => x.ToDto()).ToList());
+    }
+
+    /// <summary>
+    /// Gets a bounded, filtered page of investment transactions for an account, ordered newest first
+    /// with deterministic (TradeDate, Id) cursor continuation.
+    /// </summary>
+    [HttpGet("GetHistoryPage/{accountId:int}")]
+    [HttpGet("History/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentTransactionHistoryPageDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHistoryPage(
+        int accountId,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        [FromQuery] DateOnly? cursorTradeDate = null,
+        [FromQuery] long? cursorId = null,
+        [FromQuery] DateOnly? startDate = null,
+        [FromQuery] DateOnly? endDate = null,
+        [FromQuery] InvestmentTransactionType? type = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageSize <= 0) return BadRequest("pageSize must be greater than zero.");
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        DateOnly? parsedCursorTradeDate = cursorTradeDate;
+        long? parsedCursorId = cursorId;
+
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            if (!TryParseCursor(cursor, out var cDate, out var cId))
+                return BadRequest("Invalid cursor format.");
+
+            parsedCursorTradeDate = cDate;
+            parsedCursorId = cId;
+        }
+
+        if (parsedCursorTradeDate.HasValue != parsedCursorId.HasValue)
+            return BadRequest("cursorTradeDate and cursorId must be provided together.");
+        if (parsedCursorId is <= 0)
+            return BadRequest("cursorId must be greater than zero.");
+
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        var (items, hasMore) = await transactionRepository.GetHistoryPage(
+            accountId,
+            pageSize,
+            parsedCursorTradeDate,
+            parsedCursorId,
+            startDate,
+            endDate,
+            type,
+            search,
+            cancellationToken);
+
+        await RecoverMissingPricesAsync(items, account.UserId, cancellationToken);
+
+        string? nextCursor = null;
+        if (hasMore && items.Count > 0)
+        {
+            var last = items[^1];
+            nextCursor = FormatCursor(last.TradeDate, last.Id);
+        }
+
+        var dtos = items.Select(x => x.ToDto()).ToList();
+        return Ok(new InvestmentTransactionHistoryPageDto(dtos, hasMore, nextCursor));
     }
 
     private async Task RecoverMissingPricesAsync(
@@ -230,4 +301,44 @@ public class InvestmentTransactionController(
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>
         assetListingId > 0 && quantity > 0 && unitPrice >= 0 && !string.IsNullOrWhiteSpace(currency) && tradeDate != default;
+
+    private static string FormatCursor(DateOnly tradeDate, long id) =>
+        Convert.ToBase64String(Encoding.UTF8.GetBytes($"{tradeDate:yyyy-MM-dd}:{id}"));
+
+    private static bool TryParseCursor(string cursor, out DateOnly tradeDate, out long id)
+    {
+        tradeDate = default;
+        id = 0;
+        if (string.IsNullOrWhiteSpace(cursor)) return false;
+
+        var raw = cursor.Trim();
+        try
+        {
+            var bytes = Convert.FromBase64String(raw);
+            var decoded = Encoding.UTF8.GetString(bytes);
+            if (TryParseDelimiter(decoded, out tradeDate, out id))
+                return true;
+        }
+        catch
+        {
+            // Fall back to plain text delimiter parsing
+        }
+
+        return TryParseDelimiter(raw, out tradeDate, out id);
+    }
+
+    private static bool TryParseDelimiter(string text, out DateOnly tradeDate, out long id)
+    {
+        tradeDate = default;
+        id = 0;
+        var parts = text.Split([':', '|', '_'], 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 2 &&
+            DateOnly.TryParse(parts[0], out tradeDate) &&
+            long.TryParse(parts[1], out id) &&
+            id > 0)
+        {
+            return true;
+        }
+        return false;
+    }
 }
