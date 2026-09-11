@@ -160,22 +160,92 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         if (missingDetailIds.Count != 0)
             throw new InvalidOperationException($"Bond valuation requires details for bond ids: {string.Join(", ", missingDetailIds)}.");
 
+        var entriesByBond = new Dictionary<int, List<(BondAccountEntry Entry, int SourceIndex)>>();
+        for (var i = 0; i < Entries.Count; i++)
+        {
+            var entry = Entries[i];
+            if (entriesByBond.TryGetValue(entry.BondDetailsId, out var bondEntries))
+                bondEntries.Add((entry, i));
+            else
+                entriesByBond[entry.BondDetailsId] = [(entry, i)];
+        }
+
+        // Sort so that for equal posting dates the entry lowest in the Entries list comes last,
+        // matching the stable OrderByDescending selection in BondEntryExtension.GetThisOrNextOlder.
+        foreach (var bondEntries in entriesByBond.Values)
+            bondEntries.Sort((a, b) => a.Entry.PostingDate != b.Entry.PostingDate
+                ? a.Entry.PostingDate.CompareTo(b.Entry.PostingDate)
+                : b.SourceIndex.CompareTo(a.SourceIndex));
+
+        var totals = new Dictionary<DateOnly, decimal>();
+        foreach (var detailId in detailsIds)
+        {
+            var details = detailsById[detailId];
+            var bondEntries = entriesByBond.GetValueOrDefault(detailId);
+
+            AddBondEntryValues(totals, start, end, bondEntries, details);
+
+            NextOlderEntries.TryGetValue(detailId, out var carriedEntry);
+            AddCarriedEntryValues(totals, start, end, bondEntries, details, carriedEntry);
+        }
+
         for (var date = start; date <= end; date = date.AddDays(1))
         {
-            decimal total = 0;
-            foreach (var detailId in detailsIds)
-            {
-                var currentEntry = GetThisOrNextOlder(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), detailId);
-                if (currentEntry is null) continue;
-
-                total += currentEntry.GetPriceAt(date, detailsById[detailId]);
-            }
-
-            if (total != 0)
+            if (totals.TryGetValue(date, out var total) && total != 0)
                 result[date] = total;
         }
 
         return result;
+    }
+
+    private static void AddBondEntryValues(
+        Dictionary<DateOnly, decimal> totals, DateOnly start, DateOnly end,
+        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries, BondDetails details)
+    {
+        if (bondEntries is null || bondEntries.Count == 0) return;
+
+        for (var i = 0; i < bondEntries.Count; i++)
+        {
+            var entry = bondEntries[i].Entry;
+            var entryDay = DateOnly.FromDateTime(entry.PostingDate);
+            var intervalEnd = i + 1 < bondEntries.Count
+                ? DateOnly.FromDateTime(bondEntries[i + 1].Entry.PostingDate).AddDays(-1)
+                : end;
+
+            var windowStart = entryDay > start ? entryDay : start;
+            var windowEnd = intervalEnd < end ? intervalEnd : end;
+            if (windowStart > windowEnd) continue;
+
+            var series = entry.GetPrice(windowEnd, details);
+            for (var date = windowStart; date <= windowEnd; date = date.AddDays(1))
+            {
+                if (series.TryGetValue(date, out var value))
+                    totals[date] = totals.GetValueOrDefault(date) + value;
+            }
+        }
+    }
+
+    private static void AddCarriedEntryValues(
+        Dictionary<DateOnly, decimal> totals, DateOnly start, DateOnly end,
+        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries, BondDetails details, BondAccountEntry? carriedEntry)
+    {
+        if (carriedEntry is null) return;
+
+        var intervalEnd = bondEntries is { Count: > 0 }
+            ? DateOnly.FromDateTime(bondEntries[0].Entry.PostingDate).AddDays(-1)
+            : end;
+        if (intervalEnd > end) intervalEnd = end;
+
+        var carriedDay = DateOnly.FromDateTime(carriedEntry.PostingDate);
+        var windowStart = carriedDay > start ? carriedDay : start;
+        if (windowStart > intervalEnd) return;
+
+        var series = carriedEntry.GetPrice(intervalEnd, details);
+        for (var date = windowStart; date <= intervalEnd; date = date.AddDays(1))
+        {
+            if (series.TryGetValue(date, out var value))
+                totals[date] = totals.GetValueOrDefault(date) + value;
+        }
     }
 
     public BondAccountEntry? GetThisOrNextOlder(DateTime date, int bondDetailsId)
