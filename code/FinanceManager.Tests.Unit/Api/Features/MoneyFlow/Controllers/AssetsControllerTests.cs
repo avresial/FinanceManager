@@ -1,6 +1,9 @@
 using FinanceManager.Api.Features.MoneyFlow.Controllers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -22,6 +25,8 @@ public class AssetsControllerTests
     private readonly Mock<IAssetsService> _assetsServiceMock = new();
     private readonly Mock<IInvestmentPaycheckEstimatorService> _investmentPaycheckEstimatorServiceMock = new();
     private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
+    private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
+    private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
     private readonly AssetsController _controller;
 
     public AssetsControllerTests()
@@ -30,7 +35,12 @@ public class AssetsControllerTests
             .Setup(repo => repo.GetCurrencies(It.IsAny<CancellationToken>()))
             .Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
 
-        _controller = new AssetsController(_assetsServiceMock.Object, _investmentPaycheckEstimatorServiceMock.Object, _currencyRepositoryMock.Object)
+        _controller = new AssetsController(
+            _assetsServiceMock.Object,
+            _investmentPaycheckEstimatorServiceMock.Object,
+            _currencyRepositoryMock.Object,
+            _investmentAppreciationServiceMock.Object,
+            _accountRepositoryMock.Object)
         {
             ControllerContext = new ControllerContext
             {

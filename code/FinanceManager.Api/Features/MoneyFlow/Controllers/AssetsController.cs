@@ -1,6 +1,8 @@
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
@@ -16,7 +18,12 @@ namespace FinanceManager.Api.Features.MoneyFlow.Controllers;
 [Authorize]
 [ApiController]
 [Tags("Financial Analysis")]
-public class AssetsController(IAssetsService assetsService, IInvestmentPaycheckEstimatorService investmentPaycheckEstimatorService, ICurrencyRepository currencyRepository) : ControllerBase
+public class AssetsController(
+    IAssetsService assetsService,
+    IInvestmentPaycheckEstimatorService investmentPaycheckEstimatorService,
+    ICurrencyRepository currencyRepository,
+    IInvestmentAppreciationService investmentAppreciationService,
+    IAccountRepository<InvestmentAccount> accountRepository) : ControllerBase
 {
     [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -53,9 +60,46 @@ public class AssetsController(IAssetsService assetsService, IInvestmentPaycheckE
     public async Task<IActionResult> GetUnrealizedGainLossPerAccount(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.GetUnrealizedGainLossPerAccount(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate)) : Forbid();
 
+    [HttpGet("GetUnrealizedGainLossForAccount/{userId:int}/{accountId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UnrealizedGainLossAccountResult))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetUnrealizedGainLossForAccount(
+        int userId,
+        int accountId,
+        int currencyId,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
+            return Forbid();
+
+        var account = await accountRepository.Get(accountId, cancellationToken);
+        if (account is null)
+            return NotFound();
+
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId) || account.UserId != userId)
+            return NotFound();
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null)
+            return NotFound("Currency not found.");
+
+        var result = await investmentAppreciationService.GetForAccountAsync(
+            userId,
+            accountId,
+            currency,
+            asOfDate,
+            cancellationToken);
+
+        if (result is null)
+            return NotFound();
+
+        return Ok(result);
+    }
+
     [HttpGet("GetUnrealizedGainLossPerInstrument/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossInstrumentResult>))]
     public async Task<IActionResult> GetUnrealizedGainLossPerInstrument(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.GetUnrealizedGainLossPerInstrument(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate)) : Forbid();
-
 }

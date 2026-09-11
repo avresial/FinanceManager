@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -186,6 +187,138 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.True(result.HasPartialSalaryHistory);
     }
 
+    private async Task SeedInvestmentAccountWithHoldings(
+        int userId = 1,
+        int accountId = 20,
+        long listingId = 200,
+        string ticker = "CSPX",
+        decimal buyQuantity = 5m,
+        decimal buyUnitPrice = 90m,
+        decimal currentPrice = 100m)
+    {
+        var context = _testDatabase!.Context;
+
+        if (await context.Accounts.AnyAsync(x => x.AccountId == accountId, TestContext.Current.CancellationToken))
+            return;
+
+        var account = new FinancialAccountBaseDto
+        {
+            UserId = userId,
+            AccountId = accountId,
+            Name = $"Investment Account {accountId}",
+            AccountLabel = AccountLabel.Stock,
+            AccountType = AccountType.Stock
+        };
+        context.Accounts.Add(account);
+
+        if (!await context.AssetListings.AnyAsync(x => x.Id == listingId, TestContext.Current.CancellationToken))
+        {
+            var asset = new Asset
+            {
+                Id = (int)listingId,
+                Name = $"Asset {listingId}",
+                Type = AssetType.ETF
+            };
+            context.Assets.Add(asset);
+
+            var listing = new AssetListing
+            {
+                Id = listingId,
+                AssetId = asset.Id,
+                Ticker = ticker,
+                ExchangeMic = "XNAS",
+                ExchangeName = "United States",
+                TradingCurrency = "USD",
+                PriceMultiplier = 1m,
+                IsActive = true
+            };
+            context.AssetListings.Add(listing);
+
+            context.PriceQuotes.Add(new PriceQuote
+            {
+                AssetListingId = listingId,
+                Provider = MarketDataProvider.AlphaVantage,
+                Price = currentPrice,
+                Currency = "USD",
+                PriceTime = new DateTimeOffset(_nowUtc, TimeSpan.Zero),
+                QuoteType = PriceQuoteType.EndOfDay,
+                FetchedAt = DateTimeOffset.UtcNow
+            });
+        }
+
+        context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            AccountId = accountId,
+            AssetListingId = listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = buyQuantity,
+            UnitPrice = buyUnitPrice,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-5))
+        });
+
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_ReturnsAccountAppreciation()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 20, listingId: 200, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(1, 20, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(20, result.AccountId);
+        Assert.Equal("Investment Account 20", result.AccountName);
+        Assert.Equal(450m, result.CostBasis);
+        Assert.Equal(500m, result.CurrentValue);
+        Assert.Equal(50m, result.UnrealizedGainLoss);
+        Assert.Equal(50m / 450m * 100m, result.UnrealizedGainLossPercent);
+
+        var directResponse = await Client.GetAsync(
+            $"api/Assets/GetUnrealizedGainLossForAccount/1/20/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, directResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_ForOtherUsersAccount_ReturnsNotFound()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 2, accountId: 21, listingId: 201);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/Assets/GetUnrealizedGainLossForAccount/1/21/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var result = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(
+            1,
+            21,
+            DefaultCurrency.USD,
+            _nowUtc,
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_ForUnknownAccount_ReturnsNotFound()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/Assets/GetUnrealizedGainLossForAccount/1/999999/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var clientResult = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(1, 999999, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
+        Assert.Null(clientResult);
+    }
+
     public static TheoryData<Func<DateTime, string>> OtherUserAssetEndpointUrls => new()
     {
         now => "api/Assets/IsAnyAccountWithAssets/2",
@@ -196,6 +329,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         now => $"api/Assets/GetInvestmentPaycheckEstimate/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerAccount/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerInstrument/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetUnrealizedGainLossForAccount/2/20/{DefaultCurrency.USD.Id}/{now:O}",
     };
 
     [Theory]

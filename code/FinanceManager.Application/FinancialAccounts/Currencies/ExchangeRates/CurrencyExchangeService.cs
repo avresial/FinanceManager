@@ -10,20 +10,42 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
 internal sealed class CurrencyExchangeService(
     ICurrencyExchangeRateSource source) : ICurrencyExchangeService
 {
-    public async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(
+    public Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) => GetExchangeRateAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+    Task<List<(DateTime Date, decimal? Value)>> ICurrencyExchangeService.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken) => GetExchangeRateAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+    public Task<List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)>> GetExchangeRateRangeWithProvenanceAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime dateStart,
         DateTime dateEnd) =>
-        (await GetExchangeRateRangeWithProvenanceAsync(fromCurrency, toCurrency, dateStart, dateEnd))
-            .Select(rate => (rate.Date, rate.Value))
-            .ToList();
+        GetExchangeRateRangeWithProvenanceAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
 
-    public async Task<List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)>> GetExchangeRateRangeWithProvenanceAsync(
+    private async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsyncCore(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime dateStart,
-        DateTime dateEnd)
+        DateTime dateEnd,
+        CancellationToken cancellationToken) =>
+        (await GetExchangeRateRangeWithProvenanceAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken))
+            .Select(rate => (rate.Date, rate.Value))
+            .ToList();
+
+    private async Task<List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)>> GetExchangeRateRangeWithProvenanceAsyncCore(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken)
     {
         if (dateStart == default || dateEnd == default)
             return [];
@@ -50,7 +72,7 @@ internal sealed class CurrencyExchangeService(
                 .ToList();
 
         var context = new CurrencyExchangeRateResolutionContext();
-        var direct = await source.ResolveAsync(fromCurrency, toCurrency, dates, reuseCachedMisses: false, context: context);
+        var direct = await source.ResolveAsync(fromCurrency, toCurrency, dates, reuseCachedMisses: false, ct: cancellationToken, context: context);
         Dictionary<DateTime, (decimal? Value, CurrencyExchangeRateSource Source)> rates = [];
         List<DateTime> crossDates = [];
         List<DateTime> deferredDates = [];
@@ -90,7 +112,7 @@ internal sealed class CurrencyExchangeService(
             else
             {
                 var usd = DefaultCurrency.USD;
-                var fromUsd = await source.ResolveAsync(fromCurrency, usd, crossDates, reuseCachedMisses: false, context: context);
+                var fromUsd = await source.ResolveAsync(fromCurrency, usd, crossDates, reuseCachedMisses: false, ct: cancellationToken, context: context);
                 List<DateTime> targetDates = [];
 
                 foreach (var date in crossDates)
@@ -110,7 +132,7 @@ internal sealed class CurrencyExchangeService(
                     targetDates.Add(date);
                 }
 
-                var usdTarget = await source.ResolveAsync(usd, toCurrency, targetDates, reuseCachedMisses: false, context: context);
+                var usdTarget = await source.ResolveAsync(usd, toCurrency, targetDates, reuseCachedMisses: false, ct: cancellationToken, context: context);
                 foreach (var date in targetDates)
                 {
                     if (!usdTarget.TryGetValue(date, out var usdTargetResolution))
@@ -146,40 +168,75 @@ internal sealed class CurrencyExchangeService(
             .ToList();
     }
 
-    public async Task<decimal?> GetExchangeRateAsync(
+    public Task<decimal?> GetExchangeRateAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime date) =>
-        (await GetExchangeRateResultAsync(fromCurrency, toCurrency, date)).Value;
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
 
-    public async Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(
+    Task<decimal?> ICurrencyExchangeService.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    public Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(
         Currency fromCurrency,
         Currency toCurrency,
         DateTime date) =>
-        (await GetExchangeRateWithSourceAsync(fromCurrency, toCurrency, date)).Result;
+        GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
 
-    public async Task<CurrencyExchangeRateResolution> GetExchangeRateWithSourceAsync(
+    Task<CurrencyExchangeRateResult> ICurrencyExchangeService.GetExchangeRateResultAsync(
         Currency fromCurrency,
         Currency toCurrency,
-        DateTime date)
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    public Task<CurrencyExchangeRateResolution> GetExchangeRateWithSourceAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date) =>
+        GetExchangeRateWithSourceCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+    private async Task<decimal?> GetExchangeRateCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        (await GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, cancellationToken)).Value;
+
+    private async Task<CurrencyExchangeRateResult> GetExchangeRateResultCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        (await GetExchangeRateWithSourceCoreAsync(fromCurrency, toCurrency, date, cancellationToken)).Result;
+
+    private async Task<CurrencyExchangeRateResolution> GetExchangeRateWithSourceCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
         var requestedDate = NormalizeDate(date);
         if (IsSameCurrency(fromCurrency, toCurrency))
             return new(CurrencyExchangeRateResult.Success(1m), CurrencyExchangeRateSource.SameCurrency);
 
         var context = new CurrencyExchangeRateResolutionContext();
-        var direct = await ResolveSingleAsync(fromCurrency, toCurrency, requestedDate, reuseCachedMisses: true, context);
+        var direct = await ResolveSingleAsync(fromCurrency, toCurrency, requestedDate, reuseCachedMisses: true, cancellationToken, context);
         if (direct.Result.IsSuccess || direct.Result.Status == CurrencyExchangeRateStatus.NotYetPublished)
             return direct;
 
         if (IsUsd(fromCurrency) || IsUsd(toCurrency))
             return direct;
 
-        var fromUsd = await ResolveSingleAsync(fromCurrency, DefaultCurrency.USD, requestedDate, reuseCachedMisses: true, context);
+        var fromUsd = await ResolveSingleAsync(fromCurrency, DefaultCurrency.USD, requestedDate, reuseCachedMisses: true, cancellationToken, context);
         if (!fromUsd.Result.IsSuccess)
             return new(CombineFailure(direct.Result, fromUsd.Result), CurrencyExchangeRateSource.Unavailable);
 
-        var usdTarget = await ResolveSingleAsync(DefaultCurrency.USD, toCurrency, requestedDate, reuseCachedMisses: true, context);
+        var usdTarget = await ResolveSingleAsync(DefaultCurrency.USD, toCurrency, requestedDate, reuseCachedMisses: true, cancellationToken, context);
         if (!usdTarget.Result.IsSuccess)
             return new(CombineFailure(direct.Result, usdTarget.Result), CurrencyExchangeRateSource.Unavailable);
 
@@ -193,9 +250,10 @@ internal sealed class CurrencyExchangeService(
         Currency toCurrency,
         DateTime date,
         bool reuseCachedMisses,
+        CancellationToken cancellationToken,
         CurrencyExchangeRateResolutionContext context)
     {
-        var resolved = await source.ResolveAsync(fromCurrency, toCurrency, [date], reuseCachedMisses, context: context);
+        var resolved = await source.ResolveAsync(fromCurrency, toCurrency, [date], reuseCachedMisses, ct: cancellationToken, context: context);
         return resolved.TryGetValue(date, out var result)
             ? result
             : new(CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable);

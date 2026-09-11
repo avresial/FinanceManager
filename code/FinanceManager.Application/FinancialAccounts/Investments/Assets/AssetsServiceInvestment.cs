@@ -11,17 +11,19 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
 
 /// <summary>
-/// Surfaces investment accounts (the new asset model) to the dashboard asset aggregates. Replaces the
-/// legacy <c>AssetsServiceStock</c>: holdings come from <see cref="InvestmentTransaction"/> rows and are
-/// priced through <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/>
-/// rather than per-ticker <c>StockAccountEntry</c> values.
+/// Surfaces investment accounts (the new asset model) to the dashboard asset aggregates, and provides
+/// account-scoped appreciation for account-detail views. Replaces the legacy <c>AssetsServiceStock</c>:
+/// holdings come from <see cref="InvestmentTransaction"/> rows and are priced through
+/// <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/> rather than
+/// per-ticker <c>StockAccountEntry</c> values.
 /// </summary>
 internal class AssetsServiceInvestment(
     IFinancialAccountRepository financialAccountRepository,
+    IAccountRepository<InvestmentAccount> investmentAccountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider,
-    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped
+    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped, IInvestmentAppreciationService
 {
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
@@ -100,65 +102,34 @@ internal class AssetsServiceInvestment(
         List<UnrealizedGainLossInstrumentResult> results = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            var transactions = (await transactionRepository.GetByAccount(account.AccountId))
-                .Where(t => t.TradeDate <= DateOnly.FromDateTime(asOfDate))
-                .ToList();
-
-            foreach (var group in transactions.GroupBy(t => t.AssetListingId))
-            {
-                var holding = group.Sum(t => t.SignedQuantity);
-                if (holding <= 0) continue;
-
-                var listing = group.First().AssetListing;
-                var instrumentName = listing?.Ticker ?? group.Key.ToString();
-
-                var buys = group.Where(t => t.Type == InvestmentTransactionType.Buy).ToList();
-                var boughtQty = buys.Sum(t => t.Quantity);
-                decimal boughtCost = 0m;
-                var missingExchangeRate = false;
-                foreach (var buy in buys)
-                {
-                    var exchangeRate = await GetBuyExchangeRateAsync(buy, currency, asOfDate);
-                    if (exchangeRate is not decimal rate || rate <= 0m)
-                    {
-                        missingExchangeRate = true;
-                        break;
-                    }
-
-                    boughtCost += (buy.Quantity * buy.UnitPrice + (buy.Fee ?? 0m)) * rate;
-                }
-                var avgCost = boughtQty > 0 ? boughtCost / boughtQty : 0;
-                var costBasis = avgCost * holding;
-
-                var price = await priceProvider.GetPricePerUnitAsync(group.Key, currency, asOfDate);
-                var currentValue = holding * price;
-
-                var excluded = price <= 0 || missingExchangeRate;
-                string? warning = price <= 0
-                    ? "No price available for this instrument."
-                    : missingExchangeRate ? "No exchange rate available for the transaction date." : null;
-
-                var unrealized = currentValue - costBasis;
-                var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
-
-                results.Add(new UnrealizedGainLossInstrumentResult(
-                    account.AccountId,
-                    account.Name,
-                    instrumentName,
-                    instrumentName,
-                    holding,
-                    costBasis,
-                    currentValue,
-                    unrealized,
-                    unrealizedPercent,
-                    asOfDate,
-                    excluded,
-                    warning));
-            }
-        }
+            results.AddRange(await GetUnrealizedGainLossInstrumentsAsync(account, currency, asOfDate));
 
         return results;
+    }
+
+    public async Task<UnrealizedGainLossAccountResult?> GetForAccountAsync(
+        int userId,
+        int accountId,
+        Currency currency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        var selectedAccount = await investmentAccountRepository.Get(accountId, cancellationToken);
+
+        // The direct lookup avoids materialising the user's full portfolio. Returning null for a
+        // missing account or another user's account prevents this application boundary from leaking
+        // account existence.
+        if (selectedAccount is null || selectedAccount.UserId != userId) return null;
+
+        var instruments = await GetUnrealizedGainLossInstrumentsAsync(
+            selectedAccount,
+            currency,
+            asOfDate,
+            cancellationToken);
+
+        if (instruments.Count == 0) return null;
+
+        return AggregateAccountResult(selectedAccount.AccountId, selectedAccount.Name, instruments, asOfDate);
     }
 
     public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
@@ -167,27 +138,97 @@ internal class AssetsServiceInvestment(
 
         List<UnrealizedGainLossAccountResult> results = [];
         foreach (var accountGroup in instrumentResults.GroupBy(x => new { x.AccountId, x.AccountName }))
+            results.Add(AggregateAccountResult(accountGroup.Key.AccountId, accountGroup.Key.AccountName, accountGroup, asOfDate));
+
+        return results;
+    }
+
+    private async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossInstrumentsAsync(
+        InvestmentAccount account,
+        Currency currency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        var transactions = (await transactionRepository.GetByAccount(account.AccountId, cancellationToken))
+            .Where(t => t.TradeDate <= DateOnly.FromDateTime(asOfDate))
+            .ToList();
+
+        List<UnrealizedGainLossInstrumentResult> results = [];
+        foreach (var group in transactions.GroupBy(t => t.AssetListingId))
         {
-            var included = accountGroup.Where(x => !x.IsExcludedFromTotals).ToList();
-            var excludedCount = accountGroup.Count(x => x.IsExcludedFromTotals);
+            var holding = group.Sum(t => t.SignedQuantity);
+            if (holding <= 0) continue;
 
-            var costBasis = included.Sum(x => x.CostBasis);
-            var currentValue = included.Sum(x => x.CurrentValue);
+            var listing = group.First().AssetListing;
+            var instrumentName = listing?.Ticker ?? group.Key.ToString();
+
+            var buys = group.Where(t => t.Type == InvestmentTransactionType.Buy).ToList();
+            var boughtQty = buys.Sum(t => t.Quantity);
+            decimal boughtCost = 0m;
+            var missingExchangeRate = false;
+            foreach (var buy in buys)
+            {
+                var exchangeRate = await GetBuyExchangeRateAsync(buy, currency, asOfDate, cancellationToken);
+                if (exchangeRate is not decimal rate || rate <= 0m)
+                {
+                    missingExchangeRate = true;
+                    break;
+                }
+
+                boughtCost += (buy.Quantity * buy.UnitPrice + (buy.Fee ?? 0m)) * rate;
+            }
+
+            var avgCost = boughtQty > 0 ? boughtCost / boughtQty : 0m;
+            var costBasis = avgCost * holding;
+            var price = await priceProvider.GetPricePerUnitAsync(group.Key, currency, asOfDate, cancellationToken);
+            var currentValue = holding * price;
+            var excluded = price <= 0 || missingExchangeRate;
+            string? warning = price <= 0
+                ? "No price available for this instrument."
+                : missingExchangeRate ? "No exchange rate available for the transaction date." : null;
             var unrealized = currentValue - costBasis;
-            var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+            var unrealizedPercent = costBasis == 0m ? 0m : unrealized / costBasis * 100m;
 
-            results.Add(new UnrealizedGainLossAccountResult(
-                accountGroup.Key.AccountId,
-                accountGroup.Key.AccountName,
+            results.Add(new UnrealizedGainLossInstrumentResult(
+                account.AccountId,
+                account.Name,
+                instrumentName,
+                instrumentName,
+                holding,
                 costBasis,
                 currentValue,
                 unrealized,
                 unrealizedPercent,
                 asOfDate,
-                excludedCount));
+                excluded,
+                warning));
         }
 
         return results;
+    }
+
+    private static UnrealizedGainLossAccountResult AggregateAccountResult(
+        int accountId,
+        string accountName,
+        IEnumerable<UnrealizedGainLossInstrumentResult> instrumentResults,
+        DateTime asOfDate)
+    {
+        var instruments = instrumentResults.ToList();
+        var included = instruments.Where(x => !x.IsExcludedFromTotals).ToList();
+        var costBasis = included.Sum(x => x.CostBasis);
+        var currentValue = included.Sum(x => x.CurrentValue);
+        var unrealized = currentValue - costBasis;
+        var unrealizedPercent = costBasis == 0m ? 0m : unrealized / costBasis * 100m;
+
+        return new UnrealizedGainLossAccountResult(
+            accountId,
+            accountName,
+            costBasis,
+            currentValue,
+            unrealized,
+            unrealizedPercent,
+            asOfDate,
+            instruments.Count(x => x.IsExcludedFromTotals));
     }
 
     // The capital value of a holding is its remaining buy cost converted into the target currency at
@@ -196,17 +237,31 @@ internal class AssetsServiceInvestment(
     // capital value — and therefore its gain/loss — collapse to 0 even while the position was still
     // valued fine. Fall back to the as-of-date rate for the same pair so the position keeps a
     // best-effort capital value instead of being excluded.
-    private async Task<decimal?> GetBuyExchangeRateAsync(InvestmentTransaction buy, Currency targetCurrency, DateTime asOfDate)
+    private async Task<decimal?> GetBuyExchangeRateAsync(
+        InvestmentTransaction buy,
+        Currency targetCurrency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken)
     {
         if (string.Equals(buy.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
             return 1m;
 
         var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
-        var tradeDateRate = await currencyExchangeService.GetExchangeRateAsync(
-            sourceCurrency, targetCurrency, buy.TradeDate.ToDateTime(TimeOnly.MinValue));
+        var tradeDateRate = cancellationToken.CanBeCanceled
+            ? await currencyExchangeService.GetExchangeRateAsync(
+                sourceCurrency,
+                targetCurrency,
+                buy.TradeDate.ToDateTime(TimeOnly.MinValue),
+                cancellationToken)
+            : await currencyExchangeService.GetExchangeRateAsync(
+                sourceCurrency,
+                targetCurrency,
+                buy.TradeDate.ToDateTime(TimeOnly.MinValue));
         if (tradeDateRate is decimal rate && rate > 0m)
             return rate;
 
-        return await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate);
+        return cancellationToken.CanBeCanceled
+            ? await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate, cancellationToken)
+            : await currencyExchangeService.GetExchangeRateAsync(sourceCurrency, targetCurrency, asOfDate);
     }
 }
