@@ -56,7 +56,8 @@ internal sealed class StoredCurrencyExchangeRateSource(
         CurrencyExchangeRateResolutionContext context)
     {
         Dictionary<DateTime, CurrencyExchangeRateResolution> results = [];
-        if (orderedDates.Count == 1)
+        var isPointMode = orderedDates.Count == 1 && reuseCachedMisses;
+        if (isPointMode)
         {
             var date = orderedDates[0];
             var direct = await repository.Get(fromCurrency.ShortName, toCurrency.ShortName, date, ct);
@@ -102,7 +103,7 @@ internal sealed class StoredCurrencyExchangeRateSource(
             .ToList();
         if (ratesToPersist.Count > 0)
         {
-            if (orderedDates.Count == 1 && ratesToPersist.Count == 1)
+            if (isPointMode && ratesToPersist.Count == 1)
                 await repository.Add(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist[0].Item1, ratesToPersist[0].Item2, ct);
             else
                 await repository.AddRange(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist, ct);
