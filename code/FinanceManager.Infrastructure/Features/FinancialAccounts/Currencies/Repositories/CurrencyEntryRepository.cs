@@ -14,6 +14,9 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     private const int _maxAccountIdsPerQuery = 2_000;
 
     private readonly CurrencyEntryValueCalculator _valueCalculator = new(context);
+    private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
+        typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId));
+
     public Task<bool> Add(CurrencyAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
 
@@ -32,6 +35,8 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             context.CurrencyEntries.Add(newAccountEntry);
             await context.SaveChangesAsync(cancellationToken);
+            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
             await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
@@ -40,6 +45,8 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             // Non-relational or no recalculation: persist entry first.
             context.CurrencyEntries.Add(newAccountEntry);
             await context.SaveChangesAsync(cancellationToken);
+            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
+                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
             if (recalculate)
             {
                 // Post-commit repair: complete recalculation before propagating cancellation.
@@ -65,6 +72,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         CancellationToken cancellationToken)
     {
         var entryList = entries as IList<CurrencyAccountEntry> ?? entries.ToList();
+        if (entryList.Count == 0) return true;
 
         // Re-resolve already-persisted labels to context-tracked instances in one query so EF reuses the
         // existing rows instead of trying to INSERT detached copies — the guest seeder reads labels via
@@ -74,7 +82,8 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             ? []
             : await context.FinancialLabels.Where(l => existingLabelIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
 
-        CurrencyAccountEntry? firstEntry = null;
+        List<(CurrencyAccountEntry Source, CurrencyAccountEntry Target)> pairs = new(entryList.Count);
+        CurrencyAccountEntry? oldestEntry = null;
 
         foreach (var entry in entryList)
         {
@@ -85,34 +94,46 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
                 Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
-            if (firstEntry is null) firstEntry = newEntry;
+            pairs.Add((entry, newEntry));
+            if (oldestEntry is null || newEntry.PostingDate < oldestEntry.PostingDate)
+                oldestEntry = newEntry;
 
             context.CurrencyEntries.Add(newEntry);
         }
 
-        if (context.Database.IsRelational() && recalculate && firstEntry is not null)
+        if (context.Database.IsRelational() && recalculate && oldestEntry is not null)
         {
             // Relational: transactional mutation + recalculation commit together atomically.
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
+            foreach (var (source, target) in pairs)
+            {
+                if (source.EntryId == 0 && target.EntryId != 0)
+                    _entryIdProperty?.SetValue(source, target.EntryId);
+            }
+            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         else
         {
             // Non-relational or no recalculation: persist entries first.
             await context.SaveChangesAsync(cancellationToken);
-            if (recalculate && firstEntry is not null)
+            foreach (var (source, target) in pairs)
+            {
+                if (source.EntryId == 0 && target.EntryId != 0)
+                    _entryIdProperty?.SetValue(source, target.EntryId);
+            }
+            if (recalculate && oldestEntry is not null)
             {
                 // Post-commit repair: complete recalculation before propagating cancellation.
                 try
                 {
-                    await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, cancellationToken);
+                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                    await RecalculateValues(firstEntry.AccountId, firstEntry.EntryId, CancellationToken.None);
+                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
                 }
             }
         }

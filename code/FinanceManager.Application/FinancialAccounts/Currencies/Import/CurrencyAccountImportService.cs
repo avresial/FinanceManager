@@ -12,6 +12,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     ImportAccountValidator importAccountValidator, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
 {
+    // Keep each persistence operation bounded so large imports retain partial-failure semantics and
+    // do not create an unbounded EF change tracker or provider command batch.
+    private const int _persistenceBatchSize = 500;
+
     public Task<ImportResult> ImportEntries(
         int userId,
         int accountId,
@@ -52,20 +56,25 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         var conflicts = new List<ImportConflict>();
         CurrencyAccountEntry? oldestInserted = null;
 
-        var existingAll = cancellationToken.CanBeCanceled
+        var existingEntries = cancellationToken.CanBeCanceled
             ? await currencyAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
                 .ToListAsync(cancellationToken)
             : await currencyAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
                 .ToListAsync();
+        var importsByDay = entryList
+            .GroupBy(x => x.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var existingByDay = existingEntries
+            .GroupBy(e => e.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
-            var existingThisDay = existingAll.Where(e => e.PostingDate.Date == day).ToList();
-
-            if (importsThisDay.Count == 0) continue;
+            if (!importsByDay.TryGetValue(day, out var importsThisDay)) continue;
+            var existingThisDay = existingByDay.GetValueOrDefault(day) ?? [];
 
             var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
             var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
@@ -90,6 +99,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 continue;
             }
 
+            var entriesToInsert = new List<CurrencyAccountEntry>(importsThisDay.Count);
             foreach (var import in importsThisDay)
             {
                 try
@@ -103,22 +113,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                         ContractorDetails = import.ContractorDetails,
                         Labels = []
                     };
-
-                    var added = cancellationToken.CanBeCanceled
-                        ? await currencyAccountEntryRepository.Add(newEntry, recalculate: false, cancellationToken)
-                        : await currencyAccountEntryRepository.Add(newEntry, recalculate: false);
-                    if (added)
-                    {
-                        imported++;
-                        existingAll.Add(newEntry);
-                        if (oldestInserted is null || newEntry.PostingDate < oldestInserted.PostingDate)
-                            oldestInserted = newEntry;
-                    }
-                    else
-                    {
-                        failed++;
-                        errors.Add($"Failed to import entry with date {import.PostingDate}.");
-                    }
+                    entriesToInsert.Add(newEntry);
                 }
                 catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
@@ -137,6 +132,45 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     errors.Add(ex.Message);
                 }
 
+            }
+
+            foreach (var batch in entriesToInsert.Chunk(_persistenceBatchSize))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var batchList = batch.ToList();
+                try
+                {
+                    var added = cancellationToken.CanBeCanceled
+                        ? await currencyAccountEntryRepository.Add(batchList, recalculate: false, cancellationToken)
+                        : await currencyAccountEntryRepository.Add(batchList, recalculate: false);
+                    if (added)
+                    {
+                        imported += batchList.Count;
+                        if (oldestInserted is null || batchList[0].PostingDate < oldestInserted.PostingDate)
+                            oldestInserted = batchList[0];
+                    }
+                    else
+                    {
+                        failed += batchList.Count;
+                        errors.AddRange(batchList.Select(entry => $"Failed to import entry with date {entry.PostingDate}."));
+                    }
+                }
+                catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogDebug(ex, "Currency account import batch cancelled.");
+                    throw;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    failed += batchList.Count;
+                    errors.AddRange(batchList.Select(entry => $"Cancellation while importing entry with date {entry.PostingDate}."));
+                    logger.LogDebug(ex, "Currency account import batch cancelled or timed out.");
+                }
+                catch (Exception ex)
+                {
+                    failed += batchList.Count;
+                    errors.AddRange(batchList.Select(_ => ex.Message));
+                }
             }
 
             processed += importsThisDay.Count;
