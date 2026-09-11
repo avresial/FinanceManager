@@ -118,6 +118,84 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("NewVisits");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.Alerts.Entities.FinancialAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AlertType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ComparisonOperator")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan?>("CooldownPeriod")
+                        .HasColumnType("interval");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("EvaluationPeriod")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("LabelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LabelName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("LastStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastTriggeredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastTriggeredConditionFingerprint")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal?>("LastTriggeredValue")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("SubscriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Threshold")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "AlertType");
+
+                    b.HasIndex("UserId", "IsEnabled");
+
+                    b.ToTable("FinancialAlerts");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.Assets.Entities.Asset", b =>
                 {
                     b.Property<long>("Id")
@@ -1374,6 +1452,15 @@ namespace FinanceManager.Api.Migrations
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", null)
                         .WithMany()
                         .HasForeignKey("LabelsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.Alerts.Entities.FinancialAlert", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Identity.Dtos.UserDto", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

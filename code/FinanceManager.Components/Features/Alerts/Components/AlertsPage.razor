@@ -1,0 +1,180 @@
+@page "/Alerts"
+@using FinanceManager.Application.Alerts.Models
+@using FinanceManager.Domain.Alerts.Dtos
+@using FinanceManager.Domain.Alerts.Enums
+
+<PageTitle>Alerts and watchlists</PageTitle>
+
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Alerts and watchlists</MudText>
+</SectionContent>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
+        <div>
+            <MudText Typo="Typo.h4" HtmlTag="h1">Alerts and watchlists</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Define deterministic checks for balances, spending, transactions, and subscription changes.
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@_isLoading" OnClick="RefreshAsync">Evaluate now</MudButton>
+    </div>
+
+    @if (_errors.Count > 0)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @foreach (var error in _errors)
+            {
+                <div>@error</div>
+            }
+        </MudAlert>
+    }
+
+    <MudPaper Outlined Class="pa-4 mb-5">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">@(_editingId is null ? "Create an alert" : "Edit alert")</MudText>
+            @if (_editingId is not null)
+            {
+                <MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel</MudButton>
+            }
+        </div>
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="_form.Title" Label="Alert name" Required="true"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="AlertType" @bind-Value="_form.AlertType" Label="Condition"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var type in Enum.GetValues<AlertType>())
+                    {
+                        <MudSelectItem T="AlertType" Value="@type">@TypeLabel(type)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSelect T="AlertComparisonOperator" @bind-Value="_form.ComparisonOperator" Label="Comparison"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var comparison in Enum.GetValues<AlertComparisonOperator>())
+                    {
+                        <MudSelectItem T="AlertComparisonOperator" Value="@comparison">@ComparisonLabel(comparison)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudNumericField T="decimal" @bind-Value="_form.Threshold" Label="Threshold"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
+                                 AdornmentText="value" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudSelect T="AlertEvaluationPeriod" @bind-Value="_form.EvaluationPeriod" Label="Evaluation period"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var period in Enum.GetValues<AlertEvaluationPeriod>())
+                    {
+                        <MudSelectItem T="AlertEvaluationPeriod" Value="@period">@PeriodLabel(period)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudNumericField T="double" @bind-Value="_form.CooldownHours" Label="Cooldown (hours)"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+            </MudItem>
+
+            @if (_form.AlertType == AlertType.AccountBalance)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_form.AccountIdText" Label="Account id (optional)"
+                                  HelperText="Leave empty to check every currency account." Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            }
+            @if (_form.AlertType == AlertType.CategorySpending)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_form.LabelName" Label="Label/category (optional)"
+                                  HelperText="Leave empty to include all labelled expenses." Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            }
+            @if (_form.AlertType == AlertType.MerchantSpending)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_form.MerchantName" Label="Merchant (optional)"
+                                  HelperText="Matches contractor or description text." Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            }
+        </MudGrid>
+
+        <div class="d-flex justify-end mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSaving" OnClick="SaveAsync">
+                @(_editingId is null ? "Create alert" : "Save changes")
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    @if (_isLoading && _alerts.Count == 0)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+    }
+    else if (_alerts.Count == 0)
+    {
+        <MudPaper Outlined Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.h6" Class="mt-2">No alerts yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Create a watchlist condition above to start monitoring your finances.</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="_alerts" Dense="true" Hover="true" Outlined="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Alert</MudTh>
+                <MudTh>Condition</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Observed</MudTh>
+                <MudTh Style="text-align:right">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Alert">
+                    <MudText Typo="Typo.body1" Class="font-weight-600">@context.Title</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel(context.EvaluationPeriod)</MudText>
+                </MudTd>
+                <MudTd DataLabel="Condition">
+                    <MudText Typo="Typo.body2">@TypeLabel(context.AlertType)</MudText>
+                    <MudText Typo="Typo.caption">@GetConditionLabel(context)</MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context)" Variant="Variant.Outlined">
+                        @(context.IsEnabled ? StatusLabel(context) : "Disabled")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Observed">
+                    @if (_outcomes.TryGetValue(context.Id, out var outcome))
+                    {
+                        <MudText Typo="Typo.body2">@outcome.CurrentValue.ToString("N2")</MudText>
+                        @if (outcome.IsTriggered)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning">@outcome.Message</MudText>
+                        }
+                    }
+                    else if (context.LastTriggeredValue is decimal value)
+                    {
+                        <MudText Typo="Typo.body2">@value.ToString("N2")</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Not evaluated</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align:right; white-space:nowrap">
+                    <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleEnabledAsync(context, value))"
+                               Color="Color.Primary" Size="Size.Small" aria-label="@(string.Concat("Enable ", context.Title))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => BeginEdit(context))"
+                                   aria-label="@(string.Concat("Edit ", context.Title))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteAsync(context))" aria-label="@(string.Concat("Delete ", context.Title))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
