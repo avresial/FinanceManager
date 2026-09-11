@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
@@ -22,7 +23,7 @@ public class NetWorthServiceTests
 
     public NetWorthServiceTests()
     {
-        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<BondDetails>());
 
         _financialAccountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
@@ -41,7 +42,10 @@ public class NetWorthServiceTests
             .Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>());
 
-        _netWorthService = new NetWorthService(_financialAccountRepositoryMock.Object, _bondDetailsRepositoryMock.Object, _investmentValuationServiceMock.Object);
+        _netWorthService = new NetWorthService(
+            _financialAccountRepositoryMock.Object,
+            new BondDashboardContext(_bondDetailsRepositoryMock.Object),
+            _investmentValuationServiceMock.Object);
     }
 
     [Fact]

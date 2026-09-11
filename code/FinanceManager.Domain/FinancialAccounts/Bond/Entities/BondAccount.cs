@@ -145,7 +145,16 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         }
     }
 
-    public Dictionary<DateOnly, decimal> GetDailyPrice(DateOnly start, DateOnly end, List<BondDetails> bondDetails)
+    /// <summary>
+    /// Prices the account per day. An optional <paramref name="priceAt"/> callback replaces the
+    /// default per-entry pricing (<see cref="BondAccountEntry.GetPriceAt(DateOnly, BondDetails)"/>) so
+    /// callers can reuse cached prices; the existing missing-details behaviour is unchanged.
+    /// </summary>
+    public Dictionary<DateOnly, decimal> GetDailyPrice(
+        DateOnly start,
+        DateOnly end,
+        List<BondDetails> bondDetails,
+        Func<BondAccountEntry, BondDetails, DateOnly, decimal>? priceAt = null)
     {
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || start > end) return result;
@@ -160,6 +169,8 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         if (missingDetailIds.Count != 0)
             throw new InvalidOperationException($"Bond valuation requires details for bond ids: {string.Join(", ", missingDetailIds)}.");
 
+        var resolvePrice = priceAt ?? ((entry, details, date) => entry.GetPriceAt(date, details));
+
         for (var date = start; date <= end; date = date.AddDays(1))
         {
             decimal total = 0;
@@ -168,7 +179,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
                 var currentEntry = GetThisOrNextOlder(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), detailId);
                 if (currentEntry is null) continue;
 
-                total += currentEntry.GetPriceAt(date, detailsById[detailId]);
+                total += resolvePrice(currentEntry, detailsById[detailId], date);
             }
 
             if (total != 0)

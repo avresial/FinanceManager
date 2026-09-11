@@ -1,5 +1,5 @@
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -12,14 +12,15 @@ using FinanceManager.Domain.MoneyFlow.Services;
 
 namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
-public class NetWorthService(IFinancialAccountRepository financialAccountRepository,
-IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService investmentValuationService) : INetWorthService
+public class NetWorthService(
+    IFinancialAccountRepository financialAccountRepository,
+    BondDashboardContext bondDashboardContext,
+    IInvestmentValuationService investmentValuationService) : INetWorthService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         decimal result = 0;
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, date.Date, date))
         {
@@ -29,16 +30,22 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
             result += newestEntry.Value;
         }
 
+        List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, date.Date, date))
+            bondAccounts.Add(account);
+
+        // Only the definitions the accounts actually reference are loaded (detached, no-tracking),
+        // and prices memoize in the request-scoped context so the dashboard's other bond paths reuse them.
+        await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
+
+        foreach (var account in bondAccounts)
         {
             foreach (var detailsId in account.GetStoredBondsIds())
             {
                 var newestEntry = account.GetThisOrNextOlder(date, detailsId);
                 if (newestEntry is null) continue;
-                if (!bondDetails.TryGetValue(detailsId, out var details))
-                    throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
 
-                result += newestEntry.GetPriceAt(DateOnly.FromDateTime(date), details);
+                result += bondDashboardContext.GetOrComputePrice(account.AccountId, newestEntry, DateOnly.FromDateTime(date));
             }
         }
 
@@ -54,8 +61,6 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
 
         Dictionary<DateTime, decimal> result = [];
 
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
-
         List<CurrencyAccount> currencyAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
             currencyAccounts.Add(account);
@@ -63,6 +68,8 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
         List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
             bondAccounts.Add(account);
+
+        await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
 
         List<InvestmentAccount> investmentAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
@@ -92,10 +99,7 @@ IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService invest
                 {
                     var entry = account.GetThisOrNextOlder(date, detailsId);
                     if (entry is null) continue;
-                    if (!bondDetails.TryGetValue(detailsId, out var details))
-                        throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
-
-                    dailyTotal += entry.GetPriceAt(DateOnly.FromDateTime(date), details);
+                    dailyTotal += bondDashboardContext.GetOrComputePrice(account.AccountId, entry, DateOnly.FromDateTime(date));
                 }
             }
 

@@ -1,4 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Balance;
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -25,7 +26,7 @@ public class BondBalanceServiceTests
     {
         _service = new BondBalanceService(
             _financialAccountRepositoryMock.Object,
-            _bondDetailsRepositoryMock.Object,
+            new BondDashboardContext(_bondDetailsRepositoryMock.Object),
             _currencyExchangeServiceMock.Object);
     }
 
@@ -55,7 +56,7 @@ public class BondBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
-        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new[] { details });
 
         var result = await _service.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate);
 
@@ -90,7 +91,7 @@ public class BondBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
-        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new[] { details });
 
         var result = await _service.GetNetCashFlow(userId, DefaultCurrency.PLN, startDate, endDate);
 
@@ -116,7 +117,7 @@ public class BondBalanceServiceTests
         var details = CreateDetails(startDate, endDate, DefaultCurrency.PLN);
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
-        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new[] { details });
 
         var result = await _service.GetCapital(userId, DefaultCurrency.PLN, startDate, endDate);
 
@@ -140,7 +141,7 @@ public class BondBalanceServiceTests
 
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
-        _bondDetailsRepositoryMock.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(new[] { details });
         _currencyExchangeServiceMock
             .Setup(x => x.GetExchangeRateAsync(DefaultCurrency.USD, DefaultCurrency.PLN, startDate, endDate))
             .ReturnsAsync([
