@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Configurable in-app financial alerts and watchlists now monitor balances, category and merchant spending, large transactions, and subscription price changes with dashboard status and duplicate-trigger suppression. #735
 - Investment and bond account charts now show cumulative user-paid capital alongside account value and the selected benchmark, including range-start carry-over, withdrawals, same-day events, and historical currency conversion. #729
 - Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
 - Authorized maintenance workers can now query bounded, read-only application log history with time, level, and text filters. #722

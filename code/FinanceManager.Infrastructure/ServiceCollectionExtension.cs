@@ -9,6 +9,7 @@ using FinanceManager.Application.Shared.Options;
 using FinanceManager.Application.Shared.Persistence;
 using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.Alerts.Repositories;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
@@ -31,6 +32,7 @@ using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Services;
+using FinanceManager.Infrastructure.Features.Alerts.Repositories;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using FinanceManager.Infrastructure.Features.Assets.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
@@ -116,6 +118,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
                 .AddScoped<IRecurringSubscriptionRepository, RecurringSubscriptionRepository>()
+                .AddScoped<IFinancialAlertRepository, FinancialAlertRepository>()
                 .AddScoped<ICurrencyRepository, CurrencyRepository>()
                 .AddScoped<IExchangeRateRepository, ExchangeRateRepository>()
                 .AddScoped<IBondDetailsRepository, BondDetailsRepository>()
