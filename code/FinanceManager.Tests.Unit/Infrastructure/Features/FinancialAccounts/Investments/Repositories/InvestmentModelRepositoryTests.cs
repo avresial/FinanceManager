@@ -297,6 +297,111 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task GetByAccountAndIds_FiltersAccountAndIdsBeforeMaterializing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var assetRepo = new AssetRepository(ctx);
+        var listingRepo = new AssetListingRepository(ctx);
+        var txRepo = new InvestmentTransactionRepository(ctx);
+
+        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
+        var listing = await listingRepo.Add(new AssetListing
+        {
+            AssetId = asset.Id,
+            Ticker = "CSPX",
+            ExchangeMic = "XLON",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD"
+        }, ct);
+
+        InvestmentTransaction Make(int accountId, DateOnly tradeDate) => new()
+        {
+            UserId = 1,
+            AccountId = accountId,
+            AssetListingId = listing.Id,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 1m,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = tradeDate
+        };
+
+        var requested = await txRepo.Add(Make(10, new DateOnly(2026, 1, 10)), ct);
+        var otherAccount = await txRepo.Add(Make(20, new DateOnly(2026, 1, 11)), ct);
+
+        var result = await txRepo.GetByAccountAndIds(10, [requested.Id, otherAccount.Id], ct);
+
+        var transaction = Assert.Single(result);
+        Assert.Equal(requested.Id, transaction.Id);
+        Assert.Equal(10, transaction.AccountId);
+        Assert.NotNull(transaction.AssetListing.Asset);
+        Assert.Empty(await txRepo.GetByAccountAndIds(10, [], ct));
+    }
+
+    [Fact]
+    public async Task GetLatestByListingAsOf_ReturnsLatestMetadataBeforeDate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var ctx = CreateContext();
+        var assetRepo = new AssetRepository(ctx);
+        var listingRepo = new AssetListingRepository(ctx);
+        var txRepo = new InvestmentTransactionRepository(ctx);
+
+        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
+        var listing = await listingRepo.Add(new AssetListing
+        {
+            AssetId = asset.Id,
+            Ticker = "CSPX",
+            ExchangeMic = "XLON",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD"
+        }, ct);
+
+        await txRepo.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 11,
+            AssetListingId = listing.Id,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 5m,
+            UnitPrice = 100m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2026, 1, 10)
+        }, ct);
+        var latest = await txRepo.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 11,
+            AssetListingId = listing.Id,
+            Type = InvestmentTransactionType.Sell,
+            Quantity = 2m,
+            UnitPrice = 120m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2026, 1, 20)
+        }, ct);
+        await txRepo.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 11,
+            AssetListingId = listing.Id,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 1m,
+            UnitPrice = 130m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2026, 2, 1)
+        }, ct);
+
+        var result = await txRepo.GetLatestByListingAsOf(11, new DateOnly(2026, 1, 31), ct);
+
+        var metadata = Assert.Single(result);
+        Assert.Equal(latest.Id, metadata.Id);
+        Assert.Equal(120m, metadata.UnitPrice);
+        Assert.Equal("CSPX", metadata.AssetListing.Ticker);
+        Assert.Equal(AssetType.ETF, metadata.AssetListing.Asset.Type);
+    }
+
+    [Fact]
     public async Task GetByAccounts_ReturnsTransactionsForRequestedAccountsOnly()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -619,8 +724,8 @@ public class InvestmentModelRepositoryTests
         Assert.Single(tickerSearch);
         Assert.Equal("AAPL", tickerSearch[0].AssetListing.Ticker);
 
-        // Filter by Search on Asset Name
-        var (nameSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "Apple", cancellationToken: ct);
+        // Filter by Search on Asset Name, case-insensitively
+        var (nameSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "apple", cancellationToken: ct);
         Assert.Single(nameSearch);
         Assert.Equal("Apple Inc.", nameSearch[0].AssetListing.Asset.Name);
 
@@ -628,6 +733,17 @@ public class InvestmentModelRepositoryTests
         var (isinSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "US0378331005", cancellationToken: ct);
         Assert.Single(isinSearch);
         Assert.Equal("AAPL", isinSearch[0].AssetListing.Ticker);
+
+        // Filter by Search on Currency and Exchange
+        var (currencySearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "usd", cancellationToken: ct);
+        Assert.Equal(2, currencySearch.Count);
+        var (exchangeSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "nasdaq", cancellationToken: ct);
+        Assert.Single(exchangeSearch);
+        Assert.Equal("AAPL", exchangeSearch[0].AssetListing.Ticker);
+
+        // Wildcards in the user's term are treated as literal text.
+        var (wildcardSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "%", cancellationToken: ct);
+        Assert.Empty(wildcardSearch);
     }
 
     [Fact]

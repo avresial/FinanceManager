@@ -55,6 +55,23 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
             ?? new InvestmentTransactionHistoryPageDto([], false);
     }
 
+    /// <summary>
+    /// Loads the latest transaction metadata for each non-zero holding as of a date. This is
+    /// intentionally separate from the paged history so chart cards remain correct after the first
+    /// 100 rows and after history filters are applied.
+    /// </summary>
+    public async Task<IReadOnlyList<InvestmentTransactionDto>> GetHoldingMetadataAsync(
+        int accountId,
+        DateTime date,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/InvestmentTransaction/GetHoldingMetadata/{accountId}/{date:yyyy-MM-dd}",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>(cancellationToken) ?? [];
+    }
+
     public async Task<InvestmentTransactionDto?> GetAsync(long id)
     {
         using var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Get/{id}");

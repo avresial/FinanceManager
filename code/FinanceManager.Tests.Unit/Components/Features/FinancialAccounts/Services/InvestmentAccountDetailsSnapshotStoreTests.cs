@@ -69,6 +69,29 @@ public class InvestmentAccountDetailsSnapshotStoreTests
     }
 
     [Fact]
+    public async Task RefreshAsync_StoresHistoryQueryWithCursorMetadata()
+    {
+        GivenStoredSnapshot([1], [1]);
+        var query = new InvestmentAccountHistoryQuery(
+            new DateOnly(2026, 1, 1),
+            new DateOnly(2026, 3, 1),
+            InvestmentTransactionType.Buy,
+            "CSPX");
+
+        var result = await Refresh(fresh: Model([1], [1], historyQuery: query) with
+        {
+            HistoryNextCursor = "next",
+            HistoryHasMore = true
+        });
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(_key, It.Is<InvestmentAccountDetailsSnapshot>(s =>
+            s.HistoryQuery == query
+            && s.HistoryNextCursor == "next"
+            && s.HistoryHasMore)), Times.Once);
+    }
+
+    [Fact]
     public async Task RefreshAsync_CurrencyChangedSinceSnapshot_Repaints()
     {
         // Valuations are expressed in the preferred currency, so a preference changed since the
@@ -118,10 +141,15 @@ public class InvestmentAccountDetailsSnapshotStoreTests
         Func<InvestmentAccountDetailsModel, Task>? onSnapshotPainted = null) =>
         CreateService().RefreshAsync(1, 2, new RefreshVersionGate(), () => Task.FromResult(fresh), onSnapshotPainted);
 
-    private static InvestmentAccountDetailsModel Model(List<long> transactionIds, List<long> valuedTransactionIds, Currency? currency = null) =>
+    private static InvestmentAccountDetailsModel Model(
+        List<long> transactionIds,
+        List<long> valuedTransactionIds,
+        Currency? currency = null,
+        InvestmentAccountHistoryQuery? historyQuery = null) =>
         new(1, 2, "Brokerage", currency ?? DefaultCurrency.USD,
             [.. transactionIds.Select(Transaction)],
-            [.. valuedTransactionIds.Select(Valuation)]);
+            [.. valuedTransactionIds.Select(Valuation)],
+            HistoryQuery: historyQuery);
 
     private static InvestmentTransactionDto Transaction(long id) =>
         new(id, 1, 2, 10, InvestmentTransactionType.Buy, 1m, 100m, "USD", new DateOnly(2024, 1, 10), null, null);

@@ -117,6 +117,32 @@ public class InvestmentTransactionController(
         return Ok(new InvestmentTransactionHistoryPageDto(dtos, hasMore, nextCursor));
     }
 
+    /// <summary>
+    /// Gets one as-of transaction per currently held listing. The response is small even when an
+    /// account has a large history, and supplies the metadata needed to render holding cards beside
+    /// the independently calculated quantities.
+    /// </summary>
+    [HttpGet("GetHoldingMetadata/{accountId:int}/{date:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHoldingMetadata(int accountId, DateTime date, CancellationToken cancellationToken = default)
+    {
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        var asOf = DateOnly.FromDateTime(date);
+        var holdings = await transactionRepository.GetHoldingsAsOf([accountId], asOf, cancellationToken);
+        var latestTransactions = await transactionRepository.GetLatestByListingAsOf(accountId, asOf, cancellationToken);
+        var metadata = latestTransactions
+            .Where(transaction => holdings.TryGetValue(transaction.AssetListingId, out var quantity) && quantity != 0m)
+            .ToList();
+
+        await RecoverMissingPricesAsync(metadata, account.UserId, cancellationToken);
+        return Ok(metadata.Select(x => x.ToDto()).ToList());
+    }
+
     private async Task RecoverMissingPricesAsync(
         IReadOnlyList<InvestmentTransaction> transactions,
         int userId,

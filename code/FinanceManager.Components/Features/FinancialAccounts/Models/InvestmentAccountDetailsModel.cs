@@ -1,7 +1,15 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Models;
+
+/// <summary>History filters that produced a paged investment-account response.</summary>
+public sealed record InvestmentAccountHistoryQuery(
+    DateOnly? StartDate,
+    DateOnly? EndDate,
+    InvestmentTransactionType? Type,
+    string? Search);
 
 /// <summary>
 /// The investment account-details trade list as rendered: the trades, the server-priced valuations
@@ -21,4 +29,5 @@ public sealed record InvestmentAccountDetailsModel(
     List<InvestmentTransactionDto> Transactions,
     List<InvestmentTransactionValuationDto> Valuations,
     string? HistoryNextCursor = null,
-    bool HistoryHasMore = false);
+    bool HistoryHasMore = false,
+    InvestmentAccountHistoryQuery? HistoryQuery = null);

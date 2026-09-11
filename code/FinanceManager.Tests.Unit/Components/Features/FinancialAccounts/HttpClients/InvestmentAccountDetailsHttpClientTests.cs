@@ -65,6 +65,40 @@ public class InvestmentAccountDetailsHttpClientTests
     }
 
     [Fact]
+    public async Task GetHoldingMetadataAsync_SendsAsOfDateAndReadsRows()
+    {
+        var transaction = new InvestmentTransactionDto(
+            17,
+            1,
+            7,
+            42,
+            InvestmentTransactionType.Buy,
+            2m,
+            100m,
+            "USD",
+            new DateOnly(2026, 1, 10),
+            null,
+            null,
+            "CSPX",
+            "NASDAQ",
+            FinanceManager.Domain.Assets.Entities.AssetType.ETF);
+        var handler = new StubHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new[] { transaction })
+        });
+        var client = new InvestmentTransactionHttpClient(
+            new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+
+        var result = await client.GetHoldingMetadataAsync(
+            7,
+            new DateTime(2026, 2, 1),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(17, Assert.Single(result).Id);
+        Assert.Equal("/api/InvestmentTransaction/GetHoldingMetadata/7/2026-02-01", handler.LastRequest!.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
     public async Task GetTransactionValuationsAsync_FailedRequest_Throws()
     {
         var client = new InvestmentValuationHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.InternalServerError)));

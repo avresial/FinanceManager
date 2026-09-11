@@ -329,6 +329,26 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task GetHoldingMetadata_ReturnsLatestNonZeroTradeBeforeDate()
+    {
+        await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10), unitPrice: 100m);
+        var latestId = await SeedTransaction(InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 1, 20), unitPrice: 120m);
+        await SeedTransaction(InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 2, 10), unitPrice: 130m);
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var metadata = await new InvestmentTransactionHttpClient(Client).GetHoldingMetadataAsync(
+            _testAccountId,
+            new DateTime(2024, 2, 1),
+            TestContext.Current.CancellationToken);
+
+        var latest = Assert.Single(metadata);
+        Assert.Equal(latestId, latest.Id);
+        Assert.Equal(120m, latest.UnitPrice);
+        Assert.Equal("CSPX", latest.Ticker);
+        Assert.Equal(AssetType.ETF, latest.AssetType);
+    }
+
+    [Fact]
     public async Task GetByAccount_RecoversAllMissingPrices()
     {
         var tradeDate = new DateOnly(2024, 1, 10);

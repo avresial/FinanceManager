@@ -35,6 +35,12 @@ public class InvestmentTransactionValuationServiceTests
     {
         var repo = new Mock<IInvestmentTransactionRepository>();
         repo.Setup(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(transactions);
+        repo.Setup(x => x.GetByAccountAndIds(
+                _accountId,
+                It.IsAny<IReadOnlyCollection<long>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
+                transactions.Where(transaction => ids.Contains(transaction.Id)).ToList());
         return (repo, new Mock<IInvestmentPriceProvider>(), new Mock<ICurrencyExchangeService>());
     }
 
@@ -175,5 +181,10 @@ public class InvestmentTransactionValuationServiceTests
 
         var result = Assert.Single(results);
         Assert.Equal(2L, result.TransactionId);
+        repo.Verify(x => x.GetByAccountAndIds(
+            _accountId,
+            It.Is<IReadOnlyCollection<long>>(ids => ids.Count == 1 && ids.Contains(2)),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>()), Times.Never);
     }
 }

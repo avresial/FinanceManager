@@ -54,7 +54,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private string? _historyCursor;
     private bool _historyHasMore;
     private bool _isHistoryLoading;
-    private HistoryQuery _historyQuery;
+    private InvestmentAccountHistoryQuery _historyQuery = new(null, null, null, null);
     private IReadOnlyDictionary<long, InvestmentTransactionValuationDto> _valuations =
         new Dictionary<long, InvestmentTransactionValuationDto>();
     private List<InvestmentHoldingModel> _holdings = [];
@@ -93,12 +93,6 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     // Add/edit overlay state.
     private bool _formVisible;
     private InvestmentTransactionDto? _editingTransaction;
-
-    private readonly record struct HistoryQuery(
-        DateOnly? StartDate,
-        DateOnly? EndDate,
-        InvestmentTransactionType? Type,
-        string? Search);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -214,7 +208,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private async Task<InvestmentAccountDetailsModel?> FetchDetailsAsync(
         int accountId,
         int version,
-        HistoryQuery historyQuery,
+        InvestmentAccountHistoryQuery historyQuery,
         Func<InvestmentAccountDetailsModel, Task> onCoreDetailsReady)
     {
         if (_user is null) return null;
@@ -256,7 +250,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                 transactions,
                 [.. retainedValuations.Where(v => transactions.Any(t => t.Id == v.TransactionId))],
                 page.NextCursor,
-                page.HasMore));
+                page.HasMore,
+                historyQuery));
         }
 
         var valuations = await valuationsTask;
@@ -269,7 +264,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             transactions,
             [.. valuations],
             page.NextCursor,
-            page.HasMore);
+            page.HasMore,
+            historyQuery);
     }
 
     // Per-transaction purchase value / current valuation / gain-loss is priced server-side (needs
@@ -317,15 +313,16 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _accountName = model.Name;
         _currency = model.Currency;
         _transactions = [.. model.Transactions];
-        _historyCursor = model.HistoryNextCursor;
-        _historyHasMore = model.HistoryHasMore;
+        var historyQueryMatches = model.HistoryQuery is not null && model.HistoryQuery == _historyQuery;
+        _historyCursor = historyQueryMatches ? model.HistoryNextCursor : null;
+        _historyHasMore = historyQueryMatches && model.HistoryHasMore;
         _isHistoryLoading = false;
         _valuations = model.Valuations.ToDictionary(v => v.TransactionId);
         _isLoading = false;
 
         // Only widen the window on an account's first load: the trades themselves say how far back
         // its history reaches, and a later reload must not move a range the user has since picked.
-        if (expandRange && !_historyHasMore)
+        if (expandRange && historyQueryMatches && !_historyHasMore)
             ApplyAutomaticCustomRange();
 
         UpdateInfo(refreshChart);
@@ -416,13 +413,14 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         string selectedRange,
         DateTime dateStart,
         DateTime dateEnd,
-        List<InvestmentTransactionDto> transactions,
+        List<InvestmentTransactionDto> holdingMetadata,
         InstrumentSearchResultDto? benchmark,
         string benchmarkName)
     {
         // These requests use separate API scopes and have no data dependency on one another. Keep
         // them on the same critical path only at the join so one slow valuation cannot serialize the
         // other chart inputs or delay the first render unnecessarily.
+        var holdingMetadataTask = TransactionHttpClient.GetHoldingMetadataAsync(accountId, dateEnd);
         var chartRequests = await InvestmentChartRequestLoader.LoadAsync(
             () => ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd),
             () => ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd),
@@ -434,6 +432,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                 dateEnd,
                 benchmark?.ListingId),
             async () => await MoneyFlowHttpClient.GetCapital(userId, currency, dateStart, dateEnd, [accountId]));
+        holdingMetadata = (await holdingMetadataTask).ToList();
 
         var series = chartRequests.Series;
         var holdings = chartRequests.Holdings;
@@ -472,7 +471,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             currentValue,
             balanceChange,
             capitalValue == 0m ? null : balanceChange / capitalValue * 100m,
-            BuildHoldings(transactions, holdings, dateEnd),
+            BuildHoldings(holdingMetadata, holdings, dateEnd),
             capitalSeries);
     }
 
@@ -509,14 +508,14 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     }
 
     private static List<InvestmentHoldingModel> BuildHoldings(
-        List<InvestmentTransactionDto> transactions,
+        List<InvestmentTransactionDto> holdingMetadata,
         IReadOnlyDictionary<long, decimal> holdings,
         DateTime asOf)
     {
         // Value each holding from its latest trade on or before the as-of date so historical
         // ranges don't pull ticker/price metadata from trades that happen after the range end.
         var asOfDate = DateOnly.FromDateTime(asOf);
-        var latestByListing = transactions
+        var latestByListing = holdingMetadata
             .Where(t => t.TradeDate <= asOfDate)
             .GroupBy(t => t.AssetListingId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First());
@@ -541,9 +540,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private bool HasActiveFilter => !string.IsNullOrWhiteSpace(_searchText)
         || _activeFilter is AccountHistoryToolbar.TxFilter.Income or AccountHistoryToolbar.TxFilter.Expense;
 
-    private HistoryQuery BuildHistoryQuery(bool initialLoad) => initialLoad
-        ? new HistoryQuery(null, null, null, null)
-        : new HistoryQuery(
+    private InvestmentAccountHistoryQuery BuildHistoryQuery(bool initialLoad) => initialLoad
+        ? new InvestmentAccountHistoryQuery(null, null, null, null)
+        : new InvestmentAccountHistoryQuery(
             DateOnly.FromDateTime(_dateStart),
             DateOnly.FromDateTime(_dateEnd),
             _activeFilter switch
@@ -609,6 +608,9 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
             _transactions.AddRange(appended);
             _historyCursor = page.NextCursor;
             _historyHasMore = page.HasMore;
+
+            if (!_historyHasMore && IsUnfilteredHistoryQuery)
+                ApplyAutomaticCustomRange();
 
             if (appended.Count > 0)
             {
@@ -690,6 +692,12 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _dateStart = oldestStart;
         _customDateRange = new DateRange(_dateStart, _dateEnd);
     }
+
+    private bool IsUnfilteredHistoryQuery =>
+        _historyQuery.StartDate is null
+        && _historyQuery.EndDate is null
+        && _historyQuery.Type is null
+        && _historyQuery.Search is null;
 
     private static decimal CashImpact(InvestmentTransactionDto t)
     {

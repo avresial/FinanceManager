@@ -44,6 +44,21 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the latest transaction on or before a date for each listing held by an account, with
+    /// listing and asset metadata eagerly loaded for holding-card rendering.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets only the requested transactions belonging to an account, with the listing and asset
+    /// metadata required for valuation. The account predicate is applied before materialisation.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
+        int accountId,
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
     /// users, resolved in a single grouped query. Feeds maintenance jobs (e.g. the weekly price
     /// backfill) that must cover every instrument anyone holds without materialising transactions.

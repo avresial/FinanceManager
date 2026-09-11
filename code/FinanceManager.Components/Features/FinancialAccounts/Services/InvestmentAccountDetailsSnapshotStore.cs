@@ -48,7 +48,8 @@ public sealed class InvestmentAccountDetailsSnapshotStore(ISnapshotRefreshCoordi
                     snapshot.Transactions,
                     snapshot.Valuations,
                     snapshot.HistoryNextCursor,
-                    snapshot.HistoryHasMore)
+                    snapshot.HistoryHasMore,
+                    snapshot.HistoryQuery)
                 : null,
             FetchAsync = fetchAsync,
             ToSnapshot = model => new InvestmentAccountDetailsSnapshot
@@ -61,6 +62,7 @@ public sealed class InvestmentAccountDetailsSnapshotStore(ISnapshotRefreshCoordi
                 Valuations = model.Valuations,
                 HistoryNextCursor = model.HistoryNextCursor,
                 HistoryHasMore = model.HistoryHasMore,
+                HistoryQuery = model.HistoryQuery,
             },
             OnSnapshotPainted = onSnapshotPainted,
             OnSnapshotMissing = onSnapshotMissing,

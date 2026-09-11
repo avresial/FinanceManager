@@ -28,4 +28,5 @@ public sealed class InvestmentAccountDetailsSnapshot : SnapshotBase
     public List<InvestmentTransactionValuationDto> Valuations { get; set; } = [];
     public string? HistoryNextCursor { get; set; }
     public bool HistoryHasMore { get; set; }
+    public InvestmentAccountHistoryQuery? HistoryQuery { get; set; }
 }
