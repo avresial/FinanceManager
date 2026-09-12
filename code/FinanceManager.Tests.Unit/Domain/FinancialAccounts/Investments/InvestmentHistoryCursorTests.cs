@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Investments.ValueObjects;
+using System.Globalization;
 
 namespace FinanceManager.Tests.Unit.Domain.FinancialAccounts.Investments;
 
@@ -11,6 +12,25 @@ public class InvestmentHistoryCursorTests
 
         Assert.True(InvestmentHistoryCursor.TryCreate(expected.ToString(), out var actual));
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void ToStringAndTryCreate_UseInvariantFormat()
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+            var cursor = InvestmentHistoryCursor.Create(new DateOnly(2026, 9, 12), 42);
+
+            Assert.Equal("MjAyNi0wOS0xMjo0Mg==", cursor.ToString());
+            Assert.True(InvestmentHistoryCursor.TryCreate("2026-09-12:42", out var parsed));
+            Assert.Equal(cursor, parsed);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
     }
 
     [Theory]

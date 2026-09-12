@@ -54,6 +54,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private string? _historyCursor;
     private bool _historyHasMore;
     private bool _isHistoryLoading;
+    private bool _isHistoryRefreshing;
     private InvestmentAccountHistoryQuery _historyQuery = new(null, null, null, null);
     private IReadOnlyDictionary<long, InvestmentTransactionValuationDto> _valuations =
         new Dictionary<long, InvestmentTransactionValuationDto>();
@@ -149,53 +150,62 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         _loadedAccountId = accountId;
         var historyQuery = BuildHistoryQuery(initialLoad);
         _historyQuery = historyQuery;
+        _isHistoryRefreshing = true;
         var detailsVersion = _detailsGate.Claim();
         if (refreshChart)
             _chartGate.Claim();
         var snapshotPainted = false;
         var coreDetailsApplied = false;
 
-        var result = await DetailsSnapshotStore.RefreshAsync(
-            _user.UserId,
-            accountId,
-            _detailsGate,
-            fetchAsync: () => FetchDetailsAsync(
-                accountId,
-                detailsVersion,
-                historyQuery,
-                async model =>
-                {
-                    if (!_detailsGate.IsCurrent(detailsVersion)) return;
-
-                    // A chart refresh already started from a snapshot is still valid when the
-                    // fresh account has the same chart inputs. Otherwise the fresh trades must
-                    // supersede it, even though their valuation enrichment is not ready yet.
-                    var shouldRefreshChart = refreshChart && (!snapshotPainted || !HasSameChartInputs(model));
-                    coreDetailsApplied = true;
-                    await ApplyDetails(model, initialLoad, shouldRefreshChart);
-                }),
-
-            // A reload triggered by the user's own edit must not repaint the stored snapshot: it
-            // still holds the pre-edit trades and would flash the change back out for a moment.
-            onSnapshotPainted: initialLoad
-                ? model =>
-                {
-                    snapshotPainted = true;
-                    return ApplyDetails(model, expandRange: true);
-                }
-        : null,
-            onRefreshed: model => ApplyDetails(
-                model,
-                expandRange: initialLoad,
-                refreshChart: refreshChart && !coreDetailsApplied),
-            claimedVersion: detailsVersion);
-
-        // A failed refresh behind painted content leaves it on screen; only a page with nothing to
-        // show reports the failure the user can act on.
-        if (result.IsBlockingFailure)
+        try
         {
-            Logger.LogError(result.Error, "Failed to load investment account {AccountId}", AccountId);
-            Snackbar.Add("Could not load the investment account.", Severity.Error);
+            var result = await DetailsSnapshotStore.RefreshAsync(
+                _user.UserId,
+                accountId,
+                _detailsGate,
+                fetchAsync: () => FetchDetailsAsync(
+                    accountId,
+                    detailsVersion,
+                    historyQuery,
+                    async model =>
+                    {
+                        if (!_detailsGate.IsCurrent(detailsVersion)) return;
+
+                        // A chart refresh already started from a snapshot is still valid when the
+                        // fresh account has the same chart inputs. Otherwise the fresh trades must
+                        // supersede it, even though their valuation enrichment is not ready yet.
+                        var shouldRefreshChart = refreshChart && (!snapshotPainted || !HasSameChartInputs(model));
+                        coreDetailsApplied = true;
+                        await ApplyDetails(model, initialLoad, shouldRefreshChart);
+                    }),
+
+                // A reload triggered by the user's own edit must not repaint the stored snapshot: it
+                // still holds the pre-edit trades and would flash the change back out for a moment.
+                onSnapshotPainted: initialLoad
+                    ? model =>
+                    {
+                        snapshotPainted = true;
+                        return ApplyDetails(model, expandRange: true);
+                    }
+            : null,
+                onRefreshed: model => ApplyDetails(
+                    model,
+                    expandRange: initialLoad,
+                    refreshChart: refreshChart && !coreDetailsApplied),
+                claimedVersion: detailsVersion);
+
+            // A failed refresh behind painted content leaves it on screen; only a page with nothing to
+            // show reports the failure the user can act on.
+            if (result.IsBlockingFailure)
+            {
+                Logger.LogError(result.Error, "Failed to load investment account {AccountId}", AccountId);
+                Snackbar.Add("Could not load the investment account.", Severity.Error);
+            }
+        }
+        finally
+        {
+            if (_detailsGate.IsCurrent(detailsVersion))
+                _isHistoryRefreshing = false;
         }
 
         _isLoading = false;
@@ -588,7 +598,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     private async Task LoadMoreHistoryAsync()
     {
-        if (!_historyHasMore || string.IsNullOrWhiteSpace(_historyCursor) || _isHistoryLoading || _user is null)
+        if (!_historyHasMore || string.IsNullOrWhiteSpace(_historyCursor) || _isHistoryLoading || _isHistoryRefreshing || _user is null)
             return;
 
         var version = _detailsGate.Claim();

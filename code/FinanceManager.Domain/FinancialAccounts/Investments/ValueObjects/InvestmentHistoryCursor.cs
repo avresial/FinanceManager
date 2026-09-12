@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.ValueObjects;
@@ -41,14 +42,22 @@ public sealed record InvestmentHistoryCursor
     }
 
     public override string ToString() =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes($"{TradeDate:yyyy-MM-dd}:{Id}"));
+        Convert.ToBase64String(Encoding.UTF8.GetBytes(
+            FormattableString.Invariant($"{TradeDate:yyyy-MM-dd}:{Id}")));
 
     private static bool TryCreateDelimited(string text, [NotNullWhen(true)] out InvestmentHistoryCursor? cursor)
     {
         cursor = null;
         var parts = text.Split([':', '|', '_'], 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2 || !DateOnly.TryParse(parts[0], out var tradeDate) ||
-            !long.TryParse(parts[1], out var id) || id <= 0) return false;
+        if (parts.Length != 2 ||
+            !DateOnly.TryParseExact(
+                parts[0],
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var tradeDate) ||
+            !long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var id) ||
+            id <= 0) return false;
 
         cursor = Create(tradeDate, id);
         return true;
