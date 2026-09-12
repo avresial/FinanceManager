@@ -23,8 +23,27 @@ internal sealed class EcbCurrencyExchangeRateProvider(
 {
     private const string _eur = "EUR";
 
-    public async Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime date)
+    public Task<CurrencyExchangeRateProviderResult> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
+
+    Task<CurrencyExchangeRateProviderResult> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
+
+    private async Task<CurrencyExchangeRateProviderResult> GetExchangeRateCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!options.Value.Enabled)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
@@ -39,7 +58,7 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         if (fromEur)
         {
             // EUR → CODE: the observation is already CODE per EUR.
-            var (failed, obs) = await GetObservationAsync(Normalize(toCurrency), date);
+            var (failed, obs) = await GetObservationAsync(Normalize(toCurrency), date, cancellationToken);
             if (failed) return new(CurrencyExchangeRateProviderStatus.Failed);
             return obs is decimal codePerEur && codePerEur > 0
                 ? new(CurrencyExchangeRateProviderStatus.Success, codePerEur)
@@ -49,7 +68,7 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         if (toEur)
         {
             // CODE → EUR: invert CODE per EUR.
-            var (failed, obs) = await GetObservationAsync(Normalize(fromCurrency), date);
+            var (failed, obs) = await GetObservationAsync(Normalize(fromCurrency), date, cancellationToken);
             if (failed) return new(CurrencyExchangeRateProviderStatus.Failed);
             return obs is decimal codePerEur && codePerEur > 0
                 ? new(CurrencyExchangeRateProviderStatus.Success, 1m / codePerEur)
@@ -57,12 +76,12 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         }
 
         // Cross rate A → B via EUR: (B per EUR) / (A per EUR).
-        var (fromFailed, fromObs) = await GetObservationAsync(Normalize(fromCurrency), date);
+        var (fromFailed, fromObs) = await GetObservationAsync(Normalize(fromCurrency), date, cancellationToken);
         if (fromFailed) return new(CurrencyExchangeRateProviderStatus.Failed);
         if (fromObs is not decimal aPerEur || aPerEur <= 0)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
 
-        var (toFailed, toObs) = await GetObservationAsync(Normalize(toCurrency), date);
+        var (toFailed, toObs) = await GetObservationAsync(Normalize(toCurrency), date, cancellationToken);
         if (toFailed) return new(CurrencyExchangeRateProviderStatus.Failed);
         if (toObs is not decimal bPerEur || bPerEur <= 0)
             return new(CurrencyExchangeRateProviderStatus.NotFound);
@@ -70,8 +89,30 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         return new(CurrencyExchangeRateProviderStatus.Success, bPerEur / aPerEur);
     }
 
-    public async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(Currency fromCurrency, Currency toCurrency, DateTime dateStart, DateTime dateEnd)
+    public Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
+
+    Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> ICurrencyExchangeRateProvider.GetExchangeRateAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken) =>
+        GetExchangeRateRangeCoreAsync(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
+
+    private async Task<List<(DateTime Date, CurrencyExchangeRateProviderResult Result)>> GetExchangeRateRangeCoreAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime dateStart,
+        DateTime dateEnd,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var start = dateStart.Date;
         var end = dateEnd.Date;
         if (start > end) (start, end) = (end, start);
@@ -89,7 +130,7 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         if (fromEur || toEur)
         {
             var code = Normalize(fromEur ? toCurrency : fromCurrency);
-            var (failed, series) = await GetSeriesAsync(code, start, end);
+            var (failed, series) = await GetSeriesAsync(code, start, end, cancellationToken);
             if (failed)
                 return AllDates(start, end, new(CurrencyExchangeRateProviderStatus.Failed));
 
@@ -102,8 +143,8 @@ internal sealed class EcbCurrencyExchangeRateProvider(
         }
 
         // The two legs are independent, so fetch them concurrently.
-        var fromTask = GetSeriesAsync(Normalize(fromCurrency), start, end);
-        var toTask = GetSeriesAsync(Normalize(toCurrency), start, end);
+        var fromTask = GetSeriesAsync(Normalize(fromCurrency), start, end, cancellationToken);
+        var toTask = GetSeriesAsync(Normalize(toCurrency), start, end, cancellationToken);
         await Task.WhenAll(fromTask, toTask);
         var (fromFailed, fromSeries) = await fromTask;
         var (toFailed, toSeries) = await toTask;
@@ -122,9 +163,12 @@ internal sealed class EcbCurrencyExchangeRateProvider(
     private static List<(DateTime Date, CurrencyExchangeRateProviderResult Result)> AllDates(DateTime start, DateTime end, CurrencyExchangeRateProviderResult result) =>
         EnumerateDates(start, end).Select(d => (d, result)).ToList();
 
-    private async Task<(bool Failed, decimal? Value)> GetObservationAsync(string code, DateTime date)
+    private async Task<(bool Failed, decimal? Value)> GetObservationAsync(
+        string code,
+        DateTime date,
+        CancellationToken cancellationToken)
     {
-        var (failed, series) = await GetSeriesAsync(code, date, date);
+        var (failed, series) = await GetSeriesAsync(code, date, date, cancellationToken);
         if (failed) return (true, null);
         return series.TryGetValue(date.Date, out var value) ? (false, value) : (false, null);
     }
@@ -132,14 +176,17 @@ internal sealed class EcbCurrencyExchangeRateProvider(
     // Returns (Failed, date→(code per EUR)). Failed marks a transport/parse error; a 404 (unsupported
     // currency or a range with no published observations) is not a failure and yields an empty map.
     private async Task<(bool Failed, Dictionary<DateTime, decimal> Series)> GetSeriesAsync(
-        string code, DateTime start, DateTime end)
+        string code,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken)
     {
         var baseUrl = options.Value.BaseUrl.TrimEnd('/');
         var url = $"{baseUrl}/data/EXR/D.{code}.EUR.SP00.A?startPeriod={Iso(start)}&endPeriod={Iso(end)}&format=csvdata";
 
         try
         {
-            using var response = await httpClient.GetAsync(url);
+            using var response = await httpClient.GetAsync(url, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return (false, []);
 
@@ -149,8 +196,12 @@ internal sealed class EcbCurrencyExchangeRateProvider(
                 return (true, []);
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
             return (false, ParseCsv(responseContent));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (OperationCanceledException ex)
         {

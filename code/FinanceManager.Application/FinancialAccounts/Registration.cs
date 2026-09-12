@@ -52,6 +52,7 @@ internal static class Registration
                 .AddScoped<IAssetsServiceTyped, AssetsServiceCurrency>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceBond>()
                 .AddScoped<IAssetsServiceTyped, AssetsServiceInvestment>()
+                .AddScoped<IInvestmentAppreciationService, AssetsServiceInvestment>()
                 .AddScoped<IAssetsService, AssetsService>()
 
                 .AddScoped<CurrencyAccountSeeder>()

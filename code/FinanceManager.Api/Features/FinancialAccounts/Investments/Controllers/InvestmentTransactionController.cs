@@ -10,11 +10,11 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System.Text;
 
 namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 
@@ -77,11 +77,11 @@ public class InvestmentTransactionController(
 
         if (!string.IsNullOrWhiteSpace(cursor))
         {
-            if (!TryParseCursor(cursor, out var cDate, out var cId))
+            if (!InvestmentHistoryCursor.TryCreate(cursor, out var parsedCursor))
                 return BadRequest("Invalid cursor format.");
 
-            parsedCursorTradeDate = cDate;
-            parsedCursorId = cId;
+            parsedCursorTradeDate = parsedCursor.TradeDate;
+            parsedCursorId = parsedCursor.Id;
         }
 
         if (parsedCursorTradeDate.HasValue != parsedCursorId.HasValue)
@@ -110,7 +110,7 @@ public class InvestmentTransactionController(
         if (hasMore && items.Count > 0)
         {
             var last = items[^1];
-            nextCursor = FormatCursor(last.TradeDate, last.Id);
+            nextCursor = InvestmentHistoryCursor.Create(last.TradeDate, last.Id).ToString();
         }
 
         var dtos = items.Select(x => x.ToDto()).ToList();
@@ -328,43 +328,4 @@ public class InvestmentTransactionController(
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>
         assetListingId > 0 && quantity > 0 && unitPrice >= 0 && !string.IsNullOrWhiteSpace(currency) && tradeDate != default;
 
-    private static string FormatCursor(DateOnly tradeDate, long id) =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes($"{tradeDate:yyyy-MM-dd}:{id}"));
-
-    private static bool TryParseCursor(string cursor, out DateOnly tradeDate, out long id)
-    {
-        tradeDate = default;
-        id = 0;
-        if (string.IsNullOrWhiteSpace(cursor)) return false;
-
-        var raw = cursor.Trim();
-        try
-        {
-            var bytes = Convert.FromBase64String(raw);
-            var decoded = Encoding.UTF8.GetString(bytes);
-            if (TryParseDelimiter(decoded, out tradeDate, out id))
-                return true;
-        }
-        catch
-        {
-            // Fall back to plain text delimiter parsing
-        }
-
-        return TryParseDelimiter(raw, out tradeDate, out id);
-    }
-
-    private static bool TryParseDelimiter(string text, out DateOnly tradeDate, out long id)
-    {
-        tradeDate = default;
-        id = 0;
-        var parts = text.Split([':', '|', '_'], 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 2 &&
-            DateOnly.TryParse(parts[0], out tradeDate) &&
-            long.TryParse(parts[1], out id) &&
-            id > 0)
-        {
-            return true;
-        }
-        return false;
-    }
 }

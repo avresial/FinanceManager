@@ -59,6 +59,25 @@ public interface IInvestmentTransactionRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Signed-quantity holdings per account and <see cref="AssetListing"/> as of a date for the given accounts,
+    /// projected and aggregated at the database level.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Aggregated opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within
+    /// [<paramref name="startDate"/>, <paramref name="endDate"/>] for the given accounts, projected and aggregated
+    /// at the database boundary without loading out-of-range rows or full entity graphs.
+    /// </summary>
+    Task<AccountValuationInputs> GetValuationInputs(IReadOnlyCollection<int> accountIds, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bounded historical capital flow projection inputs for transactions on or before <paramref name="toDate"/>
+    /// across the given accounts, selecting only fields needed for cash flow calculations.
+    /// </summary>
+    Task<IReadOnlyList<CapitalFlowInput>> GetCapitalFlowInputs(IReadOnlyCollection<int> accountIds, DateOnly toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
     /// users, resolved in a single grouped query. Feeds maintenance jobs (e.g. the weekly price
     /// backfill) that must cover every instrument anyone holds without materialising transactions.
@@ -82,4 +101,29 @@ public interface IInvestmentTransactionRepository
         InvestmentTransactionType? type = null,
         string? search = null,
         CancellationToken cancellationToken = default);
+
+    public sealed record ValuationTradeInput(
+        int AccountId,
+        long AssetListingId,
+        DateOnly TradeDate,
+        decimal SignedQuantity);
+
+    public sealed record ValuationOpeningPosition(
+        int AccountId,
+        long AssetListingId,
+        decimal Quantity);
+
+    public sealed record AccountValuationInputs(
+        IReadOnlyList<ValuationOpeningPosition> OpeningPositions,
+        IReadOnlyList<ValuationTradeInput> InWindowTrades);
+
+    public sealed record CapitalFlowInput(
+        int AccountId,
+        DateOnly TradeDate,
+        InvestmentTransactionType Type,
+        decimal Quantity,
+        decimal UnitPrice,
+        decimal? Fee,
+        string Currency,
+        decimal? ListingPriceMultiplier);
 }

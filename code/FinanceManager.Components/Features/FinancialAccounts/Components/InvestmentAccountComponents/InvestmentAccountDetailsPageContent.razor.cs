@@ -424,7 +424,11 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         var chartRequests = await InvestmentChartRequestLoader.LoadAsync(
             () => ValuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd),
             () => ValuationHttpClient.GetHoldingsAsync(accountId, dateEnd),
-            async () => await AssetsHttpClient.GetUnrealizedGainLossPerAccount(userId, currency, dateEnd),
+            async () =>
+            {
+                var accountAppreciation = await AssetsHttpClient.GetUnrealizedGainLossForAccount(userId, accountId, currency, dateEnd);
+                return accountAppreciation is not null ? [accountAppreciation] : [];
+            },
             () => ValuationHttpClient.GetBenchmarkSeriesAsync(
                 accountId,
                 currency.Id,

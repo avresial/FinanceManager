@@ -1,6 +1,9 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -116,6 +119,39 @@ public class InvestmentAccountDetailsHttpClientTests
         }));
 
         Assert.Empty(await client.GetTransactionValuationsAsync(1, 1, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_FailedRequest_Throws()
+    {
+        var client = new AssetsHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetUnrealizedGainLossForAccount(1, 1, DefaultCurrency.USD, DateTime.UtcNow, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_UnknownAccount_ReturnsNull()
+    {
+        var client = new AssetsHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.NotFound)));
+
+        Assert.Null(await client.GetUnrealizedGainLossForAccount(1, 1, DefaultCurrency.USD, DateTime.UtcNow, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossForAccount_SuccessfulResponse_ReturnsResult()
+    {
+        var expected = new UnrealizedGainLossAccountResult(1, "Account 1", 100m, 120m, 20m, 20m, DateTime.UtcNow, 0);
+        var client = new AssetsHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(expected)
+        }));
+
+        var result = await client.GetUnrealizedGainLossForAccount(1, 1, DefaultCurrency.USD, DateTime.UtcNow, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(expected.AccountId, result.AccountId);
+        Assert.Equal(expected.CurrentValue, result.CurrentValue);
+        Assert.Equal(expected.CostBasis, result.CostBasis);
     }
 
     private static HttpClient CreateHttpClient(HttpResponseMessage response) =>

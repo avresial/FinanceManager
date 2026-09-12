@@ -62,23 +62,21 @@ internal class InvestmentValuationService(
         var result = new Dictionary<int, decimal>();
         if (accountIds.Count == 0) return result;
 
-        var transactions = await transactionRepository.GetByAccounts(accountIds, ct);
-        if (transactions.Count == 0) return result;
-
         var asOfDate = DateOnly.FromDateTime(asOf);
+        var rawHoldingsByAccount = await transactionRepository.GetHoldingsByAccountAsOf(accountIds, asOfDate, ct);
+        if (rawHoldingsByAccount.Count == 0) return result;
 
         // Net holding per (account, listing) as of the date, dropping zero net positions so fully
         // closed holdings never trigger a (wasted, potentially failing) price fetch.
         var holdingsByAccount = new Dictionary<int, Dictionary<long, decimal>>();
-        foreach (var group in transactions.Where(t => t.TradeDate <= asOfDate).GroupBy(t => t.AccountId))
+        foreach (var (accountId, holdings) in rawHoldingsByAccount)
         {
-            var perListing = group
-                .GroupBy(t => t.AssetListingId)
-                .Select(g => (ListingId: g.Key, Holding: g.Sum(t => t.SignedQuantity)))
-                .Where(x => x.Holding != 0m)
-                .ToDictionary(x => x.ListingId, x => x.Holding);
-            if (perListing.Count > 0) holdingsByAccount[group.Key] = perListing;
+            var nonZero = holdings.Where(kvp => kvp.Value != 0m).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            if (nonZero.Count > 0)
+                holdingsByAccount[accountId] = nonZero;
         }
+
+        if (holdingsByAccount.Count == 0) return result;
 
         // Price each distinct listing across all accounts once, not once per owning account.
         var prices = new Dictionary<long, decimal>();
@@ -121,37 +119,47 @@ internal class InvestmentValuationService(
         var result = new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>();
         if (accountIds.Count == 0 || start == default || end == default || end < start) return result;
 
-        var transactions = await transactionRepository.GetByAccounts(accountIds, ct);
-        if (transactions.Count == 0) return result;
-
         var startDate = start.Date;
         var endDate = end.Date;
         var startDateOnly = DateOnly.FromDateTime(startDate);
         var endDateOnly = DateOnly.FromDateTime(endDate);
 
-        var relevant = transactions.Where(t => t.TradeDate <= endDateOnly).ToList();
-        if (relevant.Count == 0) return result;
+        var inputs = await transactionRepository.GetValuationInputs(accountIds, startDateOnly, endDateOnly, ct);
+        if (inputs.OpeningPositions.Count == 0 && inputs.InWindowTrades.Count == 0) return result;
+
+        var openingByAccountListing = inputs.OpeningPositions
+            .ToDictionary(p => (p.AccountId, p.AssetListingId), p => p.Quantity);
+
+        var tradesByAccountListing = inputs.InWindowTrades
+            .GroupBy(t => (t.AccountId, t.AssetListingId))
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         // Retain each (account, listing) pair when its opening holding before the range is non-zero
         // OR it has trades in the range. Exclude positions fully closed before the window so they
         // never trigger unneeded price-series fetches.
-        var retainedTransactions = relevant
-            .GroupBy(t => (t.AccountId, t.AssetListingId))
-            .Where(group => group.Where(t => t.TradeDate < startDateOnly).Sum(t => t.SignedQuantity) != 0m
-                || group.Any(t => t.TradeDate >= startDateOnly))
-            .SelectMany(group => group)
+        var allKeys = openingByAccountListing.Keys.Union(tradesByAccountListing.Keys).ToList();
+        var retainedKeys = allKeys
+            .Where(k => (openingByAccountListing.TryGetValue(k, out var openQty) && openQty != 0m)
+                || tradesByAccountListing.ContainsKey(k))
             .ToList();
-        if (retainedTransactions.Count == 0) return result;
+        if (retainedKeys.Count == 0) return result;
 
         // One price-series fetch per distinct listing across all accounts (target currency already
         // applied). Accounts holding the same instrument share this series instead of re-fetching it.
         var priceSeries = new Dictionary<long, IReadOnlyDictionary<DateTime, decimal>>();
-        foreach (var listingId in retainedTransactions.Select(t => t.AssetListingId).Distinct())
+        foreach (var listingId in retainedKeys.Select(k => k.AssetListingId).Distinct())
             priceSeries[listingId] = await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct);
 
-        foreach (var accountGroup in retainedTransactions.GroupBy(t => t.AccountId))
+        foreach (var accountGroup in retainedKeys.GroupBy(k => k.AccountId))
         {
-            var series = BuildAccountSeries(accountGroup, startDate, endDate, startDateOnly, priceSeries);
+            var series = BuildAccountSeries(
+                accountGroup.Key,
+                accountGroup.Select(k => k.AssetListingId),
+                openingByAccountListing,
+                tradesByAccountListing,
+                startDate,
+                endDate,
+                priceSeries);
             if (series.Count > 0) result[accountGroup.Key] = series;
         }
 
@@ -169,10 +177,11 @@ internal class InvestmentValuationService(
         if (accountIds.Count == 0 || start == default || end == default || end < start)
             return result;
 
-        var transactions = await transactionRepository.GetByAccounts(accountIds, ct);
         var endDate = end.Date;
-        var capitalFlows = transactions
-            .Where(transaction => transaction.TradeDate.ToDateTime(TimeOnly.MinValue) <= endDate)
+        var endDateOnly = DateOnly.FromDateTime(endDate);
+
+        var capitalFlowInputs = await transactionRepository.GetCapitalFlowInputs(accountIds, endDateOnly, ct);
+        var capitalFlows = capitalFlowInputs
             .Select(ToCapitalFlow)
             .Where(flow => flow.Amount != 0m)
             .ToList();
@@ -192,35 +201,40 @@ internal class InvestmentValuationService(
     // Fold one account's transactions against the shared per-listing price series: carry each
     // listing's holding forward across days without a trade and value it at that day's price.
     private static Dictionary<DateTime, decimal> BuildAccountSeries(
-        IEnumerable<InvestmentTransaction> accountTransactions,
+        int accountId,
+        IEnumerable<long> listingIds,
+        IReadOnlyDictionary<(int AccountId, long AssetListingId), decimal> openingByAccountListing,
+        IReadOnlyDictionary<(int AccountId, long AssetListingId), List<IInvestmentTransactionRepository.ValuationTradeInput>> tradesByAccountListing,
         DateTime startDate,
         DateTime endDate,
-        DateOnly startDateOnly,
         IReadOnlyDictionary<long, IReadOnlyDictionary<DateTime, decimal>> priceSeries)
     {
         var result = new Dictionary<DateTime, decimal>();
-
-        var byListing = accountTransactions.GroupBy(t => t.AssetListingId).ToList();
+        var listings = listingIds.ToList();
 
         var holdings = new Dictionary<long, decimal>();
         var dailyDeltas = new Dictionary<long, Dictionary<DateTime, decimal>>();
 
-        foreach (var group in byListing)
+        foreach (var listingId in listings)
         {
-            var listingId = group.Key;
-            holdings[listingId] = group.Where(t => t.TradeDate < startDateOnly).Sum(t => t.SignedQuantity);
-            dailyDeltas[listingId] = group
-                .Where(t => t.TradeDate >= startDateOnly)
-                .GroupBy(t => t.TradeDate.ToDateTime(TimeOnly.MinValue))
-                .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity));
+            holdings[listingId] = openingByAccountListing.GetValueOrDefault((accountId, listingId), 0m);
+            if (tradesByAccountListing.TryGetValue((accountId, listingId), out var trades))
+            {
+                dailyDeltas[listingId] = trades
+                    .GroupBy(t => t.TradeDate.ToDateTime(TimeOnly.MinValue))
+                    .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity));
+            }
+            else
+            {
+                dailyDeltas[listingId] = [];
+            }
         }
 
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
             decimal dayValue = 0m;
-            foreach (var group in byListing)
+            foreach (var listingId in listings)
             {
-                var listingId = group.Key;
                 if (dailyDeltas[listingId].TryGetValue(date, out var delta))
                     holdings[listingId] += delta;
 
@@ -305,11 +319,11 @@ internal class InvestmentValuationService(
                 : null;
     }
 
-    private static InvestmentCapitalFlow ToCapitalFlow(InvestmentTransaction transaction)
+    private static InvestmentCapitalFlow ToCapitalFlow(IInvestmentTransactionRepository.CapitalFlowInput flow)
     {
-        var gross = transaction.Quantity * transaction.UnitPrice;
-        var fee = transaction.Fee ?? 0m;
-        var amount = transaction.Type switch
+        var gross = flow.Quantity * flow.UnitPrice;
+        var fee = flow.Fee ?? 0m;
+        var amount = flow.Type switch
         {
             // The new investment model has no separate deposit/transfer rows. Buy/Sell are the
             // persisted cash-impact records, while an unknown future type must not add capital.
@@ -318,13 +332,13 @@ internal class InvestmentValuationService(
             _ => 0m
         };
 
-        var currency = transaction.Currency.Trim();
+        var currency = flow.Currency.Trim();
         var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(currency, out var majorCurrency);
-        var multiplier = isMinorQuote ? transaction.AssetListing?.PriceMultiplier ?? 0.01m : 1m;
+        var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
 
         return new InvestmentCapitalFlow(
-            transaction.AccountId,
-            transaction.TradeDate.ToDateTime(TimeOnly.MinValue).Date,
+            flow.AccountId,
+            flow.TradeDate.ToDateTime(TimeOnly.MinValue).Date,
             amount * multiplier,
             isMinorQuote ? majorCurrency! : currency);
     }
@@ -347,10 +361,9 @@ internal class InvestmentValuationService(
         var startDateOnly = DateOnly.FromDateTime(startDate);
         var endDateOnly = DateOnly.FromDateTime(endDate);
 
-        var transactions = (await transactionRepository.GetByAccounts([accountId], ct))
-            .Where(t => t.TradeDate <= endDateOnly)
-            .ToList();
-        if (transactions.Count == 0) return new Dictionary<DateTime, decimal>();
+        var inputs = await transactionRepository.GetValuationInputs([accountId], startDateOnly, endDateOnly, ct);
+        if (inputs.OpeningPositions.Count == 0 && inputs.InWindowTrades.Count == 0)
+            return new Dictionary<DateTime, decimal>();
 
         var raw = assetListingId is long listingId
             ? await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct)
@@ -358,10 +371,16 @@ internal class InvestmentValuationService(
         var index = ToDailySeries(raw, startDate, endDate);
         if (index.Count == 0) return new Dictionary<DateTime, decimal>();
 
+        var relevantListingIds = inputs.OpeningPositions
+            .Select(p => p.AssetListingId)
+            .Union(inputs.InWindowTrades.Select(t => t.AssetListingId))
+            .Distinct()
+            .ToList();
+
         // Contributions are measured at the same market prices the account's own value series uses,
         // so a day's contribution equals the value that trade added to the account that day.
         var priceSeries = new Dictionary<long, Dictionary<DateTime, decimal>>();
-        foreach (var id in transactions.Select(t => t.AssetListingId).Distinct())
+        foreach (var id in relevantListingIds)
         {
             // Benchmarking against an instrument the account also holds would otherwise fetch that
             // listing's prices twice over the same range — the benchmark's own series is identical.
@@ -373,7 +392,7 @@ internal class InvestmentValuationService(
                     endDate);
         }
 
-        return BuildContributionMatchedSeries(transactions, index, priceSeries, startDate, endDate, startDateOnly);
+        return BuildContributionMatchedSeries(inputs, index, priceSeries, startDate, endDate);
     }
 
     // Both the benchmark index and instrument prices are published on their own calendars — monthly
@@ -408,15 +427,13 @@ internal class InvestmentValuationService(
     // Fold the account's cash flows into benchmark units: seed with whatever the account already held
     // when the range opened, then buy or sell units as trades move money in and out.
     private static Dictionary<DateTime, decimal> BuildContributionMatchedSeries(
-        IEnumerable<InvestmentTransaction> transactions,
+        IInvestmentTransactionRepository.AccountValuationInputs inputs,
         IReadOnlyDictionary<DateTime, decimal> index,
         IReadOnlyDictionary<long, Dictionary<DateTime, decimal>> priceSeries,
         DateTime startDate,
-        DateTime endDate,
-        DateOnly startDateOnly)
+        DateTime endDate)
     {
-        var byDate = transactions
-            .Where(t => t.TradeDate >= startDateOnly)
+        var byDate = inputs.InWindowTrades
             .GroupBy(t => t.TradeDate.ToDateTime(TimeOnly.MinValue))
             .ToDictionary(
                 g => g.Key,
@@ -424,10 +441,8 @@ internal class InvestmentValuationService(
                     .Select(l => (ListingId: l.Key, Quantity: l.Sum(t => t.SignedQuantity)))
                     .ToList());
 
-        var openingValue = transactions
-            .Where(t => t.TradeDate < startDateOnly)
-            .GroupBy(t => t.AssetListingId)
-            .Sum(g => g.Sum(t => t.SignedQuantity) * PriceOn(priceSeries, g.Key, startDate));
+        var openingValue = inputs.OpeningPositions
+            .Sum(p => p.Quantity * PriceOn(priceSeries, p.AssetListingId, startDate));
 
         var result = new Dictionary<DateTime, decimal>();
         decimal units = 0m;

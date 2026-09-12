@@ -37,6 +37,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Investment account transaction history now loads in bounded server-side pages, with filters and older-page continuation while account-wide totals remain unchanged. #748
+- Investment account details now request and calculate appreciation only for the selected owned account instead of valuing the entire portfolio. #744
 - Dashboard bond valuation now loads only referenced bond definitions once per request and reuses matching daily prices across net-worth and balance aggregates. #747
 - Currency conversions and overlapping chart date ranges now reuse resolved daily exchange rates while continuing to refresh missing values. #743
 - Historical exchange-rate range lookups now use bounded provider range requests, avoiding concurrent per-date NBP request bursts while preserving provider fallback and missing-day behavior. #728
