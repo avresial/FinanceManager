@@ -240,7 +240,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
                 Provider = MarketDataProvider.AlphaVantage,
                 Price = currentPrice,
                 Currency = "USD",
-                PriceTime = new DateTimeOffset(_nowUtc, TimeSpan.Zero),
+                PriceTime = new DateTimeOffset(MarketCalendar.LastMarketDay(_nowUtc), TimeSpan.Zero),
                 QuoteType = PriceQuoteType.EndOfDay,
                 FetchedAt = DateTimeOffset.UtcNow
             });

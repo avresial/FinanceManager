@@ -61,6 +61,16 @@ else
                         <InvestmentDayGroupCard Day="@group.Key" Transactions="@group" Currency="@_currency.ShortName"
                                                 Valuations="@_valuations" IsMobile="@_isMobile" OnEdit="ShowEdit" OnDelete="DeleteAsync" />
                     }
+
+                    @if (_historyHasMore)
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Class="my-4">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       Disabled="@_isHistoryLoading" OnClick="LoadMoreHistoryAsync">
+                                @(_isHistoryLoading ? "Loading older transactions…" : "Load older transactions")
+                            </MudButton>
+                        </MudStack>
+                    }
                 }
             </MudItem>
 

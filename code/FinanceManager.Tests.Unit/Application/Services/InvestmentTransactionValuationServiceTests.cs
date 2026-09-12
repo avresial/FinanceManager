@@ -35,6 +35,12 @@ public class InvestmentTransactionValuationServiceTests
     {
         var repo = new Mock<IInvestmentTransactionRepository>();
         repo.Setup(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(transactions);
+        repo.Setup(x => x.GetByAccountAndIds(
+                _accountId,
+                It.IsAny<IReadOnlyCollection<long>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
+                transactions.Where(transaction => ids.Contains(transaction.Id)).ToList());
         return (repo, new Mock<IInvestmentPriceProvider>(), new Mock<ICurrencyExchangeService>());
     }
 
@@ -155,5 +161,30 @@ public class InvestmentTransactionValuationServiceTests
         Assert.Equal(2, results.Count);
         price.Verify(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
         fx.Verify(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "USD"), DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RestrictsValuationsToRequestedTransactionIds()
+    {
+        var tradeDate = new DateOnly(2026, 1, 10);
+        var (repo, price, fx) = Mocks(
+            Buy(1m, 100m, "USD", tradeDate, id: 1),
+            Buy(2m, 100m, "USD", tradeDate, id: 2));
+        price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(110m);
+
+        var results = await Build(repo, price, fx).GetForAccountAsync(
+            _accountId,
+            DefaultCurrency.USD,
+            TestContext.Current.CancellationToken,
+            transactionIds: [2]);
+
+        var result = Assert.Single(results);
+        Assert.Equal(2L, result.TransactionId);
+        repo.Verify(x => x.GetByAccountAndIds(
+            _accountId,
+            It.Is<IReadOnlyCollection<long>>(ids => ids.Count == 1 && ids.Contains(2)),
+            It.IsAny<CancellationToken>()), Times.Once);
+        repo.Verify(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>()), Times.Never);
     }
 }

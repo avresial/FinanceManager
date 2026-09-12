@@ -10,6 +10,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.ValueObjects;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +45,102 @@ public class InvestmentTransactionController(
         var transactions = await transactionRepository.GetByAccount(accountId, cancellationToken);
         await RecoverMissingPricesAsync(transactions, account.UserId, cancellationToken);
         return Ok(transactions.Select(x => x.ToDto()).ToList());
+    }
+
+    /// <summary>
+    /// Gets a bounded, filtered page of investment transactions for an account, ordered newest first
+    /// with deterministic (TradeDate, Id) cursor continuation.
+    /// </summary>
+    [HttpGet("GetHistoryPage/{accountId:int}")]
+    [HttpGet("History/{accountId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentTransactionHistoryPageDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHistoryPage(
+        int accountId,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? cursor = null,
+        [FromQuery] DateOnly? cursorTradeDate = null,
+        [FromQuery] long? cursorId = null,
+        [FromQuery] DateOnly? startDate = null,
+        [FromQuery] DateOnly? endDate = null,
+        [FromQuery] InvestmentTransactionType? type = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageSize <= 0) return BadRequest("pageSize must be greater than zero.");
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        DateOnly? parsedCursorTradeDate = cursorTradeDate;
+        long? parsedCursorId = cursorId;
+
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            if (!InvestmentHistoryCursor.TryCreate(cursor, out var parsedCursor))
+                return BadRequest("Invalid cursor format.");
+
+            parsedCursorTradeDate = parsedCursor.TradeDate;
+            parsedCursorId = parsedCursor.Id;
+        }
+
+        if (parsedCursorTradeDate.HasValue != parsedCursorId.HasValue)
+            return BadRequest("cursorTradeDate and cursorId must be provided together.");
+        if (parsedCursorId is <= 0)
+            return BadRequest("cursorId must be greater than zero.");
+
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        var (items, hasMore) = await transactionRepository.GetHistoryPage(
+            accountId,
+            pageSize,
+            parsedCursorTradeDate,
+            parsedCursorId,
+            startDate,
+            endDate,
+            type,
+            search,
+            cancellationToken);
+
+        await RecoverMissingPricesAsync(items, account.UserId, cancellationToken);
+
+        string? nextCursor = null;
+        if (hasMore && items.Count > 0)
+        {
+            var last = items[^1];
+            nextCursor = InvestmentHistoryCursor.Create(last.TradeDate, last.Id).ToString();
+        }
+
+        var dtos = items.Select(x => x.ToDto()).ToList();
+        return Ok(new InvestmentTransactionHistoryPageDto(dtos, hasMore, nextCursor));
+    }
+
+    /// <summary>
+    /// Gets one as-of transaction per currently held listing. The response is small even when an
+    /// account has a large history, and supplies the metadata needed to render holding cards beside
+    /// the independently calculated quantities.
+    /// </summary>
+    [HttpGet("GetHoldingMetadata/{accountId:int}/{date:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHoldingMetadata(int accountId, DateTime date, CancellationToken cancellationToken = default)
+    {
+        var account = await accountRepository.Get(accountId);
+        if (account is null) return NotFound();
+        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+
+        var asOf = DateOnly.FromDateTime(date);
+        var holdings = await transactionRepository.GetHoldingsAsOf([accountId], asOf, cancellationToken);
+        var latestTransactions = await transactionRepository.GetLatestByListingAsOf(accountId, asOf, cancellationToken);
+        var metadata = latestTransactions
+            .Where(transaction => holdings.TryGetValue(transaction.AssetListingId, out var quantity) && quantity != 0m)
+            .ToList();
+
+        await RecoverMissingPricesAsync(metadata, account.UserId, cancellationToken);
+        return Ok(metadata.Select(x => x.ToDto()).ToList());
     }
 
     private async Task RecoverMissingPricesAsync(
@@ -230,4 +327,5 @@ public class InvestmentTransactionController(
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>
         assetListingId > 0 && quantity > 0 && unitPrice >= 0 && !string.IsNullOrWhiteSpace(currency) && tradeDate != default;
+
 }

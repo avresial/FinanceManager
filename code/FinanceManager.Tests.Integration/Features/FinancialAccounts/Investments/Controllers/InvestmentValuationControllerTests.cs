@@ -215,7 +215,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
 
-        var valuations = await client.GetTransactionValuationsAsync(_testAccountId, _usdCurrencyId);
+        var valuations = await client.GetTransactionValuationsAsync(
+            _testAccountId, _usdCurrencyId, cancellationToken: TestContext.Current.CancellationToken);
 
         // Only the Buy (5 @ 90 USD) is valued; latest quote is 100 USD.
         var valuation = Assert.Single(valuations);
@@ -227,6 +228,27 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Assert.Equal(100m, valuation.CurrentPrice);
         Assert.Equal(500m, valuation.CurrentValuation); // 5 * 100
         Assert.Equal(50m, valuation.GainLoss);
+    }
+
+    [Fact]
+    public async Task GetTransactionValuations_CanRestrictRowsToVisiblePage()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var buyId = await _testDatabase!.Context.InvestmentTransactions
+            .Where(x => x.AccountId == _testAccountId && x.Type == InvestmentTransactionType.Buy)
+            .Select(x => x.Id)
+            .SingleAsync(TestContext.Current.CancellationToken);
+        var client = new InvestmentValuationHttpClient(Client);
+
+        var valuations = await client.GetTransactionValuationsAsync(
+            _testAccountId,
+            _usdCurrencyId,
+            [buyId],
+            TestContext.Current.CancellationToken);
+
+        var valuation = Assert.Single(valuations);
+        Assert.Equal(buyId, valuation.TransactionId);
     }
 
     [Fact]
