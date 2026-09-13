@@ -40,7 +40,7 @@
             }
         </div>
 
-        <MudGrid Spacing="2">
+        <MudGrid Spacing="2" Class="mx-0 w-100">
             <MudItem xs="12" md="6">
                 <MudTextField T="string" @bind-Value="_form.Title" Label="Alert name" Required="true"
                               Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
@@ -54,7 +54,7 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="6" md="3">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="AlertComparisonOperator" @bind-Value="_form.ComparisonOperator" Label="Comparison"
                            Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var comparison in Enum.GetValues<AlertComparisonOperator>())
@@ -63,7 +63,7 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="6" md="3">
+            <MudItem xs="12" sm="6" md="3">
                 <MudNumericField T="decimal" @bind-Value="_form.Threshold" Label="Threshold"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
                                  AdornmentText="value" />
@@ -151,10 +151,17 @@
                 <MudTd DataLabel="Observed">
                     @if (_outcomes.TryGetValue(context.Id, out var outcome))
                     {
-                        <MudText Typo="Typo.body2">@outcome.CurrentValue.ToString("N2")</MudText>
-                        @if (outcome.IsTriggered)
+                        @if (outcome.Status == AlertTriggerStatus.Error)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Warning">@outcome.Message</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Error">Unable to evaluate</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">@outcome.CurrentValue.ToString("N2")</MudText>
+                            @if (outcome.IsTriggered)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning">@outcome.Message</MudText>
+                            }
                         }
                     }
                     else if (context.LastTriggeredValue is decimal value)

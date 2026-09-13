@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
 
@@ -8,6 +9,7 @@ public class AlertEvaluationSnapshot
     public IReadOnlyList<CurrencyAccount> Accounts { get; init; } = [];
     public IReadOnlyList<CurrencyAccountEntry> RecentEntries { get; init; } = [];
     public IReadOnlyList<RecurringTransactionResult> Subscriptions { get; init; } = [];
+    public IReadOnlyDictionary<Guid, FinancialAlertEvaluationData> AllTimeEvaluationData { get; init; } = new Dictionary<Guid, FinancialAlertEvaluationData>();
     public DateTime EvaluationDate { get; init; } = DateTime.UtcNow;
 
     public AlertEvaluationSnapshot()

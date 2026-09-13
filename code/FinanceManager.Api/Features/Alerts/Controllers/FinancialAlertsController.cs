@@ -117,6 +117,11 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         if (command is null)
             return "Alert payload is required.";
 
+        if (!Enum.IsDefined(command.AlertType)
+            || !Enum.IsDefined(command.ComparisonOperator)
+            || !Enum.IsDefined(command.EvaluationPeriod))
+            return "Alert enum values are invalid.";
+
         if (string.IsNullOrWhiteSpace(command.Title) || command.Title.Trim().Length > 200)
             return "Title is required and must be at most 200 characters.";
 
@@ -133,6 +138,11 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     {
         if (command is null)
             return "Alert payload is required.";
+
+        if (!Enum.IsDefined(command.AlertType)
+            || !Enum.IsDefined(command.ComparisonOperator)
+            || !Enum.IsDefined(command.EvaluationPeriod))
+            return "Alert enum values are invalid.";
 
         if (string.IsNullOrWhiteSpace(command.Title) || command.Title.Trim().Length > 200)
             return "Title is required and must be at most 200 characters.";

@@ -8,7 +8,7 @@ public record AlertEvaluationOutcome(
     AlertType AlertType,
     AlertTriggerStatus Status,
     bool IsTriggered,
-    bool IsNewlyTriggered,
+    DateTime? TriggeredAt,
     bool IsSuppressed,
     DeDuplicationReason DeDuplicationReason,
     decimal CurrentValue,

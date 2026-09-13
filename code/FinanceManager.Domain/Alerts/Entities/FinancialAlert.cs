@@ -62,6 +62,25 @@ public class FinancialAlert
         CooldownPeriod = cooldownPeriod;
     }
 
+    public static FinancialAlert FromCommand(int userId, CreateFinancialAlert command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        return new FinancialAlert(
+            userId,
+            command.Title,
+            command.AlertType,
+            command.ComparisonOperator,
+            command.Threshold,
+            command.EvaluationPeriod,
+            command.AccountId,
+            command.LabelId,
+            command.LabelName,
+            command.MerchantName,
+            command.SubscriptionId,
+            command.CooldownPeriod);
+    }
+
     public void UpdateFrom(UpdateFinancialAlert command)
     {
         Title = command.Title;
@@ -75,8 +94,7 @@ public class FinancialAlert
         MerchantName = command.MerchantName;
         SubscriptionId = command.SubscriptionId;
         CooldownPeriod = command.CooldownPeriod;
-        if (command.AlertType is { } alertType)
-            AlertType = alertType;
+        AlertType = command.AlertType;
         UpdatedAt = DateTime.UtcNow;
     }
 

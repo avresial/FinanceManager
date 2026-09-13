@@ -1,5 +1,8 @@
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +67,66 @@ public sealed class FinancialAlertRepositoryTests
         Assert.Equal("After", persisted!.Title);
         Assert.Equal(AlertTriggerStatus.Triggered, persisted.LastStatus);
         Assert.Equal(2500m, persisted.LastTriggeredValue);
+    }
+
+    [Fact]
+    public async Task GetAllTimeEvaluationData_AggregatesSpendingAndSelectsLargestTransaction()
+    {
+        await using var context = CreateContext();
+        var dining = new FinancialLabel { Id = 5, Name = "Dining" };
+        context.FinancialLabels.Add(dining);
+        context.Accounts.Add(new FinancialAccountBaseDto
+        {
+            AccountId = 1,
+            UserId = 1,
+            Name = "Cash",
+            AccountType = AccountType.Currency,
+            AccountLabel = AccountLabel.Cash
+        });
+        context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(1, 1, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), 400m, -400m)
+            {
+                Labels = [dining]
+            },
+            new CurrencyAccountEntry(1, 2, new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc), 3300m, -2900m)
+            {
+                Labels = [dining]
+            });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var categoryAlert = new FinancialAlert(
+            1,
+            "Dining total",
+            AlertType.CategorySpending,
+            AlertComparisonOperator.GreaterThan,
+            1000m,
+            evaluationPeriod: AlertEvaluationPeriod.AllTime,
+            labelName: "dining");
+        var largeTransactionAlert = new FinancialAlert(
+            1,
+            "Large purchase",
+            AlertType.LargeTransaction,
+            AlertComparisonOperator.GreaterThan,
+            2000m,
+            evaluationPeriod: AlertEvaluationPeriod.AllTime)
+        {
+            CreatedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc)
+        };
+
+        var result = await new FinancialAlertRepository(context).GetAllTimeEvaluationData(
+            1,
+            [categoryAlert, largeTransactionAlert],
+            new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
+            TestContext.Current.CancellationToken);
+
+        var categoryData = result[categoryAlert.Id];
+        Assert.Equal(3300m, categoryData.TotalSpend);
+        Assert.Equal(2, categoryData.TransactionCount);
+
+        var largeData = result[largeTransactionAlert.Id];
+        Assert.Equal(1, largeData.TransactionCount);
+        Assert.Equal(2, largeData.LargestTransaction!.EntryId);
+        Assert.Equal(2900m, Math.Abs(largeData.LargestTransaction.ValueChange));
     }
 
     private static FinancialAlert CreateAlert(int userId, string title) =>

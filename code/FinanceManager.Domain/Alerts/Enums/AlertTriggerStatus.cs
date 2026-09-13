@@ -4,5 +4,6 @@ public enum AlertTriggerStatus
 {
     Healthy = 1,
     Triggered = 2,
-    Disabled = 3
+    Disabled = 3,
+    Error = 4
 }

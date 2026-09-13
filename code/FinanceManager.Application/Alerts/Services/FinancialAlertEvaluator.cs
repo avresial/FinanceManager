@@ -1,6 +1,7 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using System.Globalization;
@@ -24,7 +25,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 alert.AlertType,
                 AlertTriggerStatus.Disabled,
                 IsTriggered: false,
-                IsNewlyTriggered: false,
+                TriggeredAt: null,
                 IsSuppressed: true,
                 DeDuplicationReason.AlertDisabled,
                 CurrentValue: 0m,
@@ -56,7 +57,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     alert.AlertType,
                     AlertTriggerStatus.Healthy,
                     IsTriggered: false,
-                    IsNewlyTriggered: false,
+                    TriggeredAt: null,
                     IsSuppressed: false,
                     DeDuplicationReason.None,
                     rawOutcome.ObservedValue,
@@ -77,7 +78,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     alert.AlertType,
                     AlertTriggerStatus.Triggered,
                     IsTriggered: true,
-                    IsNewlyTriggered: false,
+                    TriggeredAt: null,
                     IsSuppressed: true,
                     DeDuplicationReason.UnchangedCondition,
                     rawOutcome.ObservedValue,
@@ -97,7 +98,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     alert.AlertType,
                     AlertTriggerStatus.Triggered,
                     IsTriggered: true,
-                    IsNewlyTriggered: false,
+                    TriggeredAt: null,
                     IsSuppressed: true,
                     DeDuplicationReason.CooldownActive,
                     rawOutcome.ObservedValue,
@@ -116,7 +117,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 alert.AlertType,
                 AlertTriggerStatus.Triggered,
                 IsTriggered: true,
-                IsNewlyTriggered: true,
+                TriggeredAt: evaluationTime,
                 IsSuppressed: false,
                 DeDuplicationReason.None,
                 rawOutcome.ObservedValue,
@@ -133,9 +134,9 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 alert.Id,
                 alert.Title,
                 alert.AlertType,
-                AlertTriggerStatus.Healthy,
+                AlertTriggerStatus.Error,
                 IsTriggered: false,
-                IsNewlyTriggered: false,
+                TriggeredAt: null,
                 IsSuppressed: false,
                 DeDuplicationReason.None,
                 CurrentValue: 0m,
@@ -240,24 +241,35 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         var inv = CultureInfo.InvariantCulture;
         var (startDate, endDate) = GetPeriodRange(alert.EvaluationPeriod, snapshot.EvaluationDate);
         var periodKey = FormatPeriodKey(alert.EvaluationPeriod, startDate, endDate);
-        var allEntries = snapshot.GetAllEntries();
+        decimal totalSpend;
+        int transactionCount;
+        if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
+            && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
+        {
+            totalSpend = allTimeData.TotalSpend;
+            transactionCount = allTimeData.TransactionCount;
+        }
+        else
+        {
+            var qualifyingEntries = snapshot.GetAllEntries()
+                .Where(e => e.PostingDate >= startDate && e.PostingDate <= endDate)
+                .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
+                .Where(e => e.ValueChange < 0)
+                .Where(e =>
+                {
+                    if (e.Labels is null || e.Labels.Count == 0) return false;
+                    if (alert.LabelId is int targetId)
+                        return e.Labels.Any(l => l.Id == targetId);
+                    if (!string.IsNullOrWhiteSpace(alert.LabelName))
+                        return e.Labels.Any(l => string.Equals(l.Name, alert.LabelName, StringComparison.OrdinalIgnoreCase));
+                    return true;
+                })
+                .ToList();
 
-        var qualifyingEntries = allEntries
-            .Where(e => e.PostingDate >= startDate && e.PostingDate <= endDate)
-            .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
-            .Where(e => e.ValueChange < 0)
-            .Where(e =>
-            {
-                if (e.Labels is null || e.Labels.Count == 0) return false;
-                if (alert.LabelId is int targetId)
-                    return e.Labels.Any(l => l.Id == targetId);
-                if (!string.IsNullOrWhiteSpace(alert.LabelName))
-                    return e.Labels.Any(l => string.Equals(l.Name, alert.LabelName, StringComparison.OrdinalIgnoreCase));
-                return true;
-            })
-            .ToList();
+            totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
+            transactionCount = qualifyingEntries.Count;
+        }
 
-        var totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
         var labelKey = alert.LabelId?.ToString(inv) ?? alert.LabelName ?? "All";
         var conditionMet = MatchesComparison(totalSpend, alert.ComparisonOperator, alert.Threshold);
 
@@ -269,7 +281,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             ["Label"] = labelKey,
             ["Period"] = periodKey,
             ["TotalSpend"] = totalSpend.ToString("F2", inv),
-            ["TransactionCount"] = qualifyingEntries.Count.ToString(inv)
+            ["TransactionCount"] = transactionCount.ToString(inv)
         };
 
         return new RawConditionResult(conditionMet, totalSpend, fingerprint, message, context);
@@ -280,24 +292,35 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         var inv = CultureInfo.InvariantCulture;
         var (startDate, endDate) = GetPeriodRange(alert.EvaluationPeriod, snapshot.EvaluationDate);
         var periodKey = FormatPeriodKey(alert.EvaluationPeriod, startDate, endDate);
-        var allEntries = snapshot.GetAllEntries();
         var merchantTarget = (alert.MerchantName ?? string.Empty).Trim();
+        decimal totalSpend;
+        int transactionCount;
+        if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
+            && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
+        {
+            totalSpend = allTimeData.TotalSpend;
+            transactionCount = allTimeData.TransactionCount;
+        }
+        else
+        {
+            var qualifyingEntries = snapshot.GetAllEntries()
+                .Where(e => e.PostingDate >= startDate && e.PostingDate <= endDate)
+                .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
+                .Where(e => e.ValueChange < 0)
+                .Where(e =>
+                {
+                    if (string.IsNullOrWhiteSpace(merchantTarget)) return true;
+                    var contractor = e.ContractorDetails ?? string.Empty;
+                    var desc = e.Description ?? string.Empty;
+                    return contractor.Contains(merchantTarget, StringComparison.OrdinalIgnoreCase)
+                        || desc.Contains(merchantTarget, StringComparison.OrdinalIgnoreCase);
+                })
+                .ToList();
 
-        var qualifyingEntries = allEntries
-            .Where(e => e.PostingDate >= startDate && e.PostingDate <= endDate)
-            .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
-            .Where(e => e.ValueChange < 0)
-            .Where(e =>
-            {
-                if (string.IsNullOrWhiteSpace(merchantTarget)) return true;
-                var contractor = e.ContractorDetails ?? string.Empty;
-                var desc = e.Description ?? string.Empty;
-                return contractor.Contains(merchantTarget, StringComparison.OrdinalIgnoreCase)
-                    || desc.Contains(merchantTarget, StringComparison.OrdinalIgnoreCase);
-            })
-            .ToList();
+            totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
+            transactionCount = qualifyingEntries.Count;
+        }
 
-        var totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
         var conditionMet = MatchesComparison(totalSpend, alert.ComparisonOperator, alert.Threshold);
 
         var fingerprint = $"MerchantSpending:Merchant={merchantTarget.ToLowerInvariant()}:Period={periodKey}:Spend={totalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
@@ -308,7 +331,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             ["Merchant"] = merchantTarget,
             ["Period"] = periodKey,
             ["TotalSpend"] = totalSpend.ToString("F2", inv),
-            ["TransactionCount"] = qualifyingEntries.Count.ToString(inv)
+            ["TransactionCount"] = transactionCount.ToString(inv)
         };
 
         return new RawConditionResult(conditionMet, totalSpend, fingerprint, message, context);
@@ -318,7 +341,6 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
     {
         var inv = CultureInfo.InvariantCulture;
         var (startDate, endDate) = GetPeriodRange(alert.EvaluationPeriod, snapshot.EvaluationDate);
-        var allEntries = snapshot.GetAllEntries();
 
         // Historical import protection: for AllTime alerts, do not fire on transactions posted before alert creation
         var effectiveStart = startDate;
@@ -327,6 +349,33 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             effectiveStart = alert.CreatedAt.Date;
         }
 
+        if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
+            && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
+        {
+            if (allTimeData.LargestTransaction is not CurrencyAccountEntry largestTransaction)
+            {
+                var noMatchFingerprint = $"LargeTransaction:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+                var noMatchMessage = $"No transaction violated threshold {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)}";
+                return new RawConditionResult(false, 0m, noMatchFingerprint, noMatchMessage, new Dictionary<string, string>());
+            }
+
+            var largestAmount = Math.Abs(largestTransaction.ValueChange);
+            var fingerprint = $"LargeTransaction:Count={allTimeData.TransactionCount}:Top={largestTransaction.AccountId}:{largestTransaction.EntryId}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+            var message = $"Large transaction of {largestAmount.ToString("N2", inv)} detected on {largestTransaction.PostingDate:yyyy-MM-dd} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+            var context = new Dictionary<string, string>
+            {
+                ["TriggeringAccountId"] = largestTransaction.AccountId.ToString(inv),
+                ["TriggeringEntryId"] = largestTransaction.EntryId.ToString(inv),
+                ["Amount"] = largestAmount.ToString("F2", inv),
+                ["PostingDate"] = largestTransaction.PostingDate.ToString("yyyy-MM-dd"),
+                ["ContractorDetails"] = largestTransaction.ContractorDetails ?? string.Empty,
+                ["Description"] = largestTransaction.Description
+            };
+
+            return new RawConditionResult(true, largestAmount, fingerprint, message, context);
+        }
+
+        var allEntries = snapshot.GetAllEntries();
         var qualifyingEntries = allEntries
             .Where(e => e.PostingDate >= effectiveStart && e.PostingDate <= endDate)
             .Where(e => alert.AccountId is not int accId || e.AccountId == accId)

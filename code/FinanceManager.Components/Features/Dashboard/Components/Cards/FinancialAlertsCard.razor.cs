@@ -1,6 +1,7 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Domain.Alerts.Dtos;
+using FinanceManager.Domain.Alerts.Enums;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,12 @@ public partial class FinancialAlertsCard
         try
         {
             var outcomes = await FinancialAlertsHttpClient.EvaluateAsync();
-            _triggered = outcomes.Where(x => x.IsTriggered).OrderByDescending(x => x.IsNewlyTriggered).ThenBy(x => x.AlertTitle).ToList();
+            _hasError = outcomes.Any(x => x.Status == AlertTriggerStatus.Error);
+            _triggered = outcomes
+                .Where(x => x.IsTriggered)
+                .OrderByDescending(x => x.TriggeredAt)
+                .ThenBy(x => x.AlertTitle)
+                .ToList();
             _alerts = await FinancialAlertsHttpClient.GetAsync();
         }
         catch (Exception ex)
