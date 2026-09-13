@@ -104,7 +104,11 @@ public class InvestmentValuationController(
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<InvestmentTransactionValuationDto>))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetTransactionValuations(int accountId, int currencyId, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetTransactionValuations(
+        int accountId,
+        int currencyId,
+        [FromQuery] long[]? transactionIds = null,
+        CancellationToken cancellationToken = default)
     {
         var account = await accountRepository.Get(accountId);
         if (account is null) return NotFound();
@@ -113,7 +117,8 @@ public class InvestmentValuationController(
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var valuations = await transactionValuationService.GetForAccountAsync(accountId, currency, cancellationToken);
+        var valuations = await transactionValuationService.GetForAccountAsync(
+            accountId, currency, cancellationToken, transactionIds);
         return Ok(valuations);
     }
 }

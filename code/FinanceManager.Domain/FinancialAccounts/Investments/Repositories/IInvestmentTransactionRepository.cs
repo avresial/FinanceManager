@@ -44,6 +44,21 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the latest transaction on or before a date for each listing held by an account, with
+    /// listing and asset metadata eagerly loaded for holding-card rendering.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets only the requested transactions belonging to an account, with the listing and asset
+    /// metadata required for valuation. The account predicate is applied before materialisation.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
+        int accountId,
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Signed-quantity holdings per account and <see cref="AssetListing"/> as of a date for the given accounts,
     /// projected and aggregated at the database level.
     /// </summary>
@@ -68,6 +83,24 @@ public interface IInvestmentTransactionRepository
     /// backfill) that must cover every instrument anyone holds without materialising transactions.
     /// </summary>
     Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a bounded, deterministic page of investment transactions for an account, ordered by
+    /// <see cref="InvestmentTransaction.TradeDate"/> descending then <see cref="InvestmentTransaction.Id"/> descending.
+    /// Supports cursor continuation using (<paramref name="cursorTradeDate"/>, <paramref name="cursorId"/>)
+    /// and optional date range, transaction type, and text search filters applied at the database level.
+    /// Returns at most <paramref name="pageSize"/> items along with a boolean indicating whether more items exist.
+    /// </summary>
+    Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
+        int accountId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default);
 
     public sealed record ValuationTradeInput(
         int AccountId,

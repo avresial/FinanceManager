@@ -2,6 +2,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared;
+using System.Diagnostics;
 
 namespace FinanceManager.Tests.Unit.Domain.Entities.Bonds;
 
@@ -366,5 +367,196 @@ public class BondAccountTests
 
         Assert.Equal(3, result.Count);
         Assert.All(result.Values, value => Assert.Equal(15m, value));
+    }
+
+    [Fact]
+    public void GetDailyPrice_FiveYearHistory_MatchesReferenceCalculation()
+    {
+        var postingDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var start = DateOnly.FromDateTime(postingDate);
+        var end = DateOnly.FromDateTime(postingDate.AddYears(5));
+
+        var account = new BondAccount(1, 1, "Test Account", AccountLabel.Other);
+        account.Add(new BondAccountEntry(1, 1, postingDate, 0, 1000m, 1));
+        account.Add(new BondAccountEntry(1, 2, postingDate.AddYears(1), 0, 500m, 1));
+        account.Add(new BondAccountEntry(1, 3, postingDate.AddYears(2), 0, -500m, 1));
+        account.Add(new BondAccountEntry(1, 4, postingDate.AddYears(3).AddDays(100), 0, 200m, 1));
+
+        var method1 = new BondCalculationMethod
+        {
+            Id = 1,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2022-01-01",
+            Rate = 0.0365m
+        };
+        var method2 = new BondCalculationMethod
+        {
+            Id = 2,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2026-01-01",
+            Rate = 0.05m
+        };
+
+        var bondDetails = new BondDetails(
+            "Test Bond",
+            "Issuer",
+            start,
+            end.AddYears(1),
+            [method1, method2],
+            unitValue: 1m)
+        { Id = 1 };
+
+        var result = account.GetDailyPrice(start, end, [bondDetails]);
+        var reference = GetDailyPriceReference(account, start, end, [bondDetails]);
+
+        AssertDailyPriceEqual(reference, result);
+    }
+
+    [Fact]
+    public void GetDailyPrice_ComplexScenario_MatchesReferenceCalculation()
+    {
+        var baseDate = new DateTime(2023, 3, 10, 0, 0, 0, DateTimeKind.Utc);
+        var start = DateOnly.FromDateTime(baseDate.AddDays(-18));
+        var end = DateOnly.FromDateTime(baseDate.AddDays(120));
+
+        var account = new BondAccount(1, 1, "Test Account", AccountLabel.Other);
+        account.Add(new BondAccountEntry(1, 1, baseDate, 0, 1000m, 1));
+        account.Add(new BondAccountEntry(1, 2, baseDate.AddHours(15), 0, 250m, 1));
+        account.Add(new BondAccountEntry(1, 3, baseDate.AddDays(30), 0, 100m, 1));
+        account.Add(new BondAccountEntry(1, 4, baseDate.AddDays(30), 0, -100m, 1));
+        account.Add(new BondAccountEntry(1, 5, baseDate.AddDays(44), 0, 300m, 1));
+        account.Add(new BondAccountEntry(1, 8, baseDate.AddDays(115), 0, -1550m, 1));
+        account.Add(new BondAccountEntry(1, 6, baseDate.AddDays(10), 0, 700m, 2));
+        account.Add(new BondAccountEntry(1, 7, baseDate.AddDays(80), 0, -700m, 2));
+
+        var carriedEntry = new BondAccountEntry(1, 9, baseDate.AddDays(-13), 150m, 150m, 3);
+        account.NextOlderEntries[3] = carriedEntry;
+
+        var method1 = new BondCalculationMethod
+        {
+            Id = 1,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2023-05-01",
+            Rate = 0.0365m
+        };
+        var method2 = new BondCalculationMethod
+        {
+            Id = 2,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2031-01-01",
+            Rate = 0.05m
+        };
+        var method3 = new BondCalculationMethod
+        {
+            Id = 3,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2023-06-01",
+            Rate = 0.0365m
+        };
+        var method4 = new BondCalculationMethod
+        {
+            Id = 4,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2023-04-15",
+            Rate = 0.0365m
+        };
+
+        var bond1 = new BondDetails("Bond 1", "Issuer A", start, end.AddYears(1), [method1, method2], unitValue: 1m) { Id = 1 };
+        var bond2 = new BondDetails("Bond 2", "Issuer B", start, end.AddYears(1), [method3], unitValue: 1m) { Id = 2 };
+        var bond3 = new BondDetails("Bond 3", "Issuer C", start, end.AddYears(1), [method4], unitValue: 1m) { Id = 3 };
+
+        var result = account.GetDailyPrice(start, end, [bond1, bond2, bond3]);
+        var reference = GetDailyPriceReference(account, start, end, [bond1, bond2, bond3]);
+
+        AssertDailyPriceEqual(reference, result);
+
+        Assert.Equal(128, result.Count);
+        Assert.Equal(150.06m, result[DateOnly.FromDateTime(baseDate.AddDays(-9))]);
+        Assert.DoesNotContain(DateOnly.FromDateTime(baseDate.AddDays(-18)), result.Keys);
+        Assert.Contains(DateOnly.FromDateTime(baseDate.AddDays(-13)), result.Keys);
+        Assert.DoesNotContain(DateOnly.FromDateTime(baseDate.AddDays(115)), result.Keys);
+    }
+
+    [Theory]
+    [InlineData(1, 367, 1000)]
+    [InlineData(5, 1828, 1500)]
+    [InlineData(10, 3654, 2500)]
+    public void GetDailyPrice_LongHistories_CompleteWithinBudget(int years, int expectedDays, int budgetMs)
+    {
+        var postingDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var start = DateOnly.FromDateTime(postingDate);
+        var end = DateOnly.FromDateTime(postingDate.AddYears(years));
+
+        var account = new BondAccount(1, 1, "Test Account", AccountLabel.Other);
+        account.Add(new BondAccountEntry(1, 1, postingDate, 0, 1000m, 1));
+
+        var calculationMethod = new BondCalculationMethod
+        {
+            Id = 1,
+            DateOperator = DateOperator.UntilDate,
+            DateValue = "2031-01-01",
+            Rate = 0.0365m
+        };
+
+        var bondDetails = new BondDetails(
+            "Test Bond",
+            "Issuer",
+            start,
+            end.AddYears(1),
+            [calculationMethod],
+            unitValue: 1m)
+        { Id = 1 };
+
+        var stopwatch = Stopwatch.StartNew();
+        var result = account.GetDailyPrice(start, end, [bondDetails]);
+        stopwatch.Stop();
+
+        Assert.Equal(expectedDays, result.Count);
+        Assert.InRange(stopwatch.ElapsedMilliseconds, 0, budgetMs);
+    }
+
+    private static void AssertDailyPriceEqual(Dictionary<DateOnly, decimal> expected, Dictionary<DateOnly, decimal> actual)
+    {
+        var expectedKeys = expected.Keys.ToList();
+        var actualKeys = actual.Keys.ToList();
+
+        Assert.True(
+            expectedKeys.SequenceEqual(actualKeys),
+            $"Expected keys [{string.Join(", ", expectedKeys.Select(k => k.ToString("yyyy-MM-dd")))}] but got [{string.Join(", ", actualKeys.Select(k => k.ToString("yyyy-MM-dd")))}].");
+
+        foreach (var key in expectedKeys)
+        {
+            Assert.True(actual.TryGetValue(key, out var actualValue), $"Missing key {key:yyyy-MM-dd}.");
+            Assert.True(actualValue == expected[key], $"Value mismatch on {key:yyyy-MM-dd}: expected {expected[key]}, got {actualValue}.");
+        }
+    }
+
+    private static Dictionary<DateOnly, decimal> GetDailyPriceReference(BondAccount account, DateOnly start, DateOnly end, List<BondDetails> bondDetails)
+    {
+        var result = new Dictionary<DateOnly, decimal>();
+        if (account.Entries is null || start > end) return result;
+
+        var detailsById = bondDetails.ToDictionary(x => x.Id);
+        var detailsIds = account.Entries.Select(e => e.BondDetailsId)
+            .Concat(account.NextOlderEntries.Keys)
+            .Distinct()
+            .ToList();
+
+        for (var date = start; date <= end; date = date.AddDays(1))
+        {
+            decimal total = 0;
+            foreach (var detailId in detailsIds)
+            {
+                var currentEntry = account.GetThisOrNextOlder(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), detailId);
+                if (currentEntry is null) continue;
+
+                total += currentEntry.GetPriceAt(date, detailsById[detailId]);
+            }
+
+            if (total != 0)
+                result[date] = total;
+        }
+
+        return result;
     }
 }
