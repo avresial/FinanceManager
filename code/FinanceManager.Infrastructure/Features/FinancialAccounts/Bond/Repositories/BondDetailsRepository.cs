@@ -32,6 +32,21 @@ internal class BondDetailsRepository(AppDbContext context) : IBondDetailsReposit
     public async Task<BondDetails?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         => await context.Bonds.Include(b => b.CalculationMethods).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<BondDetails>> GetByIdsAsync(
+        IReadOnlyCollection<int> ids,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        return await context.Bonds
+            .AsNoTracking()
+            .Include(b => b.CalculationMethods)
+            .Include(b => b.Currency)
+            .Where(b => ids.Contains(b.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyDictionary<int, string>> GetNamesByIdsAsync(
         IReadOnlyCollection<int> ids,
         CancellationToken cancellationToken = default)

@@ -10,6 +10,11 @@ public interface IBondDetailsRepository
     /// the dashboard's existing fallback description for deleted bond details.
     /// </summary>
     Task<IReadOnlyDictionary<int, string>> GetNamesByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Resolves full, detached (no-tracking) bond definitions for a set of ids in one query. Missing ids are
+    /// omitted so callers can retain their existing fallback for deleted bond details.
+    /// </summary>
+    Task<IReadOnlyList<BondDetails>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken = default);
     IAsyncEnumerable<BondDetails> GetAllAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<BondDetails>> GetByIssuerAsync(string issuer, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetIssuersAsync(CancellationToken cancellationToken = default);

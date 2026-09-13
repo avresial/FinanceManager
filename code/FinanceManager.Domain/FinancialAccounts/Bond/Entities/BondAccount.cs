@@ -145,7 +145,16 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         }
     }
 
-    public Dictionary<DateOnly, decimal> GetDailyPrice(DateOnly start, DateOnly end, List<BondDetails> bondDetails)
+    /// <summary>
+    /// Prices the account per day. An optional <paramref name="priceAt"/> callback replaces the
+    /// default per-entry pricing (<see cref="BondAccountEntry.GetPriceAt(DateOnly, BondDetails)"/>) so
+    /// callers can reuse cached prices; the existing missing-details behaviour is unchanged.
+    /// </summary>
+    public Dictionary<DateOnly, decimal> GetDailyPrice(
+        DateOnly start,
+        DateOnly end,
+        List<BondDetails> bondDetails,
+        Func<BondAccountEntry, BondDetails, DateOnly, decimal>? priceAt = null)
     {
         var result = new Dictionary<DateOnly, decimal>();
         if (Entries is null || start > end) return result;
@@ -183,10 +192,10 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
             var details = detailsById[detailId];
             var bondEntries = entriesByBond.GetValueOrDefault(detailId);
 
-            AddBondEntryValues(totals, start, end, bondEntries, details);
+            AddBondEntryValues(totals, start, end, bondEntries, details, priceAt);
 
             NextOlderEntries.TryGetValue(detailId, out var carriedEntry);
-            AddCarriedEntryValues(totals, start, end, bondEntries, details, carriedEntry);
+            AddCarriedEntryValues(totals, start, end, bondEntries, details, carriedEntry, priceAt);
         }
 
         for (var date = start; date <= end; date = date.AddDays(1))
@@ -200,7 +209,9 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
 
     private static void AddBondEntryValues(
         Dictionary<DateOnly, decimal> totals, DateOnly start, DateOnly end,
-        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries, BondDetails details)
+        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries,
+        BondDetails details,
+        Func<BondAccountEntry, BondDetails, DateOnly, decimal>? priceAt)
     {
         if (bondEntries is null || bondEntries.Count == 0) return;
 
@@ -216,10 +227,13 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
             var windowEnd = intervalEnd < end ? intervalEnd : end;
             if (windowStart > windowEnd) continue;
 
-            var series = entry.GetPrice(windowEnd, details);
+            var series = priceAt is null ? entry.GetPrice(windowEnd, details) : null;
             for (var date = windowStart; date <= windowEnd; date = date.AddDays(1))
             {
-                if (series.TryGetValue(date, out var value))
+                var value = priceAt is null
+                    ? series!.GetValueOrDefault(date)
+                    : priceAt(entry, details, date);
+                if (value != 0)
                     totals[date] = totals.GetValueOrDefault(date) + value;
             }
         }
@@ -227,7 +241,10 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
 
     private static void AddCarriedEntryValues(
         Dictionary<DateOnly, decimal> totals, DateOnly start, DateOnly end,
-        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries, BondDetails details, BondAccountEntry? carriedEntry)
+        List<(BondAccountEntry Entry, int SourceIndex)>? bondEntries,
+        BondDetails details,
+        BondAccountEntry? carriedEntry,
+        Func<BondAccountEntry, BondDetails, DateOnly, decimal>? priceAt)
     {
         if (carriedEntry is null) return;
 
@@ -240,10 +257,13 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         var windowStart = carriedDay > start ? carriedDay : start;
         if (windowStart > intervalEnd) return;
 
-        var series = carriedEntry.GetPrice(intervalEnd, details);
+        var series = priceAt is null ? carriedEntry.GetPrice(intervalEnd, details) : null;
         for (var date = windowStart; date <= intervalEnd; date = date.AddDays(1))
         {
-            if (series.TryGetValue(date, out var value))
+            var value = priceAt is null
+                ? series!.GetValueOrDefault(date)
+                : priceAt(carriedEntry, details, date);
+            if (value != 0)
                 totals[date] = totals.GetValueOrDefault(date) + value;
         }
     }

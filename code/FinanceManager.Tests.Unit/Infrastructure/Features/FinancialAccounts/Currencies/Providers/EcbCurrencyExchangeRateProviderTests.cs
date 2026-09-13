@@ -103,6 +103,18 @@ public class EcbCurrencyExchangeRateProviderTests
     }
 
     [Fact]
+    public async Task CancellablePoint_ThrowsWhenTokenIsAlreadyCancelled()
+    {
+        ICurrencyExchangeRateProvider provider = CreateProvider(new MockHttpMessageHandler(_ => Ok(Csv("USD", "1.1"))));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => provider.GetExchangeRateAsync(
+            _eur,
+            _usd,
+            _date,
+            new CancellationToken(canceled: true)));
+    }
+
+    [Fact]
     public async Task ServerError_IsReportedAsFailed()
     {
         var provider = CreateProvider(new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -155,6 +167,19 @@ public class EcbCurrencyExchangeRateProviderTests
         Assert.Equal(2, results.Count);
         Assert.All(results, r => Assert.Equal(CurrencyExchangeRateProviderStatus.NotFound, r.Result.Status));
         Assert.Equal(0, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task CancellableRange_ThrowsWhenTokenIsAlreadyCancelled()
+    {
+        ICurrencyExchangeRateProvider provider = CreateProvider(new MockHttpMessageHandler(_ => Ok(Csv("USD", "1.1"))));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => provider.GetExchangeRateAsync(
+            _eur,
+            _usd,
+            _date,
+            _date.AddDays(1),
+            new CancellationToken(canceled: true)));
     }
 
     private static HttpResponseMessage Ok(string body) =>

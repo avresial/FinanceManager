@@ -11,12 +11,22 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
     /// be priced: a failed request throws instead, so the snapshot-backed details page can tell the
     /// two apart and keep the valuations it already painted. See docs/codebase/UI-SNAPSHOTS.md.
     /// </summary>
-    public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(int accountId, int currencyId)
+    public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(
+        int accountId,
+        int currencyId,
+        IReadOnlyCollection<long>? transactionIds = null,
+        CancellationToken cancellationToken = default)
     {
+        if (transactionIds is { Count: 0 }) return [];
+
+        var query = transactionIds is { Count: > 0 }
+            ? "?" + string.Join("&", transactionIds.Select(id => $"transactionIds={id}"))
+            : string.Empty;
         using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{accountId}/{currencyId}");
+            $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{accountId}/{currencyId}{query}",
+            cancellationToken);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>() ?? [];
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>(cancellationToken) ?? [];
     }
 
     public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(int accountId, DateTime date)

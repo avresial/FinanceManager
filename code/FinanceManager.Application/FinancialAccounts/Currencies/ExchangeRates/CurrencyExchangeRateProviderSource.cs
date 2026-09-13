@@ -56,7 +56,9 @@ internal sealed class CurrencyExchangeRateProviderSource(
             if (context.GetOutOfRangeProviders(date).Contains(provider))
                 continue;
 
-            var result = await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
+            var result = ct.CanBeCanceled
+                ? await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date, ct)
+                : await provider.GetExchangeRateAsync(fromCurrency, toCurrency, date);
             if (result.Status == CurrencyExchangeRateProviderStatus.OutOfRange)
             {
                 context.GetOutOfRangeProviders(date).Add(provider);
@@ -109,11 +111,18 @@ internal sealed class CurrencyExchangeRateProviderSource(
 
                 var windowStartDate = unresolvedDates[offset];
                 var windowEndDate = unresolvedDates[windowEnd];
-                var providerResults = await provider.GetExchangeRateAsync(
-                    fromCurrency,
-                    toCurrency,
-                    windowStartDate,
-                    windowEndDate);
+                var providerResults = ct.CanBeCanceled
+                    ? await provider.GetExchangeRateAsync(
+                        fromCurrency,
+                        toCurrency,
+                        windowStartDate,
+                        windowEndDate,
+                        ct)
+                    : await provider.GetExchangeRateAsync(
+                        fromCurrency,
+                        toCurrency,
+                        windowStartDate,
+                        windowEndDate);
                 var resultByDate = providerResults
                     .GroupBy(result => NormalizeDate(result.Date))
                     .ToDictionary(group => group.Key, group => group.Last().Result);

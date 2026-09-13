@@ -19,5 +19,6 @@ public interface IInvestmentTransactionValuationService
     Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForAccountAsync(
         int accountId,
         Currency targetCurrency,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        IReadOnlyCollection<long>? transactionIds = null);
 }

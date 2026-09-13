@@ -1,4 +1,5 @@
 using FinanceManager.Application.Administration;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Identity;
@@ -39,6 +40,8 @@ public static class ServiceCollectionExtension
             .AddIdentityApplication()
             .AddFinancialAccountsApplication()
             .AddLabelsApplication()
+            .AddScoped<IFinancialAlertEvaluator, FinancialAlertEvaluator>()
+            .AddScoped<IFinancialAlertService, FinancialAlertService>()
             .AddInsightsApplication()
             .AddMoneyFlowApplication()
             .AddDashboardApplication()

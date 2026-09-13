@@ -21,6 +21,21 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
+        int accountId,
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountId <= 0 || transactionIds.Count == 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
+            .Where(x => x.AccountId == accountId && transactionIds.Contains(x.Id))
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default)
     {
         if (accountIds.Count == 0) return [];
@@ -96,14 +111,131 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
         var rows = await context.InvestmentTransactions.AsNoTracking()
             .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= asOf)
-            .Select(x => new { x.AssetListingId, x.Type, x.Quantity })
+            .GroupBy(x => x.AssetListingId)
+            .Select(g => new
+            {
+                ListingId = g.Key,
+                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.ListingId, x => x.Holding);
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(
+        IReadOnlyCollection<int> accountIds,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0) return new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
+
+        var rows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= asOf)
+            .GroupBy(x => new { x.AccountId, x.AssetListingId })
+            .Select(g => new
+            {
+                g.Key.AccountId,
+                g.Key.AssetListingId,
+                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+            })
             .ToListAsync(cancellationToken);
 
         return rows
-            .GroupBy(x => x.AssetListingId)
+            .GroupBy(x => x.AccountId)
             .ToDictionary(
                 g => g.Key,
-                g => g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity));
+                g => (IReadOnlyDictionary<long, decimal>)g.ToDictionary(x => x.AssetListingId, x => x.Holding));
+    }
+
+    public async Task<IInvestmentTransactionRepository.AccountValuationInputs> GetValuationInputs(
+        IReadOnlyCollection<int> accountIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0 || startDate > endDate)
+            return new IInvestmentTransactionRepository.AccountValuationInputs([], []);
+
+        var openingRows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate < startDate)
+            .GroupBy(x => new { x.AccountId, x.AssetListingId })
+            .Select(g => new
+            {
+                g.Key.AccountId,
+                g.Key.AssetListingId,
+                Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+            })
+            .Where(x => x.Quantity != 0m)
+            .ToListAsync(cancellationToken);
+
+        var tradeRows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate >= startDate && x.TradeDate <= endDate)
+            .GroupBy(x => new { x.AccountId, x.AssetListingId, x.TradeDate })
+            .Select(g => new
+            {
+                g.Key.AccountId,
+                g.Key.AssetListingId,
+                g.Key.TradeDate,
+                SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+            })
+            .Where(x => x.SignedQuantity != 0m)
+            .ToListAsync(cancellationToken);
+
+        var openingPositions = openingRows
+            .Select(x => new IInvestmentTransactionRepository.ValuationOpeningPosition(x.AccountId, x.AssetListingId, x.Quantity))
+            .ToList();
+
+        var trades = tradeRows
+            .Select(x => new IInvestmentTransactionRepository.ValuationTradeInput(x.AccountId, x.AssetListingId, x.TradeDate, x.SignedQuantity))
+            .ToList();
+
+        return new IInvestmentTransactionRepository.AccountValuationInputs(openingPositions, trades);
+    }
+
+    public async Task<IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput>> GetCapitalFlowInputs(
+        IReadOnlyCollection<int> accountIds,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountIds.Count == 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= toDate)
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
+                x.AccountId,
+                x.TradeDate,
+                x.Type,
+                x.Quantity,
+                x.UnitPrice,
+                x.Fee,
+                x.Currency,
+                (decimal?)x.AssetListing.PriceMultiplier))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(
+        int accountId,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountId <= 0) return [];
+
+        var latestIds = context.InvestmentTransactions.AsNoTracking()
+            .Where(x => x.AccountId == accountId && x.TradeDate <= asOf)
+            .GroupBy(x => x.AssetListingId)
+            .Select(group => group
+                .OrderByDescending(x => x.TradeDate)
+                .ThenByDescending(x => x.Id)
+                .Select(x => x.Id)
+                .First());
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
+            .Where(x => latestIds.Contains(x.Id))
+            .OrderBy(x => x.AssetListingId)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default) =>
@@ -112,4 +244,66 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
+
+    public async Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
+        int accountId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (pageSize <= 0) return ([], false);
+
+        var query = context.InvestmentTransactions.AsNoTracking()
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
+            .Where(x => x.AccountId == accountId);
+
+        if (cursorTradeDate.HasValue && cursorId.HasValue)
+        {
+            var cd = cursorTradeDate.Value;
+            var cid = cursorId.Value;
+            query = query.Where(x => x.TradeDate < cd || (x.TradeDate == cd && x.Id < cid));
+        }
+
+        if (startDate.HasValue)
+            query = query.Where(x => x.TradeDate >= startDate.Value);
+
+        if (endDate.HasValue)
+            query = query.Where(x => x.TradeDate <= endDate.Value);
+
+        if (type.HasValue)
+            query = query.Where(x => x.Type == type.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            var escapedQuery = s.ToUpperInvariant()
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("%", "\\%", StringComparison.Ordinal)
+                .Replace("_", "\\_", StringComparison.Ordinal);
+            var likePattern = $"%{escapedQuery}%";
+            query = query.Where(x =>
+                (x.Notes != null && EF.Functions.Like(x.Notes.ToUpper(), likePattern, "\\")) ||
+                EF.Functions.Like(x.Currency.ToUpper(), likePattern, "\\") ||
+                EF.Functions.Like(x.AssetListing.Ticker.ToUpper(), likePattern, "\\") ||
+                EF.Functions.Like(x.AssetListing.ExchangeName.ToUpper(), likePattern, "\\") ||
+                EF.Functions.Like(x.AssetListing.Asset.Name.ToUpper(), likePattern, "\\") ||
+                (x.AssetListing.Asset.Isin != null && EF.Functions.Like(x.AssetListing.Asset.Isin.ToUpper(), likePattern, "\\")));
+        }
+
+        var rows = await query
+            .OrderByDescending(x => x.TradeDate)
+            .ThenByDescending(x => x.Id)
+            .Take(pageSize + 1)
+            .ToListAsync(cancellationToken);
+
+        var hasMore = rows.Count > pageSize;
+        var items = hasMore ? rows.Take(pageSize).ToList() : rows;
+        return (items, hasMore);
+    }
 }

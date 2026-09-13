@@ -18,6 +18,7 @@ public static class DashboardCards
     public const string Assets = "assets";
     public const string Expenses = "expenses";
     public const string Insights = "insights";
+    public const string FinancialAlerts = "financial-alerts";
     public const string RecurringTransactions = "recurring-transactions";
     public const string TransactionLog = "transaction-log";
 
@@ -32,6 +33,7 @@ public static class DashboardCards
         new(Assets, "Assets"),
         new(Expenses, "Expenses"),
         new(Insights, "Financial insights"),
+        new(FinancialAlerts, "Alerts"),
         new(RecurringTransactions, "Recurring transactions"),
         new(TransactionLog, "Transaction log"),
     ];

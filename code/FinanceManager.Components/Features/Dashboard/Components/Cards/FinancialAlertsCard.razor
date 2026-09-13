@@ -1,0 +1,68 @@
+<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
+    <MudPaper Class="d-flex align-center flex-grow-0 px-4 pt-3 pb-1 fm-card-info-header" Elevation="0">
+        <div class="flex-grow-1" style="min-width:0;">
+            <div class="d-flex align-center gap-1">
+                <CardInfoTooltip Text="Configured financial conditions that are currently triggered."
+                                 AriaLabel="About financial alerts card">
+                    <MudText Typo="Typo.h5">Alerts</MudText>
+                </CardInfoTooltip>
+            </div>
+            @if (_isLoading)
+            {
+                <MudText Typo="Typo.subtitle1" Class="text-muted"><StringSpinner CharactersCount="4" /></MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.subtitle1" Class="text-muted">
+                    @_triggered.Count triggered of @_alerts.Count configured
+                </MudText>
+            }
+        </div>
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+        @if (_isLoading)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <ChartSpinner MaxHeight="@Height" />
+            </div>
+        }
+        else if (_hasError)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
+                <MudText Typo="Typo.body2" Color="Color.Error">Unable to load alerts.</MudText>
+            </div>
+        }
+        else if (_triggered.Count == 0)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
+                <MudText Typo="Typo.body2" Color="Color.Success">All configured alerts are healthy.</MudText>
+            </div>
+        }
+        else
+        {
+            <MudList T="string" Dense="true" Class="px-2 py-0">
+                @foreach (var outcome in _triggered.Take(4))
+                {
+                    <MudListItem Class="py-1 px-2">
+                        <div class="d-flex align-items-center gap-2 w-100">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Size="Size.Small" />
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <MudText Typo="Typo.body2" Class="font-weight-500" Style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    @outcome.AlertTitle
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@outcome.Message</MudText>
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        <div class="d-flex justify-end px-3 pb-2">
+            <MudButton Href="Alerts" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">
+                Manage alerts
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudCard>

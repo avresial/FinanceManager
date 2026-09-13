@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
@@ -62,6 +63,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdminMaintenanceKeyHttpClient>()
                 .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
+                .AddScoped<FinancialAlertsHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()

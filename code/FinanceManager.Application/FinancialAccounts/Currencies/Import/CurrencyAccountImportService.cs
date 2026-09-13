@@ -12,6 +12,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     ImportAccountValidator importAccountValidator, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
 {
+    // Keep each persistence operation bounded so large imports retain partial-failure semantics and
+    // do not create an unbounded EF change tracker or provider command batch.
+    private const int _persistenceBatchSize = 500;
+
     public Task<ImportResult> ImportEntries(
         int userId,
         int accountId,
@@ -52,122 +56,168 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         var conflicts = new List<ImportConflict>();
         CurrencyAccountEntry? oldestInserted = null;
 
-        var existingAll = cancellationToken.CanBeCanceled
+        var existingEntries = cancellationToken.CanBeCanceled
             ? await currencyAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
                 .ToListAsync(cancellationToken)
             : await currencyAccountEntryRepository
                 .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
                 .ToListAsync();
-        for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
+        var importsByDay = entryList
+            .GroupBy(x => x.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var existingByDay = existingEntries
+            .GroupBy(e => e.PostingDate.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var importsThisDay = entryList.Where(x => x.PostingDate.Date == day).ToList();
-            var existingThisDay = existingAll.Where(e => e.PostingDate.Date == day).ToList();
-
-            if (importsThisDay.Count == 0) continue;
-
-            var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
-            var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
-            var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
-
-            if (exactMatches.Count != 0 || existingOnly.Count != 0)
+            for (var day = maxDay; day >= minDay; day = day.AddDays(-1))
             {
-                var dailyConflicts = new List<ImportConflict>();
-                dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
-                dailyConflicts.AddRange(importsOnly.Select(x => new ImportConflict(accountId, x, null, "Import not found in existing")));
-                dailyConflicts.AddRange(existingOnly.Select(x => new ImportConflict(accountId, null, x, "Existing not found in import")));
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!importsByDay.TryGetValue(day, out var importsThisDay)) continue;
+                var existingThisDay = existingByDay.GetValueOrDefault(day) ?? [];
 
-                conflicts.AddRange(dailyConflicts);
+                var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+                var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
+                var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
 
-                if (onConflicts is not null)
-                    await onConflicts(dailyConflicts);
+                if (exactMatches.Count != 0 || existingOnly.Count != 0)
+                {
+                    var dailyConflicts = new List<ImportConflict>();
+                    dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
+                    dailyConflicts.AddRange(importsOnly.Select(x => new ImportConflict(accountId, x, null, "Import not found in existing")));
+                    dailyConflicts.AddRange(existingOnly.Select(x => new ImportConflict(accountId, null, x, "Existing not found in import")));
+
+                    conflicts.AddRange(dailyConflicts);
+
+                    if (onConflicts is not null)
+                        await onConflicts(dailyConflicts);
+
+                    processed += importsThisDay.Count;
+                    if (onProgress is not null)
+                        await onProgress(processed, imported, failed);
+
+                    continue;
+                }
+
+                var entriesToInsert = new List<CurrencyAccountEntry>(importsThisDay.Count);
+                foreach (var import in importsThisDay)
+                {
+                    try
+                    {
+                        if (import.PostingDate.Kind != DateTimeKind.Utc)
+                            throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
+
+                        CurrencyAccountEntry newEntry = new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange)
+                        {
+                            Description = import.Description ?? string.Empty,
+                            ContractorDetails = import.ContractorDetails,
+                            Labels = []
+                        };
+                        entriesToInsert.Add(newEntry);
+                    }
+                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    {
+                        logger.LogDebug(ex, "Currency account import cancelled.");
+                        throw;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        failed++;
+                        errors.Add($"Cancellation while importing entry with date {import.PostingDate}.");
+                        logger.LogDebug(ex, "Currency account import entry cancelled or timed out for {PostingDate}; marking it failed.", import.PostingDate);
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        errors.Add(ex.Message);
+                    }
+
+                }
+
+                foreach (var batch in entriesToInsert.Chunk(_persistenceBatchSize))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var batchList = batch.ToList();
+                    try
+                    {
+                        var added = cancellationToken.CanBeCanceled
+                            ? await currencyAccountEntryRepository.Add(batchList, recalculate: false, cancellationToken)
+                            : await currencyAccountEntryRepository.Add(batchList, recalculate: false);
+                        if (added)
+                        {
+                            imported += batchList.Count;
+                            var batchOldest = batchList.MinBy(entry => (entry.PostingDate, entry.EntryId))!;
+                            if (oldestInserted is null || batchOldest.PostingDate < oldestInserted.PostingDate ||
+                                batchOldest.PostingDate == oldestInserted.PostingDate && batchOldest.EntryId < oldestInserted.EntryId)
+                                oldestInserted = batchOldest;
+                        }
+                        else
+                        {
+                            failed += batchList.Count;
+                            errors.AddRange(batchList.Select(entry => $"Failed to import entry with date {entry.PostingDate}."));
+                        }
+                    }
+                    catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+                    {
+                        logger.LogDebug(ex, "Currency account import batch cancelled.");
+                        throw;
+                    }
+                    catch (OperationCanceledException ex)
+                    {
+                        failed += batchList.Count;
+                        errors.AddRange(batchList.Select(entry => $"Cancellation while importing entry with date {entry.PostingDate}."));
+                        logger.LogDebug(ex, "Currency account import batch cancelled or timed out.");
+                    }
+                    catch (Exception ex)
+                    {
+                        failed += batchList.Count;
+                        errors.AddRange(batchList.Select(_ => ex.Message));
+                    }
+                }
 
                 processed += importsThisDay.Count;
                 if (onProgress is not null)
                     await onProgress(processed, imported, failed);
-
-                continue;
             }
 
-            foreach (var import in importsThisDay)
+            if (oldestInserted is not null)
             {
                 try
                 {
-                    if (import.PostingDate.Kind != DateTimeKind.Utc)
-                        throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
-
-                    CurrencyAccountEntry newEntry = new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange)
-                    {
-                        Description = import.Description ?? string.Empty,
-                        ContractorDetails = import.ContractorDetails,
-                        Labels = []
-                    };
-
-                    var added = cancellationToken.CanBeCanceled
-                        ? await currencyAccountEntryRepository.Add(newEntry, recalculate: false, cancellationToken)
-                        : await currencyAccountEntryRepository.Add(newEntry, recalculate: false);
-                    if (added)
-                    {
-                        imported++;
-                        existingAll.Add(newEntry);
-                        if (oldestInserted is null || newEntry.PostingDate < oldestInserted.PostingDate)
-                            oldestInserted = newEntry;
-                    }
+                    if (cancellationToken.CanBeCanceled)
+                        await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, cancellationToken);
                     else
-                    {
-                        failed++;
-                        errors.Add($"Failed to import entry with date {import.PostingDate}.");
-                    }
+                        await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId);
                 }
                 catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
-                    logger.LogDebug(ex, "Currency account import cancelled.");
+                    logger.LogDebug(ex, "Currency account import recalculation cancelled.");
                     throw;
                 }
                 catch (OperationCanceledException ex)
                 {
+                    await RecalculateCommittedEntries(accountId, oldestInserted);
                     failed++;
-                    errors.Add($"Cancellation while importing entry with date {import.PostingDate}.");
-                    logger.LogDebug(ex, "Currency account import entry cancelled or timed out for {PostingDate}; marking it failed.", import.PostingDate);
+                    errors.Add("Recalculation cancelled or timed out.");
+                    logger.LogDebug(ex, "Currency account import recalculation cancelled or timed out; marking it failed.");
                 }
-                catch (Exception ex)
-                {
-                    failed++;
-                    errors.Add(ex.Message);
-                }
-
             }
-
-            processed += importsThisDay.Count;
-            if (onProgress is not null)
-                await onProgress(processed, imported, failed);
         }
-
-        if (oldestInserted is not null)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            try
-            {
-                if (cancellationToken.CanBeCanceled)
-                    await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, cancellationToken);
-                else
-                    await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId);
-            }
-            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
-            {
-                logger.LogDebug(ex, "Currency account import recalculation cancelled.");
-                throw;
-            }
-            catch (OperationCanceledException ex)
-            {
-                failed++;
-                errors.Add("Recalculation cancelled or timed out.");
-                logger.LogDebug(ex, "Currency account import recalculation cancelled or timed out; marking it failed.");
-            }
+            await RecalculateCommittedEntries(accountId, oldestInserted);
+            throw;
         }
 
         return new(accountId, imported, failed, errors, conflicts);
     }
+
+    private Task RecalculateCommittedEntries(int accountId, CurrencyAccountEntry? oldestInserted) =>
+        oldestInserted is null
+            ? Task.CompletedTask
+            : currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, CancellationToken.None);
 
     public Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts) =>
         ApplyResolvedConflicts(resolvedConflicts, CancellationToken.None);

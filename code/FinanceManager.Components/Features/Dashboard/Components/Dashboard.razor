@@ -133,6 +133,13 @@
                 </MudItem>
             }
 
+            @if (IsCardVisible(DashboardCards.FinancialAlerts))
+            {
+                <MudItem xs="12" md="6" lg="4">
+                    <FinancialAlertsCard Height="@($"{_unitHeight * 3}px")" />
+                </MudItem>
+            }
+
             @if (IsCardVisible(DashboardCards.RecurringTransactions))
             {
                 <MudItem xs="12" md="6" lg="4">

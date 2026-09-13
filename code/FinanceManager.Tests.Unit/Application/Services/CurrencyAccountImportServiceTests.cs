@@ -8,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
@@ -53,6 +54,11 @@ public class CurrencyAccountImportServiceTests
         _mockBondEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
 
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         var mockLogger = new Mock<ILogger<CurrencyAccountImportService>>();
         var importAccountValidator = new ImportAccountValidator(_userPlanVerifier);
         _service = new CurrencyAccountImportService(_mockAccountRepository.Object, _mockAccountEntryRepository.Object, importAccountValidator, mockLogger.Object);
@@ -77,7 +83,7 @@ public class CurrencyAccountImportServiceTests
         ];
 
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(new List<CurrencyAccountEntry>().ToAsyncEnumerable());
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>())).ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>())).ReturnsAsync(true);
 
         // Act
         var result = await _service.ImportEntries(userId, accountId, domainEntries);
@@ -129,6 +135,80 @@ public class CurrencyAccountImportServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             _service.ImportEntries(1, 1, [], cancellationToken: cancellation.Token));
 #pragma warning restore xUnit1051
+    }
+
+    [Fact]
+    public async Task ImportEntries_WhenCallerCancelsAfterCommit_RecalculatesCommittedEntriesBeforePropagating()
+    {
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+
+        using var cancellation = new CancellationTokenSource();
+        var date = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        List<CurrencyEntryImport> entries = [new(date, 100m)];
+
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((batch, _, _) =>
+            {
+                foreach (var entry in batch)
+                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 100);
+                cancellation.Cancel();
+            })
+            .ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, It.Is<CancellationToken>(token => token == cancellation.Token)))
+            .ThrowsAsync(new OperationCanceledException(cancellation.Token));
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 100, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+
+#pragma warning disable xUnit1051
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            _service.ImportEntries(userId, accountId, entries, cancellation.Token));
+#pragma warning restore xUnit1051
+
+        _mockAccountEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 100, CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportEntries_RecalculationTimeout_RepairsCommittedEntriesBeforeReturning()
+    {
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+
+        var date = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        List<CurrencyEntryImport> entries = [new(date, 100m)];
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool>((batch, _) =>
+            {
+                foreach (var entry in batch)
+                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 77);
+            })
+            .ReturnsAsync(true);
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 77))
+            .ThrowsAsync(new OperationCanceledException());
+        _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 77, CancellationToken.None))
+            .Returns(Task.CompletedTask);
+
+#pragma warning disable xUnit1051
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
+#pragma warning restore xUnit1051
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(1, result.Failed);
+        Assert.Contains("Recalculation cancelled or timed out", Assert.Single(result.Errors));
+        _mockAccountEntryRepository.Verify(
+            x => x.RecalculateValues(accountId, 77, CancellationToken.None),
+            Times.Once);
     }
 
     [Fact]
@@ -217,8 +297,8 @@ public class CurrencyAccountImportServiceTests
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
         var addedEntries = new List<CurrencyAccountEntry>();
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
-            .Callback<CurrencyAccountEntry, bool>((entry, _) => addedEntries.Add(entry))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool>((entries, _) => addedEntries.AddRange(entries))
             .ReturnsAsync(true);
 
         // Act
@@ -361,7 +441,7 @@ public class CurrencyAccountImportServiceTests
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(false);
 
         // Act
@@ -391,7 +471,7 @@ public class CurrencyAccountImportServiceTests
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         // Act
@@ -401,6 +481,34 @@ public class CurrencyAccountImportServiceTests
         Assert.Equal(500, result.Imported);
         Assert.Equal(0, result.Failed);
         Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public async Task ImportEntries_UsesBoundedPersistenceBatches()
+    {
+        var userId = 1;
+        var accountId = 1;
+        var date = DateTime.UtcNow.Date;
+        var entries = Enumerable.Range(0, 1_001)
+            .Select(i => new CurrencyEntryImport(date.AddMinutes(i), i + 1m))
+            .ToArray();
+
+        var account = new CurrencyAccount(userId, accountId, "Test");
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(Array.Empty<AvailableAccount>().ToAsyncEnumerable());
+        _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
+
+        var batchSizes = new List<int>();
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool>((batch, _) => batchSizes.Add(batch.Count()))
+            .ReturnsAsync(true);
+
+        var result = await _service.ImportEntries(userId, accountId, entries);
+
+        Assert.Equal(1_001, result.Imported);
+        Assert.Equal(0, result.Failed);
+        Assert.Equal([500, 500, 1], batchSizes);
     }
 
     [Fact]
@@ -424,7 +532,7 @@ public class CurrencyAccountImportServiceTests
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         // Act
@@ -454,7 +562,7 @@ public class CurrencyAccountImportServiceTests
         _mockAccountRepository.Setup(x => x.GetAvailableAccounts(userId)).Returns(Array.Empty<AvailableAccount>().ToAsyncEnumerable());
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         var progressUpdates = new List<(int Processed, int Imported, int Failed)>();
@@ -498,7 +606,7 @@ public class CurrencyAccountImportServiceTests
         var existingEntry = new CurrencyAccountEntry(accountId, 10, conflictDay, 200m, 200m);
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(new[] { existingEntry }.ToAsyncEnumerable());
-        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         var conflictBatches = new List<IReadOnlyList<ImportConflict>>();
@@ -518,7 +626,7 @@ public class CurrencyAccountImportServiceTests
         Assert.Equal(1, result.Imported);
         Assert.Single(result.Conflicts);
         Assert.Single(conflictBatches);
-        _mockAccountEntryRepository.Verify(x => x.Add(It.Is<CurrencyAccountEntry>(e => e.PostingDate.Date == date), It.IsAny<bool>()), Times.Once);
+        _mockAccountEntryRepository.Verify(x => x.Add(It.Is<IEnumerable<CurrencyAccountEntry>>(entries => entries.Single().PostingDate.Date == date), It.IsAny<bool>()), Times.Once);
     }
 
     [Fact]
@@ -542,17 +650,15 @@ public class CurrencyAccountImportServiceTests
         _mockAccountEntryRepository.Setup(x => x.Get(accountId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
-        _mockAccountEntryRepository.Setup(x => x.Add(It.Is<CurrencyAccountEntry>(e => e.ValueChange == 200m), It.IsAny<bool>()))
+        _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>()))
             .ReturnsAsync(false);
-        _mockAccountEntryRepository.Setup(x => x.Add(It.Is<CurrencyAccountEntry>(e => e.ValueChange != 200m), It.IsAny<bool>()))
-            .ReturnsAsync(true);
 
         // Act
         var result = await _service.ImportEntries(userId, accountId, entries);
 
         // Assert
-        Assert.Equal(2, result.Imported);
-        Assert.Equal(1, result.Failed);
+        Assert.Equal(0, result.Imported);
+        Assert.Equal(3, result.Failed);
     }
 
     [Fact]

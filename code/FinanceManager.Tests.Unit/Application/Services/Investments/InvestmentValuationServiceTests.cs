@@ -123,14 +123,10 @@ public class InvestmentValuationServiceTests
         int[] accountIds = [10, 20];
 
         // Both accounts hold the same listing (10); account 20 also holds listing 30.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 6, 1), accountId: 10),
-                Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 6, 1), accountId: 20),
-                Tx(30, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 6, 1), accountId: 20)
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 6, 1), accountId: 10),
+            Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 6, 1), accountId: 20),
+            Tx(30, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 6, 1), accountId: 20));
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(100m);
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(30, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(40m);
 
@@ -141,6 +137,7 @@ public class InvestmentValuationServiceTests
 
         // The shared listing is priced once for the whole set, not once per owning account.
         _priceProvider.Verify(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>()), Times.Once);
+        _transactionRepository.Verify(x => x.GetHoldingsByAccountAsOf(accountIds, DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -165,13 +162,9 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 1, 4);
 
         // Buy 2 on Jan 1, buy 1 more on Jan 3 → holding is 2 on Jan 1-2, then 3 on Jan 3-4.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 1)),
-                Tx(10, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 3))
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 1)),
+            Tx(10, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 3)));
 
         // Flat price of 10 every day in the window.
         _priceProvider
@@ -199,12 +192,8 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 2, 2);
 
         // The only purchase happened before the window; the holding must be carried into it.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 15))
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 15)));
         _priceProvider
             .Setup(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, decimal>
@@ -222,9 +211,7 @@ public class InvestmentValuationServiceTests
     [Fact]
     public async Task GetAccountValueSeries_ReturnsEmpty_WhenNoTransactions()
     {
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>());
+        SetupTransactions();
 
         var series = await CreateSut().GetAccountValueSeriesAsync(
             _accountId, _usd, new DateTime(2024, 1, 1), new DateTime(2024, 1, 31), TestContext.Current.CancellationToken);
@@ -240,14 +227,10 @@ public class InvestmentValuationServiceTests
         int[] accountIds = [10, 20];
 
         // Both accounts hold listing 10; account 20 also holds listing 30.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 1), accountId: 10),
-                Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 1, 1), accountId: 20),
-                Tx(30, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 1), accountId: 20)
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 1), accountId: 10),
+            Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 1, 1), accountId: 20),
+            Tx(30, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 1), accountId: 20));
 
         _priceProvider
             .Setup(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()))
@@ -274,13 +257,9 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 2, 2);
 
         // Position was bought and fully sold before the valuation window opened.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
-                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20))
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
+            Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20)));
 
         var series = await CreateSut().GetAccountValueSeriesAsync(_accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
@@ -297,14 +276,10 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 2, 2);
 
         // Listing 10 was fully closed before the window; Listing 20 is still held.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
-                Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20)),
-                Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 15))
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10)),
+            Tx(10, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20)),
+            Tx(20, InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 1, 15)));
 
         _priceProvider
             .Setup(x => x.GetPricePerUnitSeriesAsync(20, _usd, start, end, It.IsAny<CancellationToken>()))
@@ -334,13 +309,9 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 2, 3);
 
         // Position opens on Day 2 and closes on Day 3 (both in-window). Opening holding is 0.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(_accountId)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 2, 2)),
-                Tx(10, InvestmentTransactionType.Sell, 3m, new DateOnly(2024, 2, 3))
-            });
+        SetupTransactions(
+            Tx(10, InvestmentTransactionType.Buy, 3m, new DateOnly(2024, 2, 2)),
+            Tx(10, InvestmentTransactionType.Sell, 3m, new DateOnly(2024, 2, 3)));
 
         _priceProvider
             .Setup(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()))
@@ -371,13 +342,9 @@ public class InvestmentValuationServiceTests
 
         // Each account is evaluated independently: account 10 holds 5 units while account 20's
         // -5-unit position offsets it globally. A global listing net would incorrectly skip both.
-        _transactionRepository
-            .Setup(x => x.GetByAccounts(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<InvestmentTransaction>
-            {
-                Tx(100, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10), accountId: 10),
-                Tx(100, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20), accountId: 20)
-            });
+        SetupTransactions(
+            Tx(100, InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10), accountId: 10),
+            Tx(100, InvestmentTransactionType.Sell, 5m, new DateOnly(2024, 1, 20), accountId: 20));
 
         _priceProvider
             .Setup(x => x.GetPricePerUnitSeriesAsync(100, _usd, start, end, It.IsAny<CancellationToken>()))
@@ -619,10 +586,67 @@ public class InvestmentValuationServiceTests
         Assert.Empty(series);
     }
 
-    private void SetupTransactions(params InvestmentTransaction[] transactions) =>
+    private void SetupTransactions(params InvestmentTransaction[] transactions)
+    {
         _transactionRepository
             .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
+
+        _transactionRepository
+            .Setup(x => x.GetHoldingsByAccountAsOf(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly asOf, CancellationToken _) =>
+            {
+                var dict = new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
+                foreach (var group in transactions.Where(t => accounts.Contains(t.AccountId) && t.TradeDate <= asOf).GroupBy(t => t.AccountId))
+                {
+                    var perListing = group
+                        .GroupBy(t => t.AssetListingId)
+                        .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity));
+                    dict[group.Key] = perListing;
+                }
+                return dict;
+            });
+
+        _transactionRepository
+            .Setup(x => x.GetValuationInputs(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly startDate, DateOnly endDate, CancellationToken _) =>
+            {
+                var opening = transactions
+                    .Where(t => accounts.Contains(t.AccountId) && t.TradeDate < startDate)
+                    .GroupBy(t => (t.AccountId, t.AssetListingId))
+                    .Select(g => new IInvestmentTransactionRepository.ValuationOpeningPosition(g.Key.AccountId, g.Key.AssetListingId, g.Sum(t => t.SignedQuantity)))
+                    .Where(p => p.Quantity != 0m)
+                    .ToList();
+
+                var trades = transactions
+                    .Where(t => accounts.Contains(t.AccountId) && t.TradeDate >= startDate && t.TradeDate <= endDate)
+                    .GroupBy(t => (t.AccountId, t.AssetListingId, t.TradeDate))
+                    .Select(g => new IInvestmentTransactionRepository.ValuationTradeInput(g.Key.AccountId, g.Key.AssetListingId, g.Key.TradeDate, g.Sum(t => t.SignedQuantity)))
+                    .Where(t => t.SignedQuantity != 0m)
+                    .ToList();
+
+                return new IInvestmentTransactionRepository.AccountValuationInputs(opening, trades);
+            });
+
+        _transactionRepository
+            .Setup(x => x.GetCapitalFlowInputs(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly toDate, CancellationToken _) =>
+            {
+                return transactions
+                    .Where(t => accounts.Contains(t.AccountId) && t.TradeDate <= toDate)
+                    .OrderBy(t => t.TradeDate).ThenBy(t => t.Id)
+                    .Select(t => new IInvestmentTransactionRepository.CapitalFlowInput(
+                        t.AccountId,
+                        t.TradeDate,
+                        t.Type,
+                        t.Quantity,
+                        t.UnitPrice,
+                        t.Fee,
+                        t.Currency,
+                        t.AssetListing?.PriceMultiplier))
+                    .ToList();
+            });
+    }
 
     private void SetupPrices(long listingId, Dictionary<DateTime, decimal> prices) =>
         _priceProvider

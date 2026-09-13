@@ -1,7 +1,7 @@
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Application.Shared;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -14,7 +14,7 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Balance;
 
 internal class BondBalanceService(
     IFinancialAccountRepository financialAccountRepository,
-    IBondDetailsRepository bondDetailsRepository,
+    BondDashboardContext bondDashboardContext,
     ICurrencyExchangeService currencyExchangeService) : IBalanceServiceTyped
 {
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
@@ -44,14 +44,21 @@ internal class BondBalanceService(
         if (start == default || end == default || end.Date < start.Date) return [];
 
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
-        List<BondCapitalFlow> flows = [];
-
+        List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            bondAccounts.Add(account);
+        }
 
+        // Only the definitions the accounts actually reference are loaded (detached, no-tracking),
+        // shared with the other dashboard bond paths through the request-scoped context.
+        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
+        List<BondCapitalFlow> flows = [];
+
+        foreach (var account in bondAccounts)
+        {
             // GetAccounts carries only the latest pre-range row per bond. Its running Value is the
             // number of units already held, which seeds the visible range without treating accrued
             // interest as user-paid capital.
@@ -118,8 +125,8 @@ internal class BondBalanceService(
         }
 
         return TimeBucketService.Get(cumulative.Select(x => (x.Key, x.Value)))
-                                .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
-                                .ToList();
+                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
+                                 .ToList();
     }
 
     public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
@@ -129,16 +136,27 @@ internal class BondBalanceService(
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        Dictionary<DateTime, decimal> prices = [];
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToListAsync();
-
+        List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            bondAccounts.Add(account);
+        }
 
-            foreach (var price in account.GetDailyPrice(DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), bondDetails))
+        var bondDetails = (await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts)).Values.ToList();
+
+        Dictionary<DateTime, decimal> prices = [];
+        foreach (var account in bondAccounts)
+        {
+            // Per-date prices resolve through the request-scoped context, which memoizes each
+            // account/bond/date so the dashboard's net-worth path never recomputes the same price.
+            foreach (var price in account.GetDailyPrice(
+                         DateOnly.FromDateTime(start),
+                         DateOnly.FromDateTime(end),
+                         bondDetails,
+                         (entry, _, date) => bondDashboardContext.GetOrComputePrice(account.AccountId, entry, date)))
             {
                 var date = price.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
                 if (!prices.ContainsKey(date))
@@ -149,23 +167,28 @@ internal class BondBalanceService(
         }
 
         return TimeBucketService.Get(prices.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
-                                .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
-                                .ToList();
+                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
+                                 .ToList();
     }
 
     private async Task<List<TimeSeriesModel>> AggregateByDay(int userId, DateTime start, DateTime end, Func<BondAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
-        Dictionary<DateTime, decimal> result = [];
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
-
+        List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account?.Entries is null) continue;
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            bondAccounts.Add(account);
+        }
 
+        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
+
+        Dictionary<DateTime, decimal> result = [];
+        foreach (var account in bondAccounts)
+        {
             foreach (var entry in account.Entries)
             {
                 if (entry.PostingDate.Date < start.Date || entry.PostingDate.Date > end.Date) continue;
@@ -181,8 +204,8 @@ internal class BondBalanceService(
         }
 
         return TimeBucketService.Get(result.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
-                                .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Sum()))
-                                .ToList();
+                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Sum()))
+                                 .ToList();
     }
 
     private sealed record BondCapitalFlow(DateTime Date, decimal Amount, Currency Currency);
