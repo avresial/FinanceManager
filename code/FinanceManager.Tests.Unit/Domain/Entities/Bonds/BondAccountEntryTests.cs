@@ -381,4 +381,40 @@ public class BondAccountEntryTests
         // Days after expiry should not be in the result
         Assert.DoesNotContain(DateOnly.FromDateTime(postingDate.AddDays(6)), result.Keys);
     }
+
+    [Fact]
+    public void GetPrice_ShorterHorizon_ShouldMatchPrefixOfLongerHorizon()
+    {
+        var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var entry = new BondAccountEntry(1, 1, postingDate, 1000m, 1000m, 1);
+
+        var calculationMethod = new BondCalculationMethod
+        {
+            Id = 1,
+            DateOperator = FinanceManager.Domain.Shared.DateOperator.UntilDate,
+            DateValue = "2026-01-01",
+            Rate = 0.0365m
+        };
+
+        var bondDetails = new BondDetails(
+            "Test Bond",
+            "Issuer",
+            DateOnly.FromDateTime(postingDate),
+            DateOnly.FromDateTime(postingDate.AddYears(4)),
+            [calculationMethod],
+            unitValue: 1m
+        );
+
+        var shortHorizon = entry.GetPrice(DateOnly.FromDateTime(postingDate.AddDays(370)), bondDetails);
+        var longHorizon = entry.GetPrice(DateOnly.FromDateTime(postingDate.AddDays(800)), bondDetails);
+
+        Assert.True(longHorizon.Count >= shortHorizon.Count,
+            $"Expected longer horizon to have at least {shortHorizon.Count} entries, got {longHorizon.Count}.");
+
+        foreach (var (date, value) in shortHorizon)
+        {
+            Assert.True(longHorizon.TryGetValue(date, out var longValue), $"Date {date} missing from longer horizon.");
+            Assert.True(longValue == value, $"Value mismatch on {date}: expected {value}, got {longValue}.");
+        }
+    }
 }
