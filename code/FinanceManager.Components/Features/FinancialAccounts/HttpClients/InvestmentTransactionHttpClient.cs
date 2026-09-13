@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -20,6 +21,55 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent) return [];
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>() ?? [];
+    }
+
+    /// <summary>
+    /// Loads one bounded history page. The cursor and filters are sent back unchanged so the
+    /// database can keep the ordering stable while the page appends older rows.
+    /// </summary>
+    public async Task<InvestmentTransactionHistoryPageDto> GetHistoryPageAsync(
+        int accountId,
+        int pageSize = 100,
+        string? cursor = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = new List<string> { $"pageSize={Math.Clamp(pageSize, 1, 100)}" };
+        if (!string.IsNullOrWhiteSpace(cursor)) query.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        if (startDate is DateOnly start) query.Add($"startDate={start:yyyy-MM-dd}");
+        if (endDate is DateOnly end) query.Add($"endDate={end:yyyy-MM-dd}");
+        if (type is InvestmentTransactionType transactionType) query.Add($"type={transactionType}");
+        if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search.Trim())}");
+
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/InvestmentTransaction/GetHistoryPage/{accountId}?{string.Join('&', query)}",
+            cancellationToken);
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent)
+            return new InvestmentTransactionHistoryPageDto([], false);
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<InvestmentTransactionHistoryPageDto>(cancellationToken)
+            ?? new InvestmentTransactionHistoryPageDto([], false);
+    }
+
+    /// <summary>
+    /// Loads the latest transaction metadata for each non-zero holding as of a date. This is
+    /// intentionally separate from the paged history so chart cards remain correct after the first
+    /// 100 rows and after history filters are applied.
+    /// </summary>
+    public async Task<IReadOnlyList<InvestmentTransactionDto>> GetHoldingMetadataAsync(
+        int accountId,
+        DateTime date,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/InvestmentTransaction/GetHoldingMetadata/{accountId}/{date:yyyy-MM-dd}",
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>(cancellationToken) ?? [];
     }
 
     public async Task<InvestmentTransactionDto?> GetAsync(long id)
