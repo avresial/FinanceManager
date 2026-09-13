@@ -3,6 +3,7 @@ using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.Alerts.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -89,6 +90,7 @@ public class FinancialAlertServiceTests
 
         var command = new UpdateFinancialAlert(
             Title: "Updated Title",
+            AlertType: AlertType.AccountBalance,
             IsEnabled: true,
             ComparisonOperator: AlertComparisonOperator.LessThanOrEqual,
             Threshold: 1200m);
@@ -154,7 +156,7 @@ public class FinancialAlertServiceTests
             alert.AlertType,
             AlertTriggerStatus.Triggered,
             IsTriggered: true,
-            IsNewlyTriggered: true,
+            TriggeredAt: _now,
             IsSuppressed: false,
             DeDuplicationReason.None,
             CurrentValue: 500m,
@@ -171,7 +173,7 @@ public class FinancialAlertServiceTests
         var results = await _service.EvaluateAlertsAsync(1, TestContext.Current.CancellationToken);
 
         Assert.Single(results);
-        Assert.True(results[0].IsNewlyTriggered);
+        Assert.Equal(_now, results[0].TriggeredAt);
         Assert.Equal(AlertTriggerStatus.Triggered, alert.LastStatus);
         Assert.Equal(500m, alert.LastTriggeredValue);
         Assert.Equal("fp-1", alert.LastTriggeredConditionFingerprint);
@@ -191,7 +193,7 @@ public class FinancialAlertServiceTests
     }
 
     [Fact]
-    public async Task EvaluateAlertsAsync_AllTimeAlertLoadsCompleteAccountHistory()
+    public async Task EvaluateAlertsAsync_AllTimeAlertUsesBoundedAccountHistoryAndAggregatedData()
     {
         var alert = new FinancialAlert(
             1,
@@ -202,10 +204,17 @@ public class FinancialAlertServiceTests
             evaluationPeriod: AlertEvaluationPeriod.AllTime);
         _alertRepositoryMock.Setup(r => r.GetAlertsByUserId(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync([alert]);
+        _alertRepositoryMock
+            .Setup(r => r.GetAllTimeEvaluationData(
+                1,
+                It.IsAny<IReadOnlyCollection<FinancialAlert>>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyDictionary<Guid, FinancialAlertEvaluationData>)new Dictionary<Guid, FinancialAlertEvaluationData>());
         _accountRepositoryMock
             .Setup(r => r.GetAccounts<CurrencyAccount>(
                 1,
-                DateTime.MinValue,
+                _now.Date.AddMonths(-12),
                 It.IsAny<DateTime>(),
                 true))
             .Returns(new[] { new CurrencyAccount(1, 1, "Cash", AccountLabel.Cash) }.ToAsyncEnumerable());
@@ -218,7 +227,7 @@ public class FinancialAlertServiceTests
                 alert.AlertType,
                 AlertTriggerStatus.Healthy,
                 IsTriggered: false,
-                IsNewlyTriggered: false,
+                TriggeredAt: null,
                 IsSuppressed: false,
                 DeDuplicationReason.None,
                 CurrentValue: 0m,
@@ -234,8 +243,53 @@ public class FinancialAlertServiceTests
         Assert.Single(results);
         _accountRepositoryMock.Verify(r => r.GetAccounts<CurrencyAccount>(
             1,
-            DateTime.MinValue,
+            _now.Date.AddMonths(-12),
             It.IsAny<DateTime>(),
             true), Times.Once);
+        _alertRepositoryMock.Verify(r => r.GetAllTimeEvaluationData(
+            1,
+            It.Is<IReadOnlyCollection<FinancialAlert>>(items => items.Count == 1 && items.Single().Id == alert.Id),
+            _now,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task EvaluateAlertsAsync_ErrorOutcomeDoesNotResolveTriggeredAlert()
+    {
+        var alert = new FinancialAlert(1, "Unstable alert", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m);
+        alert.RecordTrigger(500m, "previous", _now.AddMinutes(-1));
+        _alertRepositoryMock.Setup(r => r.GetAlertsByUserId(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([alert]);
+        _accountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), true))
+            .Returns(new[] { new CurrencyAccount(1, 1, "Cash", AccountLabel.Cash) }.ToAsyncEnumerable());
+        _recurringServiceMock.Setup(r => r.GetRecurringTransactions(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var errorOutcome = new AlertEvaluationOutcome(
+            alert.Id,
+            alert.Title,
+            alert.AlertType,
+            AlertTriggerStatus.Error,
+            IsTriggered: false,
+            TriggeredAt: null,
+            IsSuppressed: false,
+            DeDuplicationReason.None,
+            CurrentValue: 0m,
+            Threshold: alert.Threshold,
+            ComparisonOperator: alert.ComparisonOperator,
+            ConditionFingerprint: string.Empty,
+            Message: "Evaluation failed",
+            EvaluatedAt: _now,
+            Context: new Dictionary<string, string>(),
+            ErrorMessage: "provider unavailable");
+        _evaluatorMock.Setup(e => e.EvaluateAll(It.IsAny<IEnumerable<FinancialAlert>>(), It.IsAny<AlertEvaluationSnapshot>()))
+            .Returns([errorOutcome]);
+
+        var results = await _service.EvaluateAlertsAsync(1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(AlertTriggerStatus.Error, results.Single().Status);
+        Assert.Equal(AlertTriggerStatus.Triggered, alert.LastStatus);
+        Assert.Equal("previous", alert.LastTriggeredConditionFingerprint);
+        _alertRepositoryMock.Verify(r => r.Update(It.IsAny<FinancialAlert>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

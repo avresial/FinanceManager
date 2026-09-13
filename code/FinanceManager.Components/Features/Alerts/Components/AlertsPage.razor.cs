@@ -32,11 +32,6 @@ public partial class AlertsPage : ComponentBase
 
         try
         {
-            var outcomes = await HttpClient.EvaluateAsync();
-            _outcomes.Clear();
-            foreach (var outcome in outcomes)
-                _outcomes[outcome.AlertId] = outcome;
-
             _alerts = await HttpClient.GetAsync();
         }
         catch (Exception ex)
@@ -47,6 +42,22 @@ public partial class AlertsPage : ComponentBase
         finally
         {
             _isLoading = false;
+        }
+
+        try
+        {
+            var outcomes = await HttpClient.EvaluateAsync();
+            _outcomes.Clear();
+            foreach (var outcome in outcomes)
+                _outcomes[outcome.AlertId] = outcome;
+
+            if (outcomes.Any(outcome => outcome.Status == AlertTriggerStatus.Error))
+                _errors.Add("Unable to evaluate one or more alerts. Showing the last known status.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to evaluate financial alerts");
+            _errors.Add("Unable to evaluate alerts right now. Showing the last known status.");
         }
     }
 
@@ -60,7 +71,7 @@ public partial class AlertsPage : ComponentBase
         }
 
         int? accountId = null;
-        if (!string.IsNullOrWhiteSpace(_form.AccountIdText))
+        if (_form.AlertType == AlertType.AccountBalance && !string.IsNullOrWhiteSpace(_form.AccountIdText))
         {
             if (!int.TryParse(_form.AccountIdText, out var parsedAccountId) || parsedAccountId <= 0)
             {
@@ -70,6 +81,9 @@ public partial class AlertsPage : ComponentBase
 
             accountId = parsedAccountId;
         }
+
+        var labelName = _form.AlertType == AlertType.CategorySpending ? NullIfWhiteSpace(_form.LabelName) : null;
+        var merchantName = _form.AlertType == AlertType.MerchantSpending ? NullIfWhiteSpace(_form.MerchantName) : null;
 
         _isSaving = true;
         try
@@ -81,17 +95,17 @@ public partial class AlertsPage : ComponentBase
                     id,
                     new UpdateFinancialAlert(
                         _form.Title.Trim(),
+                        _form.AlertType,
                         _form.IsEnabled,
                         _form.ComparisonOperator,
                         _form.Threshold,
                         _form.EvaluationPeriod,
                         accountId,
                         null,
-                        NullIfWhiteSpace(_form.LabelName),
-                        NullIfWhiteSpace(_form.MerchantName),
+                        labelName,
+                        merchantName,
                         null,
-                        cooldown,
-                        _form.AlertType));
+                        cooldown));
                 if (updated is null)
                 {
                     _errors.Add("Unable to update this alert.");
@@ -109,8 +123,8 @@ public partial class AlertsPage : ComponentBase
                         _form.EvaluationPeriod,
                         accountId,
                         null,
-                        NullIfWhiteSpace(_form.LabelName),
-                        NullIfWhiteSpace(_form.MerchantName),
+                        labelName,
+                        merchantName,
                         null,
                         cooldown));
                 if (created is null)
@@ -239,11 +253,21 @@ public partial class AlertsPage : ComponentBase
 
     private string StatusLabel(FinancialAlertDto alert) =>
         _outcomes.TryGetValue(alert.Id, out var outcome)
-            ? outcome.Status == AlertTriggerStatus.Triggered ? "Triggered" : "Healthy"
+            ? outcome.Status switch
+            {
+                AlertTriggerStatus.Triggered => "Triggered",
+                AlertTriggerStatus.Error => "Error",
+                _ => "Healthy"
+            }
             : alert.LastStatus == AlertTriggerStatus.Triggered ? "Triggered" : "Healthy";
 
     private Color StatusColor(FinancialAlertDto alert) =>
-        StatusLabel(alert) == "Triggered" ? Color.Warning : Color.Success;
+        StatusLabel(alert) switch
+        {
+            "Triggered" => Color.Warning,
+            "Error" => Color.Error,
+            _ => Color.Success
+        };
 
     private sealed class AlertFormModel
     {

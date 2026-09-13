@@ -4,6 +4,7 @@ namespace FinanceManager.Domain.Alerts.Commands;
 
 public record UpdateFinancialAlert(
     string Title,
+    AlertType AlertType,
     bool IsEnabled,
     AlertComparisonOperator ComparisonOperator,
     decimal Threshold,
@@ -13,5 +14,4 @@ public record UpdateFinancialAlert(
     string? LabelName = null,
     string? MerchantName = null,
     Guid? SubscriptionId = null,
-    TimeSpan? CooldownPeriod = null,
-    AlertType? AlertType = null);
+    TimeSpan? CooldownPeriod = null);

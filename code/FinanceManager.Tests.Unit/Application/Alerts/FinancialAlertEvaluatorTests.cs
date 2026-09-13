@@ -2,6 +2,7 @@ using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Labels.Entities;
@@ -26,7 +27,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.False(outcome.IsTriggered);
-        Assert.False(outcome.IsNewlyTriggered);
+        Assert.Null(outcome.TriggeredAt);
         Assert.True(outcome.IsSuppressed);
         Assert.Equal(DeDuplicationReason.AlertDisabled, outcome.DeDuplicationReason);
         Assert.Equal(AlertTriggerStatus.Disabled, outcome.Status);
@@ -44,7 +45,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.True(outcome.IsTriggered);
-        Assert.True(outcome.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, outcome.TriggeredAt);
         Assert.False(outcome.IsSuppressed);
         Assert.Equal(AlertTriggerStatus.Triggered, outcome.Status);
         Assert.Equal(2500m, outcome.CurrentValue);
@@ -63,7 +64,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.False(outcome.IsTriggered);
-        Assert.False(outcome.IsNewlyTriggered);
+        Assert.Null(outcome.TriggeredAt);
         Assert.False(outcome.IsSuppressed);
         Assert.Equal(AlertTriggerStatus.Healthy, outcome.Status);
         Assert.Equal(4500m, outcome.CurrentValue);
@@ -117,7 +118,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.True(outcome.IsTriggered);
-        Assert.True(outcome.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, outcome.TriggeredAt);
         Assert.Equal(1147m, outcome.CurrentValue);
         Assert.Equal("2", outcome.Context["TransactionCount"]);
     }
@@ -146,6 +147,32 @@ public class FinancialAlertEvaluatorTests
 
         Assert.False(outcome.IsTriggered);
         Assert.Equal(250m, outcome.CurrentValue);
+    }
+
+    [Fact]
+    public void Evaluate_AllTimeCategorySpending_UsesAggregatedEvaluationData()
+    {
+        var alert = new FinancialAlert(
+            1,
+            "All dining",
+            AlertType.CategorySpending,
+            AlertComparisonOperator.GreaterThan,
+            1000m,
+            evaluationPeriod: AlertEvaluationPeriod.AllTime,
+            labelName: "Dining");
+        var snapshot = new AlertEvaluationSnapshot([], [], _evaluationDate)
+        {
+            AllTimeEvaluationData = new Dictionary<Guid, FinancialAlertEvaluationData>
+            {
+                [alert.Id] = new FinancialAlertEvaluationData(1250m, 3, null)
+            }
+        };
+
+        var outcome = _evaluator.Evaluate(alert, snapshot);
+
+        Assert.True(outcome.IsTriggered);
+        Assert.Equal(1250m, outcome.CurrentValue);
+        Assert.Equal("3", outcome.Context["TransactionCount"]);
     }
 
     [Fact]
@@ -195,7 +222,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.True(outcome.IsTriggered);
-        Assert.True(outcome.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, outcome.TriggeredAt);
         Assert.Equal(2500m, outcome.CurrentValue);
         Assert.Equal("1", outcome.Context["TriggeringAccountId"]);
         Assert.Equal("1", outcome.Context["TriggeringEntryId"]);
@@ -240,7 +267,7 @@ public class FinancialAlertEvaluatorTests
         var outcome = _evaluator.Evaluate(alert, snapshot);
 
         Assert.True(outcome.IsTriggered);
-        Assert.True(outcome.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, outcome.TriggeredAt);
         Assert.Equal(16m, outcome.CurrentValue);
         Assert.Equal("Netflix", outcome.Context["SubscriptionName"]);
         Assert.Contains("49.00", outcome.Message);
@@ -298,7 +325,7 @@ public class FinancialAlertEvaluatorTests
         // First evaluation: newly triggered
         var firstOutcome = _evaluator.Evaluate(alert, snapshot);
         Assert.True(firstOutcome.IsTriggered);
-        Assert.True(firstOutcome.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, firstOutcome.TriggeredAt);
         Assert.False(firstOutcome.IsSuppressed);
         Assert.Equal(DeDuplicationReason.None, firstOutcome.DeDuplicationReason);
 
@@ -308,7 +335,7 @@ public class FinancialAlertEvaluatorTests
         // Second evaluation (condition unchanged): suppressed duplicate!
         var secondOutcome = _evaluator.Evaluate(alert, snapshot);
         Assert.True(secondOutcome.IsTriggered);
-        Assert.False(secondOutcome.IsNewlyTriggered);
+        Assert.Null(secondOutcome.TriggeredAt);
         Assert.True(secondOutcome.IsSuppressed);
         Assert.Equal(DeDuplicationReason.UnchangedCondition, secondOutcome.DeDuplicationReason);
     }
@@ -330,7 +357,7 @@ public class FinancialAlertEvaluatorTests
         var outcome2 = _evaluator.Evaluate(alert, snapshot2);
 
         Assert.True(outcome2.IsTriggered);
-        Assert.True(outcome2.IsNewlyTriggered);
+        Assert.Equal(_evaluationDate, outcome2.TriggeredAt);
         Assert.False(outcome2.IsSuppressed);
         Assert.Equal(400m, outcome2.CurrentValue);
     }
@@ -356,7 +383,7 @@ public class FinancialAlertEvaluatorTests
         var outcome2 = _evaluator.Evaluate(alert, snapshot2);
 
         Assert.True(outcome2.IsTriggered);
-        Assert.False(outcome2.IsNewlyTriggered);
+        Assert.Null(outcome2.TriggeredAt);
         Assert.True(outcome2.IsSuppressed);
         Assert.Equal(DeDuplicationReason.CooldownActive, outcome2.DeDuplicationReason);
     }

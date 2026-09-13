@@ -100,18 +100,35 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
     }
 
     [Fact]
+    public async Task Create_WithUndefinedEnumValues_ReturnsBadRequestWithoutCallingService()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new CreateFinancialAlert(
+            "Invalid enum",
+            (AlertType)999,
+            (AlertComparisonOperator)999,
+            100m,
+            (AlertEvaluationPeriod)999);
+
+        var response = await Client.PostAsJsonAsync("api/FinancialAlerts", command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.Verify(x => x.CreateAlertAsync(It.IsAny<int>(), It.IsAny<CreateFinancialAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Update_ForAuthenticatedUser_ReturnsUpdatedAlert()
     {
         Authorize("user", _testUserId, UserRole.User);
         var alertId = Guid.NewGuid();
         var command = new UpdateFinancialAlert(
             "Updated alert",
+            AlertType.MerchantSpending,
             true,
             AlertComparisonOperator.GreaterThanOrEqual,
             1250m,
             AlertEvaluationPeriod.Last30Days,
-            MerchantName: "Market",
-            AlertType: AlertType.MerchantSpending);
+            MerchantName: "Market");
         var updated = CreateAlert(_testUserId, command.Title, AlertType.MerchantSpending);
         updated.Id = alertId;
         _serviceMock
@@ -128,6 +145,27 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
             alertId,
             It.Is<UpdateFinancialAlert>(x => x.Title == command.Title && x.AlertType == AlertType.MerchantSpending),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_WithUndefinedAlertType_ReturnsBadRequestWithoutCallingService()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new UpdateFinancialAlert(
+            "Invalid enum",
+            (AlertType)999,
+            true,
+            AlertComparisonOperator.GreaterThan,
+            100m);
+
+        var response = await Client.PutAsJsonAsync($"api/FinancialAlerts/{Guid.NewGuid()}", command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.Verify(x => x.UpdateAlertAsync(
+            It.IsAny<int>(),
+            It.IsAny<Guid>(),
+            It.IsAny<UpdateFinancialAlert>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -162,7 +200,7 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
             alert.AlertType,
             AlertTriggerStatus.Triggered,
             IsTriggered: true,
-            IsNewlyTriggered: true,
+            TriggeredAt: DateTime.UtcNow,
             IsSuppressed: false,
             DeDuplicationReason.None,
             CurrentValue: 2500m,
