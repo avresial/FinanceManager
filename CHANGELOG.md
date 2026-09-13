@@ -36,6 +36,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- The browser favicon now uses the site's orange accent on a transparent background.
 - Investment account details now request and calculate appreciation only for the selected owned account instead of valuing the entire portfolio. #744
 - Dashboard bond valuation now loads only referenced bond definitions once per request and reuses matching daily prices across net-worth and balance aggregates. #747
 - Currency conversions and overlapping chart date ranges now reuse resolved daily exchange rates while continuing to refresh missing values. #743
