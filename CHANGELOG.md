@@ -37,6 +37,8 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Keep the Alerts card action in its header and contain its loading state. #765
+- Close account-detail time-range pickers as soon as a range is selected. #768
+- Show bond account asset appreciation in the account-details breakdown card. #767
 - Remove redundant helper text from the dashboard Transaction log card header. #766
 - Financial alerts now evaluate all-time conditions with bounded server-side aggregates, preserve the last known status when evaluation fails, and validate filter choices before saving. #763
 - Investment account transaction history now loads in bounded server-side pages, with filters and older-page continuation while account-wide totals remain unchanged. #748
