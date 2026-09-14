@@ -83,16 +83,16 @@
         else
         {
             <ApexChart @ref="_chart" TItem="TimeSeriesModel" Options="_heroChartOptions" Height="200">
-                <ApexPointSeries TItem="TimeSeriesModel" Items="ChartData" Name="@BalanceSeriesName" SeriesType="SeriesType.Area"
+                <ApexPointSeries TItem="TimeSeriesModel" Items="_chartData" Name="@BalanceSeriesName" SeriesType="SeriesType.Area"
                                  XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
-                @if (BenchmarkData.Count > 0)
+                @if (_benchmarkData.Count > 0)
                 {
-                    <ApexPointSeries TItem="TimeSeriesModel" Items="BenchmarkData" Name="@BenchmarkName" SeriesType="SeriesType.Line"
+                    <ApexPointSeries TItem="TimeSeriesModel" Items="_benchmarkData" Name="@BenchmarkName" SeriesType="SeriesType.Line"
                                      XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
                 }
-                @if (CapitalData.Count > 0)
+                @if (_capitalData.Count > 0)
                 {
-                    <ApexPointSeries TItem="TimeSeriesModel" Items="CapitalData" Name="@CapitalSeriesName" SeriesType="SeriesType.Line"
+                    <ApexPointSeries TItem="TimeSeriesModel" Items="_capitalData" Name="@CapitalSeriesName" SeriesType="SeriesType.Line"
                                      XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
                 }
             </ApexChart>

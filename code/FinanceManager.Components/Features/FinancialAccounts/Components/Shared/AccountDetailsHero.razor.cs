@@ -58,8 +58,18 @@ public partial class AccountDetailsHero
     private ApexChart<TimeSeriesModel>? _chart;
     private ApexChart<TimeSeriesModel>? _drawnChart;
     private List<(string Series, DateTime DateTime, decimal Value)> _drawnPoints = [];
+    private List<TimeSeriesModel> _chartData = [];
+    private List<TimeSeriesModel> _benchmarkData = [];
+    private List<TimeSeriesModel> _capitalData = [];
 
-    protected override void OnParametersSet() => ApplyYScale();
+    protected override void OnParametersSet()
+    {
+        var aligned = ChartHelper.AlignSeries([ChartData, BenchmarkData, CapitalData]);
+        _chartData = aligned[0];
+        _benchmarkData = aligned[1];
+        _capitalData = aligned[2];
+        ApplyYScale();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -68,10 +78,10 @@ public partial class AccountDetailsHero
         // Each point carries its series name so the comparison notices a moved boundary
         // between the two series (a flat concatenation of the same points would compare
         // equal) and a renamed benchmark, which changes the legend without changing values.
-        var points = ChartData
+        var points = _chartData
             .Select(p => (BalanceSeriesName, p.DateTime, p.Value))
-            .Concat(BenchmarkData.Select(p => (BenchmarkName, p.DateTime, p.Value)))
-            .Concat(CapitalData.Select(p => (CapitalSeriesName, p.DateTime, p.Value)));
+            .Concat(_benchmarkData.Select(p => (BenchmarkName, p.DateTime, p.Value)))
+            .Concat(_capitalData.Select(p => (CapitalSeriesName, p.DateTime, p.Value)));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
             // A freshly mounted chart instance (first render, or remounted after the loading
@@ -98,7 +108,7 @@ public partial class AccountDetailsHero
 
         // The non-balance lines share the balance axis, so the padded bounds have to span every
         // displayed series or a rebased benchmark/capital line can clip.
-        var values = ChartData.Concat(BenchmarkData).Concat(CapitalData).Select(p => (double)p.Value).ToList();
+        var values = _chartData.Concat(_benchmarkData).Concat(_capitalData).Select(p => (double)p.Value).ToList();
         if (values.Count == 0) return;
 
         var bounds = ChartHelper.AddYRangePadding(values.Min(), values.Max());

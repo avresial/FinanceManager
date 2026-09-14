@@ -49,6 +49,47 @@ public class ChartHelperTests
     }
 
     [Fact]
+    public void AlignSeries_CarriesPreviousValuesAcrossCombinedTimeline()
+    {
+        List<TimeSeriesModel> balance =
+        [
+            new(new DateTime(2026, 1, 1), 100m, "Balance"),
+            new(new DateTime(2026, 1, 3), 130m, "Balance"),
+        ];
+        List<TimeSeriesModel> benchmark =
+        [
+            new(new DateTime(2026, 1, 1), 90m, "Benchmark"),
+            new(new DateTime(2026, 1, 2), 95m, "Benchmark"),
+        ];
+
+        var result = ChartHelper.AlignSeries([balance, benchmark]);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal([new DateTime(2026, 1, 1), new DateTime(2026, 1, 2), new DateTime(2026, 1, 3)],
+            result[0].Select(point => point.DateTime));
+        Assert.Equal([100m, 100m, 130m], result[0].Select(point => point.Value));
+        Assert.Equal([90m, 95m, 95m], result[1].Select(point => point.Value));
+    }
+
+    [Fact]
+    public void AlignSeries_PreservesActualPointsAndLeavesEmptyInputEmpty()
+    {
+        var actual = new TimeSeriesModel(new DateTime(2026, 1, 2), 125m, "Balance");
+
+        var result = ChartHelper.AlignSeries([
+            new[] { actual },
+            Array.Empty<TimeSeriesModel>(),
+            new[] { new TimeSeriesModel(new DateTime(2026, 1, 1), 50m, "Capital") }
+        ]);
+
+        Assert.Same(actual, result[0][1]);
+        Assert.Empty(result[1]);
+        Assert.Equal(2, result[2].Count);
+        Assert.Equal([50m, 50m], result[2].Select(point => point.Value));
+        Assert.Equal(125m, result[0][0].Value);
+    }
+
+    [Fact]
     public void AddYRangePadding_AddsFivePercentBelowAndAboveDisplayedRange()
     {
         var bounds = ChartHelper.AddYRangePadding(68_000, 72_000);
