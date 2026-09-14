@@ -168,16 +168,25 @@ public partial class AccountHistoryToolbar : ComponentBase
     private async Task OnRangeSelected(string value)
     {
         SelectedRange = value;
+        if (_rangeMenu is not null)
+            await _rangeMenu.CloseMenuAsync();
         await SelectedRangeChanged.InvokeAsync(value);
     }
 
-    private Task OpenCustomDateRangePicker() =>
-        _customDateRangePicker?.OpenAsync() ?? Task.CompletedTask;
+    private async Task OpenCustomDateRangePicker()
+    {
+        if (_rangeMenu is not null)
+            await _rangeMenu.CloseMenuAsync();
+        if (_customDateRangePicker is not null)
+            await _customDateRangePicker.OpenAsync();
+    }
 
     private async Task OnCustomDateRangeChanged(DateRange? value)
     {
         CustomDateRange = value;
         SelectedRange = CustomRangeKey;
+        if (value is { Start: DateTime, End: DateTime } && _customDateRangePicker is not null)
+            await _customDateRangePicker.CloseAsync(submit: true);
         await CustomDateRangeChanged.InvokeAsync(value);
     }
 }

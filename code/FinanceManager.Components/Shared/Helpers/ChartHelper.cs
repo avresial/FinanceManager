@@ -23,6 +23,51 @@ public static class ChartHelper
     }
 
     /// <summary>
+    /// Aligns multiple displayed series to one ordered timeline. Missing points carry the latest
+    /// known value so a shared tooltip can show every series at each date. Dates before a series
+    /// starts use its first value because no previous value exists. Actual source points are reused
+    /// and the input sequences are not mutated.
+    /// </summary>
+    public static List<List<TimeSeriesModel>> AlignSeries(IEnumerable<IEnumerable<TimeSeriesModel>> series)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+
+        var orderedSeries = series
+            .Select(points => points.OrderBy(point => point.DateTime).ToList())
+            .ToList();
+        var dates = orderedSeries
+            .SelectMany(points => points)
+            .Select(point => point.DateTime)
+            .Distinct()
+            .Order()
+            .ToList();
+
+        return orderedSeries.Select(points =>
+        {
+            if (points.Count == 0 || dates.Count == 0)
+                return points;
+
+            var pointsByDate = points
+                .GroupBy(point => point.DateTime)
+                .ToDictionary(group => group.Key, group => group.Last());
+            var first = points[0];
+            var previous = first;
+
+            return dates.Select(date =>
+            {
+                if (pointsByDate.TryGetValue(date, out var actual))
+                {
+                    previous = actual;
+                    return actual;
+                }
+
+                var carried = date < first.DateTime ? first : previous;
+                return new TimeSeriesModel(date, carried.Value, carried.Name);
+            }).ToList();
+        }).ToList();
+    }
+
+    /// <summary>
     /// Compact currency tick labels for a y-axis: 2.5k / 7.5k / 10k / 13k. Shared by the
     /// dashboard time-series cards and the account details hero chart so both label their
     /// value axis identically. Zero is labelled "0" rather than "0k"; only non-numeric

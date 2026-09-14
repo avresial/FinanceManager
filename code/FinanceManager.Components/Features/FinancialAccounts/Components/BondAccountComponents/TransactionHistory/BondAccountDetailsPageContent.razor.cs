@@ -47,6 +47,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private IEnumerable<string> _availableLabels = [];
 
     private decimal _currentBalance;
+    private decimal _capitalValue;
+    private decimal _currentValue;
     private decimal _balanceChange;
     private decimal? _balanceChangePercent;
     private List<BondAccountEntry>? _top5;
@@ -340,6 +342,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         CapitalData.Clear();
         CapitalData.AddRange(model.CapitalSeries ?? []);
         _currentBalance = model.CurrentBalance;
+        _capitalValue = model.CapitalSeries?.LastOrDefault()?.Value ?? 0m;
+        _currentValue = model.CurrentBalance;
         _balanceChange = model.BalanceChange;
         _balanceChangePercent = model.BalanceChangePercent;
         _isChartLoading = false;

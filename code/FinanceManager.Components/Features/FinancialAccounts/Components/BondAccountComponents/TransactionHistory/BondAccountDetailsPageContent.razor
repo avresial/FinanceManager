@@ -56,8 +56,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
             {
                 <MudItem lg="4">
                     <MudStack Spacing="4">
-                        <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName"
-                                           RangeLabel="@_selectedRange" FromDate="@_dateStart" ToDate="@_dateEnd" />
+                        <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                                   Currency="@_currency.ShortName" IsLoading="@_isChartLoading" />
 
                         <BondAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
                                                BondDetails="@_bondDetails" />
@@ -78,8 +78,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
             </MudStack>
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
-                <BalanceChangeCard BalanceChange="@_balanceChange" Currency="@_currency.ShortName" RangeLabel="@_selectedRange"
-                                   FromDate="@_dateStart" ToDate="@_dateEnd" />
+                <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                           Currency="@_currency.ShortName" IsLoading="@_isChartLoading" />
 
                 <BondAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
                                        BondDetails="@_bondDetails" />
