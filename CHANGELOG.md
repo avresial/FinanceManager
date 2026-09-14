@@ -36,6 +36,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Keep the Alerts card action in its header and contain its loading state. #765
 - Financial alerts now evaluate all-time conditions with bounded server-side aggregates, preserve the last known status when evaluation fails, and validate filter choices before saving. #763
 - Investment account transaction history now loads in bounded server-side pages, with filters and older-page continuation while account-wide totals remain unchanged. #748
 - The browser favicon now uses the site's orange accent on a transparent background.
