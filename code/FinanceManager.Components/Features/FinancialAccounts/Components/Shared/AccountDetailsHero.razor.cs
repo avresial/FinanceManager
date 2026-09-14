@@ -62,6 +62,9 @@ public partial class AccountDetailsHero
     private List<TimeSeriesModel> _benchmarkData = [];
     private List<TimeSeriesModel> _capitalData = [];
 
+    /// <summary>
+    /// Aligns the chart series to a shared timeline and updates the displayed y-axis range.
+    /// </summary>
     protected override void OnParametersSet()
     {
         var aligned = ChartHelper.AlignSeries([ChartData, BenchmarkData, CapitalData]);
@@ -71,6 +74,9 @@ public partial class AccountDetailsHero
         ApplyYScale();
     }
 
+    /// <summary>
+    /// Redraws the mounted chart when its aligned series or legend names change.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (IsChartLoading || _chart is null) return;

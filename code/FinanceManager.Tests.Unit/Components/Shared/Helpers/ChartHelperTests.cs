@@ -48,6 +48,9 @@ public class ChartHelperTests
         Assert.Empty(ChartHelper.EnsureSeriesEndsAt([], new DateTime(2026, 3, 31)));
     }
 
+    /// <summary>
+    /// Verifies that sparse series carry their latest values across the combined timeline.
+    /// </summary>
     [Fact]
     public void AlignSeries_CarriesPreviousValuesAcrossCombinedTimeline()
     {
@@ -71,6 +74,9 @@ public class ChartHelperTests
         Assert.Equal([90m, 95m, 95m], result[1].Select(point => point.Value));
     }
 
+    /// <summary>
+    /// Verifies that alignment reuses source points while preserving an empty series.
+    /// </summary>
     [Fact]
     public void AlignSeries_PreservesActualPointsAndLeavesEmptyInputEmpty()
     {
