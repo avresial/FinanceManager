@@ -1,5 +1,5 @@
-<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
-    <MudPaper Class="d-flex align-center flex-grow-0 px-4 pt-3 pb-1 fm-card-info-header" Elevation="0">
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
+    <MudPaper Class="d-flex fm-card-info-header gap-2 px-4 pt-3 pb-1 flex-shrink-0" Elevation="0">
         <div class="flex-grow-1" style="min-width:0;">
             <div class="d-flex align-center gap-1">
                 <CardInfoTooltip Text="Configured financial conditions that are currently triggered."
@@ -18,13 +18,17 @@
                 </MudText>
             }
         </div>
+        <MudButton Href="Alerts" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward"
+                   Class="mt-n1 flex-shrink-0">
+            Manage alerts
+        </MudButton>
     </MudPaper>
 
-    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+    <MudPaper Class="flex-grow-1 overflow-auto d-flex flex-column" Style="min-height:0;" Elevation="0">
         @if (_isLoading)
         {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <ChartSpinner MaxHeight="@Height" />
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap" style="min-height:0; overflow:hidden;">
+                <ChartSpinner MaxHeight="120px" />
             </div>
         }
         else if (_hasError)
@@ -58,11 +62,5 @@
                 }
             </MudList>
         }
-
-        <div class="d-flex justify-end px-3 pb-2">
-            <MudButton Href="Alerts" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">
-                Manage alerts
-            </MudButton>
-        </div>
     </MudPaper>
 </MudCard>
