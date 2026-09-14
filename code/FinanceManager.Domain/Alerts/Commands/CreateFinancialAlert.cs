@@ -12,5 +12,4 @@ public record CreateFinancialAlert(
     int? LabelId = null,
     string? LabelName = null,
     string? MerchantName = null,
-    Guid? SubscriptionId = null,
-    TimeSpan? CooldownPeriod = null);
+    Guid? SubscriptionId = null);

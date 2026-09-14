@@ -1,4 +1,5 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
@@ -26,7 +27,8 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
-    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -131,6 +133,8 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         await accountEntryRepository.Delete(accountId);
         var result = await accountRepository.Delete(accountId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId);
         return Ok(result);
     }
 

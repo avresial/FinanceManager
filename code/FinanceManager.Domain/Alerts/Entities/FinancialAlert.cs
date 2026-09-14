@@ -24,7 +24,6 @@ public class FinancialAlert
     public DateTime? LastTriggeredAt { get; set; }
     public decimal? LastTriggeredValue { get; set; }
     public string? LastTriggeredConditionFingerprint { get; set; }
-    public TimeSpan? CooldownPeriod { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
@@ -45,8 +44,7 @@ public class FinancialAlert
         int? labelId = null,
         string? labelName = null,
         string? merchantName = null,
-        Guid? subscriptionId = null,
-        TimeSpan? cooldownPeriod = null)
+        Guid? subscriptionId = null)
     {
         UserId = userId;
         Title = title;
@@ -59,7 +57,6 @@ public class FinancialAlert
         LabelName = labelName;
         MerchantName = merchantName;
         SubscriptionId = subscriptionId;
-        CooldownPeriod = cooldownPeriod;
     }
 
     public static FinancialAlert FromCommand(int userId, CreateFinancialAlert command)
@@ -77,8 +74,7 @@ public class FinancialAlert
             command.LabelId,
             command.LabelName,
             command.MerchantName,
-            command.SubscriptionId,
-            command.CooldownPeriod);
+            command.SubscriptionId);
     }
 
     public void UpdateFrom(UpdateFinancialAlert command)
@@ -93,7 +89,6 @@ public class FinancialAlert
         LabelName = command.LabelName;
         MerchantName = command.MerchantName;
         SubscriptionId = command.SubscriptionId;
-        CooldownPeriod = command.CooldownPeriod;
         AlertType = command.AlertType;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -112,16 +107,6 @@ public class FinancialAlert
         LastStatus = AlertTriggerStatus.Healthy;
         LastTriggeredConditionFingerprint = null;
         UpdatedAt = evaluatedAt;
-    }
-
-    public bool IsSuppressedByCooldown(DateTime currentTime)
-    {
-        if (CooldownPeriod is TimeSpan cooldown && LastTriggeredAt is DateTime lastTriggered)
-        {
-            return (currentTime - lastTriggered) < cooldown;
-        }
-
-        return false;
     }
 
     public bool IsUnchangedTrigger(string conditionFingerprint)

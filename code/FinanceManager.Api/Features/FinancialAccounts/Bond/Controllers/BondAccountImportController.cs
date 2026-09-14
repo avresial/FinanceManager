@@ -1,5 +1,6 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Bond.Import;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
@@ -18,7 +19,8 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Bond.Controllers;
 [ApiController]
 [Tags("Bond Imports")]
 public class BondAccountImportController(IBondAccountImportService importService, IAccountRepository<BondAccount> accountRepository,
-    ICacheInvalidator dashboardCacheInvalidator)
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.BondImportPath)]
@@ -38,6 +40,7 @@ public class BondAccountImportController(IBondAccountImportService importService
         var domainEntries = importDto.Entries.Select(e => new BondEntryImport(e.PostingDate, e.ValueChange, e.BondDetailsId));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries, HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
+        await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);
         return Ok(domainResult);
     }
 
@@ -61,6 +64,7 @@ public class BondAccountImportController(IBondAccountImportService importService
 
         await importService.ApplyResolvedConflicts(resolvedConflicts, HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
+        await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);
         return Ok();
     }
 }

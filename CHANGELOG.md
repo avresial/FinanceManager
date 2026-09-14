@@ -35,13 +35,14 @@ rules agents must follow when updating this file.
 - The admin **Users** page now shows a **"Last logged at"** column with each user's most recent login date (or `Never` for accounts that have never signed in). #540
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
- ### Changed
- - Keep the Alerts card action in its header and contain its loading state. #765
- - Close account-detail time-range pickers as soon as a range is selected. #768
- - Show bond account asset appreciation in the account-details breakdown card. #767
- - Remove redundant helper text from the dashboard Transaction log card header. #766
- - Align account-detail chart series so shared tooltips show sparse values together. #764
- - Financial alerts now evaluate all-time conditions with bounded server-side aggregates, preserve the last known status when evaluation fails, and validate filter choices before saving. #763
+### Changed
+- Keep the Alerts card action in its header and contain its loading state. #765
+- Close account-detail time-range pickers as soon as a range is selected. #768
+- Show bond account asset appreciation in the account-details breakdown card. #767
+- Remove redundant helper text from the dashboard Transaction log card header. #766
+- Align account-detail chart series so shared tooltips show sparse values together. #764
+- Re-evaluate financial alerts immediately after transaction changes and remove the obsolete cooldown setting. #769
+- Financial alerts now evaluate all-time conditions with bounded server-side aggregates, preserve the last known status when evaluation fails, and validate filter choices before saving. #763
 - Investment account transaction history now loads in bounded server-side pages, with filters and older-page continuation while account-wide totals remain unchanged. #748
 - The browser favicon now uses the site's orange accent on a transparent background.
 - Investment account details now request and calculate appreciation only for the selected owned account instead of valuing the entire portfolio. #744

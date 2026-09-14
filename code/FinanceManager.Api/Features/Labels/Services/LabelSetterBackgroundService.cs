@@ -1,3 +1,4 @@
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
@@ -37,6 +38,7 @@ public sealed class LabelSetterBackgroundService(
                 var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<IAccountEntryRepository<CurrencyAccountEntry>>();
                 var financialLabelsRepository = scope.ServiceProvider.GetRequiredService<IFinancialLabelsRepository>();
                 var currencyAccountRepository = scope.ServiceProvider.GetRequiredService<ICurrencyAccountRepository<CurrencyAccount>>();
+                var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
 
                 // Build name → id lookup once
                 var allLabels = await financialLabelsRepository
@@ -124,6 +126,9 @@ public sealed class LabelSetterBackgroundService(
                     totalProcessed,
                     request.EntryIds.Count,
                     batches.Count);
+
+                if (account is not null)
+                    await financialAlertService.EvaluateAlertsAsync(account.UserId, CancellationToken.None);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {

@@ -21,7 +21,6 @@ public class FinancialAlertTests
         Assert.Null(alert.LastTriggeredAt);
         Assert.Null(alert.LastTriggeredValue);
         Assert.Null(alert.LastTriggeredConditionFingerprint);
-        Assert.Null(alert.CooldownPeriod);
     }
 
     [Fact]
@@ -39,8 +38,7 @@ public class FinancialAlertTests
             labelId: 10,
             labelName: "Dining",
             merchantName: null,
-            subscriptionId: null,
-            cooldownPeriod: TimeSpan.FromHours(12));
+            subscriptionId: null);
 
         Assert.Equal(42, alert.UserId);
         Assert.Equal("Dining Alert", alert.Title);
@@ -51,7 +49,6 @@ public class FinancialAlertTests
         Assert.Equal(2, alert.AccountId);
         Assert.Equal(10, alert.LabelId);
         Assert.Equal("Dining", alert.LabelName);
-        Assert.Equal(TimeSpan.FromHours(12), alert.CooldownPeriod);
         Assert.True(alert.IsEnabled);
     }
 
@@ -76,7 +73,6 @@ public class FinancialAlertTests
             LabelName: null,
             MerchantName: "Amazon",
             SubscriptionId: null,
-            CooldownPeriod: TimeSpan.FromDays(1),
             AlertType: AlertType.MerchantSpending);
 
         alert.UpdateFrom(updateCommand);
@@ -89,7 +85,6 @@ public class FinancialAlertTests
         Assert.Equal(AlertEvaluationPeriod.Last30Days, alert.EvaluationPeriod);
         Assert.Equal(5, alert.AccountId);
         Assert.Equal("Amazon", alert.MerchantName);
-        Assert.Equal(TimeSpan.FromDays(1), alert.CooldownPeriod);
         Assert.NotNull(alert.UpdatedAt);
     }
 
@@ -137,21 +132,6 @@ public class FinancialAlertTests
     }
 
     [Fact]
-    public void IsSuppressedByCooldown_ReturnsTrueWithinWindowAndFalseOutside()
-    {
-        var alert = new FinancialAlert(1, "Balance", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m)
-        {
-            CooldownPeriod = TimeSpan.FromHours(1)
-        };
-
-        var triggerTime = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc);
-        alert.RecordTrigger(500m, "fp", triggerTime);
-
-        Assert.True(alert.IsSuppressedByCooldown(triggerTime.AddMinutes(30)));
-        Assert.False(alert.IsSuppressedByCooldown(triggerTime.AddMinutes(61)));
-    }
-
-    [Fact]
     public void FinancialAlertDto_FromEntity_MapsAllFieldsCorrectly()
     {
         var alert = new FinancialAlert(
@@ -161,8 +141,7 @@ public class FinancialAlertTests
             comparisonOperator: AlertComparisonOperator.GreaterThan,
             threshold: 2000m,
             evaluationPeriod: AlertEvaluationPeriod.Last7Days,
-            accountId: 3,
-            cooldownPeriod: TimeSpan.FromHours(2));
+            accountId: 3);
 
         var dto = FinancialAlertDto.FromEntity(alert);
 
@@ -174,6 +153,5 @@ public class FinancialAlertTests
         Assert.Equal(2000m, dto.Threshold);
         Assert.Equal(AlertEvaluationPeriod.Last7Days, dto.EvaluationPeriod);
         Assert.Equal(3, dto.AccountId);
-        Assert.Equal(TimeSpan.FromHours(2), dto.CooldownPeriod);
     }
 }

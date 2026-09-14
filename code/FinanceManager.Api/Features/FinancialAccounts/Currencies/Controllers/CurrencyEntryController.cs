@@ -1,5 +1,6 @@
 using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
@@ -23,7 +24,8 @@ public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
-    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -89,6 +91,8 @@ public class CurrencyEntryController(
         var result = await accountEntryRepository.Add(newEntry);
         await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
 
         return Ok(result);
     }
@@ -103,6 +107,8 @@ public class CurrencyEntryController(
 
         var result = await accountEntryRepository.Delete(accountId, entryId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -118,6 +124,7 @@ public class CurrencyEntryController(
 
         await accountEntryRepository.RecalculateValues(accountId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok();
     }
 
@@ -143,6 +150,8 @@ public class CurrencyEntryController(
 
         var result = await accountEntryRepository.Update(newEntry);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok(result);
     }
 }

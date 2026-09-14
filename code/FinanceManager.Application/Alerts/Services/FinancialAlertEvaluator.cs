@@ -69,7 +69,8 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     rawOutcome.Context);
             }
 
-            // Condition is met. Check de-duplication: unchanged condition vs cooldown vs new trigger.
+            // Condition is met. Suppress only an unchanged condition; changed transactions trigger
+            // a fresh evaluation immediately.
             if (alert.IsUnchangedTrigger(rawOutcome.Fingerprint))
             {
                 return new AlertEvaluationOutcome(
@@ -81,26 +82,6 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     TriggeredAt: null,
                     IsSuppressed: true,
                     DeDuplicationReason.UnchangedCondition,
-                    rawOutcome.ObservedValue,
-                    alert.Threshold,
-                    alert.ComparisonOperator,
-                    rawOutcome.Fingerprint,
-                    rawOutcome.Message,
-                    evaluationTime,
-                    rawOutcome.Context);
-            }
-
-            if (alert.IsSuppressedByCooldown(evaluationTime))
-            {
-                return new AlertEvaluationOutcome(
-                    alert.Id,
-                    alert.Title,
-                    alert.AlertType,
-                    AlertTriggerStatus.Triggered,
-                    IsTriggered: true,
-                    TriggeredAt: null,
-                    IsSuppressed: true,
-                    DeDuplicationReason.CooldownActive,
                     rawOutcome.ObservedValue,
                     alert.Threshold,
                     alert.ComparisonOperator,

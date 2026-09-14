@@ -1,4 +1,5 @@
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
@@ -45,7 +46,8 @@ public class CurrencyAccountControllerTests
             _mockAccountEntryRepository.Object,
             _userPlanVerifier.Object,
             _currencyAccountCsvExportService.Object,
-            Mock.Of<ICacheInvalidator>());
+            Mock.Of<ICacheInvalidator>(),
+            Mock.Of<IFinancialAlertService>());
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(

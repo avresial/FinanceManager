@@ -1,4 +1,5 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Domain.Assets.Discovery;
@@ -30,7 +31,8 @@ public class InvestmentTransactionController(
     IAssetListingRepository assetListingRepository,
     IInvestmentInstrumentSearchService instrumentSearchService,
     IInvestmentPriceProvider priceProvider,
-    ILogger<InvestmentTransactionController> logger) : ControllerBase
+    ILogger<InvestmentTransactionController> logger,
+    IFinancialAlertService financialAlertService) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -226,7 +228,9 @@ public class InvestmentTransactionController(
 
         try
         {
-            return Ok(await transactionService.AddAsync(request, account.UserId, cancellationToken));
+            var result = await transactionService.AddAsync(request, account.UserId, cancellationToken);
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
+            return Ok(result);
         }
         catch (InvestmentTransactionCommandException ex)
         {
@@ -258,6 +262,8 @@ public class InvestmentTransactionController(
 
         var result = await transactionRepository.Update(request.ToEntity(), cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
         return Ok(result);
     }
 
@@ -276,6 +282,8 @@ public class InvestmentTransactionController(
 
         var result = await transactionRepository.Delete(id, cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
         return Ok(result);
     }
 

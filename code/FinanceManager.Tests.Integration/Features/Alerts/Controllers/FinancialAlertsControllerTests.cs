@@ -65,8 +65,7 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
             AlertComparisonOperator.GreaterThan,
             1000m,
             AlertEvaluationPeriod.CurrentMonth,
-            LabelName: "Restaurants",
-            CooldownPeriod: TimeSpan.FromHours(6));
+            LabelName: "Restaurants");
         var created = CreateAlert(_testUserId, command.Title, command.AlertType);
         _serviceMock
             .Setup(x => x.CreateAlertAsync(_testUserId, It.IsAny<CreateFinancialAlert>(), It.IsAny<CancellationToken>()))

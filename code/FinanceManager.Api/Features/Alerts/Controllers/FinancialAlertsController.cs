@@ -128,9 +128,6 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         if (command.MerchantName?.Length > 200 || command.LabelName?.Length > 200)
             return "Scope names must be at most 200 characters.";
 
-        if (command.CooldownPeriod is { } cooldown && cooldown < TimeSpan.Zero)
-            return "Cooldown period cannot be negative.";
-
         return null;
     }
 
@@ -149,9 +146,6 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
 
         if (command.MerchantName?.Length > 200 || command.LabelName?.Length > 200)
             return "Scope names must be at most 200 characters.";
-
-        if (command.CooldownPeriod is { } cooldown && cooldown < TimeSpan.Zero)
-            return "Cooldown period cannot be negative.";
 
         return null;
     }
