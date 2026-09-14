@@ -20,7 +20,6 @@ public record FinancialAlertDto(
     AlertTriggerStatus LastStatus,
     DateTime? LastTriggeredAt,
     decimal? LastTriggeredValue,
-    TimeSpan? CooldownPeriod,
     DateTime CreatedAt,
     DateTime? UpdatedAt)
 {
@@ -41,7 +40,6 @@ public record FinancialAlertDto(
         entity.LastStatus,
         entity.LastTriggeredAt,
         entity.LastTriggeredValue,
-        entity.CooldownPeriod,
         entity.CreatedAt,
         entity.UpdatedAt);
 }

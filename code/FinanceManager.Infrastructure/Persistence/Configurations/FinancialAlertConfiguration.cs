@@ -27,8 +27,6 @@ internal sealed class FinancialAlertConfiguration : IEntityTypeConfiguration<Fin
         builder.Property(x => x.Threshold)
             .HasPrecision(18, 2);
 
-        // TimeSpan is intentionally kept as the provider-native duration/time value. Both configured
-        // relational providers and the in-memory test provider support nullable TimeSpan properties.
         builder.HasOne<UserDto>()
             .WithMany()
             .HasForeignKey(x => x.UserId)

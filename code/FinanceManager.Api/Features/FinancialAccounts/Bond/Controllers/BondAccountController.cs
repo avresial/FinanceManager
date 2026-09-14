@@ -1,4 +1,5 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
@@ -24,7 +25,8 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
-    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -134,6 +136,8 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         await bondAccountEntryRepository.Delete(accountId);
         var result = await bondAccountRepository.Delete(accountId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId);
         return Ok(result);
     }
 

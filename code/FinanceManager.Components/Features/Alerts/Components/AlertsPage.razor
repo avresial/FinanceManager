@@ -77,11 +77,6 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" md="3">
-                <MudNumericField T="double" @bind-Value="_form.CooldownHours" Label="Cooldown (hours)"
-                                 Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
-            </MudItem>
-
             @if (_form.AlertType == AlertType.AccountBalance)
             {
                 <MudItem xs="12" md="6">

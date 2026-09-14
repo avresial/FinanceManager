@@ -1,4 +1,5 @@
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
@@ -35,6 +36,7 @@ public sealed class CurrencyImportBackgroundService(
 
                 using var scope = scopeFactory.CreateScope();
                 var importService = scope.ServiceProvider.GetRequiredService<ICurrencyAccountImportService>();
+                var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
                 var domainEntries = request.Entries
                     .Select(x => new CurrencyEntryImport(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
                     .ToList();
@@ -72,6 +74,8 @@ public sealed class CurrencyImportBackgroundService(
                         }
                     },
                     cancellationToken: stoppingToken);
+
+                await financialAlertService.EvaluateAlertsAsync(request.UserId, CancellationToken.None);
 
                 jobStore.TryMarkCompleted(request.JobId, result);
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);

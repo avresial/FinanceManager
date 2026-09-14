@@ -363,12 +363,9 @@ public class FinancialAlertEvaluatorTests
     }
 
     [Fact]
-    public void Evaluate_Cooldown_SuppressesDuplicateWhenWithinCooldownWindow()
+    public void Evaluate_ChangedCondition_TriggersAgainWithoutCooldown()
     {
-        var alert = new FinancialAlert(1, "Low Balance", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m, accountId: 1)
-        {
-            CooldownPeriod = TimeSpan.FromHours(24)
-        };
+        var alert = new FinancialAlert(1, "Low Balance", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m, accountId: 1);
 
         var account = new CurrencyAccount(1, 1, "Main", AccountLabel.Cash);
         account.Add(new CurrencyAccountEntry(1, 1, _evaluationDate.AddHours(-2), 600m, 600m));
@@ -377,15 +374,15 @@ public class FinancialAlertEvaluatorTests
         var outcome1 = _evaluator.Evaluate(alert, snapshot1);
         alert.RecordTrigger(outcome1.CurrentValue, outcome1.ConditionFingerprint, outcome1.EvaluatedAt);
 
-        // Balance changed slightly to 550, but evaluated only 1 hour later (within 24h cooldown)
+        // Balance changed slightly to 550 and is evaluated again immediately.
         account.Add(new CurrencyAccountEntry(1, 2, _evaluationDate.AddHours(-1), 550m, -50m));
         var snapshot2 = new AlertEvaluationSnapshot([account], [], _evaluationDate.AddHours(-1));
         var outcome2 = _evaluator.Evaluate(alert, snapshot2);
 
         Assert.True(outcome2.IsTriggered);
-        Assert.Null(outcome2.TriggeredAt);
-        Assert.True(outcome2.IsSuppressed);
-        Assert.Equal(DeDuplicationReason.CooldownActive, outcome2.DeDuplicationReason);
+        Assert.Equal(_evaluationDate.AddHours(-1), outcome2.TriggeredAt);
+        Assert.False(outcome2.IsSuppressed);
+        Assert.Equal(DeDuplicationReason.None, outcome2.DeDuplicationReason);
     }
 
     [Fact]

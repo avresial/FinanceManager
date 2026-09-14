@@ -88,7 +88,6 @@ public partial class AlertsPage : ComponentBase
         _isSaving = true;
         try
         {
-            TimeSpan? cooldown = _form.CooldownHours <= 0 ? null : TimeSpan.FromHours(_form.CooldownHours);
             if (_editingId is Guid id)
             {
                 var updated = await HttpClient.UpdateAsync(
@@ -104,8 +103,7 @@ public partial class AlertsPage : ComponentBase
                         null,
                         labelName,
                         merchantName,
-                        null,
-                        cooldown));
+                        null));
                 if (updated is null)
                 {
                     _errors.Add("Unable to update this alert.");
@@ -125,8 +123,7 @@ public partial class AlertsPage : ComponentBase
                         null,
                         labelName,
                         merchantName,
-                        null,
-                        cooldown));
+                        null));
                 if (created is null)
                 {
                     _errors.Add("Unable to create this alert.");
@@ -204,7 +201,6 @@ public partial class AlertsPage : ComponentBase
             AccountIdText = alert.AccountId?.ToString() ?? string.Empty,
             LabelName = alert.LabelName ?? string.Empty,
             MerchantName = alert.MerchantName ?? string.Empty,
-            CooldownHours = alert.CooldownPeriod?.TotalHours ?? 0,
         };
     }
 
@@ -280,6 +276,5 @@ public partial class AlertsPage : ComponentBase
         public string AccountIdText { get; set; } = string.Empty;
         public string LabelName { get; set; } = string.Empty;
         public string MerchantName { get; set; } = string.Empty;
-        public double CooldownHours { get; set; }
     }
 }

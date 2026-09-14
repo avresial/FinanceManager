@@ -2,6 +2,7 @@ using FinanceManager.Api;
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
@@ -22,7 +23,8 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 [ApiController]
 [Tags("Currency Imports")]
 public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    ICacheInvalidator dashboardCacheInvalidator)
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]
@@ -94,6 +96,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         {
             await importService.ApplyResolvedConflicts(resolvedConflicts, HttpContext.RequestAborted);
             await dashboardCacheInvalidator.InvalidateUser(userId);
+            await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);
         }
 
         if (!jobStore.TryGetStatus(request.JobId, userId, out var status) || status is null)
@@ -120,6 +123,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         var domainEntries = importDto.Entries.Select(e => new CurrencyEntryImport(e.PostingDate, e.ValueChange, e.ContractorDetails, e.Description));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries, cancellationToken: HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
+        await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);
         return Ok(domainResult);
     }
 
@@ -141,6 +145,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
 
         await importService.ApplyResolvedConflicts(resolvedConflicts, HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
+        await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);
         return Ok();
     }
 }

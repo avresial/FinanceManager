@@ -1,4 +1,5 @@
 using FinanceManager.Api.Features.FinancialAccounts.Bond.Controllers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Bond;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
@@ -35,7 +36,8 @@ public class BondAccountControllerTests
             _mockBondAccountEntryRepository.Object,
             _userPlanVerifier.Object,
             _bondAccountCsvExportService.Object,
-            Mock.Of<ICacheInvalidator>());
+            Mock.Of<ICacheInvalidator>(),
+            Mock.Of<IFinancialAlertService>());
 
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
         [

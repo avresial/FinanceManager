@@ -1,4 +1,5 @@
 using FinanceManager.Api.Shared.Helpers;
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
@@ -19,7 +20,8 @@ public class BondEntryController(
     IAccountRepository<BondAccount> bondAccountRepository,
     IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserPlanVerifier userPlanVerifier,
-    ICacheInvalidator dashboardCacheInvalidator) : ControllerBase
+    ICacheInvalidator dashboardCacheInvalidator,
+    IFinancialAlertService financialAlertService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
@@ -80,6 +82,7 @@ public class BondEntryController(
 
         await bondAccountEntryRepository.Add(newEntry);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
 
         // Get all entries for this account and date to find the one we just added
         var entries = await bondAccountEntryRepository.Get(addEntry.AccountId, addEntry.PostingDate, addEntry.PostingDate.AddSeconds(1))
@@ -101,6 +104,8 @@ public class BondEntryController(
 
         var result = await bondAccountEntryRepository.Delete(accountId, entryId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -116,6 +121,7 @@ public class BondEntryController(
 
         await bondAccountEntryRepository.RecalculateValues(accountId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok();
     }
 
@@ -138,6 +144,8 @@ public class BondEntryController(
 
         var result = await bondAccountEntryRepository.Update(entryToUpdate);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
+        if (result)
+            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
         return Ok(result);
     }
 }
