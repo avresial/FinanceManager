@@ -3,10 +3,11 @@ using System.Text.RegularExpressions;
 namespace FinanceManager.Tests.Unit.Components;
 
 /// <summary>
-/// Guards the information-affordance convention: every <c>MudCard</c> surface hosts exactly one
-/// <c>CardInfoTooltip</c>. The Razor sources are parsed by tag order, so every tooltip is matched
-/// to its containing card and an orphan affordance or a card without its information affordance
-/// fails the build.
+/// Guards the information-affordance convention: every eligible <c>MudCard</c> surface hosts
+/// exactly one <c>CardInfoTooltip</c>. The Razor sources are parsed by tag order, so every tooltip
+/// is matched to its containing card and an orphan affordance or a card without its information
+/// affordance fails the build. Date-group cards are explicitly exempt because their redundant
+/// explanatory date tooltips are intentionally absent.
 /// </summary>
 [Trait("Category", "Unit")]
 public class CardInfoAffordanceCoverageTests
@@ -69,11 +70,22 @@ public class CardInfoAffordanceCoverageTests
         {
             var text = File.ReadAllText(file);
             var coverage = AnalyzeCardCoverage(text);
+            var relative = Path.GetRelativePath(componentsRoot, file);
             cardTotal += coverage.Cards.Count;
             tooltipTotal += coverage.TooltipCount;
+
+            if (_dateGroupTooltipExemptions.Contains(relative, StringComparer.Ordinal))
+            {
+                if (coverage.Cards.Count != 1 || coverage.TooltipCount != 0)
+                {
+                    mismatches.Add($"{relative}: expected exactly one MudCard with no CardInfoTooltip");
+                }
+
+                continue;
+            }
+
             if (coverage.Mismatches.Count > 0)
             {
-                var relative = Path.GetRelativePath(componentsRoot, file);
                 mismatches.AddRange(coverage.Mismatches.Select(mismatch => $"{relative}: {mismatch}"));
             }
         }
@@ -180,6 +192,13 @@ public class CardInfoAffordanceCoverageTests
     private static readonly Regex _commentPattern = new(
         @"@\*[\s\S]*?\*@|<!--[\s\S]*?-->",
         RegexOptions.Compiled);
+
+    private static readonly string[] _dateGroupTooltipExemptions =
+    [
+        "Features/FinancialAccounts/Components/BondAccountComponents/TransactionHistory/BondDayGroupCard.razor",
+        "Features/FinancialAccounts/Components/CurrencyAccountComponents/TransactionHistory/CurrencyDayGroupCard.razor",
+        "Features/FinancialAccounts/Components/InvestmentAccountComponents/TransactionHistory/InvestmentDayGroupCard.razor"
+    ];
 
     private sealed class CardSurface(int lineNumber)
     {
