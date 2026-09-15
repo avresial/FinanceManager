@@ -616,7 +616,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     // Seeds a cash account that books a -500 "Investment" outflow alongside an investment account
     // (Stock-type, new asset model) that holds the matching shares. The holdings value belongs in
     // closing balance, the cash outflow in cash flow — and neither must leak into the other.
-    private async Task SeedCashAndInvestmentAccounts(DateTime day0)
+    private async Task SeedCashAndInvestmentAccounts(DateTime day0, bool includeHighPriceSell = false)
     {
         var cashAccount = new FinancialAccountBaseDto
         {
@@ -678,6 +678,21 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
             TradeDate = DateOnly.FromDateTime(day0.AddDays(1))
         });
 
+        if (includeHighPriceSell)
+        {
+            _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
+            {
+                UserId = 1,
+                AccountId = 51,
+                AssetListingId = listingId,
+                Type = InvestmentTransactionType.Sell,
+                Quantity = 2m,
+                UnitPrice = 250m,
+                Currency = "USD",
+                TradeDate = DateOnly.FromDateTime(day0.AddDays(2))
+            });
+        }
+
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -733,6 +748,27 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(0m, result.Single(x => x.DateTime == day0).Value);
         Assert.Equal(500m, result.Single(x => x.DateTime == day0.AddDays(1)).Value);
         Assert.Equal(500m, result.Single(x => x.DateTime == day0.AddDays(2)).Value);
+    }
+
+    [Fact]
+    public async Task GetCapital_ReconstructsSellFromHistoricalCost_NotSaleProceeds()
+    {
+        var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        await SeedCashAndInvestmentAccounts(day0, includeHighPriceSell: true);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new MoneyFlowHttpClient(Client).GetCapital(
+            1,
+            DefaultCurrency.USD,
+            day0,
+            day0.AddDays(2),
+            [51]);
+
+        Assert.Equal(0m, result.Single(x => x.DateTime == day0).Value);
+        Assert.Equal(500m, result.Single(x => x.DateTime == day0.AddDays(1)).Value);
+        // The sell is for 2 of the 5 units, so only 2 * 100 of historical cost leaves capital;
+        // the 250 sale price must not create a discontinuity in the Capital series.
+        Assert.Equal(300m, result.Single(x => x.DateTime == day0.AddDays(2)).Value);
     }
 
     public override void Dispose()

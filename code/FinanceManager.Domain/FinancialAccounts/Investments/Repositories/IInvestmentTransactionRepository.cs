@@ -72,8 +72,9 @@ public interface IInvestmentTransactionRepository
     Task<AccountValuationInputs> GetValuationInputs(IReadOnlyCollection<int> accountIds, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Bounded historical capital flow projection inputs for transactions on or before <paramref name="toDate"/>
-    /// across the given accounts, selecting only fields needed for cash flow calculations.
+    /// Bounded historical capital reconstruction inputs for transactions on or before <paramref name="toDate"/>
+    /// across the given accounts. The projection includes the stable transaction/listing identity so
+    /// the application can replay same-day history deterministically without loading entity graphs.
     /// </summary>
     Task<IReadOnlyList<CapitalFlowInput>> GetCapitalFlowInputs(IReadOnlyCollection<int> accountIds, DateOnly toDate, CancellationToken cancellationToken = default);
 
@@ -118,7 +119,9 @@ public interface IInvestmentTransactionRepository
         IReadOnlyList<ValuationTradeInput> InWindowTrades);
 
     public sealed record CapitalFlowInput(
+        long TransactionId,
         int AccountId,
+        long AssetListingId,
         DateOnly TradeDate,
         InvestmentTransactionType Type,
         decimal Quantity,
