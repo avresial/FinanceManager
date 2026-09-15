@@ -1,6 +1,7 @@
 using FinanceManager.Api.Features.MoneyFlow.Controllers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -24,6 +25,7 @@ public class AssetsControllerTests
 
     private readonly Mock<IAssetsService> _assetsServiceMock = new();
     private readonly Mock<IInvestmentPaycheckEstimatorService> _investmentPaycheckEstimatorServiceMock = new();
+    private readonly Mock<IFeeDragService> _feeDragServiceMock = new();
     private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
     private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
     private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
@@ -38,6 +40,7 @@ public class AssetsControllerTests
         _controller = new AssetsController(
             _assetsServiceMock.Object,
             _investmentPaycheckEstimatorServiceMock.Object,
+            _feeDragServiceMock.Object,
             _currencyRepositoryMock.Object,
             _investmentAppreciationServiceMock.Object,
             _accountRepositoryMock.Object)
@@ -78,5 +81,64 @@ public class AssetsControllerTests
         var returnValue = Assert.IsType<InvestmentPaycheckEstimate>(okResult.Value);
         Assert.Equal(expected.SustainableMonthlyPaycheck, returnValue.SustainableMonthlyPaycheck);
         Assert.Equal(expected.SalaryMonthsUsed, returnValue.SalaryMonthsUsed);
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_ReturnsAnalysisForAuthenticatedUser()
+    {
+        var asOfDate = new DateTime(2026, 9, 15, 0, 0, 0, DateTimeKind.Utc);
+        var expected = new FeeDragAnalysisResult
+        {
+            TotalHoldingsValue = 100_000m,
+            AnnualFeeCost = 250m,
+            WeightedExpenseRatio = 0.0025m,
+            AssumedAnnualReturnRate = 0.07m,
+        };
+
+        _currencyRepositoryMock
+            .Setup(repository => repository.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DefaultCurrency.PLN);
+        _feeDragServiceMock
+            .Setup(service => service.GetAnalysisAsync(_testUserId, DefaultCurrency.PLN, asOfDate, 0.07m, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetFeeDragAnalysis(
+            _testUserId,
+            DefaultCurrency.PLN.Id,
+            asOfDate,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expected, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_RejectsReturnRateOutsideSupportedRange()
+    {
+        var result = await _controller.GetFeeDragAnalysis(
+            _testUserId,
+            DefaultCurrency.PLN.Id,
+            DateTime.UtcNow,
+            0.11m,
+            TestContext.Current.CancellationToken);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("between -10% and 10%", badRequest.Value?.ToString());
+        _feeDragServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_ForOtherUserReturnsForbidden()
+    {
+        var result = await _controller.GetFeeDragAnalysis(
+            _testUserId + 1,
+            DefaultCurrency.PLN.Id,
+            DateTime.UtcNow,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        Assert.IsType<ForbidResult>(result);
+        _feeDragServiceMock.VerifyNoOtherCalls();
     }
 }
