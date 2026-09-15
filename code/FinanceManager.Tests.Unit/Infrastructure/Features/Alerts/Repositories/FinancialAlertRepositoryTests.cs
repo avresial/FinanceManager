@@ -122,11 +122,13 @@ public sealed class FinancialAlertRepositoryTests
         var categoryData = result[categoryAlert.Id];
         Assert.Equal(3300m, categoryData.TotalSpend);
         Assert.Equal(2, categoryData.TransactionCount);
+        Assert.Equal([2, 1], categoryData.MatchingTransactions!.Select(entry => entry.EntryId));
 
         var largeData = result[largeTransactionAlert.Id];
         Assert.Equal(1, largeData.TransactionCount);
         Assert.Equal(2, largeData.LargestTransaction!.EntryId);
         Assert.Equal(2900m, Math.Abs(largeData.LargestTransaction.ValueChange));
+        Assert.Equal([2], largeData.MatchingTransactions!.Select(entry => entry.EntryId));
     }
 
     private static FinancialAlert CreateAlert(int userId, string title) =>

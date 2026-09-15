@@ -121,6 +121,9 @@ public class FinancialAlertEvaluatorTests
         Assert.Equal(_evaluationDate, outcome.TriggeredAt);
         Assert.Equal(1147m, outcome.CurrentValue);
         Assert.Equal("2", outcome.Context["TransactionCount"]);
+        Assert.Equal(2, outcome.MatchingTransactionCount);
+        Assert.Equal([1, 2], outcome.MatchingTransactions!.Select(transaction => transaction.EntryId));
+        Assert.DoesNotContain("threshold", outcome.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -204,6 +207,8 @@ public class FinancialAlertEvaluatorTests
         Assert.True(outcome.IsTriggered);
         Assert.Equal(175m, outcome.CurrentValue);
         Assert.Equal("2", outcome.Context["TransactionCount"]);
+        Assert.Equal(2, outcome.MatchingTransactionCount);
+        Assert.Equal([1, 2], outcome.MatchingTransactions!.Select(transaction => transaction.EntryId));
     }
 
     [Fact]
@@ -226,6 +231,9 @@ public class FinancialAlertEvaluatorTests
         Assert.Equal(2500m, outcome.CurrentValue);
         Assert.Equal("1", outcome.Context["TriggeringAccountId"]);
         Assert.Equal("1", outcome.Context["TriggeringEntryId"]);
+        Assert.Equal(1, outcome.MatchingTransactionCount);
+        Assert.Equal(1, outcome.MatchingTransactions!.Single().EntryId);
+        Assert.Equal("Large transaction detected on 2026-09-09", outcome.Message);
     }
 
     [Fact]

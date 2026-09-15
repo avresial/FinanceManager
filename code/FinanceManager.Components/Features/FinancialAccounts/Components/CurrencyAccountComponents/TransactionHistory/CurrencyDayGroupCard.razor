@@ -22,7 +22,8 @@
         <MudStack Spacing="0">
             @foreach (var entry in Entries)
             {
-                <TransactionRow Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile" />
+                <TransactionRow @key="entry.EntryId" Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile"
+                                InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)" />
                 <MudDivider />
             }
         </MudStack>
@@ -35,6 +36,7 @@
     [Parameter] public required IEnumerable<CurrencyAccountEntry> Entries { get; set; }
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public int? HighlightedEntryId { get; set; }
 
     private decimal DailyNet => Entries.Sum(e => e.ValueChange);
 }

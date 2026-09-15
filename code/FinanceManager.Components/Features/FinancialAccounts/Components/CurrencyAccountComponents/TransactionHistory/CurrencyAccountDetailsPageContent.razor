@@ -45,7 +45,7 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
                     @foreach (var group in dayGroups)
                     {
                         <CurrencyDayGroupCard Day="@group.Key" Account="Account" Entries="@group" Currency="@_currency.ShortName"
-                                              IsMobile="@_isMobile" />
+                                              IsMobile="@_isMobile" HighlightedEntryId="@_highlightedEntryId" />
                     }
                 }
             </MudItem>

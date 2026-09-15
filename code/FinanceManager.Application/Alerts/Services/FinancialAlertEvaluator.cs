@@ -10,6 +10,8 @@ namespace FinanceManager.Application.Alerts.Services;
 
 public class FinancialAlertEvaluator : IFinancialAlertEvaluator
 {
+    private const int _maxMatchingTransactions = 5;
+
     public AlertEvaluationOutcome Evaluate(FinancialAlert alert, AlertEvaluationSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(alert);
@@ -66,7 +68,9 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     rawOutcome.Fingerprint,
                     rawOutcome.Message,
                     evaluationTime,
-                    rawOutcome.Context);
+                    rawOutcome.Context,
+                    MatchingTransactions: rawOutcome.MatchingTransactions,
+                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
             }
 
             // Condition is met. Suppress only an unchanged condition; changed transactions trigger
@@ -88,7 +92,9 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     rawOutcome.Fingerprint,
                     rawOutcome.Message,
                     evaluationTime,
-                    rawOutcome.Context);
+                    rawOutcome.Context,
+                    MatchingTransactions: rawOutcome.MatchingTransactions,
+                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
             }
 
             // Newly triggered
@@ -107,7 +113,9 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 rawOutcome.Fingerprint,
                 rawOutcome.Message,
                 evaluationTime,
-                rawOutcome.Context);
+                rawOutcome.Context,
+                MatchingTransactions: rawOutcome.MatchingTransactions,
+                MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
         }
         catch (Exception ex)
         {
@@ -164,7 +172,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
 
             var conditionMet = MatchesComparison(balance, alert.ComparisonOperator, alert.Threshold);
             var fingerprint = $"AccountBalance:AccountId={targetAccountId}:Balance={balance.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-            var message = $"Account '{accountName}' balance is {balance.ToString("N2", inv)} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+            var message = $"Account '{accountName}' balance is {balance.ToString("N2", inv)}";
 
             return new RawConditionResult(conditionMet, balance, fingerprint, message, context);
         }
@@ -205,14 +213,14 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             context["Balance"] = chosenBalance.ToString("F2", inv);
 
             var fingerprint = $"AccountBalance:AccountId={triggeredAccount.AccountId}:Balance={chosenBalance.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-            var message = $"Account '{triggeredAccount.Name}' balance is {chosenBalance.ToString("N2", inv)} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+            var message = $"Account '{triggeredAccount.Name}' balance is {chosenBalance.ToString("N2", inv)}";
 
             return new RawConditionResult(true, chosenBalance, fingerprint, message, context);
         }
 
         var defaultBalance = snapshot.Accounts.Count > 0 ? GetAccountBalance(snapshot.Accounts[0]) : 0m;
         var defaultFingerprint = $"AccountBalance:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-        var defaultMessage = $"No account violated balance threshold {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)}";
+        var defaultMessage = "No account currently violates the balance condition.";
 
         return new RawConditionResult(false, defaultBalance, defaultFingerprint, defaultMessage, context);
     }
@@ -224,11 +232,13 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         var periodKey = FormatPeriodKey(alert.EvaluationPeriod, startDate, endDate);
         decimal totalSpend;
         int transactionCount;
+        IReadOnlyList<CurrencyAccountEntry> matchingEntries;
         if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
             && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
         {
             totalSpend = allTimeData.TotalSpend;
             transactionCount = allTimeData.TransactionCount;
+            matchingEntries = allTimeData.MatchingTransactions ?? [];
         }
         else
         {
@@ -249,13 +259,14 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
 
             totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
             transactionCount = qualifyingEntries.Count;
+            matchingEntries = qualifyingEntries;
         }
 
         var labelKey = alert.LabelId?.ToString(inv) ?? alert.LabelName ?? "All";
         var conditionMet = MatchesComparison(totalSpend, alert.ComparisonOperator, alert.Threshold);
 
         var fingerprint = $"CategorySpending:Label={labelKey}:Period={periodKey}:Spend={totalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-        var message = $"Spending for category '{labelKey}' in {alert.EvaluationPeriod} is {totalSpend.ToString("N2", inv)} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+        var message = $"Spending for category '{labelKey}' in {FormatPeriodLabel(alert.EvaluationPeriod)} is {totalSpend.ToString("N2", inv)}";
 
         var context = new Dictionary<string, string>
         {
@@ -265,7 +276,14 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             ["TransactionCount"] = transactionCount.ToString(inv)
         };
 
-        return new RawConditionResult(conditionMet, totalSpend, fingerprint, message, context);
+        return new RawConditionResult(
+            conditionMet,
+            totalSpend,
+            fingerprint,
+            message,
+            context,
+            ToTransactionReferences(matchingEntries),
+            transactionCount);
     }
 
     private static RawConditionResult EvaluateMerchantSpending(FinancialAlert alert, AlertEvaluationSnapshot snapshot)
@@ -276,11 +294,13 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         var merchantTarget = (alert.MerchantName ?? string.Empty).Trim();
         decimal totalSpend;
         int transactionCount;
+        IReadOnlyList<CurrencyAccountEntry> matchingEntries;
         if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
             && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
         {
             totalSpend = allTimeData.TotalSpend;
             transactionCount = allTimeData.TransactionCount;
+            matchingEntries = allTimeData.MatchingTransactions ?? [];
         }
         else
         {
@@ -300,12 +320,13 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
 
             totalSpend = qualifyingEntries.Sum(e => Math.Abs(e.ValueChange));
             transactionCount = qualifyingEntries.Count;
+            matchingEntries = qualifyingEntries;
         }
 
         var conditionMet = MatchesComparison(totalSpend, alert.ComparisonOperator, alert.Threshold);
 
         var fingerprint = $"MerchantSpending:Merchant={merchantTarget.ToLowerInvariant()}:Period={periodKey}:Spend={totalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-        var message = $"Spending for merchant '{merchantTarget}' in {alert.EvaluationPeriod} is {totalSpend.ToString("N2", inv)} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+        var message = $"Spending for merchant '{merchantTarget}' in {FormatPeriodLabel(alert.EvaluationPeriod)} is {totalSpend.ToString("N2", inv)}";
 
         var context = new Dictionary<string, string>
         {
@@ -315,7 +336,14 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             ["TransactionCount"] = transactionCount.ToString(inv)
         };
 
-        return new RawConditionResult(conditionMet, totalSpend, fingerprint, message, context);
+        return new RawConditionResult(
+            conditionMet,
+            totalSpend,
+            fingerprint,
+            message,
+            context,
+            ToTransactionReferences(matchingEntries),
+            transactionCount);
     }
 
     private static RawConditionResult EvaluateLargeTransaction(FinancialAlert alert, AlertEvaluationSnapshot snapshot)
@@ -336,13 +364,13 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             if (allTimeData.LargestTransaction is not CurrencyAccountEntry largestTransaction)
             {
                 var noMatchFingerprint = $"LargeTransaction:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-                var noMatchMessage = $"No transaction violated threshold {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)}";
+                var noMatchMessage = "No transaction currently matches the condition.";
                 return new RawConditionResult(false, 0m, noMatchFingerprint, noMatchMessage, new Dictionary<string, string>());
             }
 
             var largestAmount = Math.Abs(largestTransaction.ValueChange);
             var fingerprint = $"LargeTransaction:Count={allTimeData.TransactionCount}:Top={largestTransaction.AccountId}:{largestTransaction.EntryId}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-            var message = $"Large transaction of {largestAmount.ToString("N2", inv)} detected on {largestTransaction.PostingDate:yyyy-MM-dd} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+            var message = $"Large transaction detected on {largestTransaction.PostingDate:yyyy-MM-dd}";
             var context = new Dictionary<string, string>
             {
                 ["TriggeringAccountId"] = largestTransaction.AccountId.ToString(inv),
@@ -350,10 +378,19 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 ["Amount"] = largestAmount.ToString("F2", inv),
                 ["PostingDate"] = largestTransaction.PostingDate.ToString("yyyy-MM-dd"),
                 ["ContractorDetails"] = largestTransaction.ContractorDetails ?? string.Empty,
-                ["Description"] = largestTransaction.Description
+                ["Description"] = largestTransaction.Description,
+                ["TransactionCount"] = allTimeData.TransactionCount.ToString(inv)
             };
 
-            return new RawConditionResult(true, largestAmount, fingerprint, message, context);
+            var matchingEntries = allTimeData.MatchingTransactions ?? [largestTransaction];
+            return new RawConditionResult(
+                true,
+                largestAmount,
+                fingerprint,
+                message,
+                context,
+                ToTransactionReferences(matchingEntries),
+                allTimeData.TransactionCount);
         }
 
         var allEntries = snapshot.GetAllEntries();
@@ -373,7 +410,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             var entryIds = string.Join(",", qualifyingEntries.Select(e => $"{e.AccountId}:{e.EntryId}").Order());
 
             var fingerprint = $"LargeTransaction:Entries={entryIds}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-            var message = $"Large transaction of {largestAmount.ToString("N2", inv)} detected on {largest.PostingDate:yyyy-MM-dd} (threshold: {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)})";
+            var message = $"Large transaction detected on {largest.PostingDate:yyyy-MM-dd}";
 
             var context = new Dictionary<string, string>
             {
@@ -382,14 +419,22 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 ["Amount"] = largestAmount.ToString("F2", inv),
                 ["PostingDate"] = largest.PostingDate.ToString("yyyy-MM-dd"),
                 ["ContractorDetails"] = largest.ContractorDetails ?? string.Empty,
-                ["Description"] = largest.Description
+                ["Description"] = largest.Description,
+                ["TransactionCount"] = qualifyingEntries.Count.ToString(inv)
             };
 
-            return new RawConditionResult(true, largestAmount, fingerprint, message, context);
+            return new RawConditionResult(
+                true,
+                largestAmount,
+                fingerprint,
+                message,
+                context,
+                ToTransactionReferences(qualifyingEntries),
+                qualifyingEntries.Count);
         }
 
         var defaultFingerprint = $"LargeTransaction:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-        var defaultMessage = $"No transaction violated threshold {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)}";
+        var defaultMessage = "No transaction currently matches the condition.";
 
         return new RawConditionResult(false, 0m, defaultFingerprint, defaultMessage, new Dictionary<string, string>());
     }
@@ -433,7 +478,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
 
             var subKeys = string.Join(",", qualifyingSubs.Select(s => $"{s.Sub.PatternId}:{s.Sub.PreviousAmount.ToString("F2", inv)}->{s.Sub.LastAmount.ToString("F2", inv)}:{s.Sub.LastChargeDate:yyyyMMdd}").Order());
             var fingerprint = $"SubscriptionPriceChange:Subs={subKeys}";
-            var message = $"Subscription '{topSub.Name}' price changed by {delta.ToString("+0.00;-0.00", inv)} (from {topSub.PreviousAmount.ToString("N2", inv)} to {topSub.LastAmount.ToString("N2", inv)})";
+            var message = $"Subscription '{topSub.Name}' price changed from {topSub.PreviousAmount.ToString("N2", inv)} to {topSub.LastAmount.ToString("N2", inv)}";
 
             var context = new Dictionary<string, string>
             {
@@ -449,7 +494,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         }
 
         var defaultFingerprint = $"SubscriptionPriceChange:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
-        var defaultMessage = $"No subscription price change matched threshold {alert.ComparisonOperator} {alert.Threshold.ToString("N2", inv)}";
+        var defaultMessage = "No subscription price change currently matches the condition.";
 
         return new RawConditionResult(false, 0m, defaultFingerprint, defaultMessage, new Dictionary<string, string>());
     }
@@ -477,6 +522,31 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         AlertComparisonOperator.NotEqual => actual != threshold,
         _ => false
     };
+
+    private static string FormatPeriodLabel(AlertEvaluationPeriod period) => period switch
+    {
+        AlertEvaluationPeriod.CurrentMonth => "current month",
+        AlertEvaluationPeriod.Last30Days => "last 30 days",
+        AlertEvaluationPeriod.Last7Days => "last 7 days",
+        AlertEvaluationPeriod.AllTime => "all time",
+        _ => period.ToString()
+    };
+
+    private static IReadOnlyList<AlertTransactionReference> ToTransactionReferences(
+        IEnumerable<CurrencyAccountEntry> entries) =>
+        entries
+            .OrderByDescending(entry => Math.Abs(entry.ValueChange))
+            .ThenByDescending(entry => entry.PostingDate)
+            .ThenByDescending(entry => entry.EntryId)
+            .Take(_maxMatchingTransactions)
+            .Select(entry => new AlertTransactionReference(
+                entry.AccountId,
+                entry.EntryId,
+                entry.PostingDate,
+                Math.Abs(entry.ValueChange),
+                entry.Description,
+                entry.ContractorDetails))
+            .ToList();
 
     private static (DateTime Start, DateTime End) GetPeriodRange(AlertEvaluationPeriod period, DateTime evaluationDate)
     {
@@ -511,5 +581,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         decimal ObservedValue,
         string Fingerprint,
         string Message,
-        IReadOnlyDictionary<string, string> Context);
+        IReadOnlyDictionary<string, string> Context,
+        IReadOnlyList<AlertTransactionReference>? MatchingTransactions = null,
+        int MatchingTransactionCount = 0);
 }
