@@ -183,13 +183,19 @@ internal class InvestmentValuationService(
         var capitalFlowInputs = await transactionRepository.GetCapitalFlowInputs(accountIds, endDateOnly, ct);
         var capitalFlows = capitalFlowInputs
             .Select(ToCapitalFlow)
-            .Where(flow => flow.Amount != 0m)
             .ToList();
         if (capitalFlows.Count == 0) return result;
 
-        var ratesByCurrency = await LoadCapitalRatesAsync(capitalFlows, targetCurrency, endDate, ct);
+        var buyFlows = capitalFlows
+            .Where(flow => flow.Type == InvestmentTransactionType.Buy)
+            .ToList();
+        if (buyFlows.Count == 0) return result;
+
+        var ratesByCurrency = await LoadCapitalRatesAsync(buyFlows, targetCurrency, endDate, ct);
         foreach (var accountGroup in capitalFlows.GroupBy(flow => flow.AccountId))
         {
+            if (!accountGroup.Any(flow => flow.Type == InvestmentTransactionType.Buy)) continue;
+
             var series = BuildCapitalSeries(accountGroup, targetCurrency, ratesByCurrency, start.Date, endDate);
             if (series.Count > 0)
                 result[accountGroup.Key] = series;
@@ -281,16 +287,42 @@ internal class InvestmentValuationService(
     {
         Dictionary<DateTime, decimal> dailyDeltas = [];
         decimal openingCapital = 0m;
+        Dictionary<long, InvestmentPositionCost> positions = [];
 
-        foreach (var flow in accountFlows)
+        foreach (var flow in accountFlows.OrderBy(flow => flow.Date).ThenBy(flow => flow.TransactionId))
         {
-            var convertedAmount = ConvertCapitalFlow(flow, targetCurrency, ratesByCurrency);
-            if (convertedAmount is not decimal amount) continue;
+            var before = GetTotalCostBasis(positions);
+            switch (flow.Type)
+            {
+                case InvestmentTransactionType.Buy:
+                    {
+                        if (flow.Quantity <= 0m) break;
+
+                        var convertedCost = ConvertBuyCost(flow, targetCurrency, ratesByCurrency);
+                        if (convertedCost is not decimal cost) break;
+
+                        if (!positions.TryGetValue(flow.AssetListingId, out var position))
+                        {
+                            position = new InvestmentPositionCost();
+                            positions[flow.AssetListingId] = position;
+                        }
+
+                        position.Quantity += flow.Quantity;
+                        position.CostBasis += cost;
+                        break;
+                    }
+                case InvestmentTransactionType.Sell:
+                    RemoveCostBasis(positions, flow.AssetListingId, flow.Quantity);
+                    break;
+            }
+
+            var after = GetTotalCostBasis(positions);
+            var delta = after - before;
 
             if (flow.Date < startDate)
-                openingCapital += amount;
+                openingCapital = after;
             else if (flow.Date <= endDate)
-                dailyDeltas[flow.Date] = dailyDeltas.GetValueOrDefault(flow.Date) + amount;
+                dailyDeltas[flow.Date] = dailyDeltas.GetValueOrDefault(flow.Date) + delta;
         }
 
         Dictionary<DateTime, decimal> result = [];
@@ -304,46 +336,80 @@ internal class InvestmentValuationService(
         return result;
     }
 
-    private static decimal? ConvertCapitalFlow(
+    private static decimal GetTotalCostBasis(IReadOnlyDictionary<long, InvestmentPositionCost> positions) =>
+        positions.Values.Sum(position => position.CostBasis);
+
+    private static void RemoveCostBasis(
+        IDictionary<long, InvestmentPositionCost> positions,
+        long assetListingId,
+        decimal quantity)
+    {
+        if (quantity <= 0m || !positions.TryGetValue(assetListingId, out var position) || position.Quantity <= 0m)
+            return;
+
+        var soldQuantity = Math.Min(quantity, position.Quantity);
+        if (soldQuantity == position.Quantity)
+        {
+            positions.Remove(assetListingId);
+            return;
+        }
+
+        position.CostBasis -= position.CostBasis * soldQuantity / position.Quantity;
+        position.Quantity -= soldQuantity;
+    }
+
+    private static decimal? ConvertBuyCost(
         InvestmentCapitalFlow flow,
         Currency targetCurrency,
         IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency)
     {
+        var amount = (flow.Quantity * flow.UnitPrice + (flow.Fee ?? 0m)) * flow.PriceMultiplier;
         if (string.Equals(flow.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            return flow.Amount;
+            return amount;
 
         return ratesByCurrency.TryGetValue(flow.Currency, out var rates)
             && CurrencyRateSeries.TryGet(rates, flow.Date, out var rate)
             && rate > 0m
-                ? flow.Amount * rate
+                ? amount * rate
                 : null;
     }
 
     private static InvestmentCapitalFlow ToCapitalFlow(IInvestmentTransactionRepository.CapitalFlowInput flow)
     {
-        var gross = flow.Quantity * flow.UnitPrice;
-        var fee = flow.Fee ?? 0m;
-        var amount = flow.Type switch
-        {
-            // The new investment model has no separate deposit/transfer rows. Buy/Sell are the
-            // persisted cash-impact records, while an unknown future type must not add capital.
-            InvestmentTransactionType.Buy => gross + fee,
-            InvestmentTransactionType.Sell => -(gross - fee),
-            _ => 0m
-        };
-
         var currency = flow.Currency.Trim();
         var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(currency, out var majorCurrency);
         var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
 
         return new InvestmentCapitalFlow(
+            flow.TransactionId,
             flow.AccountId,
+            flow.AssetListingId,
             flow.TradeDate.ToDateTime(TimeOnly.MinValue).Date,
-            amount * multiplier,
-            isMinorQuote ? majorCurrency! : currency);
+            flow.Type,
+            flow.Quantity,
+            flow.UnitPrice,
+            flow.Fee,
+            isMinorQuote ? majorCurrency! : currency,
+            multiplier);
     }
 
-    private sealed record InvestmentCapitalFlow(int AccountId, DateTime Date, decimal Amount, string Currency);
+    private sealed record InvestmentCapitalFlow(
+        long TransactionId,
+        int AccountId,
+        long AssetListingId,
+        DateTime Date,
+        InvestmentTransactionType Type,
+        decimal Quantity,
+        decimal UnitPrice,
+        decimal? Fee,
+        string Currency,
+        decimal PriceMultiplier);
+
+    private sealed class InvestmentPositionCost
+    {
+        public decimal Quantity { get; set; }
+        public decimal CostBasis { get; set; }
+    }
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
         long? assetListingId,

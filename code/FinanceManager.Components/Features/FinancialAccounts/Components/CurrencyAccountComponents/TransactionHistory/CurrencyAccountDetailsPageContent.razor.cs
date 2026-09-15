@@ -474,6 +474,9 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     private void ApplyAutomaticCustomRange(DateTime selectedStart)
     {
+        if (_highlightedEntryId is not null)
+            return;
+
         var expandedStart = DateRangeHelper.GetExpandedStart(selectedStart, Account?.Entries?.MinBy(x => x.PostingDate)?.PostingDate);
         if (expandedStart is not DateTime oldest) return;
 

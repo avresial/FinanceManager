@@ -68,10 +68,12 @@ public interface IInvestmentValuationService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Cumulative net cash paid into each investment account over [<paramref name="start"/>,
-    /// <paramref name="end"/>]. The current investment model stores Buy and Sell rows as its
-    /// account-level cash-impact records, so buys increase capital and sells reduce it. Activity
-    /// before the range is carried into the first visible point; no market prices are used.
+    /// Remaining weighted-average cost basis for each investment account over [<paramref name="start"/>,
+    /// <paramref name="end"/>]. Buy rows add their purchase cost and fee; Sell rows remove only the
+    /// historical cost of the quantity sold, never the sale proceeds. Activity before the range is
+    /// replayed into the first visible point, so a sale price or a historical edit cannot create an
+    /// unrelated capital jump. The current investment model has no standalone deposit, withdrawal,
+    /// or transfer rows; unsupported future transaction types are ignored.
     /// </summary>
     Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetCapitalSeriesAsync(
         IReadOnlyCollection<int> accountIds,
