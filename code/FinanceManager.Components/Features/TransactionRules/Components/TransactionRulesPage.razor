@@ -52,97 +52,133 @@
             </MudItem>
         </MudGrid>
 
-        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Match all of these conditions</MudText>
-        <MudGrid Spacing="2" Class="mx-0 w-100">
-            <MudItem xs="12" sm="4">
-                <MudSelect T="string" @bind-Value="_condition.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    <MudSelectItem Value="@("Contractor")">Contractor</MudSelectItem>
-                    <MudSelectItem Value="@("Description")">Description</MudSelectItem>
-                    <MudSelectItem Value="@("Account")">Account id</MudSelectItem>
-                    <MudSelectItem Value="@("Amount")">Amount</MudSelectItem>
-                    <MudSelectItem Value="@("Direction")">Direction</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            @if (_condition.Type is "Contractor" or "Description")
-            {
-                <MudItem xs="12" sm="4">
-                    <MudTextField T="string" @bind-Value="_condition.Pattern" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudSelect T="TextMatchOperator" @bind-Value="_condition.MatchOperator" Label="Match" Variant="Variant.Outlined" Margin="Margin.Dense">
-                        <MudSelectItem Value="@TextMatchOperator.Equals">Equals</MudSelectItem>
-                        <MudSelectItem Value="@TextMatchOperator.Contains">Contains</MudSelectItem>
-                        <MudSelectItem Value="@TextMatchOperator.StartsWith">Starts with</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudCheckBox T="bool" @bind-Value="_condition.IgnoreCase" Label="Ignore case" Color="Color.Primary" />
-                </MudItem>
-            }
-            else if (_condition.Type == "Account")
-            {
-                <MudItem xs="12" sm="8">
-                    <MudTextField T="string" @bind-Value="_accountIds" Label="Account ids" HelperText="Comma-separated account ids" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-            }
-            else if (_condition.Type == "Direction")
-            {
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="TransactionDirection" @bind-Value="_condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var direction in Enum.GetValues<TransactionDirection>())
-                        {
-                            <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-            }
-            else
-            {
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="TransactionDirection" @bind-Value="_condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var direction in Enum.GetValues<TransactionDirection>())
-                        {
-                            <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudNumericField T="decimal?" @bind-Value="_condition.MinAmount" Label="Minimum" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudNumericField T="decimal?" @bind-Value="_condition.MaxAmount" Label="Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="2">
-                    <MudNumericField T="decimal?" @bind-Value="_condition.Threshold" Label="Threshold" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-            }
-        </MudGrid>
+        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+            <MudText Typo="Typo.subtitle2">Match all of these conditions</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddCondition">
+                Add condition
+            </MudButton>
+        </div>
+        @for (var index = 0; index < _conditions.Count; index++)
+        {
+            var condition = _conditions[index];
+            var conditionIndex = index;
+            <MudPaper Outlined Class="pa-3 mb-3" @key="condition">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <MudText Typo="Typo.subtitle2">Condition @(conditionIndex + 1)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   Disabled="@(_conditions.Count == 1)" OnClick="@(() => RemoveCondition(condition))"
+                                   aria-label="@(string.Concat("Remove condition ", conditionIndex + 1))" />
+                </div>
+                <MudGrid Spacing="2" Class="mx-0 w-100">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="string" @bind-Value="condition.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Contractor")">Contractor</MudSelectItem>
+                            <MudSelectItem Value="@("Description")">Description</MudSelectItem>
+                            <MudSelectItem Value="@("Account")">Account id</MudSelectItem>
+                            <MudSelectItem Value="@("Amount")">Amount</MudSelectItem>
+                            <MudSelectItem Value="@("Direction")">Direction</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (condition.Type is "Contractor" or "Description")
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudTextField T="string" @bind-Value="condition.Pattern" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudSelect T="TextMatchOperator" @bind-Value="condition.MatchOperator" Label="Match" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@TextMatchOperator.Equals">Equals</MudSelectItem>
+                                <MudSelectItem Value="@TextMatchOperator.Contains">Contains</MudSelectItem>
+                                <MudSelectItem Value="@TextMatchOperator.StartsWith">Starts with</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudCheckBox T="bool" @bind-Value="condition.IgnoreCase" Label="Ignore case" Color="Color.Primary" />
+                        </MudItem>
+                    }
+                    else if (condition.Type == "Account")
+                    {
+                        <MudItem xs="12" sm="8">
+                            <MudTextField T="string" @bind-Value="condition.AccountIdsText" Label="Account ids" HelperText="Comma-separated account ids" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                    else if (condition.Type == "Direction")
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="TransactionDirection" @bind-Value="condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                                {
+                                    <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="TransactionDirection" @bind-Value="condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                                {
+                                    <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.MinAmount" Label="Minimum" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.MaxAmount" Label="Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.Threshold" Label="Threshold" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
 
-        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Actions</MudText>
-        <MudGrid Spacing="2" Class="mx-0 w-100">
-            <MudItem xs="12" sm="4">
-                <MudSelect T="string" @bind-Value="_action.Type" Label="Action" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    <MudSelectItem Value="@("SetLabels")">Set labels</MudSelectItem>
-                    <MudSelectItem Value="@("NormalizeContractor")">Normalize contractor</MudSelectItem>
-                    <MudSelectItem Value="@("NormalizeDescription")">Normalize description</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            @if (_action.Type == "SetLabels")
-            {
-                <MudItem xs="12" sm="5">
-                    <MudTextField T="string" @bind-Value="_labels" Label="Labels" HelperText="Comma-separated labels" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudCheckBox T="bool" @bind-Value="_action.ReplaceExisting" Label="Replace existing" Color="Color.Primary" />
-                </MudItem>
-            }
-            else
-            {
-                <MudItem xs="12" sm="8">
-                    <MudTextField T="string" @bind-Value="_action.Value" Label="Normalized value" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-            }
-        </MudGrid>
+        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+            <MudText Typo="Typo.subtitle2">Actions</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAction">
+                Add action
+            </MudButton>
+        </div>
+        @for (var index = 0; index < _actions.Count; index++)
+        {
+            var action = _actions[index];
+            var actionIndex = index;
+            <MudPaper Outlined Class="pa-3 mb-3" @key="action">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <MudText Typo="Typo.subtitle2">Action @(actionIndex + 1)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   Disabled="@(_actions.Count == 1)" OnClick="@(() => RemoveAction(action))"
+                                   aria-label="@(string.Concat("Remove action ", actionIndex + 1))" />
+                </div>
+                <MudGrid Spacing="2" Class="mx-0 w-100">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="string" @bind-Value="action.Type" Label="Action" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("SetLabels")">Set labels</MudSelectItem>
+                            <MudSelectItem Value="@("NormalizeContractor")">Normalize contractor</MudSelectItem>
+                            <MudSelectItem Value="@("NormalizeDescription")">Normalize description</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (action.Type == "SetLabels")
+                    {
+                        <MudItem xs="12" sm="5">
+                            <MudTextField T="string" @bind-Value="action.LabelsText" Label="Labels" HelperText="Comma-separated labels" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudCheckBox T="bool" @bind-Value="action.ReplaceExisting" Label="Replace existing" Color="Color.Primary" />
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12" sm="8">
+                            <MudTextField T="string" @bind-Value="action.Value" Label="Normalized value" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
 
             <div class="d-flex justify-end mt-4">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSaving" OnClick="SaveAsync">

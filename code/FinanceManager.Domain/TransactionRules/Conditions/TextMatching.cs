@@ -10,6 +10,8 @@ namespace FinanceManager.Domain.TransactionRules.Conditions;
 /// </summary>
 internal static class TextMatching
 {
+    private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
+
     public static bool Matches(string value, string pattern, TextMatchOperator matchOperator, bool ignoreCase)
     {
         var trimmedValue = value.Trim();
@@ -21,9 +23,22 @@ internal static class TextMatching
             TextMatchOperator.Contains => trimmedValue.Contains(trimmedPattern, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal),
             TextMatchOperator.StartsWith => trimmedValue.StartsWith(trimmedPattern, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal),
             TextMatchOperator.EndsWith => trimmedValue.EndsWith(trimmedPattern, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal),
-            TextMatchOperator.RegularExpression => new Regex(trimmedPattern, ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None).IsMatch(trimmedValue),
+            TextMatchOperator.RegularExpression => MatchesRegularExpression(trimmedValue, trimmedPattern, ignoreCase),
             _ => throw new ArgumentOutOfRangeException(nameof(matchOperator), matchOperator, "Unknown text match operator."),
         };
+    }
+
+    private static bool MatchesRegularExpression(string value, string pattern, bool ignoreCase)
+    {
+        try
+        {
+            return new Regex(pattern, GetRegexOptions(ignoreCase), _regexTimeout).IsMatch(value);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A user-supplied pattern must not be able to stall imports or retroactive rule runs.
+            return false;
+        }
     }
 
     public static void ThrowIfInvalidPattern(string pattern, bool ignoreCase)
@@ -35,6 +50,9 @@ internal static class TextMatching
             throw new ArgumentException("Pattern must not be empty or whitespace.", nameof(pattern));
 
         // Fails fast on a malformed pattern for the RegularExpression operator.
-        new Regex(pattern, ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None);
+        new Regex(pattern, GetRegexOptions(ignoreCase), _regexTimeout);
     }
+
+    private static RegexOptions GetRegexOptions(bool ignoreCase) =>
+        ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
 }

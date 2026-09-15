@@ -1,3 +1,4 @@
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
@@ -22,13 +23,14 @@ public sealed class TransactionRuleServiceTests
     private readonly Mock<IFinancialLabelsRepository> _labels = new();
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _accounts = new();
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _entries = new();
+    private readonly Mock<IFinancialAlertService> _alerts = new();
     private readonly TransactionRuleService _service;
 
     public TransactionRuleServiceTests()
     {
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
             .Returns(new[] { new FinancialLabel { Id = 1, Name = "Bills" } }.ToAsyncEnumerable());
-        _service = new(_repository.Object, new TransactionRuleEngineService(), _labels.Object, _accounts.Object, _entries.Object);
+        _service = new(_repository.Object, new TransactionRuleEngineService(), _labels.Object, _accounts.Object, _entries.Object, _alerts.Object);
     }
 
     [Fact]
@@ -109,5 +111,40 @@ public sealed class TransactionRuleServiceTests
     public async Task ApplyRetroactively_RequiresExplicitConfirmation()
     {
         await Assert.ThrowsAsync<ArgumentException>(() => _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(false), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ApplyRetroactively_ReevaluatesAlertsOnceAfterUpdatedEntries()
+    {
+        _accounts.Setup(x => x.GetAll(7))
+            .ReturnsAsync([new CurrencyAccount(7, 2, "Cash")]);
+        _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new TransactionRuleDefinition
+                {
+                    UserId = 7,
+                    Name = "Normalize descriptions",
+                    Order = 1,
+                    ConditionsJson = "[{\"type\":\"Description\",\"pattern\":\"invoice\"}]",
+                    ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Receipt\"}]"
+                }
+            ]);
+        var entries = new[]
+        {
+            new CurrencyAccountEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one" },
+            new CurrencyAccountEntry(2, 2, DateTime.UtcNow.AddDays(-1), -20m, -20m) { Description = "Invoice two" }
+        };
+        _entries.Setup(x => x.Get(2, DateTime.UnixEpoch, DateTime.MaxValue, It.IsAny<CancellationToken>()))
+            .Returns(entries.ToAsyncEnumerable());
+        _entries.Setup(x => x.Update(It.IsAny<CurrencyAccountEntry>())).ReturnsAsync(true);
+        _alerts.Setup(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true), TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.Examined);
+        Assert.Equal(2, result.Updated);
+        Assert.All(entries, entry => Assert.Equal("Receipt", entry.Description));
+        _alerts.Verify(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

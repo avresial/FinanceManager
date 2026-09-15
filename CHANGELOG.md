@@ -37,6 +37,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
 - Keep the Alerts card action in its header and contain its loading state. #765
 - Close account-detail time-range pickers as soon as a range is selected. #768
 - Show bond account asset appreciation in the account-details breakdown card. #767
@@ -127,6 +128,7 @@ rules agents must follow when updating this file.
 - The **Manual stock price** admin card no longer stretches across the full width of the screen; it is now capped to a compact width, and the price field updates as you type.
 
 ### Security
+- Bound user-supplied regular-expression transaction-rule evaluation so malformed patterns cannot stall imports or retroactive updates. #734
 - The default admin and test-user accounts are no longer seeded with passwords hard-coded in source. Their passwords are now read from configuration (`Seeding:AdminPassword` / `Seeding:TestUserPassword`); when unset — as in production — the accounts are not created. The stock-price bulk-import endpoint now returns a generic error message and logs the exception server-side instead of echoing the raw exception text to the caller. #450
 
 ### Added

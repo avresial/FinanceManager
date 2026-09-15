@@ -39,6 +39,15 @@ public class TransactionRuleConditionTests
     public void ContractorCondition_MalformedRegex_Throws() =>
         Assert.Throws<RegexParseException>(() => new ContractorCondition("(unclosed", TextMatchOperator.RegularExpression));
 
+    [Fact]
+    public void ContractorCondition_TimedOutRegex_DoesNotBlockRuleEvaluation()
+    {
+        var condition = new ContractorCondition("^(a+)+$", TextMatchOperator.RegularExpression, false);
+        var facts = new TransactionFacts(new string('a', 100_000) + "!", "d", 1, 1m, TransactionDirection.Expense, []);
+
+        Assert.False(condition.Matches(facts));
+    }
+
     [Theory]
     [InlineData("Invoice #123", "invoice", TextMatchOperator.Contains, true, true)]
     [InlineData("Invoice #123", "Invoice", TextMatchOperator.StartsWith, false, true)]

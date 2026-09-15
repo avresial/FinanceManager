@@ -22,11 +22,9 @@ public partial class TransactionRulesPage : ComponentBase
     private bool _stopProcessing;
     private bool _confirmApply;
     private string _name = string.Empty;
-    private string _accountIds = string.Empty;
-    private string _labels = string.Empty;
     private string? _error;
-    private TransactionRuleConditionDto _condition = NewCondition();
-    private TransactionRuleActionDto _action = NewAction();
+    private List<ConditionEditorModel> _conditions = [NewCondition()];
+    private List<ActionEditorModel> _actions = [NewAction()];
     private TransactionRuleApplyResultDto? _applyResult;
     private TransactionRuleEngineResult? _preview;
     private MudForm? _ruleForm;
@@ -71,17 +69,17 @@ public partial class TransactionRulesPage : ComponentBase
         _isSaving = true;
         try
         {
-            var condition = BuildCondition();
-            var action = BuildAction();
+            var conditions = _conditions.Select(condition => condition.ToDto()).ToList();
+            var actions = _actions.Select(action => action.ToDto()).ToList();
             if (_editingId is Guid id)
             {
-                var saved = await HttpClient.UpdateAsync(id, new UpdateTransactionRule(_name.Trim(), [condition], [action], _enabled, _stopProcessing));
+                var saved = await HttpClient.UpdateAsync(id, new UpdateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
                 if (saved is null) throw new InvalidOperationException();
                 Snackbar.Add("Rule updated.", Severity.Success);
             }
             else
             {
-                var saved = await HttpClient.CreateAsync(new CreateTransactionRule(_name.Trim(), [condition], [action], _enabled, _stopProcessing));
+                var saved = await HttpClient.CreateAsync(new CreateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
                 if (saved is null) throw new InvalidOperationException();
                 Snackbar.Add("Rule created.", Severity.Success);
             }
@@ -146,10 +144,9 @@ public partial class TransactionRulesPage : ComponentBase
         _name = rule.Name;
         _enabled = rule.IsEnabled;
         _stopProcessing = rule.StopProcessing;
-        _condition = rule.Conditions.FirstOrDefault() is { } condition ? Clone(condition) : NewCondition();
-        _action = rule.Actions.FirstOrDefault() is { } action ? Clone(action) : NewAction();
-        _accountIds = string.Join(",", _condition.AccountIds);
-        _labels = string.Join(",", _action.Labels);
+        _conditions = rule.Conditions.Select(ConditionEditorModel.FromDto).ToList();
+        _actions = rule.Actions.Select(ActionEditorModel.FromDto).ToList();
+        EnsureEditorItems();
     }
 
     private async Task ResetForm()
@@ -158,12 +155,26 @@ public partial class TransactionRulesPage : ComponentBase
         _name = string.Empty;
         _enabled = true;
         _stopProcessing = false;
-        _condition = NewCondition();
-        _action = NewAction();
-        _accountIds = string.Empty;
-        _labels = string.Empty;
+        _conditions = [NewCondition()];
+        _actions = [NewAction()];
         if (_ruleForm is not null)
             await _ruleForm.ResetValidationAsync();
+    }
+
+    private void AddCondition() => _conditions.Add(NewCondition());
+
+    private void RemoveCondition(ConditionEditorModel condition)
+    {
+        if (_conditions.Count > 1)
+            _conditions.Remove(condition);
+    }
+
+    private void AddAction() => _actions.Add(NewAction());
+
+    private void RemoveAction(ActionEditorModel action)
+    {
+        if (_actions.Count > 1)
+            _actions.Remove(action);
     }
 
     private async Task ApplyAsync()
@@ -206,23 +217,100 @@ public partial class TransactionRulesPage : ComponentBase
         }
     }
 
-    private TransactionRuleConditionDto BuildCondition()
+    private void EnsureEditorItems()
     {
-        var condition = Clone(_condition);
-        if (condition.Type.Equals("Account", StringComparison.OrdinalIgnoreCase))
-            condition.AccountIds = _accountIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Where(value => int.TryParse(value, out _)).Select(int.Parse).ToList();
-        if (condition.Type.Equals("Amount", StringComparison.OrdinalIgnoreCase) && condition.MinAmount is null && condition.MaxAmount is null && condition.Threshold is null)
-            condition.Threshold = 0m;
-        return condition;
+        if (_conditions.Count == 0)
+            _conditions.Add(NewCondition());
+        if (_actions.Count == 0)
+            _actions.Add(NewAction());
     }
 
-    private TransactionRuleActionDto BuildAction()
+    private static List<int> ParseAccountIds(string value) => value
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(item => int.TryParse(item, out _))
+        .Select(int.Parse)
+        .ToList();
+
+    private static List<string> ParseLabels(string value) => value
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .ToList();
+
+    private static ConditionEditorModel NewCondition() => new();
+    private static ActionEditorModel NewAction() => new();
+
+    private sealed class ConditionEditorModel
     {
-        var action = Clone(_action);
-        if (action.Type.Equals("SetLabels", StringComparison.OrdinalIgnoreCase))
-            action.Labels = _labels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        return action;
+        public string Type { get; set; } = "Contractor";
+        public string? Pattern { get; set; }
+        public TextMatchOperator MatchOperator { get; set; } = TextMatchOperator.Contains;
+        public bool IgnoreCase { get; set; } = true;
+        public string AccountIdsText { get; set; } = string.Empty;
+        public TransactionDirection Direction { get; set; } = TransactionDirection.Expense;
+        public decimal? Threshold { get; set; }
+        public AmountComparison Comparison { get; set; } = AmountComparison.GreaterThan;
+        public decimal? MinAmount { get; set; }
+        public decimal? MaxAmount { get; set; }
+
+        public static ConditionEditorModel FromDto(TransactionRuleConditionDto source) => new()
+        {
+            Type = source.Type,
+            Pattern = source.Pattern,
+            MatchOperator = source.MatchOperator,
+            IgnoreCase = source.IgnoreCase,
+            AccountIdsText = string.Join(",", source.AccountIds),
+            Direction = source.Direction,
+            Threshold = source.Threshold,
+            Comparison = source.Comparison,
+            MinAmount = source.MinAmount,
+            MaxAmount = source.MaxAmount
+        };
+
+        public TransactionRuleConditionDto ToDto()
+        {
+            var condition = new TransactionRuleConditionDto
+            {
+                Type = Type,
+                Pattern = Pattern,
+                MatchOperator = MatchOperator,
+                IgnoreCase = IgnoreCase,
+                AccountIds = Type.Equals("Account", StringComparison.OrdinalIgnoreCase) ? ParseAccountIds(AccountIdsText) : [],
+                Direction = Direction,
+                Threshold = Threshold,
+                Comparison = Comparison,
+                MinAmount = MinAmount,
+                MaxAmount = MaxAmount
+            };
+
+            if (Type.Equals("Amount", StringComparison.OrdinalIgnoreCase) && condition.MinAmount is null &&
+                condition.MaxAmount is null && condition.Threshold is null)
+                condition.Threshold = 0m;
+
+            return condition;
+        }
+    }
+
+    private sealed class ActionEditorModel
+    {
+        public string Type { get; set; } = "SetLabels";
+        public string? Value { get; set; }
+        public string LabelsText { get; set; } = string.Empty;
+        public bool ReplaceExisting { get; set; }
+
+        public static ActionEditorModel FromDto(TransactionRuleActionDto source) => new()
+        {
+            Type = source.Type,
+            Value = source.Value,
+            LabelsText = string.Join(",", source.Labels),
+            ReplaceExisting = source.ReplaceExisting
+        };
+
+        public TransactionRuleActionDto ToDto() => new()
+        {
+            Type = Type,
+            Value = Value,
+            Labels = Type.Equals("SetLabels", StringComparison.OrdinalIgnoreCase) ? ParseLabels(LabelsText) : [],
+            ReplaceExisting = ReplaceExisting
+        };
     }
 
     private static string DescribeConditions(TransactionRuleDto rule) => rule.Conditions.Count == 0
@@ -232,29 +320,4 @@ public partial class TransactionRulesPage : ComponentBase
     private static string DescribeActions(TransactionRuleDto rule) => rule.Actions.Count == 0
         ? "No changes"
         : string.Join(", ", rule.Actions.Select(action => action.Type));
-
-    private static TransactionRuleConditionDto NewCondition() => new() { Type = "Contractor" };
-    private static TransactionRuleActionDto NewAction() => new() { Type = "SetLabels" };
-
-    private static TransactionRuleConditionDto Clone(TransactionRuleConditionDto source) => new()
-    {
-        Type = source.Type,
-        Pattern = source.Pattern,
-        MatchOperator = source.MatchOperator,
-        IgnoreCase = source.IgnoreCase,
-        AccountIds = [.. source.AccountIds],
-        Direction = source.Direction,
-        Threshold = source.Threshold,
-        Comparison = source.Comparison,
-        MinAmount = source.MinAmount,
-        MaxAmount = source.MaxAmount
-    };
-
-    private static TransactionRuleActionDto Clone(TransactionRuleActionDto source) => new()
-    {
-        Type = source.Type,
-        Value = source.Value,
-        Labels = [.. source.Labels],
-        ReplaceExisting = source.ReplaceExisting
-    };
 }

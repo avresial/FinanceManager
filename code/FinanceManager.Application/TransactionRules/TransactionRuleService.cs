@@ -1,3 +1,4 @@
+using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
@@ -22,7 +23,8 @@ public sealed class TransactionRuleService(
     ITransactionRuleEngineService engineService,
     IFinancialLabelsRepository labelsRepository,
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> entryRepository) : ITransactionRuleService
+    IAccountEntryRepository<CurrencyAccountEntry> entryRepository,
+    IFinancialAlertService financialAlertService) : ITransactionRuleService
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -154,6 +156,9 @@ public sealed class TransactionRuleService(
                     updated++;
             }
         }
+
+        if (updated > 0)
+            await financialAlertService.EvaluateAlertsAsync(userId, cancellationToken);
 
         return new(examined, updated);
     }
