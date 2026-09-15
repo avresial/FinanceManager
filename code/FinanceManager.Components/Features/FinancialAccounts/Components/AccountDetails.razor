@@ -8,7 +8,7 @@
     <div class="container-fluid px-0" @ref="MyElementReference">
         @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
         {
-            <CurrencyAccountDetailsPageContent AccountId="@AccountId" />
+            <CurrencyAccountDetailsPageContent AccountId="@AccountId" HighlightedEntryId="@EntryId" />
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {

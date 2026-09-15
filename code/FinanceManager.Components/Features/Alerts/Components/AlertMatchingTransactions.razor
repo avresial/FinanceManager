@@ -1,0 +1,25 @@
+@namespace FinanceManager.Components.Features.Alerts.Components
+@using FinanceManager.Application.Alerts.Models
+
+@if (Outcome.MatchingTransactions is { Count: > 0 } transactions)
+{
+    <div class="d-flex flex-wrap align-center gap-2">
+        @foreach (var transaction in transactions)
+        {
+            <MudLink Href="@AlertPresentation.TransactionHref(transaction)"
+                     aria-label="@AlertPresentation.TransactionAriaLabel(transaction)">
+                @AlertPresentation.TransactionLabel(transaction)
+            </MudLink>
+        }
+        @if (Outcome.MatchingTransactionCount > transactions.Count)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                +@(Outcome.MatchingTransactionCount - transactions.Count) more matching
+            </MudText>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public required AlertEvaluationOutcome Outcome { get; set; }
+}

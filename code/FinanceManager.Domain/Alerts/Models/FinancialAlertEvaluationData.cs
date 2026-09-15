@@ -5,4 +5,5 @@ namespace FinanceManager.Domain.Alerts.Models;
 public sealed record FinancialAlertEvaluationData(
     decimal TotalSpend,
     int TransactionCount,
-    CurrencyAccountEntry? LargestTransaction);
+    CurrencyAccountEntry? LargestTransaction,
+    IReadOnlyList<CurrencyAccountEntry>? MatchingTransactions = null);

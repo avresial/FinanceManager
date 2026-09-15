@@ -10,6 +10,8 @@ namespace FinanceManager.Infrastructure.Features.Alerts.Repositories;
 
 internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancialAlertRepository
 {
+    private const int _matchingTransactionLimit = 5;
+
     public async Task<IReadOnlyList<FinancialAlert>> GetAlertsByUserId(
         int userId,
         CancellationToken cancellationToken = default) =>
@@ -72,6 +74,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             alert => alert.Id,
             _ => new FinancialAlertEvaluationData(0m, 0, null));
         IQueryable<AlertEvaluationAggregateRow>? aggregateQuery = null;
+        IQueryable<AlertEvaluationAggregateRow>? matchingQuery = null;
 
         foreach (var alert in alerts)
         {
@@ -85,14 +88,36 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             };
 
             if (alertQuery is not null)
+            {
                 aggregateQuery = aggregateQuery is null ? alertQuery : aggregateQuery.Concat(alertQuery);
+                var alertMatchingQuery = BuildMatchingTransactionRows(entries, alert);
+                matchingQuery = matchingQuery is null ? alertMatchingQuery : matchingQuery.Concat(alertMatchingQuery);
+            }
         }
 
         if (aggregateQuery is null)
             return result;
 
-        foreach (var row in await aggregateQuery.ToListAsync(cancellationToken))
+        var evaluationQuery = matchingQuery is null
+            ? aggregateQuery
+            : aggregateQuery.Concat(matchingQuery);
+        var matchingTransactions = new Dictionary<Guid, List<CurrencyAccountEntry>>();
+        foreach (var row in await evaluationQuery.ToListAsync(cancellationToken))
+        {
+            if (row.MatchingEntryId is int)
+            {
+                matchingTransactions.TryAdd(row.AlertId, []);
+                matchingTransactions[row.AlertId].Add(row.ToMatchingTransaction());
+                continue;
+            }
+
             result[row.AlertId] = row.ToEvaluationData();
+        }
+
+        foreach (var (alertId, entries) in matchingTransactions)
+        {
+            result[alertId] = result[alertId] with { MatchingTransactions = entries };
+        }
 
         return result;
     }
@@ -107,7 +132,46 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 .Select(account => account.AccountId)
                 .Contains(entry.AccountId));
 
-    private static IQueryable<AlertEvaluationAggregateRow> BuildCategoryAggregate(
+    private static IQueryable<CurrencyAccountEntry> BuildMatchingEntries(
+        IQueryable<CurrencyAccountEntry> entries,
+        FinancialAlert alert) => alert.AlertType switch
+        {
+            AlertType.CategorySpending => BuildCategoryEntries(entries, alert),
+            AlertType.MerchantSpending => BuildMerchantEntries(entries, alert),
+            AlertType.LargeTransaction => BuildLargeTransactionEntries(entries, alert),
+            _ => entries.Where(_ => false)
+        };
+
+    private static IQueryable<AlertEvaluationAggregateRow> BuildMatchingTransactionRows(
+        IQueryable<CurrencyAccountEntry> entries,
+        FinancialAlert alert) =>
+        BuildMatchingEntries(entries, alert)
+            .OrderByDescending(entry => -entry.ValueChange)
+            .ThenByDescending(entry => entry.PostingDate)
+            .ThenByDescending(entry => entry.EntryId)
+            .Take(_matchingTransactionLimit)
+            .Select(entry => new AlertEvaluationAggregateRow
+            {
+                AlertId = alert.Id,
+                TotalSpend = 0m,
+                TransactionCount = 0,
+                LargestAccountId = null,
+                LargestEntryId = null,
+                LargestPostingDate = null,
+                LargestValue = null,
+                LargestValueChange = null,
+                LargestDescription = null,
+                LargestContractorDetails = null,
+                MatchingAccountId = entry.AccountId,
+                MatchingEntryId = entry.EntryId,
+                MatchingPostingDate = entry.PostingDate,
+                MatchingValue = entry.Value,
+                MatchingValueChange = entry.ValueChange,
+                MatchingDescription = entry.Description,
+                MatchingContractorDetails = entry.ContractorDetails
+            });
+
+    private static IQueryable<CurrencyAccountEntry> BuildCategoryEntries(
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
@@ -129,24 +193,10 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             entries = entries.Where(entry => entry.Labels.Any());
         }
 
-        return entries
-            .GroupBy(_ => 1)
-            .Select(group => new AlertEvaluationAggregateRow
-            {
-                AlertId = alert.Id,
-                TotalSpend = group.Sum(entry => -entry.ValueChange),
-                TransactionCount = group.Count(),
-                LargestAccountId = null,
-                LargestEntryId = null,
-                LargestPostingDate = null,
-                LargestValue = null,
-                LargestValueChange = null,
-                LargestDescription = null,
-                LargestContractorDetails = null
-            });
+        return entries;
     }
 
-    private static IQueryable<AlertEvaluationAggregateRow> BuildMerchantAggregate(
+    private static IQueryable<CurrencyAccountEntry> BuildMerchantEntries(
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
@@ -162,6 +212,38 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 || (entry.ContractorDetails != null && entry.ContractorDetails.ToLower().Contains(merchantName)));
         }
 
+        return entries;
+    }
+
+    private static IQueryable<CurrencyAccountEntry> BuildLargeTransactionEntries(
+        IQueryable<CurrencyAccountEntry> entries,
+        FinancialAlert alert)
+    {
+        if (alert.AccountId is int accountId)
+            entries = entries.Where(entry => entry.AccountId == accountId);
+        if (alert.CreatedAt != default)
+            entries = entries.Where(entry => entry.PostingDate >= alert.CreatedAt.Date);
+
+        entries = entries.Where(entry => entry.ValueChange < 0);
+        var threshold = alert.Threshold;
+        return alert.ComparisonOperator switch
+        {
+            AlertComparisonOperator.GreaterThan => entries.Where(entry => -entry.ValueChange > threshold),
+            AlertComparisonOperator.GreaterThanOrEqual => entries.Where(entry => -entry.ValueChange >= threshold),
+            AlertComparisonOperator.LessThan => entries.Where(entry => -entry.ValueChange < threshold),
+            AlertComparisonOperator.LessThanOrEqual => entries.Where(entry => -entry.ValueChange <= threshold),
+            AlertComparisonOperator.Equal => entries.Where(entry => -entry.ValueChange == threshold),
+            AlertComparisonOperator.NotEqual => entries.Where(entry => -entry.ValueChange != threshold),
+            _ => entries.Where(_ => false)
+        };
+    }
+
+    private static IQueryable<AlertEvaluationAggregateRow> BuildCategoryAggregate(
+        IQueryable<CurrencyAccountEntry> entries,
+        FinancialAlert alert)
+    {
+        entries = BuildCategoryEntries(entries, alert);
+
         return entries
             .GroupBy(_ => 1)
             .Select(group => new AlertEvaluationAggregateRow
@@ -175,7 +257,44 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 LargestValue = null,
                 LargestValueChange = null,
                 LargestDescription = null,
-                LargestContractorDetails = null
+                LargestContractorDetails = null,
+                MatchingAccountId = null,
+                MatchingEntryId = null,
+                MatchingPostingDate = null,
+                MatchingValue = null,
+                MatchingValueChange = null,
+                MatchingDescription = null,
+                MatchingContractorDetails = null
+            });
+    }
+
+    private static IQueryable<AlertEvaluationAggregateRow> BuildMerchantAggregate(
+        IQueryable<CurrencyAccountEntry> entries,
+        FinancialAlert alert)
+    {
+        entries = BuildMerchantEntries(entries, alert);
+
+        return entries
+            .GroupBy(_ => 1)
+            .Select(group => new AlertEvaluationAggregateRow
+            {
+                AlertId = alert.Id,
+                TotalSpend = group.Sum(entry => -entry.ValueChange),
+                TransactionCount = group.Count(),
+                LargestAccountId = null,
+                LargestEntryId = null,
+                LargestPostingDate = null,
+                LargestValue = null,
+                LargestValueChange = null,
+                LargestDescription = null,
+                LargestContractorDetails = null,
+                MatchingAccountId = null,
+                MatchingEntryId = null,
+                MatchingPostingDate = null,
+                MatchingValue = null,
+                MatchingValueChange = null,
+                MatchingDescription = null,
+                MatchingContractorDetails = null
             });
     }
 
@@ -183,23 +302,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
-        if (alert.AccountId is int accountId)
-            entries = entries.Where(entry => entry.AccountId == accountId);
-        if (alert.CreatedAt != default)
-            entries = entries.Where(entry => entry.PostingDate >= alert.CreatedAt.Date);
-
-        entries = entries.Where(entry => entry.ValueChange < 0);
-        var threshold = alert.Threshold;
-        entries = alert.ComparisonOperator switch
-        {
-            AlertComparisonOperator.GreaterThan => entries.Where(entry => -entry.ValueChange > threshold),
-            AlertComparisonOperator.GreaterThanOrEqual => entries.Where(entry => -entry.ValueChange >= threshold),
-            AlertComparisonOperator.LessThan => entries.Where(entry => -entry.ValueChange < threshold),
-            AlertComparisonOperator.LessThanOrEqual => entries.Where(entry => -entry.ValueChange <= threshold),
-            AlertComparisonOperator.Equal => entries.Where(entry => -entry.ValueChange == threshold),
-            AlertComparisonOperator.NotEqual => entries.Where(entry => -entry.ValueChange != threshold),
-            _ => entries.Where(_ => false)
-        };
+        entries = BuildLargeTransactionEntries(entries, alert);
 
         return entries
             .OrderByDescending(entry => -entry.ValueChange)
@@ -216,7 +319,14 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 LargestValue = entry.Value,
                 LargestValueChange = entry.ValueChange,
                 LargestDescription = entry.Description,
-                LargestContractorDetails = entry.ContractorDetails
+                LargestContractorDetails = entry.ContractorDetails,
+                MatchingAccountId = null,
+                MatchingEntryId = null,
+                MatchingPostingDate = null,
+                MatchingValue = null,
+                MatchingValueChange = null,
+                MatchingDescription = null,
+                MatchingContractorDetails = null
             })
             .Take(1);
     }
@@ -233,6 +343,13 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         public decimal? LargestValueChange { get; init; }
         public string? LargestDescription { get; init; }
         public string? LargestContractorDetails { get; init; }
+        public int? MatchingAccountId { get; init; }
+        public int? MatchingEntryId { get; init; }
+        public DateTime? MatchingPostingDate { get; init; }
+        public decimal? MatchingValue { get; init; }
+        public decimal? MatchingValueChange { get; init; }
+        public string? MatchingDescription { get; init; }
+        public string? MatchingContractorDetails { get; init; }
 
         public FinancialAlertEvaluationData ToEvaluationData()
         {
@@ -251,6 +368,24 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             }
 
             return new FinancialAlertEvaluationData(TotalSpend, TransactionCount, largestTransaction);
+        }
+
+        public CurrencyAccountEntry ToMatchingTransaction()
+        {
+            if (MatchingAccountId is not int accountId
+                || MatchingEntryId is not int entryId
+                || MatchingPostingDate is not DateTime postingDate
+                || MatchingValue is not decimal value
+                || MatchingValueChange is not decimal valueChange)
+            {
+                throw new InvalidOperationException("A matching transaction row is incomplete.");
+            }
+
+            return new CurrencyAccountEntry(accountId, entryId, postingDate, value, valueChange)
+            {
+                Description = MatchingDescription ?? string.Empty,
+                ContractorDetails = MatchingContractorDetails
+            };
         }
     }
 }

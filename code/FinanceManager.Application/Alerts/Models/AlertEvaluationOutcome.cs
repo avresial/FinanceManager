@@ -18,4 +18,6 @@ public record AlertEvaluationOutcome(
     string Message,
     DateTime EvaluatedAt,
     IReadOnlyDictionary<string, string> Context,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    IReadOnlyList<AlertTransactionReference>? MatchingTransactions = null,
+    int MatchingTransactionCount = 0);

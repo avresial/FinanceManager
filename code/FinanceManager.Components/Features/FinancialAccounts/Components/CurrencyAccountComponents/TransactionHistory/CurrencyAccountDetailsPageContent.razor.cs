@@ -1,5 +1,6 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Models;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
@@ -53,6 +54,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private Currency _currency = DefaultCurrency.PLN;
     private string _accountTypeLabel = "Cash account";
     private UserSession? _user;
+    private int? _highlightedEntryId;
     private bool _isChartLoading;
     private readonly RefreshVersionGate _chartGate = new();
 
@@ -62,11 +64,13 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public required int AccountId { get; set; }
+    [Parameter] public int? HighlightedEntryId { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required AccountDetailsSnapshotStore SnapshotStore { get; set; }
     [Inject] public required AccountChartSnapshotStore ChartSnapshotStore { get; set; }
@@ -186,6 +190,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
             _user = await LoginService.GetLoggedUser();
             if (_user is null) return;
 
+            await ConfigureHighlightedEntryAsync();
             SetDateRangeForSelection();
             await LoadInitialEntries();
 
@@ -206,8 +211,10 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     {
         try
         {
-            if (Account is not null && Account.AccountId == AccountId) return;
+            if (Account is not null && Account.AccountId == AccountId && _highlightedEntryId == HighlightedEntryId) return;
             IsLoading = true;
+            if (_user is not null)
+                await ConfigureHighlightedEntryAsync();
             SetDateRangeForSelection();
             await UpdateEntries(initialLoad: true);
         }
@@ -448,6 +455,21 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         (_dateStart, _dateEnd) = DateRangeHelper.GetAccountDetailsRange(
             _selectedRange, _customDateRange?.Start, _customDateRange?.End,
             Account?.Start ?? today.AddMonths(-3), new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc), today);
+    }
+
+    private async Task ConfigureHighlightedEntryAsync()
+    {
+        _highlightedEntryId = null;
+        if (HighlightedEntryId is not int entryId || entryId <= 0)
+            return;
+
+        var entry = await CurrencyEntryHttpClient.GetEntry(AccountId, entryId);
+        if (entry is null)
+            return;
+
+        _highlightedEntryId = entryId;
+        _selectedRange = AccountHistoryToolbar.CustomRangeKey;
+        _customDateRange = new DateRange(entry.PostingDate.Date, entry.PostingDate.Date);
     }
 
     private void ApplyAutomaticCustomRange(DateTime selectedStart)

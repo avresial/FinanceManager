@@ -36,6 +36,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
 - Keep the Alerts card action in its header and contain its loading state. #765
 - Close account-detail time-range pickers as soon as a range is selected. #768
 - Show bond account asset appreciation in the account-details breakdown card. #767

@@ -11,15 +11,27 @@ public partial class TransactionRow
     private bool _expanded;
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
+    private int? _loadedEntryId;
+    private bool? _loadedInitiallyExpanded;
 
     [Parameter] public required CurrencyAccount Account { get; set; }
     [Parameter] public required CurrencyAccountEntry Entry { get; set; }
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public bool InitiallyExpanded { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<TransactionRow> Logger { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (_loadedEntryId == Entry.EntryId && _loadedInitiallyExpanded == InitiallyExpanded) return;
+
+        _loadedEntryId = Entry.EntryId;
+        _loadedInitiallyExpanded = InitiallyExpanded;
+        _expanded = InitiallyExpanded;
+    }
 
     private void ToggleExpanded() => _expanded = !_expanded;
 
