@@ -115,7 +115,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Select(g => new
             {
                 ListingId = g.Key,
-                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
             })
             .ToListAsync(cancellationToken);
 
@@ -136,7 +138,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             {
                 g.Key.AccountId,
                 g.Key.AssetListingId,
-                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
             })
             .ToListAsync(cancellationToken);
 
@@ -163,7 +167,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             {
                 g.Key.AccountId,
                 g.Key.AssetListingId,
-                Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+                Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
             })
             .Where(x => x.Quantity != 0m)
             .ToListAsync(cancellationToken);
@@ -176,7 +182,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 g.Key.AccountId,
                 g.Key.AssetListingId,
                 g.Key.TradeDate,
-                SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Sell ? -t.Quantity : t.Quantity)
+                SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
             })
             .Where(x => x.SignedQuantity != 0m)
             .ToListAsync(cancellationToken);
@@ -203,7 +211,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= toDate)
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
+                x.Id,
                 x.AccountId,
+                x.AssetListingId,
                 x.TradeDate,
                 x.Type,
                 x.Quantity,
