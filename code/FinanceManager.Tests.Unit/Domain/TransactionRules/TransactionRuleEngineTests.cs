@@ -253,6 +253,17 @@ public class TransactionRuleEngineTests
     }
 
     [Fact]
+    public void Run_SetLabels_TreatsLabelNamesCaseInsensitively()
+    {
+        var rule = Rule(1, new ContractorCondition("acme"), new SetLabelsAction(["rent"]));
+
+        var result = TransactionRuleEngine.Run([rule], Facts(labels: ["Rent"]));
+
+        Assert.Equal(["Rent"], result.FinalFacts.Labels);
+        Assert.False(result.HasChanges);
+    }
+
+    [Fact]
     public void Run_StopProcessing_LaterRulesAreSkippedAfterStop()
     {
         var first = Rule(1, new ContractorCondition("acme"), new SetLabelsAction(["One"]));

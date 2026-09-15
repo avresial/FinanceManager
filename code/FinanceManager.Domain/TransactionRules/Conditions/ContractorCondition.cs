@@ -11,7 +11,7 @@ public sealed record ContractorCondition : ITransactionRuleCondition
 {
     public ContractorCondition(string pattern, TextMatchOperator matchOperator = TextMatchOperator.Contains, bool ignoreCase = true)
     {
-        TextMatching.ThrowIfInvalidPattern(pattern, ignoreCase);
+        TextMatching.ThrowIfInvalidPattern(pattern, matchOperator, ignoreCase);
 
         Pattern = pattern;
         MatchOperator = matchOperator;

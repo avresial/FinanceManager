@@ -41,7 +41,7 @@ internal static class TextMatching
         }
     }
 
-    public static void ThrowIfInvalidPattern(string pattern, bool ignoreCase)
+    public static void ThrowIfInvalidPattern(string pattern, TextMatchOperator matchOperator, bool ignoreCase)
     {
         if (pattern is null)
             throw new ArgumentNullException(nameof(pattern));
@@ -49,10 +49,11 @@ internal static class TextMatching
         if (string.IsNullOrWhiteSpace(pattern))
             throw new ArgumentException("Pattern must not be empty or whitespace.", nameof(pattern));
 
-        // Fails fast on a malformed pattern for the RegularExpression operator.
-        new Regex(pattern, GetRegexOptions(ignoreCase), _regexTimeout);
+        if (matchOperator == TextMatchOperator.RegularExpression)
+            new Regex(pattern, GetRegexOptions(ignoreCase), _regexTimeout);
     }
 
     private static RegexOptions GetRegexOptions(bool ignoreCase) =>
-        ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None;
+        RegexOptions.CultureInvariant
+        | (ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None);
 }

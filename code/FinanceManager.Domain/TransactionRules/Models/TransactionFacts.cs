@@ -11,6 +11,7 @@ namespace FinanceManager.Domain.TransactionRules.Models;
 public sealed record TransactionFacts
 {
     /// <summary>Creates facts with the given values; <paramref name="amount"/> must be non-negative.</summary>
+    // Positional syntax cannot provide the required validation, normalization, and mutable rule transformations.
     public TransactionFacts(
         string contractor,
         string description,

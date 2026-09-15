@@ -41,7 +41,7 @@ public class SetLabelsAction : ITransactionRuleAction
                 continue;
 
             var trimmed = label.Trim();
-            if (!workingLabels.Contains(trimmed))
+            if (!workingLabels.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
                 workingLabels.Add(trimmed);
         }
     }

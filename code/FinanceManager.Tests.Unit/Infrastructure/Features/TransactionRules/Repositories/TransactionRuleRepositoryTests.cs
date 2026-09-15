@@ -35,6 +35,25 @@ public sealed class TransactionRuleRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Add_AssignsNextOrderForUser()
+    {
+        _context.Users.Add(new UserDto
+        {
+            Id = 1,
+            Login = "rules-user",
+            Password = "password",
+            CreationDate = DateTime.UtcNow
+        });
+        _context.TransactionRules.Add(new TransactionRuleDefinition { UserId = 1, Order = 4, Name = "existing" });
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var rule = await new TransactionRuleRepository(_context).Add(
+            new TransactionRuleDefinition { UserId = 1, Name = "new" }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(5, rule.Order);
+    }
+
+    [Fact]
     public async Task Reorder_UsesDenseOrderWithoutUniqueIndexCollisions()
     {
         _context.Users.Add(new UserDto

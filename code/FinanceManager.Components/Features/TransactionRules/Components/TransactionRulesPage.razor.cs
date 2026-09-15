@@ -87,6 +87,10 @@ public partial class TransactionRulesPage : ComponentBase
             await ResetForm();
             await LoadAsync();
         }
+        catch (FormatException ex)
+        {
+            _error = ex.Message;
+        }
         catch (Exception)
         {
             _error = "Unable to save this rule. Check the condition and action values.";
@@ -99,26 +103,40 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ToggleAsync(TransactionRuleDto rule, bool enabled)
     {
-        if (!await HttpClient.SetEnabledAsync(rule.Id, enabled))
+        try
+        {
+            if (!await HttpClient.SetEnabledAsync(rule.Id, enabled))
+            {
+                Snackbar.Add("Unable to update this rule.", Severity.Error);
+                return;
+            }
+
+            await LoadAsync();
+        }
+        catch (Exception)
         {
             Snackbar.Add("Unable to update this rule.", Severity.Error);
-            return;
         }
-
-        await LoadAsync();
     }
 
     private async Task DeleteAsync(TransactionRuleDto rule)
     {
-        if (!await HttpClient.DeleteAsync(rule.Id))
+        try
+        {
+            if (!await HttpClient.DeleteAsync(rule.Id))
+            {
+                Snackbar.Add("Unable to delete this rule.", Severity.Error);
+                return;
+            }
+
+            _rules.Remove(rule);
+            if (_editingId == rule.Id) await ResetForm();
+            Snackbar.Add("Rule deleted.", Severity.Success);
+        }
+        catch (Exception)
         {
             Snackbar.Add("Unable to delete this rule.", Severity.Error);
-            return;
         }
-
-        _rules.Remove(rule);
-        if (_editingId == rule.Id) await ResetForm();
-        Snackbar.Add("Rule deleted.", Severity.Success);
     }
 
     private async Task MoveAsync(TransactionRuleDto rule, int offset)
@@ -128,14 +146,21 @@ public partial class TransactionRulesPage : ComponentBase
         var target = index + offset;
         if (index < 0 || target < 0 || target >= current.Count) return;
         (current[index], current[target]) = (current[target], current[index]);
-        var reordered = await HttpClient.ReorderAsync(current.Select(x => x.Id).ToList());
-        if (reordered is null)
+        try
+        {
+            var reordered = await HttpClient.ReorderAsync(current.Select(x => x.Id).ToList());
+            if (reordered is null)
+            {
+                Snackbar.Add("Unable to reorder rules.", Severity.Error);
+                return;
+            }
+
+            _rules = reordered;
+        }
+        catch (Exception)
         {
             Snackbar.Add("Unable to reorder rules.", Severity.Error);
-            return;
         }
-
-        _rules = reordered;
     }
 
     private void BeginEdit(TransactionRuleDto rule)
@@ -226,9 +251,10 @@ public partial class TransactionRulesPage : ComponentBase
     }
 
     private static List<int> ParseAccountIds(string value) => value
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Where(item => int.TryParse(item, out _))
-        .Select(int.Parse)
+        .Split(',', StringSplitOptions.TrimEntries)
+        .Select(item => int.TryParse(item, out var accountId) && accountId > 0
+            ? accountId
+            : throw new FormatException($"'{item}' is not a valid account ID."))
         .ToList();
 
     private static List<string> ParseLabels(string value) => value

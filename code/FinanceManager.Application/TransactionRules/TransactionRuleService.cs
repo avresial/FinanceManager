@@ -47,8 +47,7 @@ public sealed class TransactionRuleService(
     {
         ArgumentNullException.ThrowIfNull(command);
         ValidateCommand(command.Name, command.Conditions, command.Actions);
-        var existing = await repository.GetByUserId(userId, cancellationToken);
-        var definition = CreateDefinition(userId, command, existing.Count == 0 ? 1 : existing.Max(x => x.Order) + 1);
+        var definition = CreateDefinition(userId, command);
         await repository.Add(definition, cancellationToken);
         return TransactionRuleDto.FromEntity(definition);
     }
@@ -108,10 +107,16 @@ public sealed class TransactionRuleService(
     public async Task<bool> ApplyToEntryAsync(int userId, CurrencyAccountEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        var application = await LoadApplicationAsync(userId, cancellationToken);
+        return application.ApplyTo(entry);
+    }
+
+    public async Task<TransactionRuleApplication> LoadApplicationAsync(int userId, CancellationToken cancellationToken = default)
+    {
         var definitions = await repository.GetByUserId(userId, cancellationToken);
         var runtimeRules = definitions.Select(ToRuntimeRule).ToList();
         var labels = await LoadLabelsAsync(cancellationToken);
-        return ApplyToEntry(entry, runtimeRules, labels);
+        return new(runtimeRules, labels);
     }
 
     public async Task<TransactionRuleApplyResultDto> ApplyRetroactivelyAsync(int userId, ApplyTransactionRules command, CancellationToken cancellationToken = default)
@@ -126,9 +131,7 @@ public sealed class TransactionRuleService(
         if (command.AccountId is int requestedAccountId)
             accounts = accounts.Where(account => account.AccountId == requestedAccountId).ToList();
 
-        var definitions = await repository.GetByUserId(userId, cancellationToken);
-        var runtimeRules = definitions.Select(ToRuntimeRule).ToList();
-        var labels = await LoadLabelsAsync(cancellationToken);
+        var application = await LoadApplicationAsync(userId, cancellationToken);
         var examined = 0;
         var updated = 0;
 
@@ -141,7 +144,7 @@ public sealed class TransactionRuleService(
                 if (entry is not null)
                 {
                     examined++;
-                    if (ApplyToEntry(entry, runtimeRules, labels) && await entryRepository.Update(entry))
+                    if (application.ApplyTo(entry) && await entryRepository.Update(entry))
                         updated++;
                 }
 
@@ -152,7 +155,7 @@ public sealed class TransactionRuleService(
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 examined++;
-                if (ApplyToEntry(entry, runtimeRules, labels) && await entryRepository.Update(entry))
+                if (application.ApplyTo(entry) && await entryRepository.Update(entry))
                     updated++;
             }
         }
@@ -163,12 +166,12 @@ public sealed class TransactionRuleService(
         return new(examined, updated);
     }
 
-    private static TransactionRuleDefinition CreateDefinition(int userId, CreateTransactionRule command, int order) =>
+    private static TransactionRuleDefinition CreateDefinition(int userId, CreateTransactionRule command) =>
         new()
         {
             UserId = userId,
             Name = command.Name.Trim(),
-            Order = order,
+            Order = 0,
             IsEnabled = command.IsEnabled,
             StopProcessing = command.StopProcessing,
             ConditionsJson = JsonSerializer.Serialize(command.Conditions, _jsonOptions),
@@ -289,7 +292,7 @@ public sealed class TransactionRuleService(
         return labels;
     }
 
-    private static bool ApplyToEntry(CurrencyAccountEntry entry, IReadOnlyCollection<TransactionRule> rules, IReadOnlyCollection<FinancialLabel> availableLabels)
+    internal static bool ApplyToEntry(CurrencyAccountEntry entry, IReadOnlyCollection<TransactionRule> rules, IReadOnlyCollection<FinancialLabel> availableLabels)
     {
         var facts = new TransactionFacts(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
             Math.Abs(entry.ValueChange), entry.ValueChange switch
@@ -301,20 +304,27 @@ public sealed class TransactionRuleService(
         var result = TransactionRuleEngine.Run(rules, facts);
         if (!result.HasChanges) return false;
 
-        entry.ContractorDetails = string.IsNullOrWhiteSpace(result.FinalFacts.Contractor) ? null : result.FinalFacts.Contractor;
-        entry.Description = result.FinalFacts.Description;
-
         var existingByName = entry.Labels
             .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var availableByName = availableLabels
             .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        entry.Labels = result.FinalFacts.Labels
+        var resolvedLabels = result.FinalFacts.Labels
             .Where(name => existingByName.ContainsKey(name) || availableByName.ContainsKey(name))
             .Select(name => existingByName.GetValueOrDefault(name) ?? availableByName[name])
             .DistinctBy(label => label.Id)
             .ToList();
+        var finalContractor = string.IsNullOrWhiteSpace(result.FinalFacts.Contractor) ? null : result.FinalFacts.Contractor;
+        var contractorChanged = !string.Equals(entry.ContractorDetails, finalContractor, StringComparison.Ordinal);
+        var descriptionChanged = !string.Equals(entry.Description, result.FinalFacts.Description, StringComparison.Ordinal);
+        var labelsChanged = !entry.Labels.Select(label => label.Id).SequenceEqual(resolvedLabels.Select(label => label.Id));
+        if (!contractorChanged && !descriptionChanged && !labelsChanged)
+            return false;
+
+        entry.ContractorDetails = finalContractor;
+        entry.Description = result.FinalFacts.Description;
+        entry.Labels = resolvedLabels;
         return true;
     }
 }

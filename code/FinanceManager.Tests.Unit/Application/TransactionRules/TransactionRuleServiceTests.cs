@@ -36,15 +36,13 @@ public sealed class TransactionRuleServiceTests
     [Fact]
     public async Task CreateRule_AssignsTheNextOrder()
     {
-        _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<TransactionRuleDefinition>
-            {
-                new() { UserId = 7, Order = 4 }
-            });
-
         TransactionRuleDefinition? added = null;
         _repository.Setup(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()))
-            .Callback<TransactionRuleDefinition, CancellationToken>((rule, _) => added = rule)
+            .Callback<TransactionRuleDefinition, CancellationToken>((rule, _) =>
+            {
+                added = rule;
+                rule.Order = 5;
+            })
             .ReturnsAsync((TransactionRuleDefinition rule, CancellationToken _) => rule);
 
         var result = await _service.CreateRuleAsync(7, new CreateTransactionRule(
@@ -105,6 +103,32 @@ public sealed class TransactionRuleServiceTests
         Assert.Single(entry.Labels);
         Assert.Equal("Bills", entry.Labels.Single().Name);
         Assert.Equal(1, entry.Labels.Single().Id);
+    }
+
+    [Fact]
+    public async Task ApplyToEntry_ReturnsFalseWhenOnlyUnavailableLabelsAreRequested()
+    {
+        _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new TransactionRuleDefinition
+                {
+                    UserId = 7,
+                    Name = "Unknown label",
+                    Order = 1,
+                    ConditionsJson = "[]",
+                    ActionsJson = "[{\"type\":\"SetLabels\",\"labels\":[\"Missing\"]}]"
+                }
+            ]);
+
+        var entry = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m)
+        {
+            Description = "Invoice from ACME"
+        };
+
+        var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
+
+        Assert.False(changed);
+        Assert.Empty(entry.Labels);
     }
 
     [Fact]

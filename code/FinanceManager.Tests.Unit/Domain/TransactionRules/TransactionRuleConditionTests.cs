@@ -40,6 +40,14 @@ public class TransactionRuleConditionTests
         Assert.Throws<RegexParseException>(() => new ContractorCondition("(unclosed", TextMatchOperator.RegularExpression));
 
     [Fact]
+    public void ContractorCondition_LiteralOperatorsAcceptRegexCharacters()
+    {
+        var condition = new ContractorCondition("[", TextMatchOperator.Contains);
+
+        Assert.True(condition.Matches(new TransactionFacts("ACME [test]", "d", 1, 1m, TransactionDirection.Expense, [])));
+    }
+
+    [Fact]
     public void ContractorCondition_TimedOutRegex_DoesNotBlockRuleEvaluation()
     {
         var condition = new ContractorCondition("^(a+)+$", TextMatchOperator.RegularExpression, false);

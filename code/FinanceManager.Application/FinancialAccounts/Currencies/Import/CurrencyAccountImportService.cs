@@ -1,4 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
+using FinanceManager.Application.TransactionRules;
 using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
@@ -71,6 +72,9 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         var existingByDay = existingEntries
             .GroupBy(e => e.PostingDate.Date)
             .ToDictionary(g => g.Key, g => g.ToList());
+        var transactionRuleApplication = transactionRuleService is null
+            ? null
+            : await transactionRuleService.LoadApplicationAsync(userId, cancellationToken);
 
         try
         {
@@ -117,8 +121,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                             ContractorDetails = import.ContractorDetails,
                             Labels = []
                         };
-                        if (transactionRuleService is not null)
-                            await transactionRuleService.ApplyToEntryAsync(userId, newEntry, cancellationToken);
+                        transactionRuleApplication?.ApplyTo(newEntry);
                         entriesToInsert.Add(newEntry);
                     }
                     catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)

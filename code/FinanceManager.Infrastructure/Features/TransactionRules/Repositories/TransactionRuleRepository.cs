@@ -2,6 +2,7 @@ using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace FinanceManager.Infrastructure.Features.TransactionRules.Repositories;
 
@@ -20,9 +21,21 @@ internal sealed class TransactionRuleRepository(AppDbContext context) : ITransac
 
     public async Task<TransactionRuleDefinition> Add(TransactionRuleDefinition rule, CancellationToken cancellationToken = default)
     {
-        context.TransactionRules.Add(rule);
-        await context.SaveChangesAsync(cancellationToken);
-        return rule;
+        if (!context.Database.IsRelational())
+            return await AddCore(rule, cancellationToken);
+
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        try
+        {
+            var result = await AddCore(rule, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     public async Task Update(TransactionRuleDefinition rule, CancellationToken cancellationToken = default)
@@ -58,14 +71,51 @@ internal sealed class TransactionRuleRepository(AppDbContext context) : ITransac
         if (rules.Count != orderedIds.Count || rules.Select(x => x.Id).Intersect(orderedIds).Count() != rules.Count)
             return false;
 
-        for (var index = 0; index < rules.Count; index++)
-            rules[index].Order = -(index + 1);
-        await context.SaveChangesAsync(cancellationToken);
+        var originalOrders = rules.ToDictionary(rule => rule.Id, rule => rule.Order);
+        if (!context.Database.IsRelational())
+        {
+            SetFinalOrders(rules, orderedIds);
+            await context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
 
-        var byId = rules.ToDictionary(x => x.Id);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            for (var index = 0; index < rules.Count; index++)
+                rules[index].Order = -(index + 1);
+            await context.SaveChangesAsync(cancellationToken);
+
+            SetFinalOrders(rules, orderedIds);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            foreach (var rule in rules)
+                rule.Order = originalOrders[rule.Id];
+            throw;
+        }
+    }
+
+    private async Task<TransactionRuleDefinition> AddCore(TransactionRuleDefinition rule, CancellationToken cancellationToken)
+    {
+        var maxOrder = await context.TransactionRules
+            .Where(existing => existing.UserId == rule.UserId)
+            .Select(existing => (int?)existing.Order)
+            .MaxAsync(cancellationToken) ?? 0;
+        rule.Order = maxOrder + 1;
+        context.TransactionRules.Add(rule);
+        await context.SaveChangesAsync(cancellationToken);
+        return rule;
+    }
+
+    private static void SetFinalOrders(IReadOnlyList<TransactionRuleDefinition> rules, IReadOnlyList<Guid> orderedIds)
+    {
+        var byId = rules.ToDictionary(rule => rule.Id);
         for (var index = 0; index < orderedIds.Count; index++)
             byId[orderedIds[index]].Order = index + 1;
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
     }
 }
