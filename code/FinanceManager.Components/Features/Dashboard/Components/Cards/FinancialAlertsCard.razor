@@ -55,7 +55,11 @@
                                 <MudText Typo="Typo.body2" Class="font-weight-500" Style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     @outcome.AlertTitle
                                 </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@outcome.Message</MudText>
+                                <MudText Typo="Typo.body2">@outcome.Message</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @AlertPresentation.ComparisonDetail(outcome)
+                                </MudText>
+                                <AlertMatchingTransactions Outcome="outcome" />
                             </div>
                         </div>
                     </MudListItem>

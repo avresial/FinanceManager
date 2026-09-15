@@ -907,6 +907,20 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 10)
         }, ct);
 
+        // A transaction type added by a newer schema must not be interpreted as a Buy by an older
+        // reader, otherwise holdings can move without a corresponding capital event.
+        await txRepo.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = 10,
+            AssetListingId = listing1.Id,
+            Type = (InvestmentTransactionType)999,
+            Quantity = 100m,
+            UnitPrice = 1m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2026, 1, 10)
+        }, ct);
+
         var asOf = new DateOnly(2026, 1, 20);
         var holdings = await txRepo.GetHoldingsByAccountAsOf([10, 20], asOf, ct);
 
@@ -1083,6 +1097,7 @@ public class InvestmentModelRepositoryTests
 
         var buyFlow = flows[0];
         Assert.Equal(accountId, buyFlow.AccountId);
+        Assert.Equal(gbxListing.Id, buyFlow.AssetListingId);
         Assert.Equal(new DateOnly(2026, 1, 10), buyFlow.TradeDate);
         Assert.Equal(InvestmentTransactionType.Buy, buyFlow.Type);
         Assert.Equal(10m, buyFlow.Quantity);
@@ -1093,6 +1108,7 @@ public class InvestmentModelRepositoryTests
 
         var sellFlow = flows[1];
         Assert.Equal(accountId, sellFlow.AccountId);
+        Assert.Equal(gbxListing.Id, sellFlow.AssetListingId);
         Assert.Equal(new DateOnly(2026, 1, 15), sellFlow.TradeDate);
         Assert.Equal(InvestmentTransactionType.Sell, sellFlow.Type);
         Assert.Equal(5m, sellFlow.Quantity);

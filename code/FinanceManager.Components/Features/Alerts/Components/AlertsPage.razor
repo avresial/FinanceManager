@@ -155,7 +155,11 @@
                             <MudText Typo="Typo.body2">@outcome.CurrentValue.ToString("N2")</MudText>
                             @if (outcome.IsTriggered)
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Warning">@outcome.Message</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Warning">@outcome.Message</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @AlertPresentation.ComparisonDetail(outcome)
+                                </MudText>
+                                <AlertMatchingTransactions Outcome="outcome" />
                             }
                         }
                     }

@@ -55,5 +55,10 @@ public class InvestmentTransaction
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>Signed quantity delta this transaction contributes to a holding (+ for Buy, - for Sell).</summary>
-    public decimal SignedQuantity => Type == InvestmentTransactionType.Sell ? -Quantity : Quantity;
+    public decimal SignedQuantity => Type switch
+    {
+        InvestmentTransactionType.Buy => Quantity,
+        InvestmentTransactionType.Sell => -Quantity,
+        _ => 0m
+    };
 }
