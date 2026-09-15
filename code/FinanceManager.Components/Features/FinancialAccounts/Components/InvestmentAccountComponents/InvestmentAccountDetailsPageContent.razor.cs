@@ -38,7 +38,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
 
     private const string _defaultAccountName = "Investments";
-    private const string _defaultBenchmarkName = "Polish inflation";
+    private const string _defaultBenchmarkName = "Capital + inflation";
     private const int _historyPageSize = 100;
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();

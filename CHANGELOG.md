@@ -37,6 +37,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Remove redundant explanatory tooltips from account transaction date headers. #780
+- Rename the investment chart's default benchmark label to **Capital + inflation**. #777
 - Keep the Alerts card action in its header and contain its loading state. #765
 - Close account-detail time-range pickers as soon as a range is selected. #768
 - Show bond account asset appreciation in the account-details breakdown card. #767
