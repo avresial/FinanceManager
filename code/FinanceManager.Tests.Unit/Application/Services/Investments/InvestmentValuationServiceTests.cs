@@ -445,6 +445,20 @@ public class InvestmentValuationServiceTests
         Assert.Equal(800m, series[_accountId][end]);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GetCapitalSeries_IgnoresNonPositiveBuyQuantities(decimal quantity)
+    {
+        var date = new DateTime(2024, 1, 1);
+        SetupTransactions(Tx(1, InvestmentTransactionType.Buy, quantity, DateOnly.FromDateTime(date), unitPrice: 100m, fee: 10m));
+
+        var series = await CreateSut().GetCapitalSeriesAsync(
+            [_accountId], _usd, date, date, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, series[_accountId][date]);
+    }
+
     [Fact]
     public async Task GetCapitalSeries_ReplaysEditedAndDeletedHistory()
     {

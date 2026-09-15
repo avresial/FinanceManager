@@ -296,6 +296,8 @@ internal class InvestmentValuationService(
             {
                 case InvestmentTransactionType.Buy:
                     {
+                        if (flow.Quantity <= 0m) break;
+
                         var convertedCost = ConvertBuyCost(flow, targetCurrency, ratesByCurrency);
                         if (convertedCost is not decimal cost) break;
 
