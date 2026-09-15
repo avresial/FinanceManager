@@ -1,4 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
+using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
@@ -10,7 +11,8 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.Import;
 
 public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
-    ImportAccountValidator importAccountValidator, ILogger<CurrencyAccountImportService> logger) : ICurrencyAccountImportService
+    ImportAccountValidator importAccountValidator, ILogger<CurrencyAccountImportService> logger,
+    ITransactionRuleService? transactionRuleService = null) : ICurrencyAccountImportService
 {
     // Keep each persistence operation bounded so large imports retain partial-failure semantics and
     // do not create an unbounded EF change tracker or provider command batch.
@@ -115,6 +117,8 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                             ContractorDetails = import.ContractorDetails,
                             Labels = []
                         };
+                        if (transactionRuleService is not null)
+                            await transactionRuleService.ApplyToEntryAsync(userId, newEntry, cancellationToken);
                         entriesToInsert.Add(newEntry);
                     }
                     catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -242,11 +246,14 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
                 if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
                 {
-                    var importData = resolvedConflict.ImportData;
+                    var resolvedEntry = resolvedConflict.ToEntry();
+                    var account = transactionRuleService is null ? null : await currencyAccountRepository.Get(resolvedConflict.AccountId, cancellationToken);
+                    if (transactionRuleService is not null && account is not null)
+                        await transactionRuleService.ApplyToEntryAsync(account.UserId, resolvedEntry, cancellationToken);
                     if (cancellationToken.CanBeCanceled)
-                        await currencyAccountEntryRepository.Add(resolvedConflict.ToEntry(), recalculate: true, cancellationToken);
+                        await currencyAccountEntryRepository.Add(resolvedEntry, recalculate: true, cancellationToken);
                     else
-                        await currencyAccountEntryRepository.Add(resolvedConflict.ToEntry());
+                        await currencyAccountEntryRepository.Add(resolvedEntry);
                 }
             }
             catch (OperationCanceledException ex)

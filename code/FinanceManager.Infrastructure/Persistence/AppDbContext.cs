@@ -15,6 +15,7 @@ using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Shared.Ai.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Domain.Shared.Maintenance.Entities;
+using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,6 +52,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LogEntry> LogEntries { get; set; } = default!;
     public DbSet<ExternalServiceConfiguration> ExternalServiceConfigurations { get; set; } = default!;
     public DbSet<MaintenanceApiKey> MaintenanceApiKeys { get; set; } = default!;
+    public DbSet<TransactionRuleDefinition> TransactionRules { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,6 +86,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new LogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new ExternalServiceConfigurationConfiguration());
         modelBuilder.ApplyConfiguration(new MaintenanceApiKeyConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionRuleDefinitionConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
