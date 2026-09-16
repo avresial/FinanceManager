@@ -1,5 +1,6 @@
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -21,6 +22,7 @@ namespace FinanceManager.Api.Features.MoneyFlow.Controllers;
 public class AssetsController(
     IAssetsService assetsService,
     IInvestmentPaycheckEstimatorService investmentPaycheckEstimatorService,
+    IFeeDragService feeDragService,
     ICurrencyRepository currencyRepository,
     IInvestmentAppreciationService investmentAppreciationService,
     IAccountRepository<InvestmentAccount> accountRepository,
@@ -67,6 +69,36 @@ public class AssetsController(
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentPaycheckEstimate))]
     public async Task<IActionResult> GetInvestmentPaycheckEstimate(int userId, int currencyId, DateTime asOfDate, [FromQuery] decimal withdrawalRate = 0.05m, [FromQuery] int salaryMonths = 3, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await investmentPaycheckEstimatorService.GetEstimate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate, withdrawalRate, salaryMonths)) : Forbid();
+
+    [HttpGet("GetFeeDragAnalysis/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FeeDragAnalysisResult))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetFeeDragAnalysis(
+        int userId,
+        int currencyId,
+        DateTime asOfDate,
+        [FromQuery] decimal assumedAnnualReturnRate = 0.07m,
+        CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
+            return Forbid();
+
+        if (assumedAnnualReturnRate is < IFeeDragService.MinimumReturnRate or > IFeeDragService.MaximumReturnRate)
+            return BadRequest("The assumed annual return rate must be between -10% and 10%.");
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null)
+            return NotFound("Currency not found.");
+
+        return Ok(await feeDragService.GetAnalysisAsync(
+            userId,
+            currency,
+            asOfDate,
+            assumedAnnualReturnRate,
+            cancellationToken));
+    }
 
     [HttpGet("GetUnrealizedGainLossPerAccount/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossAccountResult>))]
