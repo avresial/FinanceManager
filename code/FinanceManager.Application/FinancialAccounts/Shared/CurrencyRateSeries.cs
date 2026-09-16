@@ -9,12 +9,48 @@ namespace FinanceManager.Application.FinancialAccounts.Shared;
 /// </summary>
 internal static class CurrencyRateSeries
 {
-    public static async Task<Dictionary<DateTime, decimal>> LoadAsync(
+    public static Task<Dictionary<DateTime, decimal>> LoadAsync(
         ICurrencyExchangeService exchangeService,
         Currency fromCurrency,
         Currency toCurrency,
         DateTime start,
-        DateTime end)
+        DateTime end) =>
+        LoadAsync(
+            fromCurrency,
+            toCurrency,
+            start,
+            end,
+            (startDate, endDate) => exchangeService.GetExchangeRateAsync(
+                fromCurrency,
+                toCurrency,
+                startDate,
+                endDate));
+
+    public static Task<Dictionary<DateTime, decimal>> LoadAsync(
+        ICurrencyExchangeService exchangeService,
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken) =>
+        LoadAsync(
+            fromCurrency,
+            toCurrency,
+            start,
+            end,
+            (startDate, endDate) => exchangeService.GetExchangeRateAsync(
+                fromCurrency,
+                toCurrency,
+                startDate,
+                endDate,
+                cancellationToken));
+
+    private static async Task<Dictionary<DateTime, decimal>> LoadAsync(
+        Currency fromCurrency,
+        Currency toCurrency,
+        DateTime start,
+        DateTime end,
+        Func<DateTime, DateTime, Task<List<(DateTime Date, decimal? Value)>>> loadRates)
     {
         var startDate = start.Date;
         var endDate = end.Date;
@@ -29,7 +65,7 @@ internal static class CurrencyRateSeries
             return sameCurrency;
         }
 
-        var rates = await exchangeService.GetExchangeRateAsync(fromCurrency, toCurrency, startDate, endDate);
+        var rates = await loadRates(startDate, endDate);
         var knownRates = rates
             .Where(x => x.Value is > 0m)
             .ToDictionary(x => x.Date.Date, x => x.Value!.Value);

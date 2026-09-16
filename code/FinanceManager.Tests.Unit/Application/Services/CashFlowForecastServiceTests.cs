@@ -1,5 +1,6 @@
 using FinanceManager.Application.MoneyFlow.CashFlowForecast;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
@@ -17,13 +18,14 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 public class CashFlowForecastServiceTests
 {
     private readonly Mock<IFinancialAccountRepository> _accounts = new();
+    private readonly Mock<ICurrencyExchangeService> _currencyExchange = new();
     private readonly Mock<IRecurringTransactionDetectorService> _recurring = new();
     private readonly FakeDateTimeProvider _clock = new(new DateTime(2026, 9, 16));
     private readonly CashFlowForecastService _service;
 
     public CashFlowForecastServiceTests()
     {
-        _service = new CashFlowForecastService(_accounts.Object, _recurring.Object, _clock);
+        _service = new CashFlowForecastService(_accounts.Object, _recurring.Object, _currencyExchange.Object, _clock);
     }
 
     [Fact]
@@ -85,14 +87,63 @@ public class CashFlowForecastServiceTests
             _service.GetForecast(7, DefaultCurrency.PLN, 45, TestContext.Current.CancellationToken));
     }
 
-    private void SetupAccounts(CurrencyAccount account) =>
+    [Fact]
+    public async Task GetForecast_IncludesOnlyCashAccounts()
+    {
+        SetupAccounts(
+            Account(Entry(1, new DateTime(2026, 9, 10), 1000m)),
+            new CurrencyAccount(
+                7,
+                2,
+                "Loan",
+                [new CurrencyAccountEntry(2, 1, new DateTime(2026, 9, 10), 500m, 500m)],
+                AccountLabel.Loan));
+        SetupFlows();
+
+        var result = await _service.GetForecast(
+            7,
+            DefaultCurrency.PLN,
+            CashFlowForecastHorizons.ThirtyDays,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1000m, HistoricalValueOn(result, new DateTime(2026, 9, 16)));
+    }
+
+    [Fact]
+    public async Task GetForecast_ValuesBalancesAndRecurringFlowsInRequestedCurrency()
+    {
+        SetupAccounts(Account(Entry(1, new DateTime(2026, 9, 10), 1000m)));
+        SetupFlows(Flow("Salary", 100m, new DateTime(2026, 9, 20), RecurringCadence.Monthly));
+        _currencyExchange
+            .Setup(x => x.GetExchangeRateAsync(
+                DefaultCurrency.PLN,
+                DefaultCurrency.USD,
+                new DateTime(2026, 8, 17),
+                new DateTime(2026, 9, 16),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enumerable.Range(0, 31)
+                .Select(offset => (new DateTime(2026, 8, 17).AddDays(offset), (decimal?)0.25m))
+                .ToList());
+
+        var result = await _service.GetForecast(
+            7,
+            DefaultCurrency.USD,
+            CashFlowForecastHorizons.ThirtyDays,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(250m, HistoricalValueOn(result, new DateTime(2026, 9, 16)));
+        Assert.Equal(25m, Assert.Single(result.ExpectedTransactions).Amount);
+        Assert.Equal(275m, ValueOn(result, new DateTime(2026, 9, 20)));
+    }
+
+    private void SetupAccounts(params CurrencyAccount[] accounts) =>
         _accounts
             .Setup(x => x.GetAccounts<CurrencyAccount>(
                 7,
                 It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<bool>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
+            .Returns(accounts.ToAsyncEnumerable());
 
     private void SetupFlows(params RecurringCashFlow[] flows) =>
         _recurring
@@ -125,4 +176,7 @@ public class CashFlowForecastServiceTests
 
     private static decimal ValueOn(CashFlowForecast forecast, DateTime date) =>
         forecast.ForecastSeries.Single(point => point.DateTime.Date == date.Date).Value;
+
+    private static decimal HistoricalValueOn(CashFlowForecast forecast, DateTime date) =>
+        forecast.HistoricalSeries.Single(point => point.DateTime.Date == date.Date).Value;
 }

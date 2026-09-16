@@ -185,10 +185,30 @@ public class RecurringTransactionDetectorServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task GetRecurringCashFlows_UsesOnlyCashAccountsWithoutChangingSubscriptionDetection()
+    {
+        var loan = AccountWithType(
+            AccountLabel.Loan,
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Loan payment"),
+            Entry(2, new DateTime(2026, 5, 15), -40m, "Loan payment"),
+            Entry(3, new DateTime(2026, 6, 15), -40m, "Loan payment"));
+        Setup([loan], []);
+        var service = CreateService();
+
+        Assert.Empty(await service.GetRecurringCashFlows(7, TestContext.Current.CancellationToken));
+        Assert.Single(await service.GetRecurringTransactions(7, TestContext.Current.CancellationToken));
+    }
+
     private RecurringTransactionDetectorService CreateService() =>
         new(_accounts.Object, _subscriptions.Object, _clock);
 
     private void Setup(CurrencyAccount account, List<RecurringSubscription> subscriptions)
+    {
+        Setup([account], subscriptions);
+    }
+
+    private void Setup(IReadOnlyCollection<CurrencyAccount> accounts, List<RecurringSubscription> subscriptions)
     {
         _accounts
             .Setup(x => x.GetAccounts<CurrencyAccount>(
@@ -196,7 +216,7 @@ public class RecurringTransactionDetectorServiceTests
                 It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<bool>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
+            .Returns(accounts.ToAsyncEnumerable());
         _subscriptions
             .Setup(x => x.GetAll(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(subscriptions);
@@ -206,7 +226,10 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     private static CurrencyAccount Account(params CurrencyAccountEntry[] entries) =>
-        new(7, 1, "Cash", entries, AccountLabel.Cash);
+        AccountWithType(AccountLabel.Cash, entries);
+
+    private static CurrencyAccount AccountWithType(AccountLabel accountType, params CurrencyAccountEntry[] entries) =>
+        new(7, 1, accountType.ToString(), entries, accountType);
 
     private static CurrencyAccountEntry Entry(int id, DateTime date, decimal amount, string merchant) =>
         new(1, id, date, amount, amount)

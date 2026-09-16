@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Commands;
 using FinanceManager.Domain.Labels.Entities;
@@ -22,18 +23,20 @@ public class RecurringTransactionDetectorService(
     public Task<List<RecurringTransactionResult>> GetRecurringTransactions(
         int userId,
         CancellationToken cancellationToken = default) =>
-        GetRecurringTransactionsCore(userId, cancellationToken, persistSubscriptions: true);
+        GetRecurringTransactionsCore(userId, cancellationToken, persistSubscriptions: true, includeAccount: null);
 
     private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
         int userId,
         CancellationToken cancellationToken,
-        bool persistSubscriptions)
+        bool persistSubscriptions,
+        Func<CurrencyAccount, bool>? includeAccount)
     {
         var today = dateTimeProvider.TodayUtc;
         var detected = await DetectPatterns(
             userId,
             today,
             static entry => entry.ValueChange < 0,
+            includeAccount,
             cancellationToken);
 
         var subscriptions = await subscriptionRepository.GetAll(userId, cancellationToken);
@@ -96,12 +99,17 @@ public class RecurringTransactionDetectorService(
         // Keep the existing detector as the source of expense/subscription state. This preserves
         // muted/cancelled semantics and stable subscription ids while the second, positive-value
         // pass adds recurring income without changing the subscriptions page contract.
-        var expenses = await GetRecurringTransactionsCore(userId, cancellationToken, persistSubscriptions: false);
+        var expenses = await GetRecurringTransactionsCore(
+            userId,
+            cancellationToken,
+            persistSubscriptions: false,
+            static account => account.AccountType == AccountLabel.Cash);
         var today = dateTimeProvider.TodayUtc;
         var incomes = await DetectPatterns(
             userId,
             today,
             static entry => entry.ValueChange > 0,
+            static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
 
         return expenses
@@ -141,6 +149,7 @@ public class RecurringTransactionDetectorService(
         int userId,
         DateTime today,
         Func<CurrencyAccountEntry, bool> includeEntry,
+        Func<CurrencyAccount, bool>? includeAccount,
         CancellationToken cancellationToken)
     {
         var start = today.AddMonths(-25);
@@ -150,6 +159,9 @@ public class RecurringTransactionDetectorService(
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (includeAccount is not null && !includeAccount(account))
+                continue;
+
             foreach (var entry in account.Entries)
             {
                 if (!includeEntry(entry) || entry.PostingDate < start || entry.PostingDate >= end)

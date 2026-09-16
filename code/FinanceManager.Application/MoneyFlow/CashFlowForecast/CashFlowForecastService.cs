@@ -1,4 +1,7 @@
+using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
@@ -18,6 +21,7 @@ namespace FinanceManager.Application.MoneyFlow.CashFlowForecast;
 public sealed class CashFlowForecastService(
     IFinancialAccountRepository financialAccountRepository,
     IRecurringTransactionDetectorService recurringTransactionDetectorService,
+    ICurrencyExchangeService currencyExchangeService,
     IDateTimeProvider dateTimeProvider) : ICashFlowForecastService
 {
     private const int _historyDays = 30;
@@ -34,11 +38,24 @@ public sealed class CashFlowForecastService(
         var asOfDate = dateTimeProvider.TodayUtc;
         var historyStart = asOfDate.AddDays(-_historyDays);
         var accounts = await LoadCashAccounts(userId, historyStart, asOfDate, cancellationToken);
-        var historicalSeries = BuildHistoricalSeries(accounts, historyStart, asOfDate);
+        // Cash accounts and recurring detector results use the application's base denomination;
+        // neither model carries a per-account currency, so value both from PLN into the requested currency.
+        var rates = await CurrencyRateSeries.LoadAsync(
+            currencyExchangeService,
+            DefaultCurrency.PLN,
+            currency,
+            historyStart,
+            asOfDate,
+            cancellationToken);
+        var historicalSeries = BuildHistoricalSeries(accounts, rates, historyStart, asOfDate);
         var currentBalance = historicalSeries.Count == 0 ? 0m : historicalSeries[^1].Value;
 
         var recurringFlows = await recurringTransactionDetectorService.GetRecurringCashFlows(userId, cancellationToken);
-        var expectedTransactions = BuildExpectedTransactions(recurringFlows, asOfDate, horizonDays);
+        // Future FX rates are unknowable, so project recurring amounts with the latest carried rate
+        // available on the forecast's as-of date.
+        var expectedTransactions = CurrencyRateSeries.TryGet(rates, asOfDate, out var currentRate)
+            ? BuildExpectedTransactions(recurringFlows, currentRate, asOfDate, horizonDays)
+            : [];
         var forecastSeries = BuildForecastSeries(currentBalance, asOfDate, horizonDays, expectedTransactions);
 
         return new ForecastModel
@@ -65,7 +82,7 @@ public sealed class CashFlowForecastService(
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (account is not null)
+            if (account is not null && account.AccountType == AccountLabel.Cash)
                 accounts.Add(account);
         }
 
@@ -74,6 +91,7 @@ public sealed class CashFlowForecastService(
 
     private static List<TimeSeriesModel> BuildHistoricalSeries(
         IReadOnlyCollection<CurrencyAccount> accounts,
+        IReadOnlyDictionary<DateTime, decimal> rates,
         DateTime start,
         DateTime end)
     {
@@ -102,7 +120,8 @@ public sealed class CashFlowForecastService(
                     entryIndex++;
                 }
 
-                balances[date] += runningBalance;
+                if (CurrencyRateSeries.TryGet(rates, date, out var rate))
+                    balances[date] += runningBalance * rate;
             }
         }
 
@@ -113,6 +132,7 @@ public sealed class CashFlowForecastService(
 
     private static List<CashFlowForecastTransaction> BuildExpectedTransactions(
         IEnumerable<RecurringCashFlow> recurringFlows,
+        decimal exchangeRate,
         DateTime asOfDate,
         int horizonDays)
     {
@@ -131,7 +151,7 @@ public sealed class CashFlowForecastService(
                 {
                     Date = nextDate,
                     Description = flow.Name,
-                    Amount = Math.Round(flow.OccurrenceAmount, 2),
+                    Amount = Math.Round(flow.OccurrenceAmount * exchangeRate, 2),
                     Cadence = flow.Cadence,
                     PatternId = flow.PatternId
                 });

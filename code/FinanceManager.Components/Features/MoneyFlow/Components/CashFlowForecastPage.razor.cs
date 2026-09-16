@@ -9,10 +9,12 @@ using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Features.MoneyFlow.Components;
 
-public partial class CashFlowForecastPage : ComponentBase
+public partial class CashFlowForecastPage : ComponentBase, IDisposable
 {
     private readonly ApexChartOptions<TimeSeriesModel> _chartOptions = BuildChartOptions();
+    private CancellationTokenSource? _loadCancellationTokenSource;
     private CashFlowForecast? _forecast;
+    private int _loadRequestVersion;
     private int _horizonDays = CashFlowForecastHorizons.NinetyDays;
     private string _currency = "PLN";
     private bool _isLoading = true;
@@ -36,12 +38,22 @@ public partial class CashFlowForecastPage : ComponentBase
 
     private async Task LoadData()
     {
+        var requestVersion = Interlocked.Increment(ref _loadRequestVersion);
+        var horizonDays = _horizonDays;
+        var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+        var previousRequest = Interlocked.Exchange(ref _loadCancellationTokenSource, cancellationTokenSource);
+        previousRequest?.Cancel();
+        previousRequest?.Dispose();
+
         _isLoading = true;
         _hasError = false;
 
         try
         {
             var user = await LoginService.GetLoggedUser();
+            if (requestVersion != _loadRequestVersion) return;
+
             if (user is null)
             {
                 _forecast = null;
@@ -49,20 +61,50 @@ public partial class CashFlowForecastPage : ComponentBase
             }
 
             var currency = await SettingsService.GetCurrencyAsync();
+            if (requestVersion != _loadRequestVersion) return;
+
+            var forecast = await CashFlowForecastHttpClient.GetAsync(
+                user.UserId,
+                currency.Id,
+                horizonDays,
+                cancellationToken);
+            if (requestVersion != _loadRequestVersion) return;
+
             _currency = currency.ShortName;
-            _forecast = await CashFlowForecastHttpClient.GetAsync(user.UserId, currency.Id, _horizonDays);
+            _forecast = forecast;
             _hasError = _forecast is null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
         }
         catch (Exception ex)
         {
+            if (requestVersion != _loadRequestVersion) return;
+
             _forecast = null;
             _hasError = true;
             Logger.LogError(ex, "Unable to load cash flow forecast page.");
         }
         finally
         {
-            _isLoading = false;
+            if (requestVersion == _loadRequestVersion)
+                _isLoading = false;
+
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(ref _loadCancellationTokenSource, null, cancellationTokenSource),
+                    cancellationTokenSource))
+            {
+                cancellationTokenSource.Dispose();
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        Interlocked.Increment(ref _loadRequestVersion);
+        var request = Interlocked.Exchange(ref _loadCancellationTokenSource, null);
+        request?.Cancel();
+        request?.Dispose();
     }
 
     private string FormatAmount(decimal amount) => $"{(amount >= 0 ? "+" : string.Empty)}{amount:N2} {_currency}";

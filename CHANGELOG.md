@@ -96,6 +96,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- Cash-flow forecasts now use only cash accounts, value balances and recurring activity in the selected currency, and keep the latest horizon when selections overlap. #153
 - Investment and bond account capital charts now carry the final value through the selected range end, and their legend labels follow the active theme for readable contrast. #753
 - The administration dashboard's new-visitors information control now has a grammatically correct screen-reader label. #730
 - Account transaction toolbar controls now share a consistent height, and the search button matches their outlined styling. #726
