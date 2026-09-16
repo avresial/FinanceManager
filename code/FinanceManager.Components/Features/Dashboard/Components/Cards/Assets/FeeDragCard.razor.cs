@@ -11,7 +11,7 @@ using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
-public partial class FeeDragCard
+public partial class FeeDragCard : IDisposable
 {
     private const decimal _minimumReturnRate = -0.10m;
     private const decimal _maximumReturnRate = 0.10m;
@@ -23,6 +23,8 @@ public partial class FeeDragCard
     private bool _hasError;
     private Currency _currency = DefaultCurrency.PLN;
     private decimal _assumedAnnualReturnRate = _defaultReturnRate;
+    private DateTime? _lastRequestedAsOfDate;
+    private CancellationTokenSource? _loadCancellationTokenSource;
 
     internal FeeDragAnalysisResult? Analysis
     {
@@ -73,38 +75,76 @@ public partial class FeeDragCard
     protected override async Task OnInitializedAsync()
     {
         _currency = await SettingsService.GetCurrencyAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_lastRequestedAsOfDate == AsOfDate)
+            return;
+
+        _lastRequestedAsOfDate = AsOfDate;
         await LoadFeeDragDataAsync();
     }
 
     internal async Task LoadFeeDragDataAsync()
     {
+        _loadCancellationTokenSource?.Cancel();
+        var cancellationTokenSource = new CancellationTokenSource();
+        _loadCancellationTokenSource = cancellationTokenSource;
+        var asOfDate = AsOfDate;
+
         _isLoading = true;
         _hasError = false;
 
         try
         {
             var user = await LoginService.GetLoggedUser();
+            if (!ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+                return;
+
             if (user is null)
             {
                 _analysis = null;
                 return;
             }
 
-            _analysis = await AssetsHttpClient.GetFeeDragAnalysis(
+            var analysis = await AssetsHttpClient.GetFeeDragAnalysis(
                 user.UserId,
                 _currency,
-                AsOfDate,
-                _assumedAnnualReturnRate);
+                asOfDate,
+                _assumedAnnualReturnRate,
+                cancellationTokenSource.Token);
+
+            if (ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+                _analysis = analysis;
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
+            if (!ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+                return;
+
             _hasError = true;
             Logger.LogError(exception, "Error loading ETF fee drag analysis");
         }
         finally
         {
-            _isLoading = false;
+            if (ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+            {
+                _isLoading = false;
+                _loadCancellationTokenSource = null;
+            }
+
+            cancellationTokenSource.Dispose();
         }
+    }
+
+    public void Dispose()
+    {
+        _loadCancellationTokenSource?.Cancel();
+        _loadCancellationTokenSource = null;
     }
 
     internal void OnReturnRateChanged(decimal value)
