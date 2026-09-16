@@ -30,6 +30,7 @@ public class AssetsControllerTests
     private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
     private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
     private readonly Mock<IMoneyWeightedReturnService> _moneyWeightedReturnServiceMock = new();
+    private readonly Mock<IPortfolioReturnAttributionService> _portfolioReturnAttributionServiceMock = new();
     private readonly AssetsController _controller;
 
     public AssetsControllerTests()
@@ -45,7 +46,8 @@ public class AssetsControllerTests
             _currencyRepositoryMock.Object,
             _investmentAppreciationServiceMock.Object,
             _accountRepositoryMock.Object,
-            _moneyWeightedReturnServiceMock.Object)
+            _moneyWeightedReturnServiceMock.Object,
+            _portfolioReturnAttributionServiceMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -101,6 +103,35 @@ public class AssetsControllerTests
             .ReturnsAsync(expected);
 
         var result = await _controller.GetMoneyWeightedReturn(
+            _testUserId,
+            DefaultCurrency.PLN.Id,
+            start,
+            end,
+            TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expected, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetReturnAttribution_ReturnsServiceResult()
+    {
+        var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var expected = PortfolioReturnAttributionResult.Available(
+            125m,
+            100m,
+            30m,
+            -5m,
+            0m,
+            start,
+            end);
+
+        _portfolioReturnAttributionServiceMock
+            .Setup(x => x.GetAsync(_testUserId, DefaultCurrency.PLN, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetReturnAttribution(
             _testUserId,
             DefaultCurrency.PLN.Id,
             start,

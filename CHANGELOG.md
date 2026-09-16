@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790
 - The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
 - The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
