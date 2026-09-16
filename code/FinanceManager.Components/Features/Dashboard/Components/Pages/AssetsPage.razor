@@ -15,6 +15,11 @@
         </MudItem>
 
         <MudItem xs="12" lg="4">
+            <MoneyWeightedReturnCard StartDateTime=StartDate EndDateTime="@EndDate"
+                                     Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
             <InvestmentPaycheckEstimatorCard Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
@@ -24,6 +29,10 @@
 
         <MudItem xs="12" lg="4">
             <DiversificationProxyCard Height="@($"{2 * _unitHeight}px")" />
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <FeeDragCard Height="@($"{2 * _unitHeight}px")" AsOfDate="@EndDate" />
         </MudItem>
     </MudGrid>
 </MudContainer>

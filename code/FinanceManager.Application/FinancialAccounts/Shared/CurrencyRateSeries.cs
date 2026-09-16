@@ -14,7 +14,8 @@ internal static class CurrencyRateSeries
         Currency fromCurrency,
         Currency toCurrency,
         DateTime start,
-        DateTime end)
+        DateTime end,
+        CancellationToken cancellationToken = default)
     {
         var startDate = start.Date;
         var endDate = end.Date;
@@ -29,7 +30,9 @@ internal static class CurrencyRateSeries
             return sameCurrency;
         }
 
-        var rates = await exchangeService.GetExchangeRateAsync(fromCurrency, toCurrency, startDate, endDate);
+        var rates = cancellationToken == default
+            ? await exchangeService.GetExchangeRateAsync(fromCurrency, toCurrency, startDate, endDate)
+            : await exchangeService.GetExchangeRateAsync(fromCurrency, toCurrency, startDate, endDate, cancellationToken);
         var knownRates = rates
             .Where(x => x.Value is > 0m)
             .ToDictionary(x => x.Date.Date, x => x.Value!.Value);
