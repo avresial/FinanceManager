@@ -86,6 +86,13 @@
                 </MudItem>
             }
 
+            @if (IsCardVisible(DashboardCards.CashFlowForecast))
+            {
+                <MudItem xs="12" md="6">
+                    <CashFlowForecastCard Height="@($"{_unitHeight * 2}px")" />
+                </MudItem>
+            }
+
             @if (IsCardVisible(DashboardCards.ClosingBalance))
             {
                 <MudItem xs="12" md="6">

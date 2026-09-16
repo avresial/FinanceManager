@@ -1,3 +1,4 @@
+using FinanceManager.Application.MoneyFlow.CashFlowForecast;
 using FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
 using FinanceManager.Application.MoneyFlow.InvestmentRate;
 using FinanceManager.Application.MoneyFlow.LabelsValue;
@@ -16,6 +17,7 @@ internal static class Registration
     public static IServiceCollection AddMoneyFlowApplication(this IServiceCollection services)
     {
         services.AddScoped<INetWorthService, NetWorthService>()
+                .AddScoped<ICashFlowForecastService, CashFlowForecastService>()
                 .AddScoped<ILabelsValueService, LabelsValueService>()
                 .AddScoped<IInvestmentRateService, InvestmentRateService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()

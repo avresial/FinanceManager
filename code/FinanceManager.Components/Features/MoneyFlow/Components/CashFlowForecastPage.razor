@@ -1,0 +1,104 @@
+@page "/CashFlowForecast"
+@using ApexCharts
+@using FinanceManager.Domain.MoneyFlow.Entities
+
+<PageTitle>Cash flow forecast</PageTitle>
+
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Cash flow forecast</MudText>
+</SectionContent>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
+        <div>
+            <MudText Typo="Typo.h4" HtmlTag="h1">Cash flow forecast</MudText>
+            <MudText Typo="Typo.body1" Color="MudBlazor.Color.Secondary">
+                A deterministic projection from your current cash balances and recurring activity.
+            </MudText>
+        </div>
+        <MudButtonGroup Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" aria-label="Forecast horizon">
+            @foreach (var horizon in Horizons)
+            {
+                <MudButton Variant="@(horizon == _horizonDays ? Variant.Filled : Variant.Outlined)"
+                           OnClick="@(() => SelectHorizon(horizon))">
+                    @horizon days
+                </MudButton>
+            }
+        </MudButtonGroup>
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="380px" Class="mb-4" />
+    }
+    else if (_hasError)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            Unable to load the cash-flow forecast.
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Inherit" OnClick="LoadData">Retry</MudButton>
+        </MudAlert>
+    }
+    else if (_forecast is not null)
+    {
+        <MudPaper Outlined Class="pa-4 mb-4">
+            <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-2">
+                <MudText Typo="Typo.h6">Projected cash balance</MudText>
+                <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">
+                    As of @_forecast.AsOfDate.ToString("d MMM yyyy") · @_forecast.Currency
+                </MudText>
+            </div>
+            <div class="cash-flow-forecast-chart">
+                <ApexChart TItem="TimeSeriesModel" Options="_chartOptions" Height="360">
+                    @if (_forecast.HistoricalSeries.Count > 0)
+                    {
+                        <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.HistoricalSeries"
+                                         Name="Historical balance" SeriesType="SeriesType.Area"
+                                         XValue="@(point => point.DateTime.ToLocalTime())"
+                                         YValue="@(point => point.Value)" />
+                    }
+                    @if (_forecast.ForecastSeries.Count > 0)
+                    {
+                        <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.ForecastSeries"
+                                         Name="Forecast balance" SeriesType="SeriesType.Line"
+                                         XValue="@(point => point.DateTime.ToLocalTime())"
+                                         YValue="@(point => point.Value)" />
+                    }
+                </ApexChart>
+            </div>
+            <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">
+                Historical balance is shaded; the forecast line begins at today's balance.
+            </MudText>
+        </MudPaper>
+
+        @if (!_forecast.HasForecastableActivity)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                No recurring activity is expected in this horizon. The projection remains at the latest known balance.
+            </MudAlert>
+        }
+        else
+        {
+            <MudPaper Outlined Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">Expected activity</MudText>
+                <MudList T="CashFlowForecastTransaction" Dense="true" ReadOnly="true">
+                    @foreach (var transaction in _forecast.ExpectedTransactions)
+                    {
+                        <MudListItem T="CashFlowForecastTransaction">
+                            <div class="d-flex justify-space-between align-center gap-3 w-100">
+                                <div class="text-truncate">
+                                    <MudText Typo="Typo.body2" Class="text-truncate">@transaction.Description</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">
+                                        @transaction.Date.ToString("d MMM yyyy") · @transaction.Cadence
+                                    </MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="@(transaction.Amount >= 0 ? "cash-flow-inflow" : "cash-flow-outflow")">
+                                    @FormatAmount(transaction.Amount)
+                                </MudText>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudPaper>
+        }
+    }
+</MudContainer>
