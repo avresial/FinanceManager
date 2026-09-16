@@ -31,7 +31,7 @@ public class CashFlowForecastPageTests
             Xunit.TestContext.Current.CancellationToken);
 
         await FindHorizon(cut, 30).ClickAsync(new());
-        await staleSelection;
+        await staleSelection.WaitAsync(TimeSpan.FromSeconds(1), Xunit.TestContext.Current.CancellationToken);
 
         cut.WaitForAssertion(() =>
         {

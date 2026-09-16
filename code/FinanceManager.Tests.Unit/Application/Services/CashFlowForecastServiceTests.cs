@@ -23,6 +23,7 @@ public class CashFlowForecastServiceTests
     private readonly FakeDateTimeProvider _clock = new(new DateTime(2026, 9, 16));
     private readonly CashFlowForecastService _service;
 
+    // A primary constructor cannot be used because its body initializes _service from the fixture mocks.
     public CashFlowForecastServiceTests()
     {
         _service = new CashFlowForecastService(_accounts.Object, _recurring.Object, _currencyExchange.Object, _clock);
