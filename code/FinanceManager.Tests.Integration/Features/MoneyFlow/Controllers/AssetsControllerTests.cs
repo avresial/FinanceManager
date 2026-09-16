@@ -217,7 +217,8 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             {
                 Id = (int)listingId,
                 Name = $"Asset {listingId}",
-                Type = AssetType.ETF
+                Type = AssetType.ETF,
+                TotalExpenseRatio = 0.005m,
             };
             context.Assets.Add(asset);
 
@@ -283,6 +284,39 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
+    public async Task GetFeeDragAnalysis_ReturnsCurrentEtfFeeCost()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 22, listingId: 202, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetFeeDragAnalysis(
+            1,
+            DefaultCurrency.USD,
+            _nowUtc,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(500m, result.TotalHoldingsValue);
+        Assert.Equal(2.50m, result.AnnualFeeCost);
+        Assert.Equal(1, result.TotalHoldingsCount);
+        Assert.Equal(0, result.MissingTerCount);
+        Assert.Equal([10, 20, 30], result.Projections.Select(projection => projection.Years).ToArray());
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_WithInvalidReturnRateReturnsBadRequest()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/Assets/GetFeeDragAnalysis/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}?assumedAnnualReturnRate=0.11",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetUnrealizedGainLossForAccount_ForOtherUsersAccount_ReturnsNotFound()
     {
         await SeedInvestmentAccountWithHoldings(userId: 2, accountId: 21, listingId: 201);
@@ -327,6 +361,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}/{InvestmentType.Stock}",
         now => $"api/Assets/GetInvestmentPaycheckEstimate/2/{DefaultCurrency.USD.Id}/{now:O}",
+        now => $"api/Assets/GetFeeDragAnalysis/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerAccount/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerInstrument/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossForAccount/2/20/{DefaultCurrency.USD.Id}/{now:O}",

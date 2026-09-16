@@ -19,6 +19,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
+using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
@@ -82,6 +83,7 @@ internal static class Registration
                 .AddScoped<IBackfillService, CurrencyRateBackfillService>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IInvestmentTransactionValuationService, InvestmentTransactionValuationService>()
+                .AddScoped<IFeeDragService, FeeDragService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
                 .AddScoped<IInvestmentInstrumentSearchService, InvestmentInstrumentSearchService>()
                 .AddScoped<IInstrumentImportService, InstrumentImportService>()
