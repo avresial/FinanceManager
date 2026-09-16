@@ -1,0 +1,291 @@
+@page "/TransactionRules"
+@attribute [Authorize]
+@using FinanceManager.Domain.TransactionRules
+@using FinanceManager.Domain.TransactionRules.Commands
+@using FinanceManager.Domain.TransactionRules.Conditions
+@using FinanceManager.Domain.TransactionRules.Dtos
+@using FinanceManager.Domain.TransactionRules.Models
+
+<PageTitle>Transaction automation</PageTitle>
+
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Transaction automation</MudText>
+</SectionContent>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
+        <div>
+            <MudText Typo="Typo.h4" HtmlTag="h1">Transaction automation</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Apply ordered labels and text clean-up automatically when transactions arrive.
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@_isLoading" OnClick="LoadAsync">Refresh</MudButton>
+    </div>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+    }
+
+    <MudForm @ref="_ruleForm">
+        <MudPaper Outlined Class="pa-4 mb-5">
+            <div class="d-flex justify-space-between align-center mb-3">
+                <MudText Typo="Typo.h6">@(_editingId is null ? "Create a rule" : "Edit rule")</MudText>
+                @if (_editingId is not null)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="ResetForm">Cancel</MudButton>
+                }
+            </div>
+
+        <MudGrid Spacing="2" Class="mx-0 w-100">
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" @bind-Value="_name" Label="Rule name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSwitch T="bool" @bind-Value="_enabled" Color="Color.Primary" Label="Enabled" />
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudSwitch T="bool" @bind-Value="_stopProcessing" Color="Color.Primary" Label="Stop after match" />
+            </MudItem>
+        </MudGrid>
+
+        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+            <MudText Typo="Typo.subtitle2">Match all of these conditions</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddCondition">
+                Add condition
+            </MudButton>
+        </div>
+        @for (var index = 0; index < _conditions.Count; index++)
+        {
+            var condition = _conditions[index];
+            var conditionIndex = index;
+            <MudPaper Outlined Class="pa-3 mb-3" @key="condition">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <MudText Typo="Typo.subtitle2">Condition @(conditionIndex + 1)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   Disabled="@(_conditions.Count == 1)" OnClick="@(() => RemoveCondition(condition))"
+                                   aria-label="@(string.Concat("Remove condition ", conditionIndex + 1))" />
+                </div>
+                <MudGrid Spacing="2" Class="mx-0 w-100">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="string" @bind-Value="condition.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Contractor")">Contractor</MudSelectItem>
+                            <MudSelectItem Value="@("Description")">Description</MudSelectItem>
+                            <MudSelectItem Value="@("Account")">Account id</MudSelectItem>
+                            <MudSelectItem Value="@("Amount")">Amount</MudSelectItem>
+                            <MudSelectItem Value="@("Direction")">Direction</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (condition.Type is "Contractor" or "Description")
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudTextField T="string" @bind-Value="condition.Pattern" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudSelect T="TextMatchOperator" @bind-Value="condition.MatchOperator" Label="Match" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@TextMatchOperator.Equals">Equals</MudSelectItem>
+                                <MudSelectItem Value="@TextMatchOperator.Contains">Contains</MudSelectItem>
+                                <MudSelectItem Value="@TextMatchOperator.StartsWith">Starts with</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudCheckBox T="bool" @bind-Value="condition.IgnoreCase" Label="Ignore case" Color="Color.Primary" />
+                        </MudItem>
+                    }
+                    else if (condition.Type == "Account")
+                    {
+                        <MudItem xs="12" sm="8">
+                            <MudTextField T="string" @bind-Value="condition.AccountIdsText" Label="Account ids" HelperText="Comma-separated account ids" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                    else if (condition.Type == "Direction")
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="TransactionDirection" @bind-Value="condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                                {
+                                    <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="TransactionDirection" @bind-Value="condition.Direction" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                                {
+                                    <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.MinAmount" Label="Minimum" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.MaxAmount" Label="Maximum" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="2">
+                            <MudNumericField T="decimal?" @bind-Value="condition.Threshold" Label="Threshold" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+            <MudText Typo="Typo.subtitle2">Actions</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAction">
+                Add action
+            </MudButton>
+        </div>
+        @for (var index = 0; index < _actions.Count; index++)
+        {
+            var action = _actions[index];
+            var actionIndex = index;
+            <MudPaper Outlined Class="pa-3 mb-3" @key="action">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <MudText Typo="Typo.subtitle2">Action @(actionIndex + 1)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   Disabled="@(_actions.Count == 1)" OnClick="@(() => RemoveAction(action))"
+                                   aria-label="@(string.Concat("Remove action ", actionIndex + 1))" />
+                </div>
+                <MudGrid Spacing="2" Class="mx-0 w-100">
+                    <MudItem xs="12" sm="4">
+                        <MudSelect T="string" @bind-Value="action.Type" Label="Action" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("SetLabels")">Set labels</MudSelectItem>
+                            <MudSelectItem Value="@("NormalizeContractor")">Normalize contractor</MudSelectItem>
+                            <MudSelectItem Value="@("NormalizeDescription")">Normalize description</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    @if (action.Type == "SetLabels")
+                    {
+                        <MudItem xs="12" sm="5">
+                            <MudTextField T="string" @bind-Value="action.LabelsText" Label="Labels" HelperText="Comma-separated labels" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudCheckBox T="bool" @bind-Value="action.ReplaceExisting" Label="Replace existing" Color="Color.Primary" />
+                        </MudItem>
+                    }
+                    else
+                    {
+                        <MudItem xs="12" sm="8">
+                            <MudTextField T="string" @bind-Value="action.Value" Label="Normalized value" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+            <div class="d-flex justify-end mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSaving" OnClick="SaveAsync">
+                    @(_editingId is null ? "Create rule" : "Save changes")
+                </MudButton>
+            </div>
+        </MudPaper>
+    </MudForm>
+
+    @if (_isLoading && _rules.Count == 0)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+    }
+    else if (_rules.Count == 0)
+    {
+        <MudPaper Outlined Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.h6" Class="mt-2">No automation rules yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Create a rule above to keep imported and new transactions tidy.</MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudTable Items="_rules" Dense="true" Hover="true" Outlined="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Rule</MudTh>
+                <MudTh>Match</MudTh>
+                <MudTh>Actions</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align:right">Manage</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Rule">
+                    <MudText Typo="Typo.body1" Class="font-weight-600">@context.Name</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Order @context.Order</MudText>
+                </MudTd>
+                <MudTd DataLabel="Match">@DescribeConditions(context)</MudTd>
+                <MudTd DataLabel="Actions">@DescribeActions(context)</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsEnabled ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                        @(context.IsEnabled ? "Enabled" : "Disabled")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Manage" Style="text-align:right; white-space:nowrap">
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" Disabled="@(context.Order == 1)" OnClick="@(() => MoveAsync(context, -1))" aria-label="Move rule up" />
+                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Disabled="@(context.Order == _rules.Count)" OnClick="@(() => MoveAsync(context, 1))" aria-label="Move rule down" />
+                    <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleAsync(context, value))" Color="Color.Primary" Size="Size.Small" aria-label="@(string.Concat("Enable ", context.Name))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => BeginEdit(context))" aria-label="@(string.Concat("Edit ", context.Name))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" aria-label="@(string.Concat("Delete ", context.Name))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    <MudPaper Outlined Class="pa-4 mt-5">
+        <MudText Typo="Typo.h6">Apply existing rules</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Retroactive application changes matching transactions in your accounts. Confirm before running it.
+        </MudText>
+        <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || _isApplying)" OnClick="ApplyAsync">
+            Apply to all currency transactions
+        </MudButton>
+        @if (_applyResult is not null)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Success" Class="mt-2">Checked @_applyResult.Examined transactions and updated @_applyResult.Updated.</MudText>
+        }
+    </MudPaper>
+
+    <MudPaper Outlined Class="pa-4 mt-5">
+        <MudText Typo="Typo.h6">Preview rules</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Test the current saved rule set against a transaction without changing your data.
+        </MudText>
+        <MudGrid Spacing="2" Class="mx-0 w-100">
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" @bind-Value="_previewContractor" Label="Contractor" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" @bind-Value="_previewDescription" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudNumericField T="int" @bind-Value="_previewAccountId" Label="Account id" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudNumericField T="decimal" @bind-Value="_previewAmount" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="TransactionDirection" @bind-Value="_previewDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                    {
+                        <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@_isPreviewing" OnClick="PreviewAsync">Preview</MudButton>
+            </MudItem>
+        </MudGrid>
+        @if (_preview is not null)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">
+                <MudText Typo="Typo.body2"><b>Contractor:</b> @_preview.FinalFacts.Contractor</MudText>
+                <MudText Typo="Typo.body2"><b>Description:</b> @_preview.FinalFacts.Description</MudText>
+                <MudText Typo="Typo.body2"><b>Labels:</b> @(string.Join(", ", _preview.FinalFacts.Labels))</MudText>
+                <MudText Typo="Typo.caption">@_preview.AppliedRules.Count rule(s) applied.</MudText>
+            </MudAlert>
+        }
+    </MudPaper>
+</MudContainer>

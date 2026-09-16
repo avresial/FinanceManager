@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734
 - Configurable in-app financial alerts and watchlists now monitor balances, category and merchant spending, large transactions, and subscription price changes with dashboard status and duplicate-trigger suppression. #735
 - Investment and bond account charts now show cumulative user-paid capital alongside account value and the selected benchmark, including range-start carry-over, withdrawals, same-day events, and historical currency conversion. #729
 - Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
@@ -35,12 +36,13 @@ rules agents must follow when updating this file.
 - The admin **Users** page now shows a **"Last logged at"** column with each user's most recent login date (or `Never` for accounts that have never signed in). #540
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
-### Changed
-- Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
-- Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
-- Remove redundant explanatory tooltips from account transaction date headers. #780
-- Rename the investment chart's default benchmark label to **Capital + inflation**. #777
-- Keep the Alerts card action in its header and contain its loading state. #765
+ ### Changed
+ - Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
+ - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
+ - Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
+ - Remove redundant explanatory tooltips from account transaction date headers. #780
+ - Rename the investment chart's default benchmark label to **Capital + inflation**. #777
+ - Keep the Alerts card action in its header and contain its loading state. #765
 - Close account-detail time-range pickers as soon as a range is selected. #768
 - Show bond account asset appreciation in the account-details breakdown card. #767
 - Remove redundant helper text from the dashboard Transaction log card header. #766
@@ -130,6 +132,7 @@ rules agents must follow when updating this file.
 - The **Manual stock price** admin card no longer stretches across the full width of the screen; it is now capped to a compact width, and the price field updates as you type.
 
 ### Security
+- Bound user-supplied regular-expression transaction-rule evaluation so malformed patterns cannot stall imports or retroactive updates. #734
 - The default admin and test-user accounts are no longer seeded with passwords hard-coded in source. Their passwords are now read from configuration (`Seeding:AdminPassword` / `Seeding:TestUserPassword`); when unset — as in production — the accounts are not created. The stock-price bulk-import endpoint now returns a generic error message and logs the exception server-side instead of echoing the raw exception text to the caller. #450
 
 ### Added
