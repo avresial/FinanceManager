@@ -186,6 +186,23 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
+    public async Task GetRecurringCashFlows_UsesProvidedAsOfDate()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Rent"),
+            Entry(2, new DateTime(2026, 5, 15), -40m, "Rent"),
+            Entry(3, new DateTime(2026, 6, 15), -40m, "Rent"));
+        Setup(account, []);
+
+        var result = await CreateService().GetRecurringCashFlows(
+            7,
+            new DateTime(2026, 8, 15),
+            TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task GetRecurringCashFlows_UsesOnlyCashAccountsWithoutChangingSubscriptionDetection()
     {
         var loan = AccountWithType(

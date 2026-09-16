@@ -47,10 +47,22 @@ public sealed class CashFlowForecastService(
             historyStart,
             asOfDate,
             cancellationToken);
+        if (rates.Count == 0 && !string.Equals(
+                DefaultCurrency.PLN.ShortName,
+                currency.ShortName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"No exchange rates are available from {DefaultCurrency.PLN.ShortName} to {currency.ShortName} for the forecast period.");
+        }
+
         var historicalSeries = BuildHistoricalSeries(accounts, rates, historyStart, asOfDate);
         var currentBalance = historicalSeries.Count == 0 ? 0m : historicalSeries[^1].Value;
 
-        var recurringFlows = await recurringTransactionDetectorService.GetRecurringCashFlows(userId, cancellationToken);
+        var recurringFlows = await recurringTransactionDetectorService.GetRecurringCashFlows(
+            userId,
+            asOfDate,
+            cancellationToken);
         // Future FX rates are unknowable, so project recurring amounts with the latest carried rate
         // available on the forecast's as-of date.
         var expectedTransactions = CurrencyRateSeries.TryGet(rates, asOfDate, out var currentRate)

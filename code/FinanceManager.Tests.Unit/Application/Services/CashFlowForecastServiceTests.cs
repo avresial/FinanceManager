@@ -137,6 +137,53 @@ public class CashFlowForecastServiceTests
         Assert.Equal(275m, ValueOn(result, new DateTime(2026, 9, 20)));
     }
 
+    [Fact]
+    public async Task GetForecast_WhenRequestedCurrencyRatesAreUnavailable_FailsExplicitly()
+    {
+        SetupAccounts(Account(Entry(1, new DateTime(2026, 9, 10), 1000m)));
+        SetupFlows();
+        _currencyExchange
+            .Setup(x => x.GetExchangeRateAsync(
+                DefaultCurrency.PLN,
+                DefaultCurrency.USD,
+                new DateTime(2026, 8, 17),
+                new DateTime(2026, 9, 16),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.GetForecast(
+                7,
+                DefaultCurrency.USD,
+                CashFlowForecastHorizons.ThirtyDays,
+                TestContext.Current.CancellationToken));
+
+        Assert.Equal("No exchange rates are available from PLN to USD for the forecast period.", exception.Message);
+        _recurring.Verify(
+            x => x.GetRecurringCashFlows(
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetForecast_PassesCapturedAsOfDateToRecurringDetector()
+    {
+        SetupAccounts(Account(Entry(1, new DateTime(2026, 9, 10), 1000m)));
+        SetupFlows();
+
+        await _service.GetForecast(
+            7,
+            DefaultCurrency.PLN,
+            CashFlowForecastHorizons.ThirtyDays,
+            TestContext.Current.CancellationToken);
+
+        _recurring.Verify(
+            x => x.GetRecurringCashFlows(7, _clock.UtcNow.Date, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private void SetupAccounts(params CurrencyAccount[] accounts) =>
         _accounts
             .Setup(x => x.GetAccounts<CurrencyAccount>(
@@ -148,7 +195,10 @@ public class CashFlowForecastServiceTests
 
     private void SetupFlows(params RecurringCashFlow[] flows) =>
         _recurring
-            .Setup(x => x.GetRecurringCashFlows(7, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetRecurringCashFlows(
+                7,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(flows.ToList());
 
     private static CurrencyAccount Account(params CurrencyAccountEntry[] entries) =>

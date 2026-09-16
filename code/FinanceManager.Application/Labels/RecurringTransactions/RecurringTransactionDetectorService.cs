@@ -23,18 +23,23 @@ public class RecurringTransactionDetectorService(
     public Task<List<RecurringTransactionResult>> GetRecurringTransactions(
         int userId,
         CancellationToken cancellationToken = default) =>
-        GetRecurringTransactionsCore(userId, cancellationToken, persistSubscriptions: true, includeAccount: null);
+        GetRecurringTransactionsCore(
+            userId,
+            dateTimeProvider.TodayUtc,
+            cancellationToken,
+            persistSubscriptions: true,
+            includeAccount: null);
 
     private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
         int userId,
+        DateTime asOfDate,
         CancellationToken cancellationToken,
         bool persistSubscriptions,
         Func<CurrencyAccount, bool>? includeAccount)
     {
-        var today = dateTimeProvider.TodayUtc;
         var detected = await DetectPatterns(
             userId,
-            today,
+            asOfDate,
             static entry => entry.ValueChange < 0,
             includeAccount,
             cancellationToken);
@@ -92,8 +97,14 @@ public class RecurringTransactionDetectorService(
             .ToList();
     }
 
+    public Task<List<RecurringCashFlow>> GetRecurringCashFlows(
+        int userId,
+        CancellationToken cancellationToken = default) =>
+        GetRecurringCashFlows(userId, dateTimeProvider.TodayUtc, cancellationToken);
+
     public async Task<List<RecurringCashFlow>> GetRecurringCashFlows(
         int userId,
+        DateTime asOfDate,
         CancellationToken cancellationToken = default)
     {
         // Keep the existing detector as the source of expense/subscription state. This preserves
@@ -101,13 +112,13 @@ public class RecurringTransactionDetectorService(
         // pass adds recurring income without changing the subscriptions page contract.
         var expenses = await GetRecurringTransactionsCore(
             userId,
+            asOfDate,
             cancellationToken,
             persistSubscriptions: false,
             static account => account.AccountType == AccountLabel.Cash);
-        var today = dateTimeProvider.TodayUtc;
         var incomes = await DetectPatterns(
             userId,
-            today,
+            asOfDate,
             static entry => entry.ValueChange > 0,
             static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
