@@ -264,6 +264,16 @@ public class TransactionRuleEngineTests
     }
 
     [Fact]
+    public void SetLabelsAction_CanApplyWithoutFacts()
+    {
+        var labels = new List<string>();
+
+        new SetLabelsAction(["Bills"]).Apply(labels);
+
+        Assert.Equal(["Bills"], labels);
+    }
+
+    [Fact]
     public void Run_StopProcessing_LaterRulesAreSkippedAfterStop()
     {
         var first = Rule(1, new ContractorCondition("acme"), new SetLabelsAction(["One"]));

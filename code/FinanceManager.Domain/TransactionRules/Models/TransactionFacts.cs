@@ -10,6 +10,24 @@ namespace FinanceManager.Domain.TransactionRules.Models;
 /// </summary>
 public sealed record TransactionFacts
 {
+    /// <summary>The user-visible contractor/merchant as currently stored (never null; may be empty).</summary>
+    public string Contractor { get; set; }
+
+    /// <summary>The user-visible description as currently stored (never null; may be empty).</summary>
+    public string Description { get; set; }
+
+    /// <summary>The account the transaction belongs to. Referenced for matching only; rules cannot move money between accounts.</summary>
+    public int AccountId { get; set; }
+
+    /// <summary>The transaction amount as a non-negative magnitude; <see cref="Direction"/> carries the sign.</summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>Whether the amount flows in (income), out (expense), or between the user's own accounts (transfer).</summary>
+    public TransactionDirection Direction { get; set; }
+
+    /// <summary>The labels currently attached to the transaction, in order.</summary>
+    public IReadOnlyList<string> Labels { get; set; }
+
     /// <summary>Creates facts with the given values; <paramref name="amount"/> must be non-negative.</summary>
     // Positional syntax cannot provide the required validation, normalization, and mutable rule transformations.
     public TransactionFacts(
@@ -30,24 +48,6 @@ public sealed record TransactionFacts
         Direction = direction;
         Labels = labels.Where(label => !string.IsNullOrWhiteSpace(label)).ToArray();
     }
-
-    /// <summary>The user-visible contractor/merchant as currently stored (never null; may be empty).</summary>
-    public string Contractor { get; set; }
-
-    /// <summary>The user-visible description as currently stored (never null; may be empty).</summary>
-    public string Description { get; set; }
-
-    /// <summary>The account the transaction belongs to. Referenced for matching only; rules cannot move money between accounts.</summary>
-    public int AccountId { get; set; }
-
-    /// <summary>The transaction amount as a non-negative magnitude; <see cref="Direction"/> carries the sign.</summary>
-    public decimal Amount { get; set; }
-
-    /// <summary>Whether the amount flows in (income), out (expense), or between the user's own accounts (transfer).</summary>
-    public TransactionDirection Direction { get; set; }
-
-    /// <summary>The labels currently attached to the transaction, in order.</summary>
-    public IReadOnlyList<string> Labels { get; set; }
 
     /// <summary>An empty set of facts, used as the JSON deserialization placeholder.</summary>
     public static TransactionFacts Empty => new(string.Empty, string.Empty, 0, 0m, TransactionDirection.Expense, []);

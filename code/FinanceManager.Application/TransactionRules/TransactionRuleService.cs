@@ -6,15 +6,12 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.TransactionRules;
-using FinanceManager.Domain.TransactionRules.Actions;
 using FinanceManager.Domain.TransactionRules.Commands;
-using FinanceManager.Domain.TransactionRules.Conditions;
 using FinanceManager.Domain.TransactionRules.Dtos;
 using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Domain.TransactionRules.Services;
-using System.Text.Json;
 
 namespace FinanceManager.Application.TransactionRules;
 
@@ -26,11 +23,6 @@ public sealed class TransactionRuleService(
     IAccountEntryRepository<CurrencyAccountEntry> entryRepository,
     IFinancialAlertService financialAlertService) : ITransactionRuleService
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNameCaseInsensitive = true
-    };
-
     public async Task<IReadOnlyList<TransactionRuleDto>> GetRulesAsync(int userId, CancellationToken cancellationToken = default)
     {
         var rules = await repository.GetByUserId(userId, cancellationToken);
@@ -46,8 +38,8 @@ public sealed class TransactionRuleService(
     public async Task<TransactionRuleDto> CreateRuleAsync(int userId, CreateTransactionRule command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ValidateCommand(command.Name, command.Conditions, command.Actions);
-        var definition = CreateDefinition(userId, command);
+        TransactionRuleCommandValidator.Validate(command);
+        var definition = command.ToDefinition(userId);
         await repository.Add(definition, cancellationToken);
         return TransactionRuleDto.FromEntity(definition);
     }
@@ -55,11 +47,11 @@ public sealed class TransactionRuleService(
     public async Task<TransactionRuleDto?> UpdateRuleAsync(int userId, Guid id, UpdateTransactionRule command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ValidateCommand(command.Name, command.Conditions, command.Actions);
+        TransactionRuleCommandValidator.Validate(command);
         var definition = await repository.GetById(userId, id, cancellationToken);
         if (definition is null) return null;
 
-        ApplyDefinition(definition, command);
+        command.ApplyTo(definition);
         await repository.Update(definition, cancellationToken);
         return TransactionRuleDto.FromEntity(definition);
     }
@@ -98,7 +90,7 @@ public sealed class TransactionRuleService(
     {
         ArgumentNullException.ThrowIfNull(facts);
         var rules = await repository.GetByUserId(userId, cancellationToken);
-        var runtimeRules = rules.Select(ToRuntimeRule).ToList();
+        var runtimeRules = rules.Select(TransactionRuleRuntimeBuilder.FromDefinition).ToList();
         var transactionFacts = new TransactionFacts(facts.Contractor ?? string.Empty, facts.Description ?? string.Empty,
             facts.AccountId, facts.Amount, facts.Direction, facts.Labels ?? []);
         return engineService.RunRules(runtimeRules, transactionFacts);
@@ -114,7 +106,7 @@ public sealed class TransactionRuleService(
     public async Task<TransactionRuleApplication> LoadApplicationAsync(int userId, CancellationToken cancellationToken = default)
     {
         var definitions = await repository.GetByUserId(userId, cancellationToken);
-        var runtimeRules = definitions.Select(ToRuntimeRule).ToList();
+        var runtimeRules = definitions.Select(TransactionRuleRuntimeBuilder.FromDefinition).ToList();
         var labels = await LoadLabelsAsync(cancellationToken);
         return new(runtimeRules, labels);
     }
@@ -164,124 +156,6 @@ public sealed class TransactionRuleService(
             await financialAlertService.EvaluateAlertsAsync(userId, cancellationToken);
 
         return new(examined, updated);
-    }
-
-    private static TransactionRuleDefinition CreateDefinition(int userId, CreateTransactionRule command) =>
-        new()
-        {
-            UserId = userId,
-            Name = command.Name.Trim(),
-            Order = 0,
-            IsEnabled = command.IsEnabled,
-            StopProcessing = command.StopProcessing,
-            ConditionsJson = JsonSerializer.Serialize(command.Conditions, _jsonOptions),
-            ActionsJson = JsonSerializer.Serialize(command.Actions, _jsonOptions)
-        };
-
-    private static void ApplyDefinition(TransactionRuleDefinition definition, UpdateTransactionRule command)
-    {
-        definition.Name = command.Name.Trim();
-        definition.IsEnabled = command.IsEnabled;
-        definition.StopProcessing = command.StopProcessing;
-        definition.ConditionsJson = JsonSerializer.Serialize(command.Conditions, _jsonOptions);
-        definition.ActionsJson = JsonSerializer.Serialize(command.Actions, _jsonOptions);
-        definition.UpdatedAt = DateTime.UtcNow;
-    }
-
-    private static void ValidateCommand(string? name, IReadOnlyList<TransactionRuleConditionDto>? conditions, IReadOnlyList<TransactionRuleActionDto>? actions)
-    {
-        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
-            throw new ArgumentException("Rule name is required and must be at most 200 characters.", nameof(name));
-        if (conditions is null || actions is null)
-            throw new ArgumentException("Conditions and actions are required.");
-
-        // Constructing the runtime rule validates enum values, patterns, and required fields.
-        _ = BuildConditions(conditions);
-        _ = BuildActions(actions);
-    }
-
-    private static TransactionRule ToRuntimeRule(TransactionRuleDefinition definition)
-    {
-        var conditions = JsonSerializer.Deserialize<List<TransactionRuleConditionDto>>(definition.ConditionsJson, _jsonOptions) ?? [];
-        var actions = JsonSerializer.Deserialize<List<TransactionRuleActionDto>>(definition.ActionsJson, _jsonOptions) ?? [];
-        return new TransactionRule(definition.Id, definition.Name, definition.Order, BuildConditions(conditions), BuildActions(actions),
-            definition.StopProcessing, definition.IsEnabled);
-    }
-
-    private static IReadOnlyCollection<FinanceManager.Domain.TransactionRules.Conditions.ITransactionRuleCondition> BuildConditions(IEnumerable<TransactionRuleConditionDto> source)
-    {
-        var result = new List<FinanceManager.Domain.TransactionRules.Conditions.ITransactionRuleCondition>();
-        foreach (var dto in source)
-        {
-            var type = dto.Type?.Trim() ?? string.Empty;
-            switch (type.ToLowerInvariant())
-            {
-                case "contractor":
-                    result.Add(new ContractorCondition(dto.Pattern ?? throw new ArgumentException("Contractor pattern is required."), dto.MatchOperator, dto.IgnoreCase));
-                    break;
-                case "description":
-                    result.Add(new DescriptionCondition(dto.Pattern ?? throw new ArgumentException("Description pattern is required."), dto.MatchOperator, dto.IgnoreCase));
-                    break;
-                case "account":
-                    if (dto.AccountIds is null || dto.AccountIds.Count == 0)
-                        throw new ArgumentException("At least one account id is required.");
-                    result.Add(new AccountCondition(dto.AccountIds));
-                    break;
-                case "direction":
-                    if (!Enum.IsDefined(dto.Direction)) throw new ArgumentException("Direction is invalid.");
-                    result.Add(new DirectionCondition(dto.Direction));
-                    break;
-                case "amount":
-                    if (!Enum.IsDefined(dto.Direction)) throw new ArgumentException("Direction is invalid.");
-                    if (dto.MinAmount is < 0m || dto.MaxAmount is < 0m || dto.Threshold is < 0m)
-                        throw new ArgumentException("Amount thresholds must be non-negative.");
-                    if (dto.MinAmount is decimal lower && dto.MaxAmount is decimal upper && lower > upper)
-                        throw new ArgumentException("Minimum amount cannot exceed maximum amount.");
-                    if ((dto.MinAmount is not null || dto.MaxAmount is not null) && dto.Threshold is not null)
-                        throw new ArgumentException("Use either an amount threshold or an amount range, not both.");
-                    if (dto.MinAmount is decimal min)
-                        result.Add(new AmountCondition(dto.Direction, min, AmountComparison.GreaterThanOrEqual));
-                    if (dto.MaxAmount is decimal max)
-                        result.Add(new AmountCondition(dto.Direction, max, AmountComparison.LessThanOrEqual));
-                    if (dto.Threshold is decimal threshold)
-                        result.Add(new AmountCondition(dto.Direction, threshold, dto.Comparison));
-                    if (dto.MinAmount is null && dto.MaxAmount is null && dto.Threshold is null)
-                        throw new ArgumentException("An amount threshold or range is required.");
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown transaction rule condition type '{dto.Type}'.");
-            }
-        }
-
-        return result;
-    }
-
-    private static IReadOnlyCollection<ITransactionRuleAction> BuildActions(IEnumerable<TransactionRuleActionDto> source)
-    {
-        var result = new List<ITransactionRuleAction>();
-        foreach (var dto in source)
-        {
-            var type = dto.Type?.Trim() ?? string.Empty;
-            switch (type.ToLowerInvariant())
-            {
-                case "setlabels":
-                case "labels":
-                    result.Add(new SetLabelsAction(dto.Labels ?? [], dto.ReplaceExisting));
-                    break;
-                case "normalizecontractor":
-                case "contractor":
-                    result.Add(new NormalizeContractorAction(dto.Value ?? throw new ArgumentException("Contractor normalization value is required.")));
-                    break;
-                case "normalizedescription":
-                case "description":
-                    result.Add(new NormalizeDescriptionAction(dto.Value ?? throw new ArgumentException("Description normalization value is required.")));
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown transaction rule action type '{dto.Type}'.");
-            }
-        }
-
-        return result;
     }
 
     private async Task<List<FinancialLabel>> LoadLabelsAsync(CancellationToken cancellationToken)

@@ -63,7 +63,7 @@ public static class TransactionRuleEngine
             var labelsBefore = new List<string>(workingLabels);
 
             foreach (var action in rule.Actions)
-                action.Apply(working, workingLabels);
+                action.Apply(workingLabels, working);
 
             var contractorChanged = working.Contractor != contractorBefore;
             var descriptionChanged = working.Description != descriptionBefore;

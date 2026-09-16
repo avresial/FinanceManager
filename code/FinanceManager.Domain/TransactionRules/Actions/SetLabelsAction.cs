@@ -30,8 +30,10 @@ public class SetLabelsAction : ITransactionRuleAction
     public IReadOnlyCollection<string> Labels { get; init; }
     public bool ReplaceExisting { get; init; }
 
-    public void Apply(TransactionFacts facts, List<string> workingLabels)
+    public void Apply(List<string> workingLabels, TransactionFacts? facts = null)
     {
+        ArgumentNullException.ThrowIfNull(workingLabels);
+
         if (ReplaceExisting)
             workingLabels.Clear();
 

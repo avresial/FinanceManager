@@ -25,6 +25,9 @@ public class NormalizeDescriptionAction : ITransactionRuleAction
 
     public string NormalizedValue { get; init; }
 
-    public void Apply(TransactionFacts facts, List<string> labels) =>
+    public void Apply(List<string> labels, TransactionFacts? facts = null)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
         facts.Description = NormalizedValue.Trim();
+    }
 }
