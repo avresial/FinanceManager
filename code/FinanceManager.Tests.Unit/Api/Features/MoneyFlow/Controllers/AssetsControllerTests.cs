@@ -29,6 +29,7 @@ public class AssetsControllerTests
     private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
     private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
     private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
+    private readonly Mock<IMoneyWeightedReturnService> _moneyWeightedReturnServiceMock = new();
     private readonly AssetsController _controller;
 
     public AssetsControllerTests()
@@ -43,7 +44,8 @@ public class AssetsControllerTests
             _feeDragServiceMock.Object,
             _currencyRepositoryMock.Object,
             _investmentAppreciationServiceMock.Object,
-            _accountRepositoryMock.Object)
+            _accountRepositoryMock.Object,
+            _moneyWeightedReturnServiceMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -81,6 +83,32 @@ public class AssetsControllerTests
         var returnValue = Assert.IsType<InvestmentPaycheckEstimate>(okResult.Value);
         Assert.Equal(expected.SustainableMonthlyPaycheck, returnValue.SustainableMonthlyPaycheck);
         Assert.Equal(expected.SalaryMonthsUsed, returnValue.SalaryMonthsUsed);
+    }
+
+    [Fact]
+    public async Task GetMoneyWeightedReturn_ReturnsServiceResult()
+    {
+        var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var expected = new MoneyWeightedReturnResult(
+            0.1m,
+            MoneyWeightedReturnStatus.Available,
+            start,
+            end);
+
+        _moneyWeightedReturnServiceMock
+            .Setup(x => x.GetAsync(_testUserId, DefaultCurrency.PLN, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetMoneyWeightedReturn(
+            _testUserId,
+            DefaultCurrency.PLN.Id,
+            start,
+            end,
+            TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expected, okResult.Value);
     }
 
     [Fact]

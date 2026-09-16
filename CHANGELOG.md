@@ -10,6 +10,8 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790
+- The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
 - The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
 - Configurable in-app financial alerts and watchlists now monitor balances, category and merchant spending, large transactions, and subscription price changes with dashboard status and duplicate-trigger suppression. #735
 - Investment and bond account charts now show cumulative user-paid capital alongside account value and the selected benchmark, including range-start carry-over, withdrawals, same-day events, and historical currency conversion. #729

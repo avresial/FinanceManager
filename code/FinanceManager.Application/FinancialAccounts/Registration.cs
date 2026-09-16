@@ -20,6 +20,7 @@ using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
+using FinanceManager.Application.FinancialAccounts.Investments.Performance;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
@@ -36,6 +37,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FinanceManager.Application.FinancialAccounts;
@@ -82,6 +84,7 @@ internal static class Registration
                 .AddScoped<IBackfillService, StockPriceBackfillService>()
                 .AddScoped<IBackfillService, CurrencyRateBackfillService>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
+                .AddScoped<IMoneyWeightedReturnService, PortfolioMoneyWeightedReturnService>()
                 .AddScoped<IInvestmentTransactionValuationService, InvestmentTransactionValuationService>()
                 .AddScoped<IFeeDragService, FeeDragService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()

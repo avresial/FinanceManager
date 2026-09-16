@@ -51,6 +51,7 @@ public class OverviewPagesInitialRangeTests
         var context = new BunitContext();
         context.ComponentFactories.AddStub<AssetsTimeSeriesCard>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
+        context.ComponentFactories.AddStub<MoneyWeightedReturnCard>();
         context.ComponentFactories.AddStub<InvestmentPaycheckEstimatorCard>();
         context.ComponentFactories.AddStub<InvestmentRateCard>();
         context.ComponentFactories.AddStub<DiversificationProxyCard>();
