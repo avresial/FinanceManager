@@ -236,6 +236,9 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         ArgumentNullException.ThrowIfNull(resolvedConflicts);
         cancellationToken.ThrowIfCancellationRequested();
 
+        var accountsById = new Dictionary<int, CurrencyAccount?>();
+        var ruleApplicationsByUserId = new Dictionary<int, TransactionRuleApplication>();
+
         foreach (var resolvedConflict in resolvedConflicts)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -250,9 +253,26 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
                 {
                     var resolvedEntry = resolvedConflict.ToEntry();
-                    var account = transactionRuleService is null ? null : await currencyAccountRepository.Get(resolvedConflict.AccountId, cancellationToken);
-                    if (transactionRuleService is not null && account is not null)
-                        await transactionRuleService.ApplyToEntryAsync(account.UserId, resolvedEntry, cancellationToken);
+                    if (transactionRuleService is not null)
+                    {
+                        if (!accountsById.TryGetValue(resolvedConflict.AccountId, out var resolvedAccount))
+                        {
+                            resolvedAccount = await currencyAccountRepository.Get(resolvedConflict.AccountId, cancellationToken);
+                            accountsById.Add(resolvedConflict.AccountId, resolvedAccount);
+                        }
+
+                        if (resolvedAccount is not null)
+                        {
+                            if (!ruleApplicationsByUserId.TryGetValue(resolvedAccount.UserId, out var ruleApplication))
+                            {
+                                ruleApplication = await transactionRuleService.LoadApplicationAsync(resolvedAccount.UserId, cancellationToken);
+                                ruleApplicationsByUserId.Add(resolvedAccount.UserId, ruleApplication);
+                            }
+
+                            ruleApplication.ApplyTo(resolvedEntry);
+                        }
+                    }
+
                     if (cancellationToken.CanBeCanceled)
                         await currencyAccountEntryRepository.Add(resolvedEntry, recalculate: true, cancellationToken);
                     else

@@ -27,7 +27,7 @@ public class CurrencyEntryController(
     IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
     ICacheInvalidator dashboardCacheInvalidator,
     IFinancialAlertService financialAlertService,
-    ITransactionRuleService? transactionRuleService = null) : ControllerBase
+    ITransactionRuleService transactionRuleService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -91,8 +91,7 @@ public class CurrencyEntryController(
             ContractorDetails = addEntry.ContractorDetails
         };
 
-        if (transactionRuleService is not null)
-            await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
+        await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Add(newEntry);
         await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
@@ -154,8 +153,7 @@ public class CurrencyEntryController(
         else
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
 
-        if (transactionRuleService is not null)
-            await transactionRuleService.ApplyToEntryAsync(ApiAuthenticationHelper.GetUserId(User), newEntry, HttpContext.RequestAborted);
+        await transactionRuleService.ApplyToEntryAsync(ApiAuthenticationHelper.GetUserId(User), newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Update(newEntry);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);

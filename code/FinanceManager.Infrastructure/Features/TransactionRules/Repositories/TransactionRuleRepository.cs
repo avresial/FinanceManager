@@ -46,21 +46,21 @@ internal sealed class TransactionRuleRepository(AppDbContext context) : ITransac
 
     public async Task<bool> Delete(int userId, Guid id, CancellationToken cancellationToken = default)
     {
-        var rule = await context.TransactionRules.SingleOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
-        if (rule is null) return false;
-        context.TransactionRules.Remove(rule);
-        await context.SaveChangesAsync(cancellationToken);
+        if (!context.Database.IsRelational())
+            return await DeleteCore(userId, id, cancellationToken);
 
-        var remaining = await context.TransactionRules
-            .Where(x => x.UserId == userId)
-            .OrderBy(x => x.Order)
-            .ThenBy(x => x.Id)
-            .ToListAsync(cancellationToken);
-        for (var index = 0; index < remaining.Count; index++)
-            remaining[index].Order = index + 1;
-        if (remaining.Count > 0)
-            await context.SaveChangesAsync(cancellationToken);
-        return true;
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        try
+        {
+            var result = await DeleteCore(userId, id, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
     }
 
     public async Task<bool> Reorder(int userId, IReadOnlyList<Guid> orderedIds, CancellationToken cancellationToken = default)
@@ -110,6 +110,31 @@ internal sealed class TransactionRuleRepository(AppDbContext context) : ITransac
         context.TransactionRules.Add(rule);
         await context.SaveChangesAsync(cancellationToken);
         return rule;
+    }
+
+    private async Task<bool> DeleteCore(int userId, Guid id, CancellationToken cancellationToken)
+    {
+        var rule = await context.TransactionRules.SingleOrDefaultAsync(x => x.UserId == userId && x.Id == id, cancellationToken);
+        if (rule is null) return false;
+
+        context.TransactionRules.Remove(rule);
+        await context.SaveChangesAsync(cancellationToken);
+
+        var remaining = await context.TransactionRules
+            .Where(x => x.UserId == userId)
+            .OrderBy(x => x.Order)
+            .ThenBy(x => x.Id)
+            .ToListAsync(cancellationToken);
+        for (var index = 0; index < remaining.Count; index++)
+            remaining[index].Order = -(index + 1);
+        if (remaining.Count > 0)
+            await context.SaveChangesAsync(cancellationToken);
+
+        for (var index = 0; index < remaining.Count; index++)
+            remaining[index].Order = index + 1;
+        if (remaining.Count > 0)
+            await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private static void SetFinalOrders(IReadOnlyList<TransactionRuleDefinition> rules, IReadOnlyList<Guid> orderedIds)

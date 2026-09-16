@@ -2,6 +2,7 @@ using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Infrastructure.Features.TransactionRules.Repositories;
 using FinanceManager.Infrastructure.Persistence;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.TransactionRules.Repositories;
@@ -73,6 +74,36 @@ public sealed class TransactionRuleRepositoryTests : IDisposable
 
         var rules = await repository.GetByUserId(1, TestContext.Current.CancellationToken);
         Assert.Equal([second.Id, first.Id], rules.Select(rule => rule.Id));
+        Assert.Equal([1, 2], rules.Select(rule => rule.Order));
+    }
+
+    [Fact]
+    public async Task Delete_UsesDenseOrderWithoutUniqueIndexCollisions()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var context = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options);
+        await context.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        context.Users.Add(new UserDto
+        {
+            Id = 1,
+            Login = "rules-user",
+            Password = "password",
+            CreationDate = DateTime.UtcNow
+        });
+        var first = new TransactionRuleDefinition { UserId = 1, Order = 1, Name = "first" };
+        var second = new TransactionRuleDefinition { UserId = 1, Order = 2, Name = "second" };
+        var third = new TransactionRuleDefinition { UserId = 1, Order = 3, Name = "third" };
+        context.TransactionRules.AddRange(first, second, third);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var repository = new TransactionRuleRepository(context);
+        Assert.True(await repository.Delete(1, second.Id, TestContext.Current.CancellationToken));
+
+        var rules = await repository.GetByUserId(1, TestContext.Current.CancellationToken);
+        Assert.Equal([first.Id, third.Id], rules.Select(rule => rule.Id));
         Assert.Equal([1, 2], rules.Select(rule => rule.Order));
     }
 

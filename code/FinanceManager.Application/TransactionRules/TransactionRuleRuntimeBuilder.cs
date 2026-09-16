@@ -101,6 +101,8 @@ internal static class TransactionRuleRuntimeBuilder
             throw new ArgumentException("Minimum amount cannot exceed maximum amount.");
         if ((dto.MinAmount is not null || dto.MaxAmount is not null) && dto.Threshold is not null)
             throw new ArgumentException("Use either an amount threshold or an amount range, not both.");
+        if (dto.Threshold is not null && !Enum.IsDefined(dto.Comparison))
+            throw new ArgumentException("Amount comparison is invalid.");
 
         var amountConditions = new List<ITransactionRuleCondition>();
         if (dto.MinAmount is decimal min)

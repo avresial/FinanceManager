@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
+using FinanceManager.Domain.TransactionRules.Conditions;
 using FinanceManager.Domain.TransactionRules.Dtos;
 using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Models;
@@ -52,6 +53,21 @@ public sealed class TransactionRuleServiceTests
         Assert.Equal(5, result.Order);
         Assert.NotNull(added);
         Assert.Contains("acme", added!.ConditionsJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateRule_RejectsInvalidAmountComparisonWhenThresholdIsSet()
+    {
+        var command = new CreateTransactionRule(
+            "Invalid amount comparison",
+            [new() { Type = "Amount", Threshold = 10m, Comparison = (AmountComparison)999 }],
+            [new() { Type = "NormalizeDescription", Value = "Expense" }]);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.CreateRuleAsync(7, command, TestContext.Current.CancellationToken));
+
+        Assert.Equal("Amount comparison is invalid.", exception.Message);
+        _repository.Verify(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
