@@ -1,0 +1,126 @@
+.fee-drag-card {
+    width: 100%;
+}
+
+.fee-drag-card__content {
+    gap: 8px;
+    padding: 16px 18px;
+}
+
+.fee-drag-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fee-drag-card__hero {
+    align-items: baseline;
+    display: flex;
+    gap: 6px;
+    margin: 6px 0 2px;
+    white-space: nowrap;
+}
+
+.fee-drag-card__hero-value {
+    color: var(--mud-palette-primary);
+    font-size: 2.25rem;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.fee-drag-card__hero-currency {
+    color: var(--mud-palette-primary);
+    font-size: 1.1rem;
+}
+
+.fee-drag-card__hero-caption {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8rem;
+}
+
+.fee-drag-card__missing {
+    font-size: 0.78rem;
+    margin: 0;
+}
+
+.fee-drag-card__control {
+    margin-top: 2px;
+}
+
+.fee-drag-card__control-header,
+.fee-drag-card__control-range {
+    color: var(--mud-palette-text-secondary);
+    display: flex;
+    font-size: 0.75rem;
+    justify-content: space-between;
+}
+
+.fee-drag-card__control-header strong {
+    color: var(--mud-palette-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.fee-drag-card__control-range {
+    font-size: 0.68rem;
+    margin-top: -8px;
+}
+
+.fee-drag-card__projections {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 2px;
+}
+
+.fee-drag-card__projection {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 8px 10px;
+}
+
+.fee-drag-card__projection .mud-typography-body1 {
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fee-drag-card__footer {
+    border-top: 1px solid var(--mud-palette-divider);
+    color: var(--mud-palette-text-secondary);
+    display: flex;
+    font-size: 0.75rem;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.fee-drag-card__state {
+    align-items: center;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+    min-height: 160px;
+    padding: 16px;
+    text-align: center;
+}
+
+@media (max-width: 599.98px) {
+    .fee-drag-card__content {
+        padding: 14px;
+    }
+
+    .fee-drag-card__hero-value {
+        font-size: 1.9rem;
+    }
+
+    .fee-drag-card__projection {
+        padding: 7px 6px;
+    }
+}

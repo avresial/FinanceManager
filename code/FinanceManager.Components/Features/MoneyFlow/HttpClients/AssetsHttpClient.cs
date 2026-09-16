@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -32,6 +33,19 @@ public class AssetsHttpClient(HttpClient httpClient)
     {
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/Assets/GetAssetsTimeSeries/{userId}/{currency.Id}/{start:O}/{end:O}/{investmentType}");
         return result ?? [];
+    }
+
+    public async Task<MoneyWeightedReturnResult> GetMoneyWeightedReturn(
+        int userId,
+        Currency currency,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<MoneyWeightedReturnResult>(
+            $"{httpClient.BaseAddress}api/Assets/GetMoneyWeightedReturn/{userId}/{currency.Id}/{start:O}/{end:O}",
+            cancellationToken);
+        return result ?? new(null, MoneyWeightedReturnStatus.Unavailable, start.Date, end.Date);
     }
 
     public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
@@ -85,5 +99,16 @@ public class AssetsHttpClient(HttpClient httpClient)
     {
         var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerInstrument/{userId}/{currency.Id}/{asOfDate:O}");
         return result ?? [];
+    }
+
+    public async Task<FeeDragAnalysisResult?> GetFeeDragAnalysis(
+        int userId,
+        Currency currency,
+        DateTime asOfDate,
+        decimal assumedAnnualReturnRate = 0.07m,
+        CancellationToken cancellationToken = default)
+    {
+        string endpoint = $"{httpClient.BaseAddress}api/Assets/GetFeeDragAnalysis/{userId}/{currency.Id}/{asOfDate:O}?assumedAnnualReturnRate={assumedAnnualReturnRate.ToString(CultureInfo.InvariantCulture)}";
+        return await httpClient.GetFromJsonAsync<FeeDragAnalysisResult>(endpoint, cancellationToken);
     }
 }

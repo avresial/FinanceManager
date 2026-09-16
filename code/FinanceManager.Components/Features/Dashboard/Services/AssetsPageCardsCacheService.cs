@@ -39,7 +39,8 @@ public class AssetsPageCardsCacheService(
         var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, currency, startDate, endDate);
         var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
         var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
-        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask);
+        var moneyWeightedReturnTask = assetsHttpClient.GetMoneyWeightedReturn(refreshContext.UserId, currency, startDate, endDate);
+        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask, moneyWeightedReturnTask);
 
         return new AssetsPageCardsCacheSnapshot
         {
@@ -52,6 +53,7 @@ public class AssetsPageCardsCacheService(
             AssetsTimeSeries = [.. (await assetsTimeSeriesTask)],
             EndAssetsPerType = [.. (await assetsPerTypeTask)],
             EndAssetsPerAccount = [.. (await assetsPerAccountTask)],
+            MoneyWeightedReturn = await moneyWeightedReturnTask,
         };
     }
 

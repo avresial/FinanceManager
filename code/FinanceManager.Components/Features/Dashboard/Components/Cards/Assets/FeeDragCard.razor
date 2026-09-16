@@ -1,0 +1,97 @@
+@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
+
+<MudCard Outlined Class="fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
+    <MudCardContent Class="fee-drag-card__content d-flex flex-column flex-grow-1">
+        <div class="fee-drag-card__header">
+            <CardInfoTooltip Text="How ETF total expense ratios reduce annual investment returns and compound into long-term cost."
+                             AriaLabel="About ETF fee drag card"
+                             TooltipClass="fm-card-info-glossary">
+                <ChildContent>
+                    <MudText Typo="Typo.h6">ETF fee drag</MudText>
+                </ChildContent>
+                <TooltipContent>
+                    <div class="fm-card-info-glossary-head">Understanding ETF fee drag</div>
+                    <dl>
+                        <dt>Annual fee cost</dt>
+                        <dd>The estimated yearly cost of the expense ratios on your current ETF holdings.</dd>
+                        <dt>Compound drag</dt>
+                        <dd>Fees reduce the amount that can compound over time. Adjust the assumed return to explore different outcomes.</dd>
+                    </dl>
+                </TooltipContent>
+            </CardInfoTooltip>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Estimated cost of ETF expense ratios</MudText>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="fee-drag-card__state" data-testid="fee-drag-loading">
+                <MudText Typo="Typo.h3" Class="text-muted"><StringSpinner CharactersCount="5" /></MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Calculating fee impact...</MudText>
+            </div>
+        }
+        else if (_hasError)
+        {
+            <div class="fee-drag-card__state" data-testid="fee-drag-error" role="alert">
+                <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" Size="Size.Large" />
+                <MudText Typo="Typo.body2" Color="Color.Error">Unable to load fee drag analysis.</MudText>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="LoadFeeDragDataAsync">Retry</MudButton>
+            </div>
+        }
+        else if (_analysis is null || _analysis.TotalHoldingsCount == 0)
+        {
+            <div class="fee-drag-card__state" data-testid="fee-drag-empty">
+                <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Secondary" Size="Size.Large" />
+                <MudText Typo="Typo.body1">No ETF holdings found</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Add an ETF holding to visualize its expense-ratio impact.</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="fee-drag-card__hero" data-testid="fee-drag-annual-fee">
+                <span class="fee-drag-card__hero-value">@FormatAmount(_analysis.AnnualFeeCost)</span>
+                <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
+                <span class="fee-drag-card__hero-caption">/ year</span>
+            </div>
+
+            @if (_analysis.MissingTerCount > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Dense Class="fee-drag-card__missing" data-testid="fee-drag-missing-ter">
+                    <strong>Expense ratio not set</strong> for @_analysis.MissingTerCount of @_analysis.TotalHoldingsCount holdings.
+                </MudAlert>
+            }
+
+            <div class="fee-drag-card__control" data-testid="fee-drag-return-control">
+                <div class="fee-drag-card__control-header">
+                    <span>Assumed annual return</span>
+                    <strong data-testid="fee-drag-return-value">@FormatPercentage(_assumedAnnualReturnRate)</strong>
+                </div>
+                <MudSlider T="decimal"
+                           Value="_assumedAnnualReturnRate"
+                           ValueChanged="OnReturnRateChanged"
+                           Min="_minimumReturnRate"
+                           Max="_maximumReturnRate"
+                           Step="_returnRateStep"
+                           Immediate="true"
+                           Color="Color.Primary"
+                           aria-label="Assumed annual return from -10% to 10%" />
+                <div class="fee-drag-card__control-range" aria-hidden="true"><span>-10%</span><span>10%</span></div>
+            </div>
+
+            <div class="fee-drag-card__projections" data-testid="fee-drag-projections" role="region" aria-label="Projected fee drag">
+                @foreach (var projection in ComputedProjections)
+                {
+                    <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@projection.Years years</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">estimated drag</MudText>
+                    </div>
+                }
+            </div>
+
+            <div class="fee-drag-card__footer">
+                <span>@_analysis.TotalHoldingsCount ETF holding@(_analysis.TotalHoldingsCount == 1 ? "" : "s")</span>
+                <span>Avg TER @FormatPercentage(_analysis.WeightedExpenseRatio)</span>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>

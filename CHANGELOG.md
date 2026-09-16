@@ -10,8 +10,10 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
-
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
+- Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790
+- The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
+- The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
 - Configurable in-app financial alerts and watchlists now monitor balances, category and merchant spending, large transactions, and subscription price changes with dashboard status and duplicate-trigger suppression. #735
 - Investment and bond account charts now show cumulative user-paid capital alongside account value and the selected benchmark, including range-start carry-over, withdrawals, same-day events, and historical currency conversion. #729
 - Every card on the dashboard, account, admin, and welcome pages now carries an information icon that shows a short tooltip explaining what the card is about, on hover or keyboard focus. #730
@@ -38,6 +40,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786
 - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
 - Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
 - Remove redundant explanatory tooltips from account transaction date headers. #780
