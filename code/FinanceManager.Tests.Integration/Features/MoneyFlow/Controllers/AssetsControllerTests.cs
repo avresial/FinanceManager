@@ -13,6 +13,7 @@ using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
@@ -138,6 +139,24 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.NotEmpty(result);
 
         Assert.All(result, item => Assert.True(item.Value > 0));
+    }
+
+    [Fact]
+    public async Task GetMoneyWeightedReturn_WithoutInvestmentHistory_ReturnsInsufficientData()
+    {
+        await SeedWithTestCurrencyAccount();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var start = _nowUtc.AddDays(-30).Date;
+        var response = await Client.GetAsync(
+            $"api/Assets/GetMoneyWeightedReturn/1/{DefaultCurrency.PLN.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<MoneyWeightedReturnResult>(TestContext.Current.CancellationToken);
+        Assert.NotNull(result);
+        Assert.Equal(MoneyWeightedReturnStatus.InsufficientData, result.Status);
+        Assert.Null(result.AnnualizedReturn);
     }
 
     [Fact]
@@ -326,6 +345,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         now => $"api/Assets/GetEndAssetsPerType/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}/{InvestmentType.Stock}",
+        now => $"api/Assets/GetMoneyWeightedReturn/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetInvestmentPaycheckEstimate/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerAccount/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetUnrealizedGainLossPerInstrument/2/{DefaultCurrency.USD.Id}/{now:O}",

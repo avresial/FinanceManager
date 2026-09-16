@@ -23,7 +23,8 @@ public class AssetsController(
     IInvestmentPaycheckEstimatorService investmentPaycheckEstimatorService,
     ICurrencyRepository currencyRepository,
     IInvestmentAppreciationService investmentAppreciationService,
-    IAccountRepository<InvestmentAccount> accountRepository) : ControllerBase
+    IAccountRepository<InvestmentAccount> accountRepository,
+    IMoneyWeightedReturnService moneyWeightedReturnService) : ControllerBase
 {
     [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -49,6 +50,18 @@ public class AssetsController(
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
     public async Task<IActionResult> GetAssetsTimeSeries(int userId, int currencyId, DateTime start, DateTime end, InvestmentType investmentType, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.GetAssetsTimeSeries(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end, investmentType)) : Forbid();
+
+    [HttpGet("GetMoneyWeightedReturn/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MoneyWeightedReturnResult))]
+    public async Task<IActionResult> GetMoneyWeightedReturn(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
+            ? Ok(await moneyWeightedReturnService.GetAsync(
+                userId,
+                await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken),
+                start,
+                end,
+                cancellationToken))
+            : Forbid();
 
     [HttpGet("GetInvestmentPaycheckEstimate/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentPaycheckEstimate))]
