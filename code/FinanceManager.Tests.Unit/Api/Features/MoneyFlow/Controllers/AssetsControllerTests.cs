@@ -30,6 +30,7 @@ public class AssetsControllerTests
     private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
     private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
     private readonly Mock<IMoneyWeightedReturnService> _moneyWeightedReturnServiceMock = new();
+    private readonly Mock<ITimeWeightedReturnService> _timeWeightedReturnServiceMock = new();
     private readonly AssetsController _controller;
 
     public AssetsControllerTests()
@@ -45,7 +46,8 @@ public class AssetsControllerTests
             _currencyRepositoryMock.Object,
             _investmentAppreciationServiceMock.Object,
             _accountRepositoryMock.Object,
-            _moneyWeightedReturnServiceMock.Object)
+            _moneyWeightedReturnServiceMock.Object,
+            _timeWeightedReturnServiceMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -101,6 +103,32 @@ public class AssetsControllerTests
             .ReturnsAsync(expected);
 
         var result = await _controller.GetMoneyWeightedReturn(
+            _testUserId,
+            DefaultCurrency.PLN.Id,
+            start,
+            end,
+            TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expected, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetTimeWeightedReturn_ReturnsServiceResult()
+    {
+        var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var expected = new TimeWeightedReturnResult(
+            0.1m,
+            TimeWeightedReturnStatus.Available,
+            start,
+            end);
+
+        _timeWeightedReturnServiceMock
+            .Setup(x => x.GetAsync(_testUserId, DefaultCurrency.PLN, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var result = await _controller.GetTimeWeightedReturn(
             _testUserId,
             DefaultCurrency.PLN.Id,
             start,
