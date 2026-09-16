@@ -40,6 +40,32 @@ public class TransactionRuleConditionTests
         Assert.Throws<RegexParseException>(() => new ContractorCondition("(unclosed", TextMatchOperator.RegularExpression));
 
     [Fact]
+    public void ContractorCondition_UndefinedMatchOperator_Throws() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ContractorCondition("acme", (TextMatchOperator)999));
+
+    [Fact]
+    public void ContractorCondition_OversizedRegex_Throws() =>
+        Assert.Throws<ArgumentException>(() => new ContractorCondition(new string('a', 1_001), TextMatchOperator.RegularExpression));
+
+    [Fact]
+    public void ContractorCondition_DeeplyNestedRegex_Throws()
+    {
+        var pattern = new string('(', 21) + new string(')', 21);
+
+        Assert.Throws<ArgumentException>(() => new ContractorCondition(pattern, TextMatchOperator.RegularExpression));
+    }
+
+    [Fact]
+    public void ContractorCondition_RegexAtComplexityLimits_IsAccepted()
+    {
+        var pattern = new string('(', 20) + new string(')', 20) + new string('a', 960);
+
+        var condition = new ContractorCondition(pattern, TextMatchOperator.RegularExpression);
+
+        Assert.Equal(pattern, condition.Pattern);
+    }
+
+    [Fact]
     public void ContractorCondition_LiteralOperatorsAcceptRegexCharacters()
     {
         var condition = new ContractorCondition("[", TextMatchOperator.Contains);

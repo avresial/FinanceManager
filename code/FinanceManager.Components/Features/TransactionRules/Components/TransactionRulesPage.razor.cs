@@ -251,7 +251,7 @@ public partial class TransactionRulesPage : ComponentBase
     }
 
     private static List<int> ParseAccountIds(string value) => value
-        .Split(',', StringSplitOptions.TrimEntries)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .Select(item => int.TryParse(item, out var accountId) && accountId > 0
             ? accountId
             : throw new FormatException($"'{item}' is not a valid account ID."))

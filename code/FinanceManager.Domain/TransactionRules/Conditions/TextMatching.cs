@@ -10,6 +10,8 @@ namespace FinanceManager.Domain.TransactionRules.Conditions;
 /// </summary>
 internal static class TextMatching
 {
+    private const int _maxRegexPatternLength = 1_000;
+    private const int _maxRegexNestingDepth = 20;
     private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
 
     public static bool Matches(string value, string pattern, TextMatchOperator matchOperator, bool ignoreCase)
@@ -49,8 +51,65 @@ internal static class TextMatching
         if (string.IsNullOrWhiteSpace(pattern))
             throw new ArgumentException("Pattern must not be empty or whitespace.", nameof(pattern));
 
+        if (!Enum.IsDefined(matchOperator))
+            throw new ArgumentOutOfRangeException(nameof(matchOperator), matchOperator, "Unknown text match operator.");
+
         if (matchOperator == TextMatchOperator.RegularExpression)
+        {
+            ThrowIfRegexIsTooComplex(pattern);
             new Regex(pattern, GetRegexOptions(ignoreCase), _regexTimeout);
+        }
+    }
+
+    private static void ThrowIfRegexIsTooComplex(string pattern)
+    {
+        if (pattern.Length > _maxRegexPatternLength)
+            throw new ArgumentException($"Regular expression patterns must not exceed {_maxRegexPatternLength} characters.", nameof(pattern));
+
+        var nestingDepth = 0;
+        var isEscaped = false;
+        var isInCharacterClass = false;
+
+        foreach (var character in pattern)
+        {
+            if (isEscaped)
+            {
+                isEscaped = false;
+                continue;
+            }
+
+            if (character == '\\')
+            {
+                isEscaped = true;
+                continue;
+            }
+
+            if (character == '[')
+            {
+                isInCharacterClass = true;
+                continue;
+            }
+
+            if (character == ']' && isInCharacterClass)
+            {
+                isInCharacterClass = false;
+                continue;
+            }
+
+            if (isInCharacterClass)
+                continue;
+
+            if (character == '(')
+            {
+                nestingDepth++;
+                if (nestingDepth > _maxRegexNestingDepth)
+                    throw new ArgumentException($"Regular expression patterns must not exceed {_maxRegexNestingDepth} levels of nesting.", nameof(pattern));
+            }
+            else if (character == ')' && nestingDepth > 0)
+            {
+                nestingDepth--;
+            }
+        }
     }
 
     private static RegexOptions GetRegexOptions(bool ignoreCase) =>

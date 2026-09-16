@@ -15,6 +15,42 @@ namespace FinanceManager.Tests.Unit.Components.Features.TransactionRules;
 public sealed class TransactionRulesPageTests
 {
     [Fact]
+    public async Task Edit_AccountCondition_IgnoresEmptyAccountIdTokens()
+    {
+        var handler = new RulesHandler(AccountRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Account rule", cut.Markup));
+
+        cut.Find("button[aria-label='Edit Account rule']").Click();
+        var accountIdsLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Account ids", StringComparison.Ordinal));
+        cut.Find($"#{accountIdsLabel.GetAttribute("for")}").Change("1, , 2,,");
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
+        Assert.Equal([1, 2], handler.LastUpdate!.Conditions.Single().AccountIds);
+    }
+
+    [Theory]
+    [InlineData("1, invalid", "'invalid' is not a valid account ID.")]
+    [InlineData("1, 0", "'0' is not a valid account ID.")]
+    public async Task Edit_AccountCondition_RejectsInvalidNonEmptyAccountIdTokens(string accountIds, string expectedError)
+    {
+        var handler = new RulesHandler(AccountRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Account rule", cut.Markup));
+
+        cut.Find("button[aria-label='Edit Account rule']").Click();
+        var accountIdsLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Account ids", StringComparison.Ordinal));
+        cut.Find($"#{accountIdsLabel.GetAttribute("for")}").Change(accountIds);
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(expectedError, cut.Markup));
+        Assert.Null(handler.LastUpdate);
+    }
+
+    [Fact]
     public async Task Edit_RendersAllConditionsAndActionsAndSupportsAddingMore()
     {
         var rule = new TransactionRuleDto(
@@ -72,6 +108,17 @@ public sealed class TransactionRulesPageTests
         }));
         return context;
     }
+
+    private static TransactionRuleDto AccountRule() => new(
+        Guid.NewGuid(),
+        "Account rule",
+        1,
+        true,
+        false,
+        [new() { Type = "Account", AccountIds = [1] }],
+        [new() { Type = "SetLabels", Labels = ["Bills"] }],
+        DateTime.UtcNow,
+        null);
 
     private sealed class RulesHandler(TransactionRuleDto rule) : HttpMessageHandler
     {
