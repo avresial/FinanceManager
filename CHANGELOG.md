@@ -36,6 +36,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786
 - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
 - Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
 - Remove redundant explanatory tooltips from account transaction date headers. #780

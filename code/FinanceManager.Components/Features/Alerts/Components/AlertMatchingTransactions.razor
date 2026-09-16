@@ -3,17 +3,30 @@
 
 @if (Outcome.MatchingTransactions is { Count: > 0 } transactions)
 {
-    <div class="d-flex flex-wrap align-center gap-2">
+    <div class="d-flex flex-column gap-1" data-testid="alert-matching-transactions" style="min-width:0; max-width:100%;">
         @foreach (var transaction in transactions)
         {
-            <MudLink Href="@AlertPresentation.TransactionHref(transaction)"
-                     aria-label="@AlertPresentation.TransactionAriaLabel(transaction)">
-                @AlertPresentation.TransactionLabel(transaction)
-            </MudLink>
+            var title = GetTransactionTitle(transaction);
+            var metadata = GetTransactionMetadata(transaction);
+            <div class="d-flex align-center w-100" style="min-width:0;">
+                <MudLink Href="@AlertPresentation.TransactionHref(transaction)"
+                         aria-label="@AlertPresentation.TransactionAriaLabel(transaction)"
+                         Typo="Typo.caption"
+                         Class="text-truncate flex-grow-1"
+                         Style="min-width:0;">
+                    @title
+                </MudLink>
+                @if (!string.IsNullOrEmpty(metadata))
+                {
+                    <MudText Inline="true" Typo="Typo.caption" Class="mud-text-secondary ms-1 flex-shrink-0">
+                        @metadata
+                    </MudText>
+                }
+            </div>
         }
         @if (Outcome.MatchingTransactionCount > transactions.Count)
         {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary flex-shrink-0">
                 +@(Outcome.MatchingTransactionCount - transactions.Count) more matching
             </MudText>
         }
@@ -22,4 +35,24 @@
 
 @code {
     [Parameter] public required AlertEvaluationOutcome Outcome { get; set; }
+
+    private static string GetTransactionTitle(AlertTransactionReference transaction)
+    {
+        var title = !string.IsNullOrWhiteSpace(transaction.ContractorDetails)
+            ? transaction.ContractorDetails
+            : transaction.Description;
+        return string.IsNullOrWhiteSpace(title)
+            ? "Transaction"
+            : title;
+    }
+
+    private static string GetTransactionMetadata(AlertTransactionReference transaction)
+    {
+        var title = !string.IsNullOrWhiteSpace(transaction.ContractorDetails)
+            ? transaction.ContractorDetails
+            : transaction.Description;
+        return string.IsNullOrWhiteSpace(title)
+            ? $"on {transaction.PostingDate:yyyy-MM-dd}"
+            : $"· {transaction.PostingDate:yyyy-MM-dd}";
+    }
 }
