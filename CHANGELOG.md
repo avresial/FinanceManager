@@ -36,13 +36,14 @@ rules agents must follow when updating this file.
 - The admin **Users** page now shows a **"Last logged at"** column with each user's most recent login date (or `Never` for accounts that have never signed in). #540
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
- ### Changed
- - Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
- - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
- - Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
- - Remove redundant explanatory tooltips from account transaction date headers. #780
- - Rename the investment chart's default benchmark label to **Capital + inflation**. #777
- - Keep the Alerts card action in its header and contain its loading state. #765
+### Changed
+- Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
+- Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786
+- Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779
+- Harden investment capital reconstruction to use historical weighted-average cost basis and ignore sale proceeds. #778
+- Remove redundant explanatory tooltips from account transaction date headers. #780
+- Rename the investment chart's default benchmark label to **Capital + inflation**. #777
+- Keep the Alerts card action in its header and contain its loading state. #765
 - Close account-detail time-range pickers as soon as a range is selected. #768
 - Show bond account asset appreciation in the account-details breakdown card. #767
 - Remove redundant helper text from the dashboard Transaction log card header. #766
