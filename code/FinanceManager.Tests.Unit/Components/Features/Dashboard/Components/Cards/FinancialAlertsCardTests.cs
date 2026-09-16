@@ -139,9 +139,9 @@ public sealed class FinancialAlertsCardTests
         Assert.Equal("Inspect Apple Inc · 2026-09-10", link.GetAttribute("aria-label"));
 
         // Transaction date metadata is outside the link and styled muted
-        var metadataElement = cut.Find(".mud-text-secondary");
+        var metadataElement = cut.Find("[data-testid='alert-matching-transactions'] .mud-text-secondary");
         Assert.NotNull(metadataElement);
-        Assert.Contains("· 2026-09-10", cut.Markup);
+        Assert.Contains("· 2026-09-10", metadataElement.TextContent);
 
         // The "+N more matching" text must use mud-text-secondary styling rather than accent orange
         var moreMatching = cut.FindAll(".mud-text-secondary")
