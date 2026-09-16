@@ -114,6 +114,77 @@ public class RecurringTransactionDetectorServiceTests
         Assert.Equal(new DateTime(2026, 9, 1), result.NextExpectedChargeDate);
     }
 
+    [Fact]
+    public async Task GetRecurringCashFlows_DetectsRecurringIncomeWithPositiveAmount()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 15), 500m, "Salary"),
+            Entry(2, new DateTime(2026, 5, 15), 500m, "Salary"),
+            Entry(3, new DateTime(2026, 6, 15), 500m, "Salary"));
+        Setup(account, []);
+
+        var result = Assert.Single(await CreateService().GetRecurringCashFlows(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal("Salary", result.Name);
+        Assert.Equal(500m, result.MonthlyAmount);
+        Assert.Equal(500m, result.OccurrenceAmount);
+        Assert.Equal(new DateTime(2026, 8, 15), result.NextExpectedDate);
+        Assert.NotEqual(Guid.Empty, result.PatternId);
+        Assert.False(result.IsMuted);
+        Assert.False(result.IsCancelled);
+    }
+
+    [Fact]
+    public async Task GetRecurringCashFlows_DoesNotPersistNewExpensePatterns()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Rent"),
+            Entry(2, new DateTime(2026, 5, 15), -40m, "Rent"),
+            Entry(3, new DateTime(2026, 6, 15), -40m, "Rent"));
+        Setup(account, []);
+
+        _subscriptions.Invocations.Clear();
+
+        var result = Assert.Single(await CreateService().GetRecurringCashFlows(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(-40m, result.OccurrenceAmount);
+        _subscriptions.Verify(
+            x => x.Save(It.IsAny<IEnumerable<RecurringSubscription>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetRecurringCashFlows_DoesNotMutateExistingSubscriptionState()
+    {
+        var subscription = new RecurringSubscription
+        {
+            Id = Guid.NewGuid(),
+            UserId = 7,
+            MerchantKey = "rent",
+            Name = "Saved rent name",
+            IsMuted = true
+        };
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Rent"),
+            Entry(2, new DateTime(2026, 5, 15), -40m, "Rent"),
+            Entry(3, new DateTime(2026, 6, 15), -40m, "Rent"));
+        Setup(account, [subscription]);
+
+        var result = Assert.Single(await CreateService().GetRecurringCashFlows(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal("Saved rent name", subscription.Name);
+        Assert.True(result.IsMuted);
+        _subscriptions.Verify(
+            x => x.Save(It.IsAny<IEnumerable<RecurringSubscription>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private RecurringTransactionDetectorService CreateService() =>
         new(_accounts.Object, _subscriptions.Object, _clock);
 
