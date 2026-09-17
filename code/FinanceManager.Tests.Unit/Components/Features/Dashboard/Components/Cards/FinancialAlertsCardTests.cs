@@ -52,43 +52,50 @@ public sealed class FinancialAlertsCardTests
     }
 
     [Fact]
-    public async Task TriggeredAlert_PreservesHierarchy_TitleMessageComparisonMatchingTransactions()
+    public async Task TriggeredAlert_DefaultViewShowsSummaryWithoutMatchingTransactions()
     {
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Groceries overspend");
-        var tx = new AlertTransactionReference(
-            AccountId: 10,
-            EntryId: 99,
-            PostingDate: new DateTime(2026, 9, 14),
-            Amount: 1250m,
-            Description: "Supermarket Purchase",
-            ContractorDetails: "Supermarket");
-
         var outcome = CreateOutcome(
             alertId: alertId,
             title: "Groceries overspend",
-            message: "Monthly budget exceeded",
             currentValue: 1250m,
             threshold: 1000m,
             comparisonOperator: AlertComparisonOperator.GreaterThan,
-            matchingTransactions: [tx],
-            matchingCount: 1);
+            matchingCount: 5);
 
         await using var context = CreateContext(outcomes: [outcome], alerts: [alert]);
         var cut = context.Render<FinancialAlertsCard>();
 
-        var itemContent = cut.Find(".mud-list-item div.w-100");
-        Assert.NotNull(itemContent);
+        var row = cut.Find("[data-testid='alert-summary-row']");
+        Assert.Contains("Groceries overspend", row.TextContent);
+        Assert.Contains(AlertPresentation.ComparisonDetail(outcome), row.TextContent);
+        Assert.Contains("5 matches", row.TextContent);
+        Assert.DoesNotContain("data-testid=\"alert-matching-transactions\"", cut.Markup);
+    }
 
-        // Verify hierarchy: Title -> Message -> Comparison -> Matching transactions
-        var elements = itemContent.Children;
-        Assert.True(elements.Length >= 4, "Expected at least 4 child elements for hierarchy");
+    [Fact]
+    public async Task TriggeredAlerts_GroupRepeatedEvaluationsIntoOneSummaryRow()
+    {
+        var alertId = Guid.NewGuid();
+        var alert = CreateAlertDto(id: alertId, title: "Repeated alert");
+        var older = CreateOutcome(
+            alertId: alertId,
+            title: "Repeated alert",
+            matchingCount: 2,
+            evaluatedAt: new DateTime(2026, 9, 15, 0, 0, 0, DateTimeKind.Utc));
+        var newer = CreateOutcome(
+            alertId: alertId,
+            title: "Repeated alert",
+            matchingCount: 4,
+            evaluatedAt: new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc));
 
-        // The DOM element order guarantees the visual and DOM hierarchy
-        Assert.Equal("Groceries overspend", elements[0].TextContent.Trim());
-        Assert.Equal("Monthly budget exceeded", elements[1].TextContent.Trim());
-        Assert.Equal(AlertPresentation.ComparisonDetail(outcome), elements[2].TextContent.Trim());
-        Assert.Contains("Supermarket", elements[3].TextContent);
+        await using var context = CreateContext(outcomes: [older, newer], alerts: [alert]);
+        var cut = context.Render<FinancialAlertsCard>();
+
+        var rows = cut.FindAll("[data-testid='alert-summary-row']");
+        Assert.Single(rows);
+        Assert.Contains("4 matches", rows[0].TextContent);
     }
 
     [Fact]
@@ -111,7 +118,7 @@ public sealed class FinancialAlertsCardTests
     }
 
     [Fact]
-    public async Task MatchingTransactions_RendersMetadataInMutedStylingRatherThanAccentOrange()
+    public async Task SelectingAlert_ShowsDetailFieldsAndInspectableTransaction()
     {
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Large transaction");
@@ -128,29 +135,44 @@ public sealed class FinancialAlertsCardTests
             title: "Large transaction",
             matchingTransactions: [tx],
             matchingCount: 3);
+        var detailedOutcome = CreateOutcome(
+            alertId: alertId,
+            title: "Large transaction",
+            matchingTransactions: [tx],
+            matchingCount: 1);
 
-        await using var context = CreateContext(outcomes: [outcome], alerts: [alert]);
+        await using var context = CreateContext(
+            outcomes: [outcome],
+            alerts: [alert],
+            detailedOutcomes: new Dictionary<Guid, AlertEvaluationOutcome> { [alertId] = detailedOutcome });
         var cut = context.Render<FinancialAlertsCard>();
 
-        // Link text is the transaction title
-        var link = cut.Find("a[href='/AccountDetails/5?entryId=42']");
+        await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
+
+        var header = cut.Find("[data-testid='alert-card-header']");
+        Assert.Contains("Large transaction", header.TextContent);
+        Assert.NotNull(header.QuerySelector("button[aria-label='Back to alerts']"));
+        Assert.Contains("1 match", header.TextContent);
+
+        var detail = cut.Find("[data-testid='alert-detail-occurrences']");
+        Assert.Contains("2026-09-10", detail.TextContent);
+        Assert.Contains("Account", detail.TextContent);
+        Assert.Contains("#5", detail.TextContent);
+        Assert.Contains("Transaction #42", detail.TextContent);
+        Assert.Contains(5_000m.ToString("N2"), detail.TextContent);
+
+        var link = detail.QuerySelector("a[href='/AccountDetails/5?entryId=42']");
         Assert.NotNull(link);
         Assert.Equal("Apple Inc", link.TextContent.Trim());
         Assert.Equal("Inspect Apple Inc · 2026-09-10", link.GetAttribute("aria-label"));
 
-        // Transaction date metadata is outside the link and styled muted
-        var metadataElement = cut.Find("[data-testid='alert-matching-transactions'] .mud-text-secondary");
-        Assert.NotNull(metadataElement);
-        Assert.Contains("· 2026-09-10", metadataElement.TextContent);
-
-        // The "+N more matching" text must use mud-text-secondary styling rather than accent orange
-        var moreMatching = cut.FindAll(".mud-text-secondary")
-            .FirstOrDefault(e => e.TextContent.Contains("+2 more matching"));
-        Assert.NotNull(moreMatching);
+        await cut.Find("button[aria-label='Back to alerts']").ClickAsync();
+        Assert.NotNull(cut.Find("[data-testid='alert-summary-list']"));
+        Assert.Empty(cut.FindAll("[data-testid='alert-detail-occurrences']"));
     }
 
     [Fact]
-    public async Task MatchingTransactions_AppliesCompactPresentationAndTruncationClasses()
+    public async Task SelectedAlert_DetailUsesCompactResponsiveOccurrenceMarkup()
     {
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Long title test");
@@ -168,21 +190,25 @@ public sealed class FinancialAlertsCardTests
             matchingTransactions: [tx],
             matchingCount: 1);
 
-        await using var context = CreateContext(outcomes: [outcome], alerts: [alert]);
+        await using var context = CreateContext(
+            outcomes: [outcome],
+            alerts: [alert],
+            detailedOutcomes: new Dictionary<Guid, AlertEvaluationOutcome> { [alertId] = outcome });
         var cut = context.Render<FinancialAlertsCard>();
 
-        // Every matching transaction occupies its own compact row and the container stays within the card.
-        var container = cut.Find("[data-testid='alert-matching-transactions']");
-        Assert.NotNull(container);
-        Assert.Contains("d-flex flex-column", container.ClassName);
-        Assert.DoesNotContain("flex-wrap", container.ClassName);
-        Assert.Contains("max-width:100%", container.GetAttribute("style")?.Replace(" ", "") ?? "");
+        await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
 
-        // Verify the link can shrink and truncate long transaction titles.
+        var container = cut.Find("[data-testid='alert-detail-occurrences']");
+        Assert.NotNull(container);
+        Assert.Contains("pa-2", container.ClassName);
+
         var link = cut.Find("a[href='/AccountDetails/1?entryId=2']");
-        Assert.Contains("text-truncate", link.ClassName);
-        Assert.Contains("flex-grow-1", link.ClassName);
-        Assert.Contains("min-width:0", link.GetAttribute("style")?.Replace(" ", "") ?? "");
+        Assert.Contains("d-block", link.ClassName);
+        var linkStyle = link.GetAttribute("style")?.Replace(" ", "") ?? "";
+        Assert.Contains("min-width:0", linkStyle);
+        Assert.Contains("white-space:normal", linkStyle);
+        Assert.Contains("overflow-wrap:anywhere", linkStyle);
+        Assert.Contains("Transaction #2", container.TextContent);
     }
 
     [Fact]
@@ -206,7 +232,7 @@ public sealed class FinancialAlertsCardTests
     }
 
     [Fact]
-    public async Task MatchingTransactions_FallsBackToDescriptionWhenContractorDetailsEmpty()
+    public async Task SelectedAlert_DetailFallsBackToDescriptionWhenContractorDetailsEmpty()
     {
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Card debit");
@@ -224,16 +250,21 @@ public sealed class FinancialAlertsCardTests
             matchingTransactions: [tx],
             matchingCount: 1);
 
-        await using var context = CreateContext(outcomes: [outcome], alerts: [alert]);
+        await using var context = CreateContext(
+            outcomes: [outcome],
+            alerts: [alert],
+            detailedOutcomes: new Dictionary<Guid, AlertEvaluationOutcome> { [alertId] = outcome });
         var cut = context.Render<FinancialAlertsCard>();
 
-        var link = cut.Find("a[href='/AccountDetails/3?entryId=17']");
+        await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
+
+        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/3?entryId=17']");
         Assert.Equal("Online Service Monthly", link.TextContent.Trim());
-        Assert.Contains("· 2026-09-08", cut.Markup);
+        Assert.Contains("2026-09-08", cut.Markup);
     }
 
     [Fact]
-    public async Task MatchingTransactions_FallsBackToTransactionWhenBothContractorAndDescriptionEmpty()
+    public async Task SelectedAlert_DetailFallsBackToTransactionWhenBothContractorAndDescriptionEmpty()
     {
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Unknown fee");
@@ -251,12 +282,17 @@ public sealed class FinancialAlertsCardTests
             matchingTransactions: [tx],
             matchingCount: 1);
 
-        await using var context = CreateContext(outcomes: [outcome], alerts: [alert]);
+        await using var context = CreateContext(
+            outcomes: [outcome],
+            alerts: [alert],
+            detailedOutcomes: new Dictionary<Guid, AlertEvaluationOutcome> { [alertId] = outcome });
         var cut = context.Render<FinancialAlertsCard>();
 
-        var link = cut.Find("a[href='/AccountDetails/4?entryId=88']");
+        await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
+
+        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/4?entryId=88']");
         Assert.Equal("Transaction", link.TextContent.Trim());
-        Assert.Contains("on 2026-09-05", cut.Markup);
+        Assert.Contains("2026-09-05", cut.Markup);
     }
 
     [Fact]
@@ -279,7 +315,8 @@ public sealed class FinancialAlertsCardTests
     private static BunitContext CreateContext(
         List<AlertEvaluationOutcome>? outcomes = null,
         List<FinancialAlertDto>? alerts = null,
-        bool throwOnEvaluate = false)
+        bool throwOnEvaluate = false,
+        IReadOnlyDictionary<Guid, AlertEvaluationOutcome>? detailedOutcomes = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -296,7 +333,17 @@ public sealed class FinancialAlertsCardTests
                     return new HttpResponseMessage(HttpStatusCode.InternalServerError);
                 }
 
-                var json = JsonSerializer.Serialize(outcomes ?? []);
+                var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                AlertEvaluationOutcome? detailedOutcome = null;
+                if (segments.Length >= 4
+                    && Guid.TryParse(segments[^2], out var detailedAlertId))
+                {
+                    detailedOutcomes?.TryGetValue(detailedAlertId, out detailedOutcome);
+                }
+
+                var json = detailedOutcome is not null
+                    ? JsonSerializer.Serialize(detailedOutcome)
+                    : JsonSerializer.Serialize(outcomes ?? []);
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(json, Encoding.UTF8, "application/json")
@@ -337,15 +384,17 @@ public sealed class FinancialAlertsCardTests
         AlertComparisonOperator comparisonOperator = AlertComparisonOperator.GreaterThan,
         AlertTriggerStatus status = AlertTriggerStatus.Triggered,
         IReadOnlyList<AlertTransactionReference>? matchingTransactions = null,
-        int matchingCount = 0)
+        int matchingCount = 0,
+        DateTime? evaluatedAt = null)
     {
+        var evaluationTime = evaluatedAt ?? DateTime.UtcNow;
         return new AlertEvaluationOutcome(
             AlertId: alertId ?? Guid.NewGuid(),
             AlertTitle: title,
             AlertType: AlertType.LargeTransaction,
             Status: status,
             IsTriggered: isTriggered,
-            TriggeredAt: DateTime.UtcNow,
+            TriggeredAt: evaluationTime,
             IsSuppressed: false,
             DeDuplicationReason: DeDuplicationReason.None,
             CurrentValue: currentValue,
@@ -353,7 +402,7 @@ public sealed class FinancialAlertsCardTests
             ComparisonOperator: comparisonOperator,
             ConditionFingerprint: "fingerprint",
             Message: message,
-            EvaluatedAt: DateTime.UtcNow,
+            EvaluatedAt: evaluationTime,
             Context: new Dictionary<string, string>(),
             ErrorMessage: null,
             MatchingTransactions: matchingTransactions,

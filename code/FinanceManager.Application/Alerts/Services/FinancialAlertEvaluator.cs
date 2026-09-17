@@ -70,7 +70,8 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     evaluationTime,
                     rawOutcome.Context,
                     MatchingTransactions: rawOutcome.MatchingTransactions,
-                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
+                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount,
+                    OccurrenceCount: rawOutcome.OccurrenceCount ?? rawOutcome.MatchingTransactionCount);
             }
 
             // Condition is met. Suppress only an unchanged condition; changed transactions trigger
@@ -94,7 +95,8 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                     evaluationTime,
                     rawOutcome.Context,
                     MatchingTransactions: rawOutcome.MatchingTransactions,
-                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
+                    MatchingTransactionCount: rawOutcome.MatchingTransactionCount,
+                    OccurrenceCount: rawOutcome.OccurrenceCount ?? rawOutcome.MatchingTransactionCount);
             }
 
             // Newly triggered
@@ -115,7 +117,8 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 evaluationTime,
                 rawOutcome.Context,
                 MatchingTransactions: rawOutcome.MatchingTransactions,
-                MatchingTransactionCount: rawOutcome.MatchingTransactionCount);
+                MatchingTransactionCount: rawOutcome.MatchingTransactionCount,
+                OccurrenceCount: rawOutcome.OccurrenceCount ?? rawOutcome.MatchingTransactionCount);
         }
         catch (Exception ex)
         {
@@ -174,7 +177,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             var fingerprint = $"AccountBalance:AccountId={targetAccountId}:Balance={balance.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
             var message = $"Account '{accountName}' balance is {balance.ToString("N2", inv)}";
 
-            return new RawConditionResult(conditionMet, balance, fingerprint, message, context);
+            return new RawConditionResult(conditionMet, balance, fingerprint, message, context, OccurrenceCount: conditionMet ? 1 : 0);
         }
 
         // AccountId is null: evaluate each available account
@@ -215,7 +218,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             var fingerprint = $"AccountBalance:AccountId={triggeredAccount.AccountId}:Balance={chosenBalance.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
             var message = $"Account '{triggeredAccount.Name}' balance is {chosenBalance.ToString("N2", inv)}";
 
-            return new RawConditionResult(true, chosenBalance, fingerprint, message, context);
+            return new RawConditionResult(true, chosenBalance, fingerprint, message, context, OccurrenceCount: 1);
         }
 
         var defaultBalance = snapshot.Accounts.Count > 0 ? GetAccountBalance(snapshot.Accounts[0]) : 0m;
@@ -282,7 +285,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             fingerprint,
             message,
             context,
-            ToTransactionReferences(matchingEntries),
+            ToTransactionReferences(matchingEntries, snapshot.IncludeAllMatchingTransactions),
             transactionCount);
     }
 
@@ -342,7 +345,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
             fingerprint,
             message,
             context,
-            ToTransactionReferences(matchingEntries),
+            ToTransactionReferences(matchingEntries, snapshot.IncludeAllMatchingTransactions),
             transactionCount);
     }
 
@@ -389,7 +392,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 fingerprint,
                 message,
                 context,
-                ToTransactionReferences(matchingEntries),
+                ToTransactionReferences(matchingEntries, snapshot.IncludeAllMatchingTransactions),
                 allTimeData.TransactionCount);
         }
 
@@ -429,7 +432,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 fingerprint,
                 message,
                 context,
-                ToTransactionReferences(qualifyingEntries),
+                ToTransactionReferences(qualifyingEntries, snapshot.IncludeAllMatchingTransactions),
                 qualifyingEntries.Count);
         }
 
@@ -490,7 +493,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 ["LastChargeDate"] = topSub.LastChargeDate.ToString("yyyy-MM-dd")
             };
 
-            return new RawConditionResult(true, delta, fingerprint, message, context);
+            return new RawConditionResult(true, delta, fingerprint, message, context, OccurrenceCount: qualifyingSubs.Count);
         }
 
         var defaultFingerprint = $"SubscriptionPriceChange:NoMatch:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
@@ -533,13 +536,18 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
     };
 
     private static IReadOnlyList<AlertTransactionReference> ToTransactionReferences(
-        IEnumerable<CurrencyAccountEntry> entries) =>
-        entries
+        IEnumerable<CurrencyAccountEntry> entries,
+        bool includeAllMatchingTransactions)
+    {
+        IEnumerable<CurrencyAccountEntry> orderedEntries = entries
             .OrderByDescending(entry => Math.Abs(entry.ValueChange))
             .ThenByDescending(entry => entry.PostingDate)
-            .ThenByDescending(entry => entry.EntryId)
-            .Take(_maxMatchingTransactions)
-            .Select(entry => new AlertTransactionReference(
+            .ThenByDescending(entry => entry.EntryId);
+
+        if (!includeAllMatchingTransactions)
+            orderedEntries = orderedEntries.Take(_maxMatchingTransactions);
+
+        return orderedEntries.Select(entry => new AlertTransactionReference(
                 entry.AccountId,
                 entry.EntryId,
                 entry.PostingDate,
@@ -547,6 +555,7 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
                 entry.Description,
                 entry.ContractorDetails))
             .ToList();
+    }
 
     private static (DateTime Start, DateTime End) GetPeriodRange(AlertEvaluationPeriod period, DateTime evaluationDate)
     {
@@ -583,5 +592,6 @@ public class FinancialAlertEvaluator : IFinancialAlertEvaluator
         string Message,
         IReadOnlyDictionary<string, string> Context,
         IReadOnlyList<AlertTransactionReference>? MatchingTransactions = null,
-        int MatchingTransactionCount = 0);
+        int MatchingTransactionCount = 0,
+        int? OccurrenceCount = null);
 }

@@ -65,7 +65,8 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         int userId,
         IReadOnlyCollection<FinancialAlert> alerts,
         DateTime endDate,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeAllMatchingTransactions = false)
     {
         if (alerts.Count == 0)
             return new Dictionary<Guid, FinancialAlertEvaluationData>();
@@ -90,7 +91,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             if (alertQuery is not null)
             {
                 aggregateQuery = aggregateQuery is null ? alertQuery : aggregateQuery.Concat(alertQuery);
-                var alertMatchingQuery = BuildMatchingTransactionRows(entries, alert);
+                var alertMatchingQuery = BuildMatchingTransactionRows(entries, alert, includeAllMatchingTransactions);
                 matchingQuery = matchingQuery is null ? alertMatchingQuery : matchingQuery.Concat(alertMatchingQuery);
             }
         }
@@ -144,32 +145,38 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
 
     private static IQueryable<AlertEvaluationAggregateRow> BuildMatchingTransactionRows(
         IQueryable<CurrencyAccountEntry> entries,
-        FinancialAlert alert) =>
-        BuildMatchingEntries(entries, alert)
+        FinancialAlert alert,
+        bool includeAllMatchingTransactions)
+    {
+        IQueryable<CurrencyAccountEntry> matchingEntries = BuildMatchingEntries(entries, alert)
             .OrderByDescending(entry => -entry.ValueChange)
             .ThenByDescending(entry => entry.PostingDate)
-            .ThenByDescending(entry => entry.EntryId)
-            .Take(_matchingTransactionLimit)
-            .Select(entry => new AlertEvaluationAggregateRow
-            {
-                AlertId = alert.Id,
-                TotalSpend = 0m,
-                TransactionCount = 0,
-                LargestAccountId = null,
-                LargestEntryId = null,
-                LargestPostingDate = null,
-                LargestValue = null,
-                LargestValueChange = null,
-                LargestDescription = null,
-                LargestContractorDetails = null,
-                MatchingAccountId = entry.AccountId,
-                MatchingEntryId = entry.EntryId,
-                MatchingPostingDate = entry.PostingDate,
-                MatchingValue = entry.Value,
-                MatchingValueChange = entry.ValueChange,
-                MatchingDescription = entry.Description,
-                MatchingContractorDetails = entry.ContractorDetails
-            });
+            .ThenByDescending(entry => entry.EntryId);
+
+        if (!includeAllMatchingTransactions)
+            matchingEntries = matchingEntries.Take(_matchingTransactionLimit);
+
+        return matchingEntries.Select(entry => new AlertEvaluationAggregateRow
+        {
+            AlertId = alert.Id,
+            TotalSpend = 0m,
+            TransactionCount = 0,
+            LargestAccountId = null,
+            LargestEntryId = null,
+            LargestPostingDate = null,
+            LargestValue = null,
+            LargestValueChange = null,
+            LargestDescription = null,
+            LargestContractorDetails = null,
+            MatchingAccountId = entry.AccountId,
+            MatchingEntryId = entry.EntryId,
+            MatchingPostingDate = entry.PostingDate,
+            MatchingValue = entry.Value,
+            MatchingValueChange = entry.ValueChange,
+            MatchingDescription = entry.Description,
+            MatchingContractorDetails = entry.ContractorDetails
+        });
+    }
 
     private static IQueryable<CurrencyAccountEntry> BuildCategoryEntries(
         IQueryable<CurrencyAccountEntry> entries,

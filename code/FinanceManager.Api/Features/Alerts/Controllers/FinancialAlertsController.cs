@@ -105,10 +105,17 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     [HttpPost("{id:guid}/evaluate")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(AlertEvaluationOutcome))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Evaluate(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Evaluate(
+        Guid id,
+        [FromQuery] bool includeAllMatchingTransactions = false,
+        CancellationToken cancellationToken = default)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
-        var outcome = await alertService.EvaluateAlertAsync(userId, id, cancellationToken);
+        var outcome = await alertService.EvaluateAlertAsync(
+            userId,
+            id,
+            cancellationToken,
+            includeAllMatchingTransactions);
         return outcome is null ? NotFound() : Ok(outcome);
     }
 

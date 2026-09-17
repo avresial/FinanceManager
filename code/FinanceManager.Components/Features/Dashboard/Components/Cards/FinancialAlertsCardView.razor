@@ -1,0 +1,162 @@
+@using FinanceManager.Application.Alerts.Models
+@using FinanceManager.Components.Features.Alerts.Components
+
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
+    <MudPaper Class="d-flex flex-column px-4 pt-3 pb-1 flex-shrink-0" Elevation="0" data-testid="alert-card-header">
+        <div class="d-flex align-center justify-space-between gap-2 fm-card-info-header">
+            <div class="d-flex align-center gap-1" style="min-width:0;">
+                @if (SelectedAlert is not null)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                                   Size="Size.Small"
+                                   OnClick="OnBack"
+                                   aria-label="Back to alerts" />
+                }
+                <CardInfoTooltip Text="Configured financial conditions that are currently triggered."
+                                 AriaLabel="About financial alerts card">
+                    <MudText Typo="Typo.h5" Class="text-truncate">
+                        @(SelectedAlert?.AlertTitle ?? "Alerts")
+                    </MudText>
+                </CardInfoTooltip>
+            </div>
+            @if (SelectedAlert is null)
+            {
+                <MudTooltip Text="Manage alerts">
+                    <MudIconButton Href="Alerts"
+                                   Icon="@Icons.Material.Filled.Settings"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   aria-label="Manage alerts"
+                                   Class="flex-shrink-0" />
+                </MudTooltip>
+            }
+        </div>
+        @if (SelectedAlert is null)
+        {
+            @if (IsLoading)
+            {
+                <MudText Typo="Typo.subtitle1" Class="text-muted"><StringSpinner CharactersCount="4" /></MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.subtitle1" Class="text-muted">
+                    @Triggered.Count triggered of @ConfiguredCount configured
+                </MudText>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="text-muted">
+                @AlertPresentation.ComparisonDetail(SelectedAlert) · @AlertPresentation.OccurrenceLabel(SelectedAlert)
+            </MudText>
+        }
+    </MudPaper>
+
+    <MudPaper Class="flex-grow-1 overflow-auto d-flex flex-column" Style="min-height:0;" Elevation="0">
+        @if (SelectedAlert is null)
+        {
+            @if (IsLoading)
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap" style="min-height:0; overflow:hidden;">
+                    <ChartSpinner MaxHeight="120px" />
+                </div>
+            }
+            else if (HasError)
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
+                    <MudText Typo="Typo.body2" Color="Color.Error">Unable to load alerts.</MudText>
+                </div>
+            }
+            else if (Triggered.Count == 0)
+            {
+                <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
+                    <MudText Typo="Typo.body2" Color="Color.Success">All configured alerts are healthy.</MudText>
+                </div>
+            }
+            else
+            {
+                <MudList T="string" Dense="true" Class="px-2 py-0" data-testid="alert-summary-list">
+                    @foreach (var alert in Triggered)
+                    {
+                        <MudListItem Class="py-2 px-2 cursor-pointer"
+                                     @onclick="() => OnAlertSelected.InvokeAsync(alert)"
+                                     @onkeydown="eventArgs => HandleAlertKeyDown(eventArgs, alert)"
+                                     role="button"
+                                     tabindex="0"
+                                     data-testid="alert-summary-row">
+                            <div class="d-flex flex-column w-100" style="min-width:0;">
+                                <MudText Typo="Typo.body2" Class="font-weight-500 text-truncate">
+                                    @alert.AlertTitle
+                                </MudText>
+                                <div class="d-flex align-center justify-space-between gap-2" style="min-width:0;">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary text-truncate">
+                                        @AlertPresentation.ComparisonDetail(alert)
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary flex-shrink-0">
+                                        @AlertPresentation.OccurrenceLabel(alert)
+                                    </MudText>
+                                </div>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        }
+        else if (IsLoadingDetail)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap" style="min-height:0; overflow:hidden;">
+                <ChartSpinner MaxHeight="120px" />
+            </div>
+        }
+        else if (HasDetailError)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
+                <MudText Typo="Typo.body2" Color="Color.Error">Unable to load alert details.</MudText>
+            </div>
+        }
+        else if (SelectedAlert.MatchingTransactions is { Count: > 0 } transactions)
+        {
+            <div class="d-flex flex-column gap-1 pa-2" data-testid="alert-detail-occurrences">
+                @foreach (var transaction in transactions)
+                {
+                    <div class="d-flex flex-column gap-1 px-2 py-2"
+                         style="border-bottom:1px solid var(--mud-palette-lines-default);">
+                        <div class="d-flex align-start justify-space-between gap-2">
+                            <div>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Date</MudText>
+                                <MudText Typo="Typo.body2">@transaction.PostingDate.ToString("yyyy-MM-dd")</MudText>
+                            </div>
+                            <div class="text-right">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Account</MudText>
+                                <MudText Typo="Typo.body2">#@transaction.AccountId</MudText>
+                            </div>
+                        </div>
+                        <div class="d-flex align-start justify-space-between gap-2">
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Transaction</MudText>
+                                <MudLink Href="@AlertPresentation.TransactionHref(transaction)"
+                                         aria-label="@AlertPresentation.TransactionAriaLabel(transaction)"
+                                         Class="d-block"
+                                         Style="min-width:0; white-space:normal; overflow-wrap:anywhere;"
+                                         Title="@AlertPresentation.TransactionTitle(transaction)">
+                                    @AlertPresentation.TransactionTitle(transaction)
+                                </MudLink>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Transaction #@transaction.EntryId</MudText>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Value</MudText>
+                                <MudText Typo="Typo.body2">@transaction.Amount.ToString("N2")</MudText>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4" data-testid="alert-detail-empty">
+                <MudText Typo="Typo.body2" Align="Align.Center">@GetEmptyDetailMessage(SelectedAlert)</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>
