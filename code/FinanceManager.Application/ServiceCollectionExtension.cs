@@ -9,6 +9,7 @@ using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
 using FinanceManager.Application.Shared.Maintenance;
 using FinanceManager.Application.Shared.Time;
+using FinanceManager.Application.TransactionRules;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared.Services;
@@ -45,7 +46,8 @@ public static class ServiceCollectionExtension
             .AddInsightsApplication()
             .AddMoneyFlowApplication()
             .AddDashboardApplication()
-            .AddAdministrationApplication();
+            .AddAdministrationApplication()
+            .AddTransactionRulesApplication();
 
         return services;
     }
