@@ -21,6 +21,7 @@ public static class DashboardCards
     public const string FinancialAlerts = "financial-alerts";
     public const string RecurringTransactions = "recurring-transactions";
     public const string TransactionLog = "transaction-log";
+    public const string CashFlowForecast = "cash-flow-forecast";
 
     /// <summary>All customizable cards in the order they appear on the dashboard.</summary>
     public static readonly IReadOnlyList<DashboardCardDescriptor> All =
@@ -36,5 +37,6 @@ public static class DashboardCards
         new(FinancialAlerts, "Alerts"),
         new(RecurringTransactions, "Recurring transactions"),
         new(TransactionLog, "Transaction log"),
+        new(CashFlowForecast, "Cash flow forecast"),
     ];
 }

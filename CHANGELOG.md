@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
 - Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734
 - Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790
 - The **Assets** page now shows annual ETF expense-ratio costs and their projected 10-, 20-, and 30-year compound fee drag, with an adjustable return assumption and missing-ratio warning. #649
@@ -100,6 +101,7 @@ rules agents must follow when updating this file.
 - Exchange rates are now stored in the application database: a conversion first checks the in-memory cache and the database (including inverse pairs), and only on a miss asks the external rate provider — whose answer is persisted so the same pair and date never leave the app twice. Unknown pairs additionally fall back to a cross-rate via USD.
 
 ### Fixed
+- Cash-flow forecasts now use only cash accounts, value balances and recurring activity in the selected currency, and keep the latest horizon when selections overlap. #153
 - Transaction automation rules now expose every text-match option, ignore blank account-list separators, and reject unsupported amount comparisons or text-match expressions. #734
 - Investment and bond account capital charts now carry the final value through the selected range end, and their legend labels follow the active theme for readable contrast. #753
 - The administration dashboard's new-visitors information control now has a grammatically correct screen-reader label. #730

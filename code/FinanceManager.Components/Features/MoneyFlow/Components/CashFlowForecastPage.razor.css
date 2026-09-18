@@ -1,0 +1,13 @@
+.cash-flow-forecast-chart {
+    min-height: 360px;
+}
+
+.cash-flow-inflow {
+    color: var(--mud-palette-success);
+    white-space: nowrap;
+}
+
+.cash-flow-outflow {
+    color: var(--mud-palette-error);
+    white-space: nowrap;
+}

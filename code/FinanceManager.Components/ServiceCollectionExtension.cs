@@ -66,6 +66,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<FinancialAlertsHttpClient>()
+                .AddScoped<CashFlowForecastHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()
