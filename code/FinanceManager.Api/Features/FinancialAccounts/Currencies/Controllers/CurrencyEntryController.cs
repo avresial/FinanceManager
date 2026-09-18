@@ -2,6 +2,7 @@ using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
@@ -25,7 +26,8 @@ public class CurrencyEntryController(
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
     ICacheInvalidator dashboardCacheInvalidator,
-    IFinancialAlertService financialAlertService) : ControllerBase
+    IFinancialAlertService financialAlertService,
+    ITransactionRuleService transactionRuleService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -82,11 +84,14 @@ public class CurrencyEntryController(
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
 
+        var userId = ApiAuthenticationHelper.GetUserId(User);
         var newEntry = new CurrencyAccountEntry(addEntry.AccountId, 0, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
         {
             Description = addEntry.Description,
             ContractorDetails = addEntry.ContractorDetails
         };
+
+        await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Add(newEntry);
         await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
@@ -147,6 +152,8 @@ public class CurrencyEntryController(
             newEntry.Labels = [];
         else
             newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
+
+        await transactionRuleService.ApplyToEntryAsync(ApiAuthenticationHelper.GetUserId(User), newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Update(newEntry);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
