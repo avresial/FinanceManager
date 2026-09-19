@@ -117,7 +117,14 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
 
         foreach (var (alertId, entries) in matchingTransactions)
         {
-            result[alertId] = result[alertId] with { MatchingTransactions = entries };
+            result[alertId] = result[alertId] with
+            {
+                MatchingTransactions = entries
+                    .OrderByDescending(entry => -entry.ValueChange)
+                    .ThenByDescending(entry => entry.PostingDate)
+                    .ThenByDescending(entry => entry.EntryId)
+                    .ToList()
+            };
         }
 
         return result;

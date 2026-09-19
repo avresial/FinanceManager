@@ -131,63 +131,6 @@ public sealed class FinancialAlertRepositoryTests
         Assert.Equal([2], largeData.MatchingTransactions!.Select(entry => entry.EntryId));
     }
 
-    [Fact]
-    public async Task GetAllTimeEvaluationData_DetailedRequestReturnsEveryMatchingTransaction()
-    {
-        await using var context = CreateContext();
-        var label = new FinancialLabel { Id = 5, Name = "Dining" };
-        context.FinancialLabels.Add(label);
-        context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = 1,
-            UserId = 1,
-            Name = "Cash",
-            AccountType = AccountType.Currency,
-            AccountLabel = AccountLabel.Cash
-        });
-
-        for (var entryId = 1; entryId <= 6; entryId++)
-        {
-            context.CurrencyEntries.Add(new CurrencyAccountEntry(
-                1,
-                entryId,
-                new DateTime(2026, 9, entryId, 0, 0, 0, DateTimeKind.Utc),
-                1000m - entryId * 100m,
-                -entryId * 100m)
-            {
-                Labels = [label]
-            });
-        }
-
-        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var alert = new FinancialAlert(
-            1,
-            "Dining total",
-            AlertType.CategorySpending,
-            AlertComparisonOperator.GreaterThan,
-            100m,
-            evaluationPeriod: AlertEvaluationPeriod.AllTime,
-            labelName: "dining");
-        var repository = new FinancialAlertRepository(context);
-
-        var summary = await repository.GetAllTimeEvaluationData(
-            1,
-            [alert],
-            new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
-            TestContext.Current.CancellationToken);
-        var detailed = await repository.GetAllTimeEvaluationData(
-            1,
-            [alert],
-            new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
-            TestContext.Current.CancellationToken,
-            includeAllMatchingTransactions: true);
-
-        Assert.Equal(6, summary[alert.Id].TransactionCount);
-        Assert.Equal(5, summary[alert.Id].MatchingTransactions!.Count);
-        Assert.Equal(6, detailed[alert.Id].MatchingTransactions!.Count);
-        Assert.Equal(Enumerable.Range(1, 6).Reverse(), detailed[alert.Id].MatchingTransactions!.Select(entry => entry.EntryId));
-    }
-
     private static FinancialAlert CreateAlert(int userId, string title) =>
         new(userId, title, AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m);
 

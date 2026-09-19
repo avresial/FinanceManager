@@ -338,12 +338,26 @@ public sealed class FinancialAlertsCardTests
                 if (segments.Length >= 4
                     && Guid.TryParse(segments[^2], out var detailedAlertId))
                 {
-                    detailedOutcomes?.TryGetValue(detailedAlertId, out detailedOutcome);
+                    if (detailedOutcomes is not null
+                        && detailedOutcomes.TryGetValue(detailedAlertId, out var outcome))
+                    {
+                        detailedOutcome = outcome;
+                    }
                 }
 
-                var json = detailedOutcome is not null
-                    ? JsonSerializer.Serialize(detailedOutcome)
-                    : JsonSerializer.Serialize(outcomes ?? []);
+                if (segments.Length >= 4)
+                {
+                    if (detailedOutcome is null)
+                        return new HttpResponseMessage(HttpStatusCode.NotFound);
+
+                    var detailJson = JsonSerializer.Serialize(detailedOutcome);
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(detailJson, Encoding.UTF8, "application/json")
+                    };
+                }
+
+                var json = JsonSerializer.Serialize(outcomes ?? []);
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent(json, Encoding.UTF8, "application/json")
