@@ -41,6 +41,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Redesign the dashboard Alerts card as a compact triggered-alert list with an in-card detail view for matching occurrences. #794
 - Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
 - Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786
 - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779

@@ -11,6 +11,7 @@ public class AlertEvaluationSnapshot
     public IReadOnlyList<RecurringTransactionResult> Subscriptions { get; init; } = [];
     public IReadOnlyDictionary<Guid, FinancialAlertEvaluationData> AllTimeEvaluationData { get; init; } = new Dictionary<Guid, FinancialAlertEvaluationData>();
     public DateTime EvaluationDate { get; init; } = DateTime.UtcNow;
+    public bool IncludeAllMatchingTransactions { get; init; }
 
     public AlertEvaluationSnapshot()
     {
