@@ -223,6 +223,52 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
         _serviceMock.Verify(x => x.EvaluateAlertsAsync(_testUserId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task EvaluateSingle_DetailedRequestIncludesAllMatchingTransactionsFlag()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var alert = CreateAlert(_testUserId, "Large purchase", AlertType.LargeTransaction);
+        var outcome = new AlertEvaluationOutcome(
+            alert.Id,
+            alert.Title,
+            alert.AlertType,
+            AlertTriggerStatus.Triggered,
+            IsTriggered: true,
+            TriggeredAt: DateTime.UtcNow,
+            IsSuppressed: false,
+            DeDuplicationReason.None,
+            CurrentValue: 2500m,
+            Threshold: 2000m,
+            ComparisonOperator: AlertComparisonOperator.GreaterThan,
+            ConditionFingerprint: "large-1",
+            Message: "Large transaction",
+            EvaluatedAt: DateTime.UtcNow,
+            Context: new Dictionary<string, string>(),
+            MatchingTransactionCount: 6,
+            OccurrenceCount: 6);
+        _serviceMock
+            .Setup(x => x.EvaluateAlertAsync(
+                _testUserId,
+                alert.Id,
+                It.IsAny<CancellationToken>(),
+                true))
+            .ReturnsAsync(outcome);
+
+        var response = await Client.PostAsync(
+            $"api/FinancialAlerts/{alert.Id}/evaluate?includeAllMatchingTransactions=true",
+            content: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<AlertEvaluationOutcome>(TestContext.Current.CancellationToken);
+        Assert.Equal(6, result!.MatchingTransactionCount);
+        _serviceMock.Verify(x => x.EvaluateAlertAsync(
+            _testUserId,
+            alert.Id,
+            It.IsAny<CancellationToken>(),
+            true), Times.Once);
+    }
+
     private static FinancialAlert CreateAlert(int userId, string title, AlertType type = AlertType.AccountBalance) =>
         new(userId, title, type, AlertComparisonOperator.GreaterThan, 100m);
 }

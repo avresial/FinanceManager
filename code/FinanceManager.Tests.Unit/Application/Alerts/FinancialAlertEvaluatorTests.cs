@@ -127,6 +127,48 @@ public class FinancialAlertEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_CategorySpending_DetailedSnapshotIncludesEveryMatchingTransaction()
+    {
+        var label = new FinancialLabel { Id = 5, Name = "Restaurants" };
+        var alert = new FinancialAlert(
+            1,
+            "Restaurants limit",
+            AlertType.CategorySpending,
+            AlertComparisonOperator.GreaterThan,
+            100m,
+            labelId: 5);
+        var account = new CurrencyAccount(1, 1, "Main", AccountLabel.Cash);
+
+        for (var entryId = 1; entryId <= 6; entryId++)
+        {
+            account.Add(new CurrencyAccountEntry(
+                1,
+                entryId,
+                _evaluationDate.AddDays(-entryId),
+                1000m - entryId * 100m,
+                -entryId * 100m)
+            {
+                Labels = [label]
+            });
+        }
+
+        var summaryOutcome = _evaluator.Evaluate(
+            alert,
+            new AlertEvaluationSnapshot([account], [], _evaluationDate));
+        var detailedOutcome = _evaluator.Evaluate(
+            alert,
+            new AlertEvaluationSnapshot([account], [], _evaluationDate)
+            {
+                IncludeAllMatchingTransactions = true
+            });
+
+        Assert.Equal(6, summaryOutcome.MatchingTransactionCount);
+        Assert.Equal(5, summaryOutcome.MatchingTransactions!.Count);
+        Assert.Equal(6, detailedOutcome.MatchingTransactions!.Count);
+        Assert.Equal(6, detailedOutcome.OccurrenceCount);
+    }
+
+    [Fact]
     public void Evaluate_CategorySpending_MatchesByLabelName_IgnoresIncomeTransactions()
     {
         var groceriesLabel = new FinancialLabel { Id = 99, Name = "Groceries" };

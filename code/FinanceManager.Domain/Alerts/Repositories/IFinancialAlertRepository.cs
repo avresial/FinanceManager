@@ -14,5 +14,6 @@ public interface IFinancialAlertRepository
         int userId,
         IReadOnlyCollection<FinancialAlert> alerts,
         DateTime endDate,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool includeAllMatchingTransactions = false);
 }

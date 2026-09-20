@@ -114,7 +114,8 @@ public class FinancialAlertService(
     public async Task<AlertEvaluationOutcome?> EvaluateAlertAsync(
         int userId,
         Guid alertId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeAllMatchingTransactions = false)
     {
         try
         {
@@ -124,7 +125,7 @@ public class FinancialAlertService(
                 return null;
             }
 
-            var snapshot = await BuildSnapshotAsync(userId, [alert], cancellationToken);
+            var snapshot = await BuildSnapshotAsync(userId, [alert], cancellationToken, includeAllMatchingTransactions);
             var outcome = evaluator.Evaluate(alert, snapshot);
 
             if (outcome.TriggeredAt is DateTime triggeredAt)
@@ -153,7 +154,8 @@ public class FinancialAlertService(
     private async Task<AlertEvaluationSnapshot> BuildSnapshotAsync(
         int userId,
         IReadOnlyList<FinancialAlert> alerts,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeAllMatchingTransactions = false)
     {
         var now = dateTimeProvider.UtcNow;
         var start = now.Date.AddMonths(-12);
@@ -165,7 +167,12 @@ public class FinancialAlertService(
             .ToList();
         var allTimeEvaluationData = allTimeAlerts.Count == 0
             ? new Dictionary<Guid, FinancialAlertEvaluationData>()
-            : await alertRepository.GetAllTimeEvaluationData(userId, allTimeAlerts, now, cancellationToken);
+            : await alertRepository.GetAllTimeEvaluationData(
+                userId,
+                allTimeAlerts,
+                now,
+                cancellationToken,
+                includeAllMatchingTransactions);
 
         var accounts = new List<CurrencyAccount>();
         await foreach (var account in accountRepository.GetAccounts<CurrencyAccount>(userId, start, end).WithCancellation(cancellationToken))
@@ -177,7 +184,8 @@ public class FinancialAlertService(
 
         return new AlertEvaluationSnapshot(accounts, subscriptions, now)
         {
-            AllTimeEvaluationData = allTimeEvaluationData
+            AllTimeEvaluationData = allTimeEvaluationData,
+            IncludeAllMatchingTransactions = includeAllMatchingTransactions
         };
     }
 }
