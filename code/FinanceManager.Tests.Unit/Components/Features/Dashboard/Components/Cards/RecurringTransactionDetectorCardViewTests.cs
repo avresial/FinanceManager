@@ -3,6 +3,7 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using System.Text.RegularExpressions;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Cards;
 
@@ -25,7 +26,8 @@ public class RecurringTransactionDetectorCardViewTests
             ]));
 
         Assert.Contains("Monthly salary", cut.Markup);
-        Assert.Matches(@"\+5000[.,]00 PLN/mo", cut.Markup);
-        Assert.Contains("mud-success-text", cut.Markup);
+        var incomeAmount = cut.FindAll(".mud-typography")
+            .Single(element => Regex.IsMatch(element.TextContent, @"\+5000[.,]00 PLN/mo"));
+        Assert.Contains("mud-success-text", incomeAmount.ClassList);
     }
 }
