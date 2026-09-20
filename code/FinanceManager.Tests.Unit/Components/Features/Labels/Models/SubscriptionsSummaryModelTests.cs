@@ -42,6 +42,18 @@ public class SubscriptionsSummaryModelTests
         Assert.Equal(SubscriptionsSummaryModel.Empty, model);
     }
 
+    [Fact]
+    public void FromSubscriptions_IgnoresRecurringIncome()
+    {
+        var income = Subscription("Salary", 5_000m);
+        income.IsIncome = true;
+
+        var model = SubscriptionsSummaryModel.FromSubscriptions([Subscription("Netflix", 30m), income]);
+
+        Assert.Equal(1, model.ActiveCount);
+        Assert.Equal(30m, model.MonthlyCost);
+    }
+
     private static RecurringTransactionResult Subscription(
         string name,
         decimal monthlyCost,

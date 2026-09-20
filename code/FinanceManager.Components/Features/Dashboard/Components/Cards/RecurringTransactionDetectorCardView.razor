@@ -56,15 +56,16 @@
                     {
                         <MudListItem Class="py-1 px-2 cursor-pointer" @onclick="() => OnItemSelected.InvokeAsync(item)">
                             <div class="d-flex align-items-center gap-3 w-100">
-                                <MudIcon Icon="@Icons.Material.Filled.Repeat" Size="Size.Small" />
+                                <MudIcon Icon="@(item.IsIncome ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.Repeat)"
+                                         Color="@(item.IsIncome ? Color.Success : Color.Inherit)" Size="Size.Small" />
                                 <div class="flex-grow-1">
                                     <MudText Typo="Typo.body2" Class="font-weight-500">@item.Name</MudText>
                                     <MudProgressLinear Value="@GetPercentage(item.Value)" Color="Color.Warning"
                                                       Class="mt-1" Size="Size.Small" />
                                 </div>
-                                <MudText Typo="Typo.body2" Color="Color.Warning" Class="font-weight-600"
+                                <MudText Typo="Typo.body2" Color="@(item.IsIncome ? Color.Success : Color.Warning)" Class="font-weight-600"
                                          Style="min-width: 120px; text-align: right;">
-                                    @($"{item.Value:0.00} {Currency}/mo")
+                                    @($"{(item.IsIncome ? "+" : string.Empty)}{item.Value:0.00} {Currency}/mo")
                                 </MudText>
                             </div>
                         </MudListItem>
@@ -107,7 +108,9 @@
                             </MudTooltip>
                         </MudTd>
                         <MudTd DataLabel="Amount" Style="text-align:right">
-                            <MudText Color="Color.Error">@($"{Math.Abs(context.ValueChange):0.00} {Currency}")</MudText>
+                            <MudText Color="@(SelectedItem.IsIncome ? Color.Success : Color.Error)">
+                                @($"{(SelectedItem.IsIncome ? "+" : string.Empty)}{Math.Abs(context.ValueChange):0.00} {Currency}")
+                            </MudText>
                         </MudTd>
                     </RowTemplate>
                 </MudTable>

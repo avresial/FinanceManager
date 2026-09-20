@@ -137,6 +137,31 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
+    public async Task RecurringIncome_WithPaydayAndAmountVariation_IsReturnedByBothQueries()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 5, 30), 4_950m, "ACME payroll"),
+            Entry(2, new DateTime(2026, 6, 30), 5_000m, "ACME payroll"),
+            Entry(3, new DateTime(2026, 7, 29), 5_050m, "ACME payroll"));
+        Setup(account, []);
+        var service = CreateService();
+
+        var transaction = Assert.Single(await service.GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken));
+        var cashFlow = Assert.Single(await service.GetRecurringCashFlows(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.True(transaction.IsIncome);
+        Assert.Equal(5_000m, transaction.MonthlyCost);
+        Assert.Equal(new DateTime(2026, 8, 29), transaction.NextExpectedChargeDate);
+        Assert.Equal(5_000m, cashFlow.MonthlyAmount);
+        Assert.Equal(5_050m, cashFlow.OccurrenceAmount);
+        Assert.Equal(transaction.NextExpectedChargeDate, cashFlow.NextExpectedDate);
+    }
+
+    [Fact]
     public async Task GetRecurringCashFlows_DoesNotPersistNewExpensePatterns()
     {
         var account = Account(

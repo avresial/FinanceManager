@@ -15,6 +15,7 @@ public class RecurringTransactionResult(string name, decimal value)
     public decimal PriceDelta => LastAmount - PreviousAmount;
     public decimal MonthlyCost { get; set; }
     public decimal AnnualCost { get; set; }
+    public bool IsIncome { get; set; }
     public bool IsMuted { get; set; }
     public bool IsCancelled { get; set; }
     public bool IsFlaggedForReview { get; set; }

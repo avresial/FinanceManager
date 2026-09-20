@@ -74,7 +74,9 @@ public partial class SubscriptionsPage : ComponentBase
         // One request feeds both surfaces: the first surface to reach its fetch starts it, the other
         // awaits the same task. Lazy is thread-safe by default, so neither ordering issues a second call.
         var subscriptions = new Lazy<Task<List<RecurringTransactionResult>>>(
-            () => HttpClient.GetRecurringTransactions(user.UserId));
+            async () => (await HttpClient.GetRecurringTransactions(user.UserId))
+                .Where(x => !x.IsIncome)
+                .ToList());
 
         // Run both surfaces concurrently so each paints its own snapshot as soon as it is read,
         // instead of the list waiting for the tiles to finish reconciling.

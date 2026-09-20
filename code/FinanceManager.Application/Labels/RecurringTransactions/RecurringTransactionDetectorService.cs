@@ -20,15 +20,32 @@ public class RecurringTransactionDetectorService(
     private const decimal _minimumMonthlyAverage = 5m;
     private const double _similarityThreshold = 0.75;
 
-    public Task<List<RecurringTransactionResult>> GetRecurringTransactions(
+    public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(
         int userId,
-        CancellationToken cancellationToken = default) =>
-        GetRecurringTransactionsCore(
+        CancellationToken cancellationToken = default)
+    {
+        var asOfDate = dateTimeProvider.TodayUtc;
+        var expenses = await GetRecurringTransactionsCore(
             userId,
-            dateTimeProvider.TodayUtc,
+            asOfDate,
             cancellationToken,
             persistSubscriptions: true,
             includeAccount: null);
+        var incomes = await DetectPatterns(
+            userId,
+            asOfDate,
+            static entry => entry.ValueChange > 0,
+            isIncome: true,
+            static account => account.AccountType == AccountLabel.Cash,
+            cancellationToken);
+
+        return expenses
+            .Concat(incomes.Select(x => x.Result))
+            .OrderByDescending(x => x.IsFlaggedForReview)
+            .ThenBy(x => x.IsMuted || x.IsCancelled)
+            .ThenBy(x => x.NextExpectedChargeDate)
+            .ToList();
+    }
 
     private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
         int userId,
@@ -41,6 +58,7 @@ public class RecurringTransactionDetectorService(
             userId,
             asOfDate,
             static entry => entry.ValueChange < 0,
+            isIncome: false,
             includeAccount,
             cancellationToken);
 
@@ -120,6 +138,7 @@ public class RecurringTransactionDetectorService(
             userId,
             asOfDate,
             static entry => entry.ValueChange > 0,
+            isIncome: true,
             static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
 
@@ -160,6 +179,7 @@ public class RecurringTransactionDetectorService(
         int userId,
         DateTime today,
         Func<CurrencyAccountEntry, bool> includeEntry,
+        bool isIncome,
         Func<CurrencyAccount, bool>? includeAccount,
         CancellationToken cancellationToken)
     {
@@ -194,7 +214,7 @@ public class RecurringTransactionDetectorService(
 
         var clusters = Cluster(rawEntries);
         return clusters
-            .Select(cluster => BuildResult(cluster.Key, cluster.Value, today))
+            .Select(cluster => BuildResult(cluster.Key, cluster.Value, today, isIncome))
             .OfType<DetectedPattern>()
             .Where(x => x.Result.MonthlyCost >= _minimumMonthlyAverage)
             .ToList();
@@ -221,7 +241,11 @@ public class RecurringTransactionDetectorService(
         return result;
     }
 
-    private static DetectedPattern? BuildResult(string name, List<DetectedEntry> entries, DateTime asOf)
+    private static DetectedPattern? BuildResult(
+        string name,
+        List<DetectedEntry> entries,
+        DateTime asOf,
+        bool isIncome)
     {
         var occurrences = entries
             .GroupBy(x => x.Date.Date)
@@ -267,6 +291,7 @@ public class RecurringTransactionDetectorService(
                 PreviousAmount = Math.Round(previous.Amount, 2),
                 MonthlyCost = monthlyCost,
                 AnnualCost = monthlyCost * 12m,
+                IsIncome = isIncome,
                 Entries = occurrences.SelectMany(x => x.Entries).ToList()
             });
     }
