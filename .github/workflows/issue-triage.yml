@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 360
     concurrency:
       group: codex-qwen-financemanager
-      cancel-in-progress: false
+      queue: max
     permissions:
       contents: read
       issues: write

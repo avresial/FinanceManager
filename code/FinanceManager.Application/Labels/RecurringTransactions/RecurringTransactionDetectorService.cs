@@ -1,9 +1,11 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Commands;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Labels.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Services;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,43 +20,29 @@ public class RecurringTransactionDetectorService(
     private const decimal _minimumMonthlyAverage = 5m;
     private const double _similarityThreshold = 0.75;
 
-    public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(
+    public Task<List<RecurringTransactionResult>> GetRecurringTransactions(
         int userId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GetRecurringTransactionsCore(
+            userId,
+            dateTimeProvider.TodayUtc,
+            cancellationToken,
+            persistSubscriptions: true,
+            includeAccount: null);
+
+    private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
+        int userId,
+        DateTime asOfDate,
+        CancellationToken cancellationToken,
+        bool persistSubscriptions,
+        Func<CurrencyAccount, bool>? includeAccount)
     {
-        var today = dateTimeProvider.TodayUtc;
-        var start = today.AddMonths(-25);
-        var end = today.AddDays(1);
-        var rawEntries = new List<DetectedEntry>();
-
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            foreach (var entry in account.Entries)
-            {
-                if (entry.ValueChange >= 0 || entry.PostingDate < start || entry.PostingDate >= end)
-                    continue;
-
-                var merchant = string.IsNullOrWhiteSpace(entry.ContractorDetails)
-                    ? entry.Description
-                    : entry.ContractorDetails;
-                if (string.IsNullOrWhiteSpace(merchant)) continue;
-
-                rawEntries.Add(new(
-                    merchant.Trim(),
-                    entry.PostingDate,
-                    Math.Abs(entry.ValueChange),
-                    account.AccountId,
-                    entry.EntryId));
-            }
-        }
-
-        var clusters = Cluster(rawEntries);
-        var detected = clusters
-            .Select(cluster => BuildResult(cluster.Key, cluster.Value, today))
-            .OfType<DetectedPattern>()
-            .Where(x => x.Result.MonthlyCost >= _minimumMonthlyAverage)
-            .ToList();
+        var detected = await DetectPatterns(
+            userId,
+            asOfDate,
+            static entry => entry.ValueChange < 0,
+            includeAccount,
+            cancellationToken);
 
         var subscriptions = await subscriptionRepository.GetAll(userId, cancellationToken);
         var added = new List<RecurringSubscription>();
@@ -84,8 +72,11 @@ public class RecurringTransactionDetectorService(
             }
             else
             {
-                subscription.MerchantKey = pattern.MerchantKey;
-                subscription.Name = pattern.Result.Name;
+                if (persistSubscriptions)
+                {
+                    subscription.MerchantKey = pattern.MerchantKey;
+                    subscription.Name = pattern.Result.Name;
+                }
             }
 
             matchedIds.Add(subscription.Id);
@@ -95,7 +86,8 @@ public class RecurringTransactionDetectorService(
             pattern.Result.IsFlaggedForReview = subscription.IsFlaggedForReview;
         }
 
-        await subscriptionRepository.Save(added, cancellationToken);
+        if (persistSubscriptions)
+            await subscriptionRepository.Save(added, cancellationToken);
 
         return detected
             .Select(x => x.Result)
@@ -105,12 +97,108 @@ public class RecurringTransactionDetectorService(
             .ToList();
     }
 
+    public Task<List<RecurringCashFlow>> GetRecurringCashFlows(
+        int userId,
+        CancellationToken cancellationToken = default) =>
+        GetRecurringCashFlows(userId, dateTimeProvider.TodayUtc, cancellationToken);
+
+    public async Task<List<RecurringCashFlow>> GetRecurringCashFlows(
+        int userId,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        // Keep the existing detector as the source of expense/subscription state. This preserves
+        // muted/cancelled semantics and stable subscription ids while the second, positive-value
+        // pass adds recurring income without changing the subscriptions page contract.
+        var expenses = await GetRecurringTransactionsCore(
+            userId,
+            asOfDate,
+            cancellationToken,
+            persistSubscriptions: false,
+            static account => account.AccountType == AccountLabel.Cash);
+        var incomes = await DetectPatterns(
+            userId,
+            asOfDate,
+            static entry => entry.ValueChange > 0,
+            static account => account.AccountType == AccountLabel.Cash,
+            cancellationToken);
+
+        return expenses
+            .Select(expense => new RecurringCashFlow
+            {
+                Name = expense.Name,
+                MonthlyAmount = -expense.MonthlyCost,
+                OccurrenceAmount = -expense.LastAmount,
+                Cadence = expense.Cadence,
+                NextExpectedDate = expense.NextExpectedChargeDate,
+                PatternId = expense.PatternId,
+                IsMuted = expense.IsMuted,
+                IsCancelled = expense.IsCancelled
+            })
+            .Concat(incomes.Select(income => new RecurringCashFlow
+            {
+                Name = income.Result.Name,
+                MonthlyAmount = income.Result.MonthlyCost,
+                OccurrenceAmount = income.Result.LastAmount,
+                Cadence = income.Result.Cadence,
+                NextExpectedDate = income.Result.NextExpectedChargeDate,
+                PatternId = CreatePatternId(userId, income.MerchantKey)
+            }))
+            .OrderBy(flow => flow.NextExpectedDate)
+            .ThenBy(flow => flow.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     public Task<bool> UpdateSubscription(
         int userId,
         Guid patternId,
         UpdateRecurringSubscription command,
         CancellationToken cancellationToken = default) =>
         subscriptionRepository.Update(userId, patternId, command, cancellationToken);
+
+    private async Task<List<DetectedPattern>> DetectPatterns(
+        int userId,
+        DateTime today,
+        Func<CurrencyAccountEntry, bool> includeEntry,
+        Func<CurrencyAccount, bool>? includeAccount,
+        CancellationToken cancellationToken)
+    {
+        var start = today.AddMonths(-25);
+        var end = today.AddDays(1);
+        var rawEntries = new List<DetectedEntry>();
+
+        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (includeAccount is not null && !includeAccount(account))
+                continue;
+
+            foreach (var entry in account.Entries)
+            {
+                if (!includeEntry(entry) || entry.PostingDate < start || entry.PostingDate >= end)
+                    continue;
+
+                var merchant = string.IsNullOrWhiteSpace(entry.ContractorDetails)
+                    ? entry.Description
+                    : entry.ContractorDetails;
+                if (string.IsNullOrWhiteSpace(merchant)) continue;
+
+                rawEntries.Add(new(
+                    merchant.Trim(),
+                    entry.PostingDate,
+                    Math.Abs(entry.ValueChange),
+                    account.AccountId,
+                    entry.EntryId));
+            }
+        }
+
+        var clusters = Cluster(rawEntries);
+        return clusters
+            .Select(cluster => BuildResult(cluster.Key, cluster.Value, today))
+            .OfType<DetectedPattern>()
+            .Where(x => x.Result.MonthlyCost >= _minimumMonthlyAverage)
+            .ToList();
+    }
 
     private static Dictionary<string, List<DetectedEntry>> Cluster(IEnumerable<DetectedEntry> entries)
     {

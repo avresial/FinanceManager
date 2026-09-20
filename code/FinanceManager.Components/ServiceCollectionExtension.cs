@@ -10,6 +10,7 @@ using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Components.Features.Labels.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.TransactionRules.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
@@ -56,6 +57,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<FinancialInsightsHttpClient>()
                 .AddScoped<RecurringTransactionDetectorHttpClient>()
                 .AddScoped<TransactionLogHttpClient>()
+                .AddScoped<TransactionRuleHttpClient>()
                 .AddScoped<DiversificationHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()
                 .AddScoped<AdminAiProvidersHttpClient>()
@@ -64,6 +66,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdminLogsHttpClient>()
                 .AddScoped<NewVisitorsHttpClient>()
                 .AddScoped<FinancialAlertsHttpClient>()
+                .AddScoped<CashFlowForecastHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
                 .AddScoped<AccountDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()

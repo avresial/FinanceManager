@@ -1,0 +1,70 @@
+<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+    <MudCardHeader Class="py-2 flex-shrink-0">
+        <CardHeaderContent>
+            <CardInfoTooltip Text="Projected cash-account balances based on recurring income, expenses, and active subscriptions."
+                             AriaLabel="About cash flow forecast card">
+                <MudText Typo="Typo.h6" Class="fm-title">Cash flow forecast</MudText>
+            </CardInfoTooltip>
+            <MudText Typo="Typo.caption" Class="fm-muted">Next 90 days</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Href="/CashFlowForecast" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                       EndIcon="@Icons.Material.Filled.ArrowForward" aria-label="See detailed cash flow forecast">
+                More
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudDivider Class="flex-grow-0" />
+
+    <MudCardContent Class="flex-grow-1 overflow-y-auto py-3" Style="min-height:0;">
+        @if (_isLoading)
+        {
+            <MudStack Spacing="2">
+                <MudSkeleton SkeletonType="SkeletonType.Text" Width="45%" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="42px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="42px" />
+                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="42px" />
+            </MudStack>
+        }
+        else if (_hasError)
+        {
+            <div class="fm-state">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
+                <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load forecast</MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                           Class="mt-2" OnClick="LoadData">Try again</MudButton>
+            </div>
+        }
+        else if (_forecast is not null)
+        {
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Current balance: <strong>@FormatMoney(CurrentBalance)</strong>
+                </MudText>
+                <MudGrid Spacing="1">
+                    @foreach (var horizon in _horizons)
+                    {
+                        <MudItem xs="4">
+                            <MudPaper Outlined Class="pa-2 text-center h-100">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@horizon days</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-600">@FormatMoney(ValueAt(horizon))</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+                @if (!_forecast.HasForecastableActivity)
+                {
+                    <MudAlert Severity="Severity.Info" Dense>
+                        No recurring activity is expected in the selected horizon.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @ExpectedSummary
+                    </MudText>
+                }
+            </MudStack>
+        }
+    </MudCardContent>
+</MudCard>

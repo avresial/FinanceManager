@@ -1,6 +1,8 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.FinancialAccounts.Shared.Imports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.TransactionRules;
+using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -772,5 +774,35 @@ public class CurrencyAccountImportServiceTests
         // Assert
         _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyResolvedConflicts_CachesAccountsAndRuleApplications()
+    {
+        var ruleService = new Mock<ITransactionRuleService>();
+        ruleService.Setup(x => x.LoadApplicationAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TransactionRuleApplication([], []));
+        _mockAccountRepository.Setup(x => x.Get(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CurrencyAccount(7, 1, "First"));
+        _mockAccountRepository.Setup(x => x.Get(2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CurrencyAccount(7, 2, "Second"));
+        var service = new CurrencyAccountImportService(
+            _mockAccountRepository.Object,
+            _mockAccountEntryRepository.Object,
+            new ImportAccountValidator(_userPlanVerifier),
+            new Mock<ILogger<CurrencyAccountImportService>>().Object,
+            ruleService.Object);
+        ResolvedImportConflict[] conflicts =
+        [
+            new() { AccountId = 1, AddImported = true, ImportData = new(DateTime.UtcNow, 10m) },
+            new() { AccountId = 1, AddImported = true, ImportData = new(DateTime.UtcNow.AddDays(1), 20m) },
+            new() { AccountId = 2, AddImported = true, ImportData = new(DateTime.UtcNow.AddDays(2), 30m) }
+        ];
+
+        await service.ApplyResolvedConflicts(conflicts, TestContext.Current.CancellationToken);
+
+        _mockAccountRepository.Verify(x => x.Get(1, It.IsAny<CancellationToken>()), Times.Once);
+        _mockAccountRepository.Verify(x => x.Get(2, It.IsAny<CancellationToken>()), Times.Once);
+        ruleService.Verify(x => x.LoadApplicationAsync(7, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

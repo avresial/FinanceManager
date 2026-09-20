@@ -89,7 +89,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
                 return NotFound($"Conflict {decision.ConflictId} was not found.");
 
             if (resolvedConflict is not null)
-                resolvedConflicts.Add(resolvedConflict);
+                resolvedConflicts.Add((ResolvedImportConflict)resolvedConflict);
         }
 
         if (resolvedConflicts.Count != 0)

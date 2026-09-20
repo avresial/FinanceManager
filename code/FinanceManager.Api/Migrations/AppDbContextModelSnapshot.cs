@@ -1230,6 +1230,53 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("MaintenanceApiKeys");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.TransactionRules.Entities.TransactionRuleDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConditionsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("StopProcessing")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsEnabled");
+
+                    b.HasIndex("UserId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("TransactionRules");
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>
                 {
                     b.Property<string>("Id")
@@ -1563,6 +1610,15 @@ namespace FinanceManager.Api.Migrations
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.Labels.Entities.RecurringSubscription", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.Identity.Dtos.UserDto", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.TransactionRules.Entities.TransactionRuleDefinition", b =>
                 {
                     b.HasOne("FinanceManager.Domain.Identity.Dtos.UserDto", null)
                         .WithMany()

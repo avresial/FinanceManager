@@ -59,7 +59,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
 
             if (await httpClient.Delete(userId))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
@@ -78,7 +78,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
             if (existingUser is null) return false;
             if (await httpClient.UpdatePassword(new(userId, newPassword, currentPassword)))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
@@ -96,7 +96,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
             if (existingUser is null) return false;
             if (await httpClient.UpdatePricingPlan(new(userId, newPricingLevel)))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
@@ -116,7 +116,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
             if (existingUser is null) return false;
             if (await httpClient.UpdatePreferredCurrency(new(userId, currencyId)))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
@@ -136,7 +136,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
             if (existingUser is null) return false;
             if (await httpClient.UpdatePreferredBenchmark(new(userId, assetListingId)))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
@@ -156,7 +156,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
             if (existingUser is null) return false;
             if (await httpClient.UpdateRole(new(userId, userRole)))
             {
-                OnUserChangeEvent?.Invoke(existingUser);
+                OnUserChangeEvent?.Invoke((User)existingUser);
                 return true;
             }
         }
