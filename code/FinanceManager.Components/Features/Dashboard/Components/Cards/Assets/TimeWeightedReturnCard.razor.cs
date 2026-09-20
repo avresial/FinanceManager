@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -16,6 +17,7 @@ public partial class TimeWeightedReturnCard
     private bool _hasError;
     private Currency _currency = DefaultCurrency.PLN;
     private TimeWeightedReturnResult? _result;
+    private readonly RefreshVersionGate _refreshGate = new();
 
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
@@ -30,36 +32,52 @@ public partial class TimeWeightedReturnCard
 
     private async Task Reload()
     {
+        var version = _refreshGate.Claim();
+        var startDateTime = StartDateTime;
+        var endDateTime = EndDateTime;
+        _isLoading = true;
+        _hasError = false;
+
         var user = await LoginService.GetLoggedUser();
+        if (!_refreshGate.IsCurrent(version)) return;
         if (user is null)
         {
             _result = null;
+            _isLoading = false;
             return;
         }
 
-        _isLoading = true;
-        _hasError = false;
         try
         {
-            _currency = await SettingsService.GetCurrencyAsync();
+            var currency = await SettingsService.GetCurrencyAsync();
+            if (!_refreshGate.IsCurrent(version)) return;
+
             var context = new AssetsPageCardsRefreshContext
             {
                 UserId = user.UserId,
-                CurrencyId = _currency.Id,
-                StartDateTime = StartDateTime,
-                EndDateTime = EndDateTime,
+                CurrencyId = currency.Id,
+                StartDateTime = startDateTime,
+                EndDateTime = endDateTime,
             };
 
-            _result = (await AssetsPageCardsCacheService.GetSnapshotAsync(context)).TimeWeightedReturn;
+            var result = (await AssetsPageCardsCacheService.GetSnapshotAsync(context)).TimeWeightedReturn;
+            if (!_refreshGate.IsCurrent(version)) return;
+
+            _currency = currency;
+            _result = result;
         }
         catch (Exception ex)
         {
-            _hasError = true;
-            Logger.LogError(ex, "Error getting time-weighted return");
+            if (_refreshGate.IsCurrent(version))
+            {
+                _hasError = true;
+                Logger.LogError(ex, "Error getting time-weighted return");
+            }
         }
         finally
         {
-            _isLoading = false;
+            if (_refreshGate.IsCurrent(version))
+                _isLoading = false;
         }
     }
 

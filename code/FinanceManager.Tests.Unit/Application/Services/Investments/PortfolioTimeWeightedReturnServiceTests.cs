@@ -172,6 +172,41 @@ public class PortfolioTimeWeightedReturnServiceTests
         Assert.Equal(0m, result.TotalReturn);
     }
 
+    [Fact]
+    public async Task GetAsync_ReturnsUnavailableWhenBondCalculationDateIsMalformed()
+    {
+        var bondAccount = new BondAccount(
+            _userId,
+            20,
+            "Bonds",
+            [new BondAccountEntry(20, 1, _start, 1m, 1m, 5)]);
+        var details = new BondDetails(
+            "Bond",
+            "Issuer",
+            DateOnly.FromDateTime(_start),
+            DateOnly.FromDateTime(_end.AddYears(1)),
+            [new BondCalculationMethod { DateValue = "not-a-date", Rate = 0m }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            100m)
+        {
+            Id = 5,
+        };
+        var fixture = CreateFixture(
+            null,
+            new IInvestmentTransactionRepository.AccountValuationInputs([], []),
+            includeInvestmentAccount: false,
+            bondAccounts: [bondAccount]);
+        fixture.BondDetailsRepository
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([details]);
+
+        var result = await fixture.Service.GetAsync(_userId, DefaultCurrency.PLN, _start, _end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TimeWeightedReturnStatus.Unavailable, result.Status);
+        Assert.Null(result.TotalReturn);
+    }
+
     private static Fixture CreateFixture(
         IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput>? flows,
         IInvestmentTransactionRepository.AccountValuationInputs valuationInputs,

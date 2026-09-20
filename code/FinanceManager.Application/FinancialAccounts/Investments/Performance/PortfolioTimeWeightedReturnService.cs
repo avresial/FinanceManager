@@ -112,7 +112,7 @@ public class PortfolioTimeWeightedReturnService(
                 endDate);
             return TimeWeightedReturnCalculator.Calculate(periods, startDate, endDate);
         }
-        catch (InvalidOperationException)
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
         {
             return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
         }
