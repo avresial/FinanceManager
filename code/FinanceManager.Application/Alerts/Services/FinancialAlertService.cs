@@ -180,7 +180,9 @@ public class FinancialAlertService(
             accounts.Add(account);
         }
 
-        var subscriptions = await recurringTransactionDetectorService.GetRecurringTransactions(userId, cancellationToken);
+        var subscriptions = (await recurringTransactionDetectorService.GetRecurringTransactions(userId, cancellationToken))
+            .Where(x => !x.IsIncome)
+            .ToList();
 
         return new AlertEvaluationSnapshot(accounts, subscriptions, now)
         {

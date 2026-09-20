@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Fixed
+- Detect recurring income in the dashboard and cash-flow forecast, and keep forecast chart legends readable in light and dark themes. #798
+
 ### Added
 - Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
