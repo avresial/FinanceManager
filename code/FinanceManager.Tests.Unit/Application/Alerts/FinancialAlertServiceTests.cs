@@ -254,6 +254,69 @@ public class FinancialAlertServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAlertAsync_DetailedRequestIncludesAllMatchingTransactions()
+    {
+        var alert = new FinancialAlert(
+            1,
+            "All history",
+            AlertType.CategorySpending,
+            AlertComparisonOperator.GreaterThan,
+            1000m,
+            evaluationPeriod: AlertEvaluationPeriod.AllTime);
+        _alertRepositoryMock.Setup(r => r.GetById(1, alert.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(alert);
+        _alertRepositoryMock
+            .Setup(r => r.GetAllTimeEvaluationData(
+                1,
+                It.IsAny<IReadOnlyCollection<FinancialAlert>>(),
+                _now,
+                It.IsAny<CancellationToken>(),
+                true))
+            .ReturnsAsync((IReadOnlyDictionary<Guid, FinancialAlertEvaluationData>)new Dictionary<Guid, FinancialAlertEvaluationData>());
+        _accountRepositoryMock
+            .Setup(r => r.GetAccounts<CurrencyAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), true))
+            .Returns(Array.Empty<CurrencyAccount>().ToAsyncEnumerable());
+        _recurringServiceMock.Setup(r => r.GetRecurringTransactions(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var outcome = new AlertEvaluationOutcome(
+            alert.Id,
+            alert.Title,
+            alert.AlertType,
+            AlertTriggerStatus.Triggered,
+            IsTriggered: true,
+            TriggeredAt: _now,
+            IsSuppressed: false,
+            DeDuplicationReason.None,
+            CurrentValue: 1250m,
+            Threshold: alert.Threshold,
+            ComparisonOperator: alert.ComparisonOperator,
+            ConditionFingerprint: "detailed",
+            Message: "Triggered",
+            EvaluatedAt: _now,
+            Context: new Dictionary<string, string>(),
+            MatchingTransactionCount: 2,
+            OccurrenceCount: 2);
+        _evaluatorMock.Setup(e => e.Evaluate(
+                alert,
+                It.Is<AlertEvaluationSnapshot>(snapshot => snapshot.IncludeAllMatchingTransactions)))
+            .Returns(outcome);
+
+        var result = await _service.EvaluateAlertAsync(
+            1,
+            alert.Id,
+            TestContext.Current.CancellationToken,
+            includeAllMatchingTransactions: true);
+
+        Assert.Equal(outcome, result);
+        _alertRepositoryMock.Verify(r => r.GetAllTimeEvaluationData(
+            1,
+            It.Is<IReadOnlyCollection<FinancialAlert>>(items => items.Count == 1 && items.Single().Id == alert.Id),
+            _now,
+            It.IsAny<CancellationToken>(),
+            true), Times.Once);
+    }
+
+    [Fact]
     public async Task EvaluateAlertsAsync_ErrorOutcomeDoesNotResolveTriggeredAlert()
     {
         var alert = new FinancialAlert(1, "Unstable alert", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m);

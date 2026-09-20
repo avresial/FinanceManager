@@ -112,6 +112,62 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
         Assert.Equal(1, _commands.Count);
     }
 
+    [Fact]
+    public async Task GetAllTimeEvaluationData_DetailedRequestReturnsEveryMatchingTransaction()
+    {
+        var label = new FinancialLabel { Id = 5, Name = "Dining" };
+        _context.FinancialLabels.Add(label);
+        _context.Accounts.Add(new FinancialAccountBaseDto
+        {
+            AccountId = 1,
+            UserId = 1,
+            Name = "Cash",
+            AccountType = AccountType.Currency,
+            AccountLabel = AccountLabel.Cash
+        });
+
+        for (var entryId = 1; entryId <= 6; entryId++)
+        {
+            _context.CurrencyEntries.Add(new CurrencyAccountEntry(
+                1,
+                entryId,
+                new DateTime(2026, 9, entryId, 0, 0, 0, DateTimeKind.Utc),
+                1000m - entryId * 100m,
+                -entryId * 100m)
+            {
+                Labels = [label]
+            });
+        }
+
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var alert = new FinancialAlert(
+            1,
+            "Dining total",
+            AlertType.CategorySpending,
+            AlertComparisonOperator.GreaterThan,
+            100m,
+            evaluationPeriod: AlertEvaluationPeriod.AllTime,
+            labelName: "dining");
+        var repository = new FinancialAlertRepository(_context);
+
+        var summary = await repository.GetAllTimeEvaluationData(
+            1,
+            [alert],
+            new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
+            TestContext.Current.CancellationToken);
+        var detailed = await repository.GetAllTimeEvaluationData(
+            1,
+            [alert],
+            new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
+            TestContext.Current.CancellationToken,
+            includeAllMatchingTransactions: true);
+
+        Assert.Equal(6, summary[alert.Id].TransactionCount);
+        Assert.Equal(5, summary[alert.Id].MatchingTransactions!.Count);
+        Assert.Equal(6, detailed[alert.Id].MatchingTransactions!.Count);
+        Assert.Equal(Enumerable.Range(1, 6).Reverse(), detailed[alert.Id].MatchingTransactions!.Select(entry => entry.EntryId));
+    }
+
     public void Dispose()
     {
         _context.Dispose();

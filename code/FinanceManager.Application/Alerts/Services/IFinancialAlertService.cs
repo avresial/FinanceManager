@@ -13,5 +13,9 @@ public interface IFinancialAlertService
     Task<bool> DeleteAlertAsync(int userId, Guid alertId, CancellationToken cancellationToken = default);
     Task<bool> SetEnabledAsync(int userId, Guid alertId, bool isEnabled, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AlertEvaluationOutcome>> EvaluateAlertsAsync(int userId, CancellationToken cancellationToken = default);
-    Task<AlertEvaluationOutcome?> EvaluateAlertAsync(int userId, Guid alertId, CancellationToken cancellationToken = default);
+    Task<AlertEvaluationOutcome?> EvaluateAlertAsync(
+        int userId,
+        Guid alertId,
+        CancellationToken cancellationToken = default,
+        bool includeAllMatchingTransactions = false);
 }

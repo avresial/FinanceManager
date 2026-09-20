@@ -30,6 +30,7 @@ using FinanceManager.Domain.Shared.Ai.Repositories;
 using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
+using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Services;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
@@ -45,6 +46,7 @@ using FinanceManager.Infrastructure.Features.Insights.Repositories;
 using FinanceManager.Infrastructure.Features.Labels.Repositories;
 using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using FinanceManager.Infrastructure.Features.MoneyFlow.Providers;
+using FinanceManager.Infrastructure.Features.TransactionRules.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Ai;
 using FinanceManager.Infrastructure.Shared.Persistence;
@@ -127,6 +129,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
                 .AddScoped<IMaintenanceKeyRepository, MaintenanceKeyRepository>()
                 .AddScoped<ILogEntryRepository, LogEntryRepository>()
+                .AddScoped<ITransactionRuleRepository, TransactionRuleRepository>()
 
                 .AddSingleton<IInsightsPromptProvider, InsightsPromptProvider>()
                 .AddSingleton<ILabelSetterPromptProvider, LabelSetterPromptProvider>()

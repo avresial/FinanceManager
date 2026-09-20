@@ -6,7 +6,6 @@
     <div class="d-flex flex-column gap-1" data-testid="alert-matching-transactions" style="min-width:0; max-width:100%;">
         @foreach (var transaction in transactions)
         {
-            var title = GetTransactionTitle(transaction);
             var metadata = GetTransactionMetadata(transaction);
             <div class="d-flex align-center w-100" style="min-width:0;">
                 <MudLink Href="@AlertPresentation.TransactionHref(transaction)"
@@ -14,7 +13,7 @@
                          Typo="Typo.caption"
                          Class="text-truncate flex-grow-1"
                          Style="min-width:0;">
-                    @title
+                    @AlertPresentation.TransactionTitle(transaction)
                 </MudLink>
                 @if (!string.IsNullOrEmpty(metadata))
                 {
@@ -36,22 +35,10 @@
 @code {
     [Parameter] public required AlertEvaluationOutcome Outcome { get; set; }
 
-    private static string GetTransactionTitle(AlertTransactionReference transaction)
-    {
-        var title = !string.IsNullOrWhiteSpace(transaction.ContractorDetails)
-            ? transaction.ContractorDetails
-            : transaction.Description;
-        return string.IsNullOrWhiteSpace(title)
-            ? "Transaction"
-            : title;
-    }
-
     private static string GetTransactionMetadata(AlertTransactionReference transaction)
     {
-        var title = !string.IsNullOrWhiteSpace(transaction.ContractorDetails)
-            ? transaction.ContractorDetails
-            : transaction.Description;
-        return string.IsNullOrWhiteSpace(title)
+        return string.IsNullOrWhiteSpace(transaction.ContractorDetails)
+            && string.IsNullOrWhiteSpace(transaction.Description)
             ? $"on {transaction.PostingDate:yyyy-MM-dd}"
             : $"· {transaction.PostingDate:yyyy-MM-dd}";
     }

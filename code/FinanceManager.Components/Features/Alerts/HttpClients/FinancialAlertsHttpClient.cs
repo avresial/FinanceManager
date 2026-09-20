@@ -63,4 +63,21 @@ public sealed class FinancialAlertsHttpClient(HttpClient httpClient)
         var result = await response.Content.ReadFromJsonAsync<List<AlertEvaluationOutcome>>(cancellationToken: cancellationToken);
         return result ?? [];
     }
+
+    public async Task<AlertEvaluationOutcome?> EvaluateAsync(
+        Guid id,
+        bool includeAllMatchingTransactions = false,
+        CancellationToken cancellationToken = default)
+    {
+        var endpoint = $"{_endpoint}/{id}/evaluate";
+        if (includeAllMatchingTransactions)
+            endpoint += "?includeAllMatchingTransactions=true";
+
+        using var response = await httpClient.PostAsync(endpoint, content: null, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<AlertEvaluationOutcome>(cancellationToken: cancellationToken);
+    }
 }
