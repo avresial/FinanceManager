@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Added
+- Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
 - Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734
 - Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790

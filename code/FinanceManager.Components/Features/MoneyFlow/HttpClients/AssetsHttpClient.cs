@@ -48,6 +48,19 @@ public class AssetsHttpClient(HttpClient httpClient)
         return result ?? new(null, MoneyWeightedReturnStatus.Unavailable, start.Date, end.Date);
     }
 
+    public async Task<PortfolioReturnAttributionResult> GetReturnAttribution(
+        int userId,
+        Currency currency,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<PortfolioReturnAttributionResult>(
+            $"{httpClient.BaseAddress}api/Assets/GetReturnAttribution/{userId}/{currency.Id}/{start:O}/{end:O}",
+            cancellationToken);
+        return result ?? PortfolioReturnAttributionResult.Unavailable(start.Date, end.Date);
+    }
+
     public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerAccount/{userId}/{currency.Id}/{asOfDate:O}");
