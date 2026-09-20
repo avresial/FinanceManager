@@ -17,7 +17,7 @@ jobs:
     name: Triage issue with local Qwen Codex
     if: github.actor == github.repository_owner
     runs-on: [self-hosted, macOS, ARM64, codex-lmstudio]
-    timeout-minutes: 360
+    timeout-minutes: 30
     concurrency:
       group: codex-qwen-financemanager
       queue: max
@@ -35,12 +35,13 @@ jobs:
     steps:
       # Do not check out the repository or pass issue content to the local
       # process. The triage skill reads the live issue through GitHub APIs.
-      - name: Verify the Qwen Codex profile
+      - name: Verify the Qwen Codex profile and issue-management skill
         shell: bash
         run: |
           set -euo pipefail
           command -v codex
           test -f "$CODEX_HOME/qwen.config.toml"
+          test -f /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md
 
       - name: Triage the opened issue with Qwen Codex
         shell: bash
@@ -54,6 +55,6 @@ jobs:
             --skip-git-repo-check \
             --cd "$RUNNER_TEMP" \
             --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
-            "Use the \$gh-triage-issues skill to triage issue #${ISSUE_NUMBER} in ${REPOSITORY}. Read the complete issue conversation and the repository guidance, labels, linked dependencies, branches, and pull requests through GitHub APIs. Apply the repository's issue lifecycle and type or area labels when supported, preserve human labels and ownership, avoid duplicate comments, and report the resulting state. Process only this FinanceManager issue. Do not implement code, create branches or pull requests, or modify the local working directory." \
+            "Use the installed \$codebase-manage-issues skill to triage only issue #${ISSUE_NUMBER} in ${REPOSITORY}. Do not search for or install skills. Read this issue's complete conversation, labels, timeline, and directly linked dependencies or pull requests through GitHub APIs. Read repository label definitions only when needed for classification. Do not scan unrelated issues, branches, or pull requests, inspect source code or local repository files, implement code, create branches or pull requests, or modify the local working directory. Apply only supported lifecycle and type or area labels, preserve human labels and ownership, avoid duplicate comments, and report the resulting state." \
             < /dev/null
           test -s "$RUNNER_TEMP/codex-last-message.txt"
