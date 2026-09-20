@@ -179,6 +179,42 @@ public class PortfolioReturnAttributionServiceTests
         Assert.Equal(0m, result.ReconciliationDifference);
     }
 
+    [Fact]
+    public async Task GetAsync_ReturnsUnavailableWhenBondCalculationDateIsMalformed()
+    {
+        var bondAccount = new BondAccount(
+            _userId,
+            20,
+            "Bonds",
+            [new BondAccountEntry(20, 1, _start, 1m, 1m, 5)]);
+        var details = new BondDetails(
+            "Bond",
+            "Issuer",
+            DateOnly.FromDateTime(_start),
+            DateOnly.FromDateTime(_end.AddYears(1)),
+            [new BondCalculationMethod { DateValue = "not-a-date", Rate = 0m }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            100m)
+        {
+            Id = 5,
+        };
+        var fixture = CreateFixture(
+            [],
+            new Dictionary<int, IReadOnlyDictionary<long, decimal>>(),
+            new Dictionary<int, IReadOnlyDictionary<long, decimal>>(),
+            includeInvestmentAccount: false,
+            bondAccounts: [bondAccount]);
+        fixture.BondDetailsRepository
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([details]);
+
+        var result = await fixture.Service.GetAsync(_userId, DefaultCurrency.PLN, _start, _end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(PortfolioReturnAttributionStatus.Unavailable, result.Status);
+        Assert.Null(result.TotalChange);
+    }
+
     private static IInvestmentTransactionRepository.CapitalFlowInput Flow(
         long id,
         DateTime date,
@@ -208,7 +244,9 @@ public class PortfolioReturnAttributionServiceTests
     private static Fixture CreateFixture(
         IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactions,
         IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> openingHoldings,
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> endingHoldings)
+        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> endingHoldings,
+        bool includeInvestmentAccount = true,
+        IReadOnlyList<BondAccount>? bondAccounts = null)
     {
         var accountRepository = new Mock<IFinancialAccountRepository>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
@@ -227,10 +265,10 @@ public class PortfolioReturnAttributionServiceTests
 
         accountRepository
             .Setup(x => x.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
+            .Returns((includeInvestmentAccount ? new[] { investmentAccount } : Array.Empty<InvestmentAccount>()).ToAsyncEnumerable());
         accountRepository
             .Setup(x => x.GetAccounts<BondAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-            .Returns(Array.Empty<BondAccount>().ToAsyncEnumerable());
+            .Returns((bondAccounts ?? []).ToAsyncEnumerable());
         transactionRepository
             .Setup(x => x.GetCapitalFlowInputs(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
@@ -249,11 +287,12 @@ public class PortfolioReturnAttributionServiceTests
             new BondDashboardContext(bondDetailsRepository.Object),
             currencyExchange.Object);
 
-        return new Fixture(service, priceProvider, currencyExchange);
+        return new Fixture(service, priceProvider, currencyExchange, bondDetailsRepository);
     }
 
     private sealed record Fixture(
         PortfolioReturnAttributionService Service,
         Mock<IInvestmentPriceProvider> PriceProvider,
-        Mock<ICurrencyExchangeService> CurrencyExchange);
+        Mock<ICurrencyExchangeService> CurrencyExchange,
+        Mock<IBondDetailsRepository> BondDetailsRepository);
 }

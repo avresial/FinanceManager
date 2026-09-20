@@ -313,7 +313,8 @@ public class PortfolioReturnAttributionService(
                 if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
                     return (0m, false);
 
-                var value = entry.GetPriceAt(valuationDate, details);
+                if (!TryGetBondPrice(entry, details, valuationDate, out var value))
+                    return (0m, false);
                 if (value == 0m && entry.Value != 0m)
                     return (0m, false);
 
@@ -555,12 +556,31 @@ public class PortfolioReturnAttributionService(
         if (!TryGetRatePair(sourceCurrency, targetCurrency, startDate, endDate, ratesByCurrency, out var startRate, out var endRate))
             return false;
 
-        var endingNativeValue = entry.GetPriceAt(DateOnly.FromDateTime(endDate), details);
+        if (!TryGetBondPrice(entry, details, DateOnly.FromDateTime(endDate), out var endingNativeValue))
+            return false;
         if (endingNativeValue == 0m && entry.Value != 0m)
             return false;
 
         fxEffect += endingNativeValue * (endRate - startRate);
         return true;
+    }
+
+    private static bool TryGetBondPrice(
+        BondAccountEntry entry,
+        BondDetails details,
+        DateOnly date,
+        out decimal value)
+    {
+        try
+        {
+            value = entry.GetPriceAt(date, details);
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            value = 0m;
+            return false;
+        }
     }
 
     private static bool TryGetRatePair(
