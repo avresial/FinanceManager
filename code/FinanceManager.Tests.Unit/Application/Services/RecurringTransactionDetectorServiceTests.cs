@@ -134,19 +134,25 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
-    public async Task GetRecurringTransactions_DoesNotChainIndividuallyCloseAmountsIntoOneCluster()
+    public async Task GetRecurringTransactions_KeepsEveryClusterMemberWithinToleranceOfFinalMedian()
     {
         var account = Account(
-            Entry(1, new DateTime(2026, 4, 15), -100m, "Streaming service"),
-            Entry(2, new DateTime(2026, 5, 15), -104m, "Streaming service"),
-            Entry(3, new DateTime(2026, 6, 15), -108m, "Streaming service"));
+            Entry(1, new DateTime(2025, 12, 15), -100m, "Streaming service"),
+            Entry(2, new DateTime(2026, 1, 15), -105m, "Streaming service"),
+            Entry(3, new DateTime(2026, 2, 15), -105m, "Streaming service"),
+            Entry(4, new DateTime(2026, 3, 15), -105m, "Streaming service"),
+            Entry(5, new DateTime(2026, 4, 15), -110m, "Streaming service"),
+            Entry(6, new DateTime(2026, 5, 15), -110m, "Streaming service"),
+            Entry(7, new DateTime(2026, 6, 15), -110m, "Streaming service"),
+            Entry(8, new DateTime(2026, 7, 15), -110m, "Streaming service"));
         Setup(account, []);
 
-        var result = await CreateService().GetRecurringTransactions(
+        var result = Assert.Single(await CreateService().GetRecurringTransactions(
             7,
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.Empty(result);
+        Assert.Equal(7, result.Entries.Count);
+        Assert.Equal(106.43m, result.MonthlyCost);
     }
 
     [Fact]

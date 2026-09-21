@@ -238,8 +238,14 @@ public class RecurringTransactionDetectorService(
         foreach (var entry in entries.OrderBy(x => x.Date))
         {
             var cluster = result.FirstOrDefault(candidate =>
-                CalculateSimilarity(candidate[0].Merchant, entry.Merchant) >= _similarityThreshold &&
-                AmountsAreSimilar(Median(candidate.Select(x => x.Amount)), entry.Amount));
+            {
+                if (CalculateSimilarity(candidate[0].Merchant, entry.Merchant) < _similarityThreshold)
+                    return false;
+
+                List<DetectedEntry> prospective = [.. candidate, entry];
+                var referenceAmount = Median(prospective.Select(x => x.Amount));
+                return prospective.All(item => AmountsAreSimilar(referenceAmount, item.Amount));
+            });
 
             if (cluster is null)
             {

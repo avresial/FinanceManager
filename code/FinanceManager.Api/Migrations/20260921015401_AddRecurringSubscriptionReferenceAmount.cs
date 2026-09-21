@@ -25,7 +25,7 @@ namespace FinanceManager.Api.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_RecurringSubscriptions_UserId_MerchantKey_ReferenceAmount",
                 table: "RecurringSubscriptions",
-                columns: new[] { "UserId", "MerchantKey", "ReferenceAmount" },
+                columns: ["UserId", "MerchantKey", "ReferenceAmount"],
                 unique: true);
         }
 
