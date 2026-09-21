@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 - Detect recurring income in the dashboard and cash-flow forecast, and keep forecast chart legends readable in light and dark themes. #798
 
 ### Added
+- Transaction automation rules can now be tested against up to five existing transactions before saving, with read-only before-and-after results. #802
 - Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
 - Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734

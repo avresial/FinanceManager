@@ -93,6 +93,66 @@ public sealed class TransactionRuleServiceTests
     }
 
     [Fact]
+    public async Task Test_UsesUnsavedRule_ReturnsAtMostFiveMatches_AndPerformsNoWrites()
+    {
+        _accounts.Setup(x => x.GetAll(7))
+            .ReturnsAsync([new CurrencyAccount(7, 2, "Cash")]);
+        var entries = Enumerable.Range(1, 7)
+            .Select(index => new CurrencyAccountEntry(2, index, DateTime.UtcNow.AddDays(-index), -index, -index)
+            {
+                Description = $"Invoice {index}",
+                ContractorDetails = "ACME"
+            })
+            .ToArray();
+        _entries.Setup(x => x.GetPostingDates(2))
+            .ReturnsAsync(entries.Select(entry => entry.PostingDate).ToList());
+        _entries.Setup(x => x.Get(
+                2,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(entries.ToAsyncEnumerable());
+        var command = new CreateTransactionRule(
+            "Unsaved rule",
+            [new() { Type = "Contractor", Pattern = "ACME" }],
+            [new() { Type = "SetLabels", Labels = ["Bills"] }]);
+
+        var results = await _service.TestAsync(7, command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(5, results.Count);
+        Assert.All(results, result =>
+        {
+            Assert.Equal("Cash", result.AccountName);
+            Assert.Empty(result.Before.Labels);
+            Assert.Equal(["Bills"], result.After.Labels);
+            Assert.True(result.HasChanges);
+        });
+        _repository.Verify(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repository.Verify(x => x.Update(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
+        _entries.Verify(x => x.Update(It.IsAny<CurrencyAccountEntry>()), Times.Never);
+        _alerts.Verify(x => x.EvaluateAlertsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Test_UsesCreateValidationBeforeReadingTransactions()
+    {
+        var command = new CreateTransactionRule(
+            "Invalid rule",
+            [new() { Type = "Contractor", Pattern = null }],
+            [new() { Type = "NormalizeDescription", Value = "Receipt" }]);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.TestAsync(7, command, TestContext.Current.CancellationToken));
+
+        _accounts.Verify(x => x.GetAll(It.IsAny<int>()), Times.Never);
+        _entries.Verify(x => x.Get(
+            It.IsAny<int>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<DateTime>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ApplyToEntry_ResolvesKnownLabelsAndUpdatesTheEntry()
     {
         _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))

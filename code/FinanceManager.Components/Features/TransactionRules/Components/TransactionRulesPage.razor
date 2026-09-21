@@ -182,11 +182,65 @@
             </MudPaper>
         }
 
-            <div class="d-flex justify-end mt-4">
+            <div class="d-flex flex-wrap justify-end gap-2 mt-4">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_isSaving || _isTesting)" OnClick="TestAsync">
+                    @(_isTesting ? "Testing..." : "Test")
+                </MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSaving" OnClick="SaveAsync">
                     @(_editingId is null ? "Create rule" : "Save changes")
                 </MudButton>
             </div>
+
+            @if (_testResults is not null)
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.h6">Test results</MudText>
+                @if (_testResults.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">
+                        No matching transactions found
+                    </MudAlert>
+                }
+                else
+                {
+                    @foreach (var result in _testResults)
+                    {
+                        <MudPaper Outlined Class="pa-3 mt-3">
+                            <div class="d-flex flex-wrap justify-space-between gap-2">
+                                <MudText Typo="Typo.subtitle2">@result.AccountName · @result.Date.ToString("d")</MudText>
+                                <MudText Typo="Typo.subtitle2">@result.Amount.ToString("N2")</MudText>
+                            </div>
+                            <MudText Typo="Typo.body2"><b>Contractor:</b> @result.Before.Contractor</MudText>
+                            <MudText Typo="Typo.body2"><b>Description:</b> @result.Before.Description</MudText>
+                            <MudText Typo="Typo.body2"><b>Current labels:</b> @FormatLabels(result.Before.Labels)</MudText>
+
+                            @if (!result.HasChanges)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                                    Rule matches but produces no effective change.
+                                </MudText>
+                            }
+                            else
+                            {
+                                <div class="mt-2">
+                                    @if (TestsContractor())
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Contractor:</b> @result.Before.Contractor → @result.After.Contractor</MudText>
+                                    }
+                                    @if (TestsDescription())
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Description:</b> @result.Before.Description → @result.After.Description</MudText>
+                                    }
+                                    @if (TestsLabels())
+                                    {
+                                        <MudText Typo="Typo.body2"><b>Labels:</b> @FormatLabels(result.Before.Labels) → @FormatLabels(result.After.Labels)</MudText>
+                                    }
+                                </div>
+                            }
+                        </MudPaper>
+                    }
+                }
+            }
         </MudPaper>
     </MudForm>
 

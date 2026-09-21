@@ -16,6 +16,7 @@ public partial class TransactionRulesPage : ComponentBase
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isSaving;
+    private bool _isTesting;
     private bool _isApplying;
     private bool _isPreviewing;
     private bool _enabled = true;
@@ -27,6 +28,7 @@ public partial class TransactionRulesPage : ComponentBase
     private List<ActionEditorModel> _actions = [NewAction()];
     private TransactionRuleApplyResultDto? _applyResult;
     private TransactionRuleEngineResult? _preview;
+    private List<TransactionRuleTestResultDto>? _testResults;
     private MudForm? _ruleForm;
     private string _previewContractor = "ACME Corp";
     private string _previewDescription = "Invoice";
@@ -101,6 +103,41 @@ public partial class TransactionRulesPage : ComponentBase
         }
     }
 
+    private async Task TestAsync()
+    {
+        _error = null;
+        _testResults = null;
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _error = "Rule name is required.";
+            return;
+        }
+
+        _isTesting = true;
+        try
+        {
+            var command = new CreateTransactionRule(
+                _name.Trim(),
+                _conditions.Select(condition => condition.ToDto()).ToList(),
+                _actions.Select(action => action.ToDto()).ToList(),
+                _enabled,
+                _stopProcessing);
+            _testResults = await HttpClient.TestAsync(command) ?? throw new InvalidOperationException();
+        }
+        catch (FormatException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "Unable to test this rule. Check the condition and action values.";
+        }
+        finally
+        {
+            _isTesting = false;
+        }
+    }
+
     private async Task ToggleAsync(TransactionRuleDto rule, bool enabled)
     {
         try
@@ -165,6 +202,7 @@ public partial class TransactionRulesPage : ComponentBase
 
     private void BeginEdit(TransactionRuleDto rule)
     {
+        _testResults = null;
         _editingId = rule.Id;
         _name = rule.Name;
         _enabled = rule.IsEnabled;
@@ -182,6 +220,7 @@ public partial class TransactionRulesPage : ComponentBase
         _stopProcessing = false;
         _conditions = [NewCondition()];
         _actions = [NewAction()];
+        _testResults = null;
         if (_ruleForm is not null)
             await _ruleForm.ResetValidationAsync();
     }
@@ -346,4 +385,12 @@ public partial class TransactionRulesPage : ComponentBase
     private static string DescribeActions(TransactionRuleDto rule) => rule.Actions.Count == 0
         ? "No changes"
         : string.Join(", ", rule.Actions.Select(action => action.Type));
+
+    private bool TestsContractor() => _actions.Any(action => action.Type.Equals("NormalizeContractor", StringComparison.OrdinalIgnoreCase));
+    private bool TestsDescription() => _actions.Any(action => action.Type.Equals("NormalizeDescription", StringComparison.OrdinalIgnoreCase));
+    private bool TestsLabels() => _actions.Any(action => action.Type.Equals("SetLabels", StringComparison.OrdinalIgnoreCase));
+
+    private static string FormatLabels(IReadOnlyList<string> labels) => labels.Count == 0
+        ? "None"
+        : string.Join(", ", labels);
 }

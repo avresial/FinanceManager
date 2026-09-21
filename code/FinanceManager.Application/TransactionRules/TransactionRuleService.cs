@@ -56,6 +56,70 @@ public sealed class TransactionRuleService(
         return TransactionRuleDto.FromEntity(definition);
     }
 
+    public async Task<IReadOnlyList<TransactionRuleTestResultDto>> TestAsync(
+        int userId,
+        CreateTransactionRule command,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        TransactionRuleCommandValidator.Validate(command);
+
+        var rule = new TransactionRule(
+            Guid.Empty,
+            command.Name.Trim(),
+            1,
+            TransactionRuleRuntimeBuilder.BuildConditions(command.Conditions),
+            TransactionRuleRuntimeBuilder.BuildActions(command.Actions));
+        var accounts = await accountRepository.GetAll(userId);
+        var constrainedAccountIds = command.Conditions
+            .Where(condition => condition.Type.Equals("Account", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(condition => condition.AccountIds)
+            .ToHashSet();
+        if (constrainedAccountIds.Count > 0)
+            accounts = accounts.Where(account => constrainedAccountIds.Contains(account.AccountId)).ToList();
+        var availableLabels = await LoadLabelsAsync(cancellationToken);
+        var results = new List<TransactionRuleTestResultDto>(5);
+
+        foreach (var account in accounts)
+        {
+            var months = (await entryRepository.GetPostingDates(account.AccountId))
+                .Select(date => new DateTime(date.Year, date.Month, 1, 0, 0, 0, date.Kind))
+                .Distinct()
+                .OrderDescending();
+
+            foreach (var monthStart in months)
+            {
+                var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+                await foreach (var entry in entryRepository.Get(account.AccountId, monthStart, monthEnd, cancellationToken))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var before = ToFacts(entry);
+                    if (!rule.Matches(before))
+                        continue;
+
+                    var sandboxEntry = entry.GetCopy();
+                    sandboxEntry.Labels = entry.Labels.ToList();
+                    _ = ApplyToEntry(sandboxEntry, [rule], availableLabels);
+                    var after = ToFacts(sandboxEntry);
+                    results.Add(new(
+                        entry.AccountId,
+                        account.Name,
+                        entry.EntryId,
+                        entry.PostingDate,
+                        entry.ValueChange,
+                        before,
+                        after,
+                        before != after));
+
+                    if (results.Count == 5)
+                        return results;
+                }
+            }
+        }
+
+        return results;
+    }
+
     public async Task<bool> SetEnabledAsync(int userId, Guid id, bool enabled, CancellationToken cancellationToken = default)
     {
         var definition = await repository.GetById(userId, id, cancellationToken);
@@ -168,13 +232,7 @@ public sealed class TransactionRuleService(
 
     internal static bool ApplyToEntry(CurrencyAccountEntry entry, IReadOnlyCollection<TransactionRule> rules, IReadOnlyCollection<FinancialLabel> availableLabels)
     {
-        var facts = new TransactionFacts(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
-            Math.Abs(entry.ValueChange), entry.ValueChange switch
-            {
-                > 0 => TransactionDirection.Income,
-                < 0 => TransactionDirection.Expense,
-                _ => TransactionDirection.Transfer
-            }, entry.Labels.Select(label => label.Name).ToList());
+        var facts = ToFacts(entry);
         var result = TransactionRuleEngine.Run(rules, facts);
         if (!result.HasChanges) return false;
 
@@ -201,4 +259,13 @@ public sealed class TransactionRuleService(
         entry.Labels = resolvedLabels;
         return true;
     }
+
+    private static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
+        new(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
+            Math.Abs(entry.ValueChange), entry.ValueChange switch
+            {
+                > 0 => TransactionDirection.Income,
+                < 0 => TransactionDirection.Expense,
+                _ => TransactionDirection.Transfer
+            }, entry.Labels.Select(label => label.Name).ToList());
 }

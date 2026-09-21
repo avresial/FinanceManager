@@ -11,6 +11,7 @@ public interface ITransactionRuleService
     Task<TransactionRuleDto?> GetRuleAsync(int userId, Guid id, CancellationToken cancellationToken = default);
     Task<TransactionRuleDto> CreateRuleAsync(int userId, CreateTransactionRule command, CancellationToken cancellationToken = default);
     Task<TransactionRuleDto?> UpdateRuleAsync(int userId, Guid id, UpdateTransactionRule command, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TransactionRuleTestResultDto>> TestAsync(int userId, CreateTransactionRule command, CancellationToken cancellationToken = default);
     Task<bool> SetEnabledAsync(int userId, Guid id, bool enabled, CancellationToken cancellationToken = default);
     Task<bool> DeleteRuleAsync(int userId, Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TransactionRuleDto>?> ReorderAsync(int userId, ReorderTransactionRules command, CancellationToken cancellationToken = default);
