@@ -120,6 +120,50 @@ public sealed class TransactionRuleControllerTests(OptionsProvider optionsProvid
     }
 
     [Fact]
+    public async Task Test_ForAuthenticatedUser_EvaluatesTheUnsavedRule()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new CreateTransactionRule(
+            "Unsaved",
+            [new() { Type = "Contractor", Pattern = "ACME" }],
+            [new() { Type = "NormalizeContractor", Value = "Acme" }]);
+        var result = new TransactionRuleTestResultDto(
+            12,
+            "Cash",
+            34,
+            DateTime.UtcNow,
+            -10m,
+            new("ACME LTD", "Invoice", 12, 10m, TransactionDirection.Expense, []),
+            new("Acme", "Invoice", 12, 10m, TransactionDirection.Expense, []),
+            true);
+        _serviceMock
+            .Setup(x => x.TestAsync(_testUserId, It.IsAny<CreateTransactionRule>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([result]);
+
+        var response = await Client.PostAsJsonAsync(
+            "api/TransactionRules/test",
+            command,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var results = await response.Content.ReadFromJsonAsync<List<TransactionRuleTestResultDto>>(TestContext.Current.CancellationToken);
+        Assert.Equal(result.TransactionId, Assert.Single(results!).TransactionId);
+        _serviceMock.Verify(x => x.TestAsync(
+            _testUserId,
+            It.Is<CreateTransactionRule>(value => value.Name == "Unsaved"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(x => x.CreateRuleAsync(
+            It.IsAny<int>(),
+            It.IsAny<CreateTransactionRule>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _serviceMock.Verify(x => x.UpdateRuleAsync(
+            It.IsAny<int>(),
+            It.IsAny<Guid>(),
+            It.IsAny<UpdateTransactionRule>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Reorder_AndPreview_ReturnServiceResults()
     {
         Authorize("user", _testUserId, UserRole.User);

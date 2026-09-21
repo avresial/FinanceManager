@@ -32,6 +32,14 @@ public sealed class TransactionRuleHttpClient(HttpClient httpClient)
             : null;
     }
 
+    public async Task<List<TransactionRuleTestResultDto>?> TestAsync(CreateTransactionRule command, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync($"{_endpoint}/test", command, cancellationToken);
+        return response.IsSuccessStatusCode
+            ? await response.Content.ReadFromJsonAsync<List<TransactionRuleTestResultDto>>(cancellationToken: cancellationToken)
+            : null;
+    }
+
     public async Task<bool> SetEnabledAsync(Guid id, bool enabled, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PatchAsJsonAsync($"{_endpoint}/{id}/enabled", enabled, cancellationToken);
