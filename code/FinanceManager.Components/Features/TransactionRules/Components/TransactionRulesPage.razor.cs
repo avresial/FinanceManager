@@ -1,5 +1,7 @@
 using FinanceManager.Application.TransactionRules.Services;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
 using FinanceManager.Domain.TransactionRules.Conditions;
@@ -13,6 +15,7 @@ namespace FinanceManager.Components.Features.TransactionRules.Components;
 public partial class TransactionRulesPage : ComponentBase
 {
     private List<TransactionRuleDto> _rules = [];
+    private List<AvailableAccount> _accounts = [];
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isSaving;
@@ -30,11 +33,12 @@ public partial class TransactionRulesPage : ComponentBase
     private MudForm? _ruleForm;
     private string _previewContractor = "ACME Corp";
     private string _previewDescription = "Invoice";
-    private int _previewAccountId = 1;
+    private int? _previewAccountId;
     private decimal _previewAmount = 100m;
     private TransactionDirection _previewDirection = TransactionDirection.Expense;
 
     [Inject] public required TransactionRuleHttpClient HttpClient { get; set; }
+    [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -45,7 +49,14 @@ public partial class TransactionRulesPage : ComponentBase
         _error = null;
         try
         {
-            _rules = await HttpClient.GetAsync();
+            var rulesTask = HttpClient.GetAsync();
+            var accountsTask = CurrencyAccountHttpClient.GetAvailableAccountsAsync();
+            await Task.WhenAll(rulesTask, accountsTask);
+
+            _rules = await rulesTask;
+            _accounts = [.. await accountsTask];
+            if (_previewAccountId is not int accountId || IsMissingAccount(accountId))
+                _previewAccountId = _accounts.FirstOrDefault()?.AccountId;
         }
         catch (Exception)
         {
@@ -224,12 +235,18 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task PreviewAsync()
     {
+        if (_previewAccountId is not int accountId)
+        {
+            _error = "Select an account to preview the current rules.";
+            return;
+        }
+
         _isPreviewing = true;
         _error = null;
         try
         {
             _preview = await HttpClient.PreviewAsync(new TransactionRulePreviewFacts(
-                _previewContractor, _previewDescription, _previewAccountId, _previewAmount, _previewDirection, []));
+                _previewContractor, _previewDescription, accountId, _previewAmount, _previewDirection, []));
             if (_preview is null) throw new InvalidOperationException();
         }
         catch (Exception)
@@ -250,13 +267,6 @@ public partial class TransactionRulesPage : ComponentBase
             _actions.Add(NewAction());
     }
 
-    private static List<int> ParseAccountIds(string value) => value
-        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Select(item => int.TryParse(item, out var accountId) && accountId > 0
-            ? accountId
-            : throw new FormatException($"'{item}' is not a valid account ID."))
-        .ToList();
-
     private static List<string> ParseLabels(string value) => value
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .ToList();
@@ -264,13 +274,43 @@ public partial class TransactionRulesPage : ComponentBase
     private static ConditionEditorModel NewCondition() => new();
     private static ActionEditorModel NewAction() => new();
 
+    private bool IsMissingAccount(int accountId) => _accounts.All(account => account.AccountId != accountId);
+
+    private string GetAccountLabel(AvailableAccount account)
+    {
+        var accountsWithSameName = _accounts
+            .Where(candidate => candidate.AccountName.Equals(account.AccountName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(candidate => candidate.AccountId)
+            .ToList();
+        var context = account.AccountLabel?.ToString();
+        if (accountsWithSameName.Count == 1)
+            return context is null ? account.AccountName : $"{account.AccountName} ({context})";
+
+        var duplicateContext = accountsWithSameName.Count(candidate => candidate.AccountLabel == account.AccountLabel) > 1;
+        if (!duplicateContext && context is not null)
+            return $"{account.AccountName} ({context})";
+
+        var position = accountsWithSameName.IndexOf(account) + 1;
+        return context is null
+            ? $"{account.AccountName} ({position} of {accountsWithSameName.Count})"
+            : $"{account.AccountName} ({context} {position} of {accountsWithSameName.Count})";
+    }
+
+    private string GetAccountLabel(int accountId)
+    {
+        var account = _accounts.FirstOrDefault(candidate => candidate.AccountId == accountId);
+        return account is null ? GetMissingAccountLabel(accountId) : GetAccountLabel(account);
+    }
+
+    private static string GetMissingAccountLabel(int accountId) => $"Deleted account (#{accountId})";
+
     private sealed class ConditionEditorModel
     {
         public string Type { get; set; } = "Contractor";
         public string? Pattern { get; set; }
         public TextMatchOperator MatchOperator { get; set; } = TextMatchOperator.Contains;
         public bool IgnoreCase { get; set; } = true;
-        public string AccountIdsText { get; set; } = string.Empty;
+        public IReadOnlyCollection<int> AccountIds { get; set; } = [];
         public TransactionDirection Direction { get; set; } = TransactionDirection.Expense;
         public decimal? Threshold { get; set; }
         public AmountComparison Comparison { get; set; } = AmountComparison.GreaterThan;
@@ -283,7 +323,7 @@ public partial class TransactionRulesPage : ComponentBase
             Pattern = source.Pattern,
             MatchOperator = source.MatchOperator,
             IgnoreCase = source.IgnoreCase,
-            AccountIdsText = string.Join(",", source.AccountIds),
+            AccountIds = source.AccountIds,
             Direction = source.Direction,
             Threshold = source.Threshold,
             Comparison = source.Comparison,
@@ -299,7 +339,7 @@ public partial class TransactionRulesPage : ComponentBase
                 Pattern = Pattern,
                 MatchOperator = MatchOperator,
                 IgnoreCase = IgnoreCase,
-                AccountIds = Type.Equals("Account", StringComparison.OrdinalIgnoreCase) ? ParseAccountIds(AccountIdsText) : [],
+                AccountIds = Type.Equals("Account", StringComparison.OrdinalIgnoreCase) ? AccountIds.Distinct().ToList() : [],
                 Direction = Direction,
                 Threshold = Threshold,
                 Comparison = Comparison,

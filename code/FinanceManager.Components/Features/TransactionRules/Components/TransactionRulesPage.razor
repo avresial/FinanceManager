@@ -74,7 +74,7 @@
                         <MudSelect T="string" @bind-Value="condition.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem Value="@("Contractor")">Contractor</MudSelectItem>
                             <MudSelectItem Value="@("Description")">Description</MudSelectItem>
-                            <MudSelectItem Value="@("Account")">Account id</MudSelectItem>
+                            <MudSelectItem Value="@("Account")">Account</MudSelectItem>
                             <MudSelectItem Value="@("Amount")">Amount</MudSelectItem>
                             <MudSelectItem Value="@("Direction")">Direction</MudSelectItem>
                         </MudSelect>
@@ -100,7 +100,18 @@
                     else if (condition.Type == "Account")
                     {
                         <MudItem xs="12" sm="8">
-                            <MudTextField T="string" @bind-Value="condition.AccountIdsText" Label="Account ids" HelperText="Comma-separated account ids" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <MudSelect T="int" @bind-SelectedValues="condition.AccountIds" Label="Accounts" MultiSelection="true"
+                                       ToStringFunc="GetAccountLabel"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var account in _accounts)
+                                {
+                                    <MudSelectItem T="int" Value="@account.AccountId">@GetAccountLabel(account)</MudSelectItem>
+                                }
+                                @foreach (var accountId in condition.AccountIds.Where(IsMissingAccount))
+                                {
+                                    <MudSelectItem T="int" Value="@accountId">@GetMissingAccountLabel(accountId)</MudSelectItem>
+                                }
+                            </MudSelect>
                         </MudItem>
                     }
                     else if (condition.Type == "Direction")
@@ -262,8 +273,15 @@
             <MudItem xs="12" sm="6">
                 <MudTextField T="string" @bind-Value="_previewDescription" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </MudItem>
-            <MudItem xs="6" sm="3">
-                <MudNumericField T="int" @bind-Value="_previewAccountId" Label="Account id" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudItem xs="12" sm="3">
+                <MudSelect T="int?" @bind-Value="_previewAccountId" Label="Account" Required="true"
+                           ToStringFunc="@(accountId => accountId is int id ? GetAccountLabel(id) : string.Empty)"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var account in _accounts)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@GetAccountLabel(account)</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="3">
                 <MudNumericField T="decimal" @bind-Value="_previewAmount" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" />
