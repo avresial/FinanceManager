@@ -169,6 +169,9 @@ public sealed class TransactionRulesPageTests
             Assert.Contains("PAYPRO", cut.Markup);
             Assert.Contains("Income, Salary", cut.Markup);
         });
+
+        cut.Find($"#{labelsLabel.GetAttribute("for")}").Change("Bills");
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Test results", cut.Markup));
     }
 
     private static BunitContext CreateContext(RulesHandler handler)

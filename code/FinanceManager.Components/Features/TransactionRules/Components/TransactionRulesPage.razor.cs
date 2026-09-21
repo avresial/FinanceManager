@@ -7,6 +7,7 @@ using FinanceManager.Domain.TransactionRules.Dtos;
 using FinanceManager.Domain.TransactionRules.Models;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace FinanceManager.Components.Features.TransactionRules.Components;
 
@@ -29,6 +30,7 @@ public partial class TransactionRulesPage : ComponentBase
     private TransactionRuleApplyResultDto? _applyResult;
     private TransactionRuleEngineResult? _preview;
     private List<TransactionRuleTestResultDto>? _testResults;
+    private int _editorVersion;
     private MudForm? _ruleForm;
     private string _previewContractor = "ACME Corp";
     private string _previewDescription = "Invoice";
@@ -122,7 +124,10 @@ public partial class TransactionRulesPage : ComponentBase
                 _actions.Select(action => action.ToDto()).ToList(),
                 _enabled,
                 _stopProcessing);
-            _testResults = await HttpClient.TestAsync(command) ?? throw new InvalidOperationException();
+            var editorVersion = _editorVersion;
+            var results = await HttpClient.TestAsync(command) ?? throw new InvalidOperationException();
+            if (editorVersion == _editorVersion)
+                _testResults = results;
         }
         catch (FormatException ex)
         {
@@ -225,20 +230,34 @@ public partial class TransactionRulesPage : ComponentBase
             await _ruleForm.ResetValidationAsync();
     }
 
-    private void AddCondition() => _conditions.Add(NewCondition());
+    private void AddCondition()
+    {
+        EditorChanged();
+        _conditions.Add(NewCondition());
+    }
 
     private void RemoveCondition(ConditionEditorModel condition)
     {
         if (_conditions.Count > 1)
+        {
+            EditorChanged();
             _conditions.Remove(condition);
+        }
     }
 
-    private void AddAction() => _actions.Add(NewAction());
+    private void AddAction()
+    {
+        EditorChanged();
+        _actions.Add(NewAction());
+    }
 
     private void RemoveAction(ActionEditorModel action)
     {
         if (_actions.Count > 1)
+        {
+            EditorChanged();
             _actions.Remove(action);
+        }
     }
 
     private async Task ApplyAsync()
@@ -386,9 +405,13 @@ public partial class TransactionRulesPage : ComponentBase
         ? "No changes"
         : string.Join(", ", rule.Actions.Select(action => action.Type));
 
-    private bool TestsContractor() => _actions.Any(action => action.Type.Equals("NormalizeContractor", StringComparison.OrdinalIgnoreCase));
-    private bool TestsDescription() => _actions.Any(action => action.Type.Equals("NormalizeDescription", StringComparison.OrdinalIgnoreCase));
-    private bool TestsLabels() => _actions.Any(action => action.Type.Equals("SetLabels", StringComparison.OrdinalIgnoreCase));
+    private void OnEditorChanged(FormFieldChangedEventArgs _) => EditorChanged();
+
+    private void EditorChanged()
+    {
+        _editorVersion++;
+        _testResults = null;
+    }
 
     private static string FormatLabels(IReadOnlyList<string> labels) => labels.Count == 0
         ? "None"

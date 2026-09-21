@@ -29,7 +29,7 @@
         <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
     }
 
-    <MudForm @ref="_ruleForm">
+    <MudForm @ref="_ruleForm" FieldChanged="OnEditorChanged">
         <MudPaper Outlined Class="pa-4 mb-5">
             <div class="d-flex justify-space-between align-center mb-3">
                 <MudText Typo="Typo.h6">@(_editingId is null ? "Create a rule" : "Edit rule")</MudText>
@@ -223,15 +223,15 @@
                             else
                             {
                                 <div class="mt-2">
-                                    @if (TestsContractor())
+                                    @if (!string.Equals(result.Before.Contractor, result.After.Contractor, StringComparison.Ordinal))
                                     {
                                         <MudText Typo="Typo.body2"><b>Contractor:</b> @result.Before.Contractor → @result.After.Contractor</MudText>
                                     }
-                                    @if (TestsDescription())
+                                    @if (!string.Equals(result.Before.Description, result.After.Description, StringComparison.Ordinal))
                                     {
                                         <MudText Typo="Typo.body2"><b>Description:</b> @result.Before.Description → @result.After.Description</MudText>
                                     }
-                                    @if (TestsLabels())
+                                    @if (!result.Before.Labels.SequenceEqual(result.After.Labels))
                                     {
                                         <MudText Typo="Typo.body2"><b>Labels:</b> @FormatLabels(result.Before.Labels) → @FormatLabels(result.After.Labels)</MudText>
                                     }

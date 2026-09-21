@@ -69,7 +69,12 @@ public sealed class TransactionRuleService(
             command.Name.Trim(),
             1,
             TransactionRuleRuntimeBuilder.BuildConditions(command.Conditions),
-            TransactionRuleRuntimeBuilder.BuildActions(command.Actions));
+            TransactionRuleRuntimeBuilder.BuildActions(command.Actions),
+            command.StopProcessing,
+            command.IsEnabled);
+        if (!rule.IsEnabled)
+            return [];
+
         var accounts = await accountRepository.GetAll(userId);
         var constrainedAccountIds = command.Conditions
             .Where(condition => condition.Type.Equals("Account", StringComparison.OrdinalIgnoreCase))

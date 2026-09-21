@@ -153,6 +153,22 @@ public sealed class TransactionRuleServiceTests
     }
 
     [Fact]
+    public async Task Test_DisabledRule_ReturnsNoMatchesWithoutReadingTransactions()
+    {
+        var command = new CreateTransactionRule(
+            "Disabled rule",
+            [new() { Type = "Contractor", Pattern = "ACME" }],
+            [new() { Type = "NormalizeDescription", Value = "Receipt" }],
+            IsEnabled: false);
+
+        var results = await _service.TestAsync(7, command, TestContext.Current.CancellationToken);
+
+        Assert.Empty(results);
+        _accounts.Verify(x => x.GetAll(It.IsAny<int>()), Times.Never);
+        _entries.Verify(x => x.GetPostingDates(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ApplyToEntry_ResolvesKnownLabelsAndUpdatesTheEntry()
     {
         _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
