@@ -6,6 +6,7 @@ public class RecurringSubscription
     public int UserId { get; set; }
     public string MerchantKey { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public decimal? ReferenceAmount { get; set; }
     public bool IsMuted { get; set; }
     public bool IsCancelled { get; set; }
     public bool IsFlaggedForReview { get; set; }
