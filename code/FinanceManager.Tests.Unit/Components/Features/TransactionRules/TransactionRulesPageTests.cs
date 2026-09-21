@@ -15,6 +15,58 @@ namespace FinanceManager.Tests.Unit.Components.Features.TransactionRules;
 public sealed class TransactionRulesPageTests
 {
     [Fact]
+    public async Task EmptyRules_HidesApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No automation rules yet", cut.Markup);
+            Assert.DoesNotContain("Apply existing rules", cut.Markup);
+            Assert.DoesNotContain("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task CreatingFirstRule_ShowsApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("No automation rules yet", cut.Markup));
+
+        var nameLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Rule name", StringComparison.Ordinal));
+        cut.Find($"#{nameLabel.GetAttribute("for")}").Change("First rule");
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Create rule", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Apply existing rules", cut.Markup);
+            Assert.Contains("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task DeletingFinalRule_HidesApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler(AccountRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Apply existing rules", cut.Markup));
+
+        cut.Find("button[aria-label='Delete Account rule']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No automation rules yet", cut.Markup);
+            Assert.DoesNotContain("Apply existing rules", cut.Markup);
+            Assert.DoesNotContain("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Edit_AccountCondition_IgnoresEmptyAccountIdTokens()
     {
         var handler = new RulesHandler(AccountRule());
@@ -120,22 +172,34 @@ public sealed class TransactionRulesPageTests
         DateTime.UtcNow,
         null);
 
-    private sealed class RulesHandler(TransactionRuleDto rule) : HttpMessageHandler
+    private sealed class RulesHandler(TransactionRuleDto? rule = null) : HttpMessageHandler
     {
+        private readonly List<TransactionRuleDto> _rules = rule is null ? [] : [rule];
+
         public UpdateTransactionRule? LastUpdate { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (request.Method == HttpMethod.Get)
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { rule }) };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(_rules) };
+
+            if (request.Method == HttpMethod.Post)
+            {
+                var created = AccountRule() with { Name = "First rule" };
+                _rules.Add(created);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(created) };
+            }
 
             if (request.Method == HttpMethod.Put)
             {
                 LastUpdate = await request.Content!.ReadFromJsonAsync<UpdateTransactionRule>(cancellationToken);
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(rule) };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(_rules.Single()) };
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(rule) };
+            if (request.Method == HttpMethod.Delete)
+                _rules.Clear();
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }
     }
 }
