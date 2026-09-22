@@ -141,6 +141,34 @@ public class PortfolioReturnAttributionServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_TracksZeroPricePurchaseForFxAttribution()
+    {
+        var transaction = Flow(1, _start, InvestmentTransactionType.Buy, 1m, 0m, currency: "EUR");
+        var fixture = CreateFixture(
+            [transaction],
+            openingHoldings: new Dictionary<int, IReadOnlyDictionary<long, decimal>>(),
+            endingHoldings: Holdings(1m));
+        fixture.PriceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(450m);
+        fixture.CurrencyExchange
+            .Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(currency => currency.ShortName == "EUR"),
+                DefaultCurrency.PLN,
+                _start,
+                _end,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([(_start, 4m), (_end, 4.5m)]);
+
+        var result = await fixture.Service.GetAsync(_userId, DefaultCurrency.PLN, _start, _end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(PortfolioReturnAttributionStatus.Available, result.Status);
+        Assert.Equal(0m, result.ExternalCashMovement);
+        Assert.Equal(50m, result.FxEffect);
+        Assert.Equal(0m, result.ReconciliationDifference);
+    }
+
+    [Fact]
     public async Task GetAsync_MissingHistoricalExchangeRateReturnsUnavailable()
     {
         var transaction = Flow(1, _start, InvestmentTransactionType.Buy, 1m, 100m, currency: "EUR");

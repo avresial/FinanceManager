@@ -69,7 +69,7 @@ public class PortfolioReturnAttributionService(
             .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
-        var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
+        var ledger = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
         var ratesByCurrency = await LoadRatesAsync(
             listingCurrencies.Values
                 .Concat(bondDetails.Values.Select(details => NormalizeCurrency(details.Currency.ShortName)))
@@ -79,7 +79,7 @@ public class PortfolioReturnAttributionService(
             endDate,
             cancellationToken);
 
-        if (!TryConvertFlows(movements, currency, ratesByCurrency, out var externalCashMovement, out var feeEffect))
+        if (!TryConvertFlows(ledger.Movements, currency, ratesByCurrency, out var externalCashMovement, out var feeEffect))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var openingHoldings = investmentAccountIds.Length == 0
@@ -112,7 +112,7 @@ public class PortfolioReturnAttributionService(
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var (investmentFxEffect, investmentFxComplete) = await GetInvestmentFxEffectAsync(
-            movements,
+            ledger.QuantityChanges,
             openingHoldings,
             listingCurrencies,
             currency,
@@ -308,7 +308,7 @@ public class PortfolioReturnAttributionService(
     }
 
     private async Task<(decimal Effect, bool Complete)> GetInvestmentFxEffectAsync(
-        IReadOnlyList<PortfolioMovement> movements,
+        IReadOnlyList<PortfolioQuantityChange> quantityChanges,
         IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> openingHoldings,
         IReadOnlyDictionary<long, string> listingCurrencies,
         Currency targetCurrency,
@@ -327,8 +327,7 @@ public class PortfolioReturnAttributionService(
             }
         }
 
-        var flowsByListing = movements
-            .Where(flow => flow.Kind is PortfolioMovementKind.Purchase or PortfolioMovementKind.Sale)
+        var flowsByListing = quantityChanges
             .GroupBy(flow => flow.InstrumentId)
             .ToDictionary(group => group.Key, group => group.OrderBy(flow => flow.Date).ThenBy(flow => flow.SourceId).ToList());
 
@@ -365,7 +364,7 @@ public class PortfolioReturnAttributionService(
                         fxEffect += interval.Effect;
                     }
 
-                    quantity += flow.Kind == PortfolioMovementKind.Purchase ? flow.Quantity!.Value : -flow.Quantity!.Value;
+                    quantity += flow.Kind == PortfolioMovementKind.Purchase ? flow.Quantity : -flow.Quantity;
                     currentDate = flowDate;
                 }
             }

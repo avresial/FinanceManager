@@ -6,9 +6,11 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Performance;
 
 /// <summary>Normalizes period movements without valuation, FX conversion, or return semantics.</summary>
-public static class PortfolioPeriodLedger
+public sealed record PortfolioPeriodLedger(
+    IReadOnlyList<PortfolioMovement> Movements,
+    IReadOnlyList<PortfolioQuantityChange> QuantityChanges)
 {
-    public static IReadOnlyList<PortfolioMovement> Build(
+    public static PortfolioPeriodLedger Build(
         IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows,
         IReadOnlyList<BondAccount> bondAccounts,
         IReadOnlyDictionary<int, BondDetails> bondDetails,
@@ -16,6 +18,7 @@ public static class PortfolioPeriodLedger
         DateTime endDate)
     {
         List<PortfolioMovement> result = [];
+        List<PortfolioQuantityChange> quantityChanges = [];
 
         foreach (var flow in transactionFlows)
         {
@@ -29,6 +32,10 @@ public static class PortfolioPeriodLedger
             var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
             var principal = flow.Quantity * flow.UnitPrice * multiplier;
             var currency = isMinorQuote ? majorCurrency! : sourceCurrency;
+            quantityChanges.Add(new PortfolioQuantityChange(
+                flow.TransactionId, flow.AccountId, flow.AssetListingId, date,
+                flow.Type == InvestmentTransactionType.Buy ? PortfolioMovementKind.Purchase : PortfolioMovementKind.Sale,
+                flow.Quantity));
             if (principal != 0m)
                 result.Add(new PortfolioMovement(
                     flow.TransactionId, flow.AccountId, flow.AssetListingId, date,
@@ -64,6 +71,6 @@ public static class PortfolioPeriodLedger
             }
         }
 
-        return result;
+        return new PortfolioPeriodLedger(result, quantityChanges);
     }
 }

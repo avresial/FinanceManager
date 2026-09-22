@@ -27,7 +27,11 @@ public class PortfolioPeriodLedgerTests
             TradeDate = DateOnly.FromDateTime(_end.AddDays(1)),
         };
 
-        var movements = PortfolioPeriodLedger.Build([buy, sell], [], new Dictionary<int, BondDetails>(), _start, _end);
+        var ledger = PortfolioPeriodLedger.Build([buy, sell], [], new Dictionary<int, BondDetails>(), _start, _end);
+        var movements = ledger.Movements;
+
+        Assert.Single(ledger.QuantityChanges);
+        Assert.Equal(2m, ledger.QuantityChanges[0].Quantity);
 
         Assert.Collection(movements,
             principal =>
@@ -57,7 +61,7 @@ public class PortfolioPeriodLedgerTests
             12, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Sell,
             2m, 100m, -3m, "PLN", null);
 
-        var movements = PortfolioPeriodLedger.Build([sell], [], new Dictionary<int, BondDetails>(), _start, _end);
+        var movements = PortfolioPeriodLedger.Build([sell], [], new Dictionary<int, BondDetails>(), _start, _end).Movements;
 
         Assert.Equal(PortfolioMovementKind.Sale, movements[0].Kind);
         Assert.Equal(200m, movements[0].Amount);
@@ -77,12 +81,28 @@ public class PortfolioPeriodLedgerTests
             BondType.InflationBond, 100m)
         { Id = 5 };
 
-        var movements = PortfolioPeriodLedger.Build([], [account], new Dictionary<int, BondDetails> { [5] = details }, _start, _end);
+        var movements = PortfolioPeriodLedger.Build([], [account], new Dictionary<int, BondDetails> { [5] = details }, _start, _end).Movements;
 
         Assert.Equal(PortfolioMovementKind.BondContribution, movements[0].Kind);
         Assert.Equal(200m, movements[0].Amount);
         Assert.Equal(PortfolioMovementKind.BondWithdrawal, movements[1].Kind);
         Assert.Equal(100m, movements[1].Amount);
         Assert.All(movements, movement => Assert.Equal("PLN", movement.Currency));
+    }
+
+    [Fact]
+    public void Build_KeepsQuantityForZeroPriceTradeWithoutZeroAmountMovement()
+    {
+        var buy = new IInvestmentTransactionRepository.CapitalFlowInput(
+            13, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+            2m, 0m, null, "EUR", null);
+
+        var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
+
+        Assert.Empty(ledger.Movements);
+        var quantityChange = Assert.Single(ledger.QuantityChanges);
+        Assert.Equal(PortfolioMovementKind.Purchase, quantityChange.Kind);
+        Assert.Equal(2m, quantityChange.Quantity);
+        Assert.Equal(13, quantityChange.SourceId);
     }
 }

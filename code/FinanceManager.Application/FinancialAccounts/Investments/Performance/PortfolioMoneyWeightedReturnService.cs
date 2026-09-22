@@ -67,7 +67,7 @@ public class PortfolioMoneyWeightedReturnService(
             .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
-        var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
+        var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate).Movements;
         var ratesByCurrency = await LoadRatesAsync(
             movements,
             bondDetails.Values,
