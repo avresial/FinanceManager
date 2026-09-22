@@ -57,6 +57,29 @@ public class PortfolioMoneyWeightedReturnServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_IncludesSeparatePurchaseFeeInCashOutflow()
+    {
+        var transaction = new IInvestmentTransactionRepository.CapitalFlowInput(
+            1, _accountId, _listingId, DateOnly.FromDateTime(_start),
+            InvestmentTransactionType.Buy, 1m, 100m, 5m, "PLN", null);
+        var fixture = CreateFixture(
+            [transaction],
+            openingHoldings: new Dictionary<int, IReadOnlyDictionary<long, decimal>>(),
+            endingHoldings: new Dictionary<int, IReadOnlyDictionary<long, decimal>>
+            {
+                [_accountId] = new Dictionary<long, decimal> { [_listingId] = 1m }
+            });
+        fixture.PriceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(105m);
+
+        var result = await fixture.Service.GetAsync(_userId, DefaultCurrency.PLN, _start, _end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(MoneyWeightedReturnStatus.Available, result.Status);
+        Assert.Equal(0m, result.AnnualizedReturn);
+    }
+
+    [Fact]
     public async Task GetAsync_ConvertsCashFlowsUsingHistoricalFx()
     {
         var transaction = new IInvestmentTransactionRepository.CapitalFlowInput(
