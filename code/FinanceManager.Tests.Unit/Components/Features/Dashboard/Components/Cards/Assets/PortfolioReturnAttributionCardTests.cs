@@ -1,7 +1,6 @@
 using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
-using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -13,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MudBlazor.Services;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -20,7 +20,7 @@ using System.Text;
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Cards.Assets;
 
 [Trait("Category", "Unit")]
-public class TimeWeightedReturnCardTests
+public class PortfolioReturnAttributionCardTests
 {
     [Fact]
     public async Task RangeChange_IgnoresSlowerPreviousResponse()
@@ -32,25 +32,26 @@ public class TimeWeightedReturnCardTests
         var handler = new QueuedAssetsHandler();
         await using var context = CreateContext(handler);
 
-        var cut = context.Render<TimeWeightedReturnCard>(parameters => parameters
+        var cut = context.Render<PortfolioReturnAttributionCard>(parameters => parameters
             .Add(component => component.StartDateTime, firstStart)
             .Add(component => component.EndDateTime, firstEnd));
-        Assert.Equal(1, handler.TimeWeightedReturnRequestCount);
+        Assert.Equal(1, handler.ReturnAttributionRequestCount);
 
         cut.Render(parameters => parameters
             .Add(component => component.StartDateTime, secondStart)
             .Add(component => component.EndDateTime, secondEnd));
-        Assert.Equal(2, handler.TimeWeightedReturnRequestCount);
+        Assert.Equal(2, handler.ReturnAttributionRequestCount);
 
-        handler.Complete(1, new(0.2m, TimeWeightedReturnStatus.Available, secondStart, secondEnd));
-        cut.WaitForAssertion(() => Assert.Contains("20.00%", cut.Markup));
+        handler.Complete(1, PortfolioReturnAttributionResult.Available(200m, 0m, 200m, 0m, 0m, secondStart, secondEnd));
+        var currentAmount = $"+{200m.ToString("N2", CultureInfo.CurrentCulture)} PLN";
+        cut.WaitForAssertion(() => Assert.Contains(currentAmount, cut.Markup));
 
         var renderCount = cut.RenderCount;
-        handler.Complete(0, new(0.1m, TimeWeightedReturnStatus.Available, firstStart, firstEnd));
+        handler.Complete(0, PortfolioReturnAttributionResult.Available(100m, 0m, 100m, 0m, 0m, firstStart, firstEnd));
         cut.WaitForState(() => cut.RenderCount > renderCount);
 
-        Assert.Contains("20.00%", cut.Markup);
-        Assert.DoesNotContain("10.00%", cut.Markup);
+        Assert.Contains(currentAmount, cut.Markup);
+        Assert.DoesNotContain($"+{100m.ToString("N2", CultureInfo.CurrentCulture)} PLN", cut.Markup);
     }
 
     private static BunitContext CreateContext(HttpMessageHandler handler)
@@ -85,25 +86,25 @@ public class TimeWeightedReturnCardTests
 
     private sealed class QueuedAssetsHandler : HttpMessageHandler
     {
-        private readonly TaskCompletionSource<HttpResponseMessage>[] _timeWeightedReturnResponses =
+        private readonly TaskCompletionSource<HttpResponseMessage>[] _returnAttributionResponses =
         [
             new(TaskCreationOptions.RunContinuationsAsynchronously),
             new(TaskCreationOptions.RunContinuationsAsynchronously),
         ];
-        private int _timeWeightedReturnRequestCount;
+        private int _returnAttributionRequestCount;
 
-        public int TimeWeightedReturnRequestCount => Volatile.Read(ref _timeWeightedReturnRequestCount);
+        public int ReturnAttributionRequestCount => Volatile.Read(ref _returnAttributionRequestCount);
 
-        public void Complete(int index, TimeWeightedReturnResult result) =>
-            _timeWeightedReturnResponses[index].SetResult(Response(result));
+        public void Complete(int index, PortfolioReturnAttributionResult result) =>
+            _returnAttributionResponses[index].SetResult(Response(result));
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
-            if (path.Contains("GetTimeWeightedReturn", StringComparison.Ordinal))
+            if (path.Contains("GetReturnAttribution", StringComparison.Ordinal))
             {
-                var index = Interlocked.Increment(ref _timeWeightedReturnRequestCount) - 1;
-                return _timeWeightedReturnResponses[index].Task;
+                var index = Interlocked.Increment(ref _returnAttributionRequestCount) - 1;
+                return _returnAttributionResponses[index].Task;
             }
 
             if (path.Contains("GetMoneyWeightedReturn", StringComparison.Ordinal))
@@ -113,8 +114,12 @@ public class TimeWeightedReturnCardTests
                     DateTime.MinValue,
                     DateTime.MinValue)));
 
-            if (path.Contains("GetReturnAttribution", StringComparison.Ordinal))
-                return Task.FromResult(Response(PortfolioReturnAttributionResult.Unavailable(DateTime.MinValue, DateTime.MinValue)));
+            if (path.Contains("GetTimeWeightedReturn", StringComparison.Ordinal))
+                return Task.FromResult(Response(new TimeWeightedReturnResult(
+                    null,
+                    TimeWeightedReturnStatus.InsufficientData,
+                    DateTime.MinValue,
+                    DateTime.MinValue)));
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

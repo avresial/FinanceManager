@@ -79,7 +79,7 @@ public partial class Dashboard : ComponentBase
         !CardVisibility.IsHidden(cardId) && !IsAutoHiddenWhenEmpty(cardId);
 
     private bool IsAutoHiddenWhenEmpty(string cardId) =>
-        _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, (DashboardOverviewDto)_overview);
+        _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, _overview);
 
     private bool AnyCardVisible => DashboardCards.All.Any(card => IsCardVisible(card.Id));
 

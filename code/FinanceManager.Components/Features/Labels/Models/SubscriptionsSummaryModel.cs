@@ -17,7 +17,7 @@ public sealed record SubscriptionsSummaryModel(int ActiveCount, decimal MonthlyC
     /// <summary>Aggregates the tiles from a full subscription list, ignoring muted and cancelled items.</summary>
     public static SubscriptionsSummaryModel FromSubscriptions(IEnumerable<RecurringTransactionResult> subscriptions)
     {
-        var active = subscriptions.Where(x => !x.IsMuted && !x.IsCancelled).ToList();
+        var active = subscriptions.Where(x => !x.IsIncome && !x.IsMuted && !x.IsCancelled).ToList();
         return new SubscriptionsSummaryModel(
             active.Count,
             active.Sum(x => x.MonthlyCost),

@@ -12,7 +12,8 @@ internal class RecurringSubscriptionConfiguration : IEntityTypeConfiguration<Rec
         builder.HasKey(x => x.Id);
         builder.Property(x => x.MerchantKey).IsRequired().HasMaxLength(300);
         builder.Property(x => x.Name).IsRequired().HasMaxLength(300);
-        builder.HasIndex(x => new { x.UserId, x.MerchantKey }).IsUnique();
+        builder.Property(x => x.ReferenceAmount).HasPrecision(18, 2);
+        builder.HasIndex(x => new { x.UserId, x.MerchantKey, x.ReferenceAmount }).IsUnique();
         builder.HasOne<UserDto>()
             .WithMany()
             .HasForeignKey(x => x.UserId)

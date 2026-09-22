@@ -67,6 +67,22 @@ public sealed class TransactionRuleController(ITransactionRuleService ruleServic
         }
     }
 
+    [HttpPost("test")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<TransactionRuleTestResultDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Test([FromBody] CreateTransactionRule command, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = ApiAuthenticationHelper.GetUserId(User);
+            return Ok(await ruleService.TestAsync(userId, command, cancellationToken));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPatch("{id:guid}/enabled")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

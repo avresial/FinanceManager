@@ -22,8 +22,8 @@ public class RecurringTransactionDetectorServiceTests
         var existingId = Guid.NewGuid();
         var account = Account(
             Entry(1, new DateTime(2026, 4, 15), -40m, "Netflix"),
-            Entry(2, new DateTime(2026, 5, 15), -43m, "Netflix"),
-            Entry(3, new DateTime(2026, 6, 15), -49m, "Netflix"));
+            Entry(2, new DateTime(2026, 5, 15), -41m, "Netflix"),
+            Entry(3, new DateTime(2026, 6, 15), -42m, "Netflix"));
         Setup(account,
         [
             new RecurringSubscription
@@ -44,10 +44,10 @@ public class RecurringTransactionDetectorServiceTests
         Assert.Equal(existingId, result.PatternId);
         Assert.Equal(RecurringCadence.Monthly, result.Cadence);
         Assert.Equal(new DateTime(2026, 8, 15), result.NextExpectedChargeDate);
-        Assert.Equal(49m, result.LastAmount);
-        Assert.Equal(6m, result.PriceDelta);
-        Assert.Equal(44m, result.MonthlyCost);
-        Assert.Equal(528m, result.AnnualCost);
+        Assert.Equal(42m, result.LastAmount);
+        Assert.Equal(1m, result.PriceDelta);
+        Assert.Equal(41m, result.MonthlyCost);
+        Assert.Equal(492m, result.AnnualCost);
         Assert.True(result.IsFlaggedForReview);
     }
 
@@ -56,7 +56,7 @@ public class RecurringTransactionDetectorServiceTests
     {
         var account = Account(
             Entry(1, new DateTime(2025, 6, 1), -120m, "Cloud storage"),
-            Entry(2, new DateTime(2026, 6, 1), -144m, "Cloud storage"));
+            Entry(2, new DateTime(2026, 6, 1), -124m, "Cloud storage"));
         Setup(account, []);
         List<RecurringSubscription>? saved = null;
         _subscriptions
@@ -70,11 +70,13 @@ public class RecurringTransactionDetectorServiceTests
             TestContext.Current.CancellationToken));
 
         Assert.Equal(RecurringCadence.Annual, result.Cadence);
-        Assert.Equal(11m, result.MonthlyCost);
-        Assert.Equal(132m, result.AnnualCost);
+        Assert.Equal(10.17m, result.MonthlyCost);
+        Assert.Equal(122.04m, result.AnnualCost);
         Assert.Equal(new DateTime(2027, 6, 1), result.NextExpectedChargeDate);
         Assert.NotEqual(Guid.Empty, result.PatternId);
-        Assert.Equal(result.PatternId, Assert.Single(saved!).Id);
+        var savedSubscription = Assert.Single(saved!);
+        Assert.Equal(result.PatternId, savedSubscription.Id);
+        Assert.Equal(122m, savedSubscription.ReferenceAmount);
     }
 
     [Fact]
@@ -115,6 +117,158 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
+    public async Task GetRecurringTransactions_GroupsSameMerchantWithinFivePercent()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 15), -100m, "Streaming service"),
+            Entry(2, new DateTime(2026, 5, 15), -103m, "Streaming service"),
+            Entry(3, new DateTime(2026, 6, 15), -105m, "Streaming service"));
+        Setup(account, []);
+
+        var result = Assert.Single(await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(RecurringCadence.Monthly, result.Cadence);
+        Assert.Equal(102.67m, result.MonthlyCost);
+    }
+
+    [Fact]
+    public async Task GetRecurringTransactions_KeepsEveryClusterMemberWithinToleranceOfFinalMedian()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2025, 12, 15), -100m, "Streaming service"),
+            Entry(2, new DateTime(2026, 1, 15), -105m, "Streaming service"),
+            Entry(3, new DateTime(2026, 2, 15), -105m, "Streaming service"),
+            Entry(4, new DateTime(2026, 3, 15), -105m, "Streaming service"),
+            Entry(5, new DateTime(2026, 4, 15), -110m, "Streaming service"),
+            Entry(6, new DateTime(2026, 5, 15), -110m, "Streaming service"),
+            Entry(7, new DateTime(2026, 6, 15), -110m, "Streaming service"),
+            Entry(8, new DateTime(2026, 7, 15), -110m, "Streaming service"));
+        Setup(account, []);
+
+        var result = Assert.Single(await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(7, result.Entries.Count);
+        Assert.Equal(106.43m, result.MonthlyCost);
+    }
+
+    [Fact]
+    public async Task GetRecurringTransactions_SeparatesMateriallyDifferentAmountsForSameMerchant()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 1), -100m, "Utility provider"),
+            Entry(2, new DateTime(2026, 4, 15), -200m, "Utility provider"),
+            Entry(3, new DateTime(2026, 5, 1), -101m, "Utility provider"),
+            Entry(4, new DateTime(2026, 5, 15), -202m, "Utility provider"),
+            Entry(5, new DateTime(2026, 6, 1), -102m, "Utility provider"),
+            Entry(6, new DateTime(2026, 6, 15), -204m, "Utility provider"));
+        Setup(account, []);
+
+        var result = await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.Count);
+        Assert.All(result, pattern => Assert.Equal(RecurringCadence.Monthly, pattern.Cadence));
+        Assert.Equal([101m, 202m], result.Select(x => x.MonthlyCost).Order().ToList());
+    }
+
+    [Fact]
+    public async Task GetRecurringTransactions_SeparatesInterleavedAnnualPoliciesForSameMerchant()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2024, 9, 1), -610m, "Insurance company"),
+            Entry(2, new DateTime(2025, 3, 1), -257m, "Insurance company"),
+            Entry(3, new DateTime(2025, 6, 1), -430m, "Insurance company"),
+            Entry(4, new DateTime(2025, 9, 1), -610m, "Insurance company"),
+            Entry(5, new DateTime(2026, 3, 1), -257m, "Insurance company"),
+            Entry(6, new DateTime(2026, 6, 1), -430m, "Insurance company"));
+        Setup(account, []);
+
+        var result = await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, result.Count);
+        Assert.All(result, pattern => Assert.Equal(RecurringCadence.Annual, pattern.Cadence));
+        Assert.Equal([257m, 430m, 610m], result.Select(x => x.LastAmount).Order().ToList());
+    }
+
+    [Fact]
+    public async Task GetRecurringTransactions_MatchesSavedStateByMerchantAndAmount()
+    {
+        var mutedPatternId = Guid.NewGuid();
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 1), -100m, "Utility provider"),
+            Entry(2, new DateTime(2026, 4, 15), -200m, "Utility provider"),
+            Entry(3, new DateTime(2026, 5, 1), -101m, "Utility provider"),
+            Entry(4, new DateTime(2026, 5, 15), -202m, "Utility provider"),
+            Entry(5, new DateTime(2026, 6, 1), -102m, "Utility provider"),
+            Entry(6, new DateTime(2026, 6, 15), -204m, "Utility provider"));
+        Setup(account,
+        [
+            new RecurringSubscription
+            {
+                Id = mutedPatternId,
+                UserId = 7,
+                MerchantKey = "utilityprovider",
+                Name = "Utility provider",
+                ReferenceAmount = 101m,
+                IsMuted = true
+            }
+        ]);
+
+        var result = await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken);
+
+        var muted = Assert.Single(result, pattern => pattern.IsMuted);
+        Assert.Equal(mutedPatternId, muted.PatternId);
+        Assert.Equal(102m, muted.LastAmount);
+        Assert.False(Assert.Single(result, pattern => !pattern.IsMuted).IsCancelled);
+    }
+
+    [Fact]
+    public async Task GetRecurringTransactions_DoesNotTransferLegacyStateWhenMerchantSplits()
+    {
+        var legacyPatternId = Guid.NewGuid();
+        var account = Account(
+            Entry(1, new DateTime(2026, 4, 1), -100m, "Utility provider"),
+            Entry(2, new DateTime(2026, 4, 15), -200m, "Utility provider"),
+            Entry(3, new DateTime(2026, 5, 1), -100m, "Utility provider"),
+            Entry(4, new DateTime(2026, 5, 15), -200m, "Utility provider"),
+            Entry(5, new DateTime(2026, 6, 1), -100m, "Utility provider"),
+            Entry(6, new DateTime(2026, 6, 15), -200m, "Utility provider"));
+        Setup(account,
+        [
+            new RecurringSubscription
+            {
+                Id = legacyPatternId,
+                UserId = 7,
+                MerchantKey = "utilityprovider",
+                Name = "Utility provider",
+                IsMuted = true,
+                IsCancelled = true
+            }
+        ]);
+
+        var result = await CreateService().GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.Count);
+        Assert.DoesNotContain(result, pattern => pattern.PatternId == legacyPatternId);
+        Assert.All(result, pattern =>
+        {
+            Assert.False(pattern.IsMuted);
+            Assert.False(pattern.IsCancelled);
+        });
+    }
+
+    [Fact]
     public async Task GetRecurringCashFlows_DetectsRecurringIncomeWithPositiveAmount()
     {
         var account = Account(
@@ -134,6 +288,31 @@ public class RecurringTransactionDetectorServiceTests
         Assert.NotEqual(Guid.Empty, result.PatternId);
         Assert.False(result.IsMuted);
         Assert.False(result.IsCancelled);
+    }
+
+    [Fact]
+    public async Task RecurringIncome_WithPaydayAndAmountVariation_IsReturnedByBothQueries()
+    {
+        var account = Account(
+            Entry(1, new DateTime(2026, 5, 30), 4_950m, "ACME payroll"),
+            Entry(2, new DateTime(2026, 6, 30), 5_000m, "ACME payroll"),
+            Entry(3, new DateTime(2026, 7, 29), 5_050m, "ACME payroll"));
+        Setup(account, []);
+        var service = CreateService();
+
+        var transaction = Assert.Single(await service.GetRecurringTransactions(
+            7,
+            TestContext.Current.CancellationToken));
+        var cashFlow = Assert.Single(await service.GetRecurringCashFlows(
+            7,
+            TestContext.Current.CancellationToken));
+
+        Assert.True(transaction.IsIncome);
+        Assert.Equal(5_000m, transaction.MonthlyCost);
+        Assert.Equal(new DateTime(2026, 8, 29), transaction.NextExpectedChargeDate);
+        Assert.Equal(5_000m, cashFlow.MonthlyAmount);
+        Assert.Equal(5_050m, cashFlow.OccurrenceAmount);
+        Assert.Equal(transaction.NextExpectedChargeDate, cashFlow.NextExpectedDate);
     }
 
     [Fact]

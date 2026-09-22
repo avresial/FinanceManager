@@ -20,4 +20,5 @@ public record AlertEvaluationOutcome(
     IReadOnlyDictionary<string, string> Context,
     string? ErrorMessage = null,
     IReadOnlyList<AlertTransactionReference>? MatchingTransactions = null,
-    int MatchingTransactionCount = 0);
+    int MatchingTransactionCount = 0,
+    int OccurrenceCount = 0);

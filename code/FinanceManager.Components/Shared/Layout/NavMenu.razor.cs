@@ -109,12 +109,12 @@ public partial class NavMenu : ComponentBase, IDisposable
                 ApplySnapshot(cachedSnapshot);
                 cancellationToken.ThrowIfCancellationRequested();
                 await InvokeAsync(StateHasChanged);
-                _ = RefreshSnapshotAsync((UserSession)user, cancellationToken);
+                _ = RefreshSnapshotAsync(user, cancellationToken);
                 return;
             }
         }
 
-        await RefreshSnapshotAsync((UserSession)user, cancellationToken);
+        await RefreshSnapshotAsync(user, cancellationToken);
     }
 
     private async Task<UserSession?> TryGetLoggedUserAsync(CancellationToken cancellationToken)

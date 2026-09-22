@@ -9,8 +9,14 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Fixed
+- Keep distinct recurring payments to the same merchant separate by requiring their amounts to stay within 5% before detecting cadence. #799
+- Detect recurring income in the dashboard and cash-flow forecast, and keep forecast chart legends readable in light and dark themes. #798
+
 ### Added
 - Portfolio-level Assets analytics now show cumulative time-weighted return with contributions and withdrawals neutralized for the selected range. #791
+- Transaction automation rules can now be tested against up to five existing transactions before saving, with read-only before-and-after results. #802
+- Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
 - Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734
 - Portfolio-level Assets analytics now show annualized money-weighted return (XIRR) for the selected investment range, with historical currency conversion and explicit unavailable states. #790
@@ -42,6 +48,8 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Hide transaction-rule preview and retroactive-apply controls until at least one automation rule exists. #801
+- Redesign the dashboard Alerts card as a compact triggered-alert list with an in-card detail view for matching occurrences. #794
 - Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
 - Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786
 - Improve triggered alert details with formatted comparisons and inspectable matching transactions. #779

@@ -19,6 +19,7 @@ public sealed class AssetsPageCardsCacheSnapshot
     public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
     public MoneyWeightedReturnResult? MoneyWeightedReturn { get; set; }
     public TimeWeightedReturnResult? TimeWeightedReturn { get; set; }
+    public PortfolioReturnAttributionResult? ReturnAttribution { get; set; }
 }
 
 public sealed class AssetsPageCardsRefreshContext

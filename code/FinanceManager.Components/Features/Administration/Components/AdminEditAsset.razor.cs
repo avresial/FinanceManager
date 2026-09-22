@@ -108,7 +108,7 @@ public partial class AdminEditAsset : ComponentBase
         {
             if (_isNew)
             {
-                var created = await AssetHttpClient.CreateAsset((AssetDto)_asset);
+                var created = await AssetHttpClient.CreateAsset(_asset);
                 if (created is null)
                 {
                     _errors.Add("Failed to create asset.");

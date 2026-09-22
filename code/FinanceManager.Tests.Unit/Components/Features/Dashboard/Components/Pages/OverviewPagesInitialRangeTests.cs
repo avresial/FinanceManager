@@ -53,6 +53,7 @@ public class OverviewPagesInitialRangeTests
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
         context.ComponentFactories.AddStub<MoneyWeightedReturnCard>();
         context.ComponentFactories.AddStub<TimeWeightedReturnCard>();
+        context.ComponentFactories.AddStub<PortfolioReturnAttributionCard>();
         context.ComponentFactories.AddStub<InvestmentPaycheckEstimatorCard>();
         context.ComponentFactories.AddStub<InvestmentRateCard>();
         context.ComponentFactories.AddStub<DiversificationProxyCard>();

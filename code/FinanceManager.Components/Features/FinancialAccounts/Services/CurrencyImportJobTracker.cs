@@ -113,7 +113,7 @@ public sealed class CurrencyImportJobTracker(
         try
         {
             var status = await importClient.GetCurrencyImportStatusAsync(jobId);
-            if (status is not null && ApplyStatus((CurrencyImportJobStatusDto)status)) Changed?.Invoke();
+            if (status is not null && ApplyStatus(status)) Changed?.Invoke();
         }
         catch (Exception ex) { logger.LogDebug(ex, "Unable to refresh import job status"); }
     }

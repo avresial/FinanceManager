@@ -16,8 +16,9 @@
 }
 
 /* ApexCharts defaults legend labels to a fixed dark grey. Use the active MudBlazor palette so
-   the Balance, benchmark, and Capital labels remain readable when the app switches to dark mode. */
-.fm-hero-chart .apexcharts-legend-text {
+   account and cash-flow forecast series labels remain readable when the app switches theme. */
+.fm-hero-chart .apexcharts-legend-text,
+.cash-flow-forecast-chart .apexcharts-legend-text {
     color: var(--mud-palette-text-primary) !important;
 }
 

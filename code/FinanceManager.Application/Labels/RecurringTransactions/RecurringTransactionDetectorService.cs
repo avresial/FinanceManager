@@ -7,6 +7,7 @@ using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Labels.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Services;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -18,17 +19,35 @@ public class RecurringTransactionDetectorService(
     IDateTimeProvider dateTimeProvider) : IRecurringTransactionDetectorService
 {
     private const decimal _minimumMonthlyAverage = 5m;
+    private const decimal _amountTolerance = 0.05m;
     private const double _similarityThreshold = 0.75;
 
-    public Task<List<RecurringTransactionResult>> GetRecurringTransactions(
+    public async Task<List<RecurringTransactionResult>> GetRecurringTransactions(
         int userId,
-        CancellationToken cancellationToken = default) =>
-        GetRecurringTransactionsCore(
+        CancellationToken cancellationToken = default)
+    {
+        var asOfDate = dateTimeProvider.TodayUtc;
+        var expenses = await GetRecurringTransactionsCore(
             userId,
-            dateTimeProvider.TodayUtc,
+            asOfDate,
             cancellationToken,
             persistSubscriptions: true,
             includeAccount: null);
+        var incomes = await DetectPatterns(
+            userId,
+            asOfDate,
+            static entry => entry.ValueChange > 0,
+            isIncome: true,
+            static account => account.AccountType == AccountLabel.Cash,
+            cancellationToken);
+
+        return expenses
+            .Concat(incomes.Select(x => x.Result))
+            .OrderByDescending(x => x.IsFlaggedForReview)
+            .ThenBy(x => x.IsMuted || x.IsCancelled)
+            .ThenBy(x => x.NextExpectedChargeDate)
+            .ToList();
+    }
 
     private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
         int userId,
@@ -41,6 +60,7 @@ public class RecurringTransactionDetectorService(
             userId,
             asOfDate,
             static entry => entry.ValueChange < 0,
+            isIncome: false,
             includeAccount,
             cancellationToken);
 
@@ -54,7 +74,14 @@ public class RecurringTransactionDetectorService(
                 .Where(x => !matchedIds.Contains(x.Id))
                 .Select(x => (Subscription: x, Similarity: CalculateSimilarity(x.MerchantKey, pattern.MerchantKey)))
                 .Where(x => x.Similarity >= _similarityThreshold)
+                .Where(x => x.Subscription.ReferenceAmount is decimal referenceAmount
+                    ? AmountsAreSimilar(referenceAmount, pattern.ReferenceAmount)
+                    : detected.Count(candidate =>
+                        CalculateSimilarity(x.Subscription.MerchantKey, candidate.MerchantKey) >= _similarityThreshold) == 1)
                 .OrderByDescending(x => x.Similarity)
+                .ThenBy(x => x.Subscription.ReferenceAmount is decimal referenceAmount
+                    ? Math.Abs(referenceAmount - pattern.ReferenceAmount)
+                    : decimal.MaxValue)
                 .Select(x => x.Subscription)
                 .FirstOrDefault();
 
@@ -62,10 +89,11 @@ public class RecurringTransactionDetectorService(
             {
                 subscription = new RecurringSubscription
                 {
-                    Id = CreatePatternId(userId, pattern.MerchantKey),
+                    Id = CreatePatternId(userId, pattern.MerchantKey, pattern.ReferenceAmount),
                     UserId = userId,
                     MerchantKey = pattern.MerchantKey,
-                    Name = pattern.Result.Name
+                    Name = pattern.Result.Name,
+                    ReferenceAmount = pattern.ReferenceAmount
                 };
                 subscriptions.Add(subscription);
                 added.Add(subscription);
@@ -76,6 +104,7 @@ public class RecurringTransactionDetectorService(
                 {
                     subscription.MerchantKey = pattern.MerchantKey;
                     subscription.Name = pattern.Result.Name;
+                    subscription.ReferenceAmount = pattern.ReferenceAmount;
                 }
             }
 
@@ -120,6 +149,7 @@ public class RecurringTransactionDetectorService(
             userId,
             asOfDate,
             static entry => entry.ValueChange > 0,
+            isIncome: true,
             static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
 
@@ -142,7 +172,7 @@ public class RecurringTransactionDetectorService(
                 OccurrenceAmount = income.Result.LastAmount,
                 Cadence = income.Result.Cadence,
                 NextExpectedDate = income.Result.NextExpectedChargeDate,
-                PatternId = CreatePatternId(userId, income.MerchantKey)
+                PatternId = CreatePatternId(userId, income.MerchantKey, income.ReferenceAmount)
             }))
             .OrderBy(flow => flow.NextExpectedDate)
             .ThenBy(flow => flow.Name, StringComparer.OrdinalIgnoreCase)
@@ -160,6 +190,7 @@ public class RecurringTransactionDetectorService(
         int userId,
         DateTime today,
         Func<CurrencyAccountEntry, bool> includeEntry,
+        bool isIncome,
         Func<CurrencyAccount, bool>? includeAccount,
         CancellationToken cancellationToken)
     {
@@ -194,34 +225,45 @@ public class RecurringTransactionDetectorService(
 
         var clusters = Cluster(rawEntries);
         return clusters
-            .Select(cluster => BuildResult(cluster.Key, cluster.Value, today))
+            .Select(cluster => BuildResult(cluster[0].Merchant, cluster, today, isIncome))
             .OfType<DetectedPattern>()
             .Where(x => x.Result.MonthlyCost >= _minimumMonthlyAverage)
             .ToList();
     }
 
-    private static Dictionary<string, List<DetectedEntry>> Cluster(IEnumerable<DetectedEntry> entries)
+    private static List<List<DetectedEntry>> Cluster(IEnumerable<DetectedEntry> entries)
     {
-        var result = new Dictionary<string, List<DetectedEntry>>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<List<DetectedEntry>>();
 
         foreach (var entry in entries.OrderBy(x => x.Date))
         {
-            var representative = result.Keys.FirstOrDefault(
-                key => CalculateSimilarity(key, entry.Merchant) >= _similarityThreshold);
-
-            if (representative is null)
+            var cluster = result.FirstOrDefault(candidate =>
             {
-                result[entry.Merchant] = [entry];
+                if (CalculateSimilarity(candidate[0].Merchant, entry.Merchant) < _similarityThreshold)
+                    return false;
+
+                List<DetectedEntry> prospective = [.. candidate, entry];
+                var referenceAmount = Median(prospective.Select(x => x.Amount));
+                return prospective.All(item => AmountsAreSimilar(referenceAmount, item.Amount));
+            });
+
+            if (cluster is null)
+            {
+                result.Add([entry]);
                 continue;
             }
 
-            result[representative].Add(entry);
+            cluster.Add(entry);
         }
 
         return result;
     }
 
-    private static DetectedPattern? BuildResult(string name, List<DetectedEntry> entries, DateTime asOf)
+    private static DetectedPattern? BuildResult(
+        string name,
+        List<DetectedEntry> entries,
+        DateTime asOf,
+        bool isIncome)
     {
         var occurrences = entries
             .GroupBy(x => x.Date.Date)
@@ -232,6 +274,8 @@ public class RecurringTransactionDetectorService(
             .OrderBy(x => x.Date)
             .ToList();
         if (occurrences.Count < 2) return null;
+
+        var referenceAmount = Median(entries.Select(x => x.Amount));
 
         var gaps = occurrences.Zip(occurrences.Skip(1), (previous, current) => (current.Date - previous.Date).TotalDays).ToList();
         var cadence = DetectCadence(gaps);
@@ -256,6 +300,7 @@ public class RecurringTransactionDetectorService(
 
         return new(
             NormalizeMerchant(name),
+            referenceAmount,
             new RecurringTransactionResult
             {
                 Name = name,
@@ -267,6 +312,7 @@ public class RecurringTransactionDetectorService(
                 PreviousAmount = Math.Round(previous.Amount, 2),
                 MonthlyCost = monthlyCost,
                 AnnualCost = monthlyCost * 12m,
+                IsIncome = isIncome,
                 Entries = occurrences.SelectMany(x => x.Entries).ToList()
             });
     }
@@ -323,9 +369,22 @@ public class RecurringTransactionDetectorService(
     private static string NormalizeMerchant(string value) =>
         string.Concat(value.Where(char.IsLetterOrDigit)).ToLowerInvariant();
 
-    private static Guid CreatePatternId(int userId, string merchantKey)
+    private static bool AmountsAreSimilar(decimal referenceAmount, decimal candidateAmount) =>
+        Math.Abs(candidateAmount - referenceAmount) <= referenceAmount * _amountTolerance;
+
+    private static decimal Median(IEnumerable<decimal> values)
     {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{userId}:{merchantKey}"));
+        var ordered = values.Order().ToList();
+        var middle = ordered.Count / 2;
+        return ordered.Count % 2 == 0
+            ? (ordered[middle - 1] + ordered[middle]) / 2m
+            : ordered[middle];
+    }
+
+    private static Guid CreatePatternId(int userId, string merchantKey, decimal referenceAmount)
+    {
+        var amountKey = referenceAmount.ToString("F2", CultureInfo.InvariantCulture);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{userId}:{merchantKey}:{amountKey}"));
         return new Guid(hash.AsSpan(0, 16));
     }
 
@@ -357,5 +416,8 @@ public class RecurringTransactionDetectorService(
 
     private sealed record DetectedEntry(string Merchant, DateTime Date, decimal Amount, int AccountId, int EntryId);
     private sealed record Occurrence(DateTime Date, decimal Amount, List<RecurringTransactionEntryReference> Entries);
-    private sealed record DetectedPattern(string MerchantKey, RecurringTransactionResult Result);
+    private sealed record DetectedPattern(
+        string MerchantKey,
+        decimal ReferenceAmount,
+        RecurringTransactionResult Result);
 }

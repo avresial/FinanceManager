@@ -64,7 +64,7 @@ public partial class RecurringTransactionDetectorCard : IDisposable
                 var data = (await RecurringTransactionDetectorHttpClient.GetRecurringTransactions(user.UserId))
                     .Where(x => !x.IsMuted && !x.IsCancelled)
                     .ToList();
-                return new(data, data.Count == 0 ? 0 : Math.Round(data.Sum(x => x.Value), 2));
+                return new(data, Math.Round(data.Where(x => !x.IsIncome).Sum(x => x.Value), 2));
             },
             onSnapshotPainted: ShowData,
             onSnapshotMissing: ShowLoading,

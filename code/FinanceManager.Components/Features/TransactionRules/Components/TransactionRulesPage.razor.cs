@@ -7,6 +7,7 @@ using FinanceManager.Domain.TransactionRules.Dtos;
 using FinanceManager.Domain.TransactionRules.Models;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Utilities;
 
 namespace FinanceManager.Components.Features.TransactionRules.Components;
 
@@ -16,6 +17,7 @@ public partial class TransactionRulesPage : ComponentBase
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isSaving;
+    private bool _isTesting;
     private bool _isApplying;
     private bool _isPreviewing;
     private bool _enabled = true;
@@ -27,6 +29,8 @@ public partial class TransactionRulesPage : ComponentBase
     private List<ActionEditorModel> _actions = [NewAction()];
     private TransactionRuleApplyResultDto? _applyResult;
     private TransactionRuleEngineResult? _preview;
+    private List<TransactionRuleTestResultDto>? _testResults;
+    private int _editorVersion;
     private MudForm? _ruleForm;
     private string _previewContractor = "ACME Corp";
     private string _previewDescription = "Invoice";
@@ -101,6 +105,44 @@ public partial class TransactionRulesPage : ComponentBase
         }
     }
 
+    private async Task TestAsync()
+    {
+        _error = null;
+        _testResults = null;
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            _error = "Rule name is required.";
+            return;
+        }
+
+        _isTesting = true;
+        try
+        {
+            var command = new CreateTransactionRule(
+                _name.Trim(),
+                _conditions.Select(condition => condition.ToDto()).ToList(),
+                _actions.Select(action => action.ToDto()).ToList(),
+                _enabled,
+                _stopProcessing);
+            var editorVersion = _editorVersion;
+            var results = await HttpClient.TestAsync(command) ?? throw new InvalidOperationException();
+            if (editorVersion == _editorVersion)
+                _testResults = results;
+        }
+        catch (FormatException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "Unable to test this rule. Check the condition and action values.";
+        }
+        finally
+        {
+            _isTesting = false;
+        }
+    }
+
     private async Task ToggleAsync(TransactionRuleDto rule, bool enabled)
     {
         try
@@ -165,6 +207,7 @@ public partial class TransactionRulesPage : ComponentBase
 
     private void BeginEdit(TransactionRuleDto rule)
     {
+        _testResults = null;
         _editingId = rule.Id;
         _name = rule.Name;
         _enabled = rule.IsEnabled;
@@ -182,24 +225,39 @@ public partial class TransactionRulesPage : ComponentBase
         _stopProcessing = false;
         _conditions = [NewCondition()];
         _actions = [NewAction()];
+        _testResults = null;
         if (_ruleForm is not null)
             await _ruleForm.ResetValidationAsync();
     }
 
-    private void AddCondition() => _conditions.Add(NewCondition());
+    private void AddCondition()
+    {
+        EditorChanged();
+        _conditions.Add(NewCondition());
+    }
 
     private void RemoveCondition(ConditionEditorModel condition)
     {
         if (_conditions.Count > 1)
+        {
+            EditorChanged();
             _conditions.Remove(condition);
+        }
     }
 
-    private void AddAction() => _actions.Add(NewAction());
+    private void AddAction()
+    {
+        EditorChanged();
+        _actions.Add(NewAction());
+    }
 
     private void RemoveAction(ActionEditorModel action)
     {
         if (_actions.Count > 1)
+        {
+            EditorChanged();
             _actions.Remove(action);
+        }
     }
 
     private async Task ApplyAsync()
@@ -346,4 +404,16 @@ public partial class TransactionRulesPage : ComponentBase
     private static string DescribeActions(TransactionRuleDto rule) => rule.Actions.Count == 0
         ? "No changes"
         : string.Join(", ", rule.Actions.Select(action => action.Type));
+
+    private void OnEditorChanged(FormFieldChangedEventArgs _) => EditorChanged();
+
+    private void EditorChanged()
+    {
+        _editorVersion++;
+        _testResults = null;
+    }
+
+    private static string FormatLabels(IReadOnlyList<string> labels) => labels.Count == 0
+        ? "None"
+        : string.Join(", ", labels);
 }

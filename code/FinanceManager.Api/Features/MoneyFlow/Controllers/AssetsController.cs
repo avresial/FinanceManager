@@ -27,7 +27,8 @@ public class AssetsController(
     IInvestmentAppreciationService investmentAppreciationService,
     IAccountRepository<InvestmentAccount> accountRepository,
     IMoneyWeightedReturnService moneyWeightedReturnService,
-    ITimeWeightedReturnService timeWeightedReturnService) : ControllerBase
+    ITimeWeightedReturnService timeWeightedReturnService,
+    IPortfolioReturnAttributionService portfolioReturnAttributionService) : ControllerBase
 {
     [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
@@ -71,6 +72,18 @@ public class AssetsController(
     public async Task<IActionResult> GetTimeWeightedReturn(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
             ? Ok(await timeWeightedReturnService.GetAsync(
+                userId,
+                await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken),
+                start,
+                end,
+                cancellationToken))
+            : Forbid();
+
+    [HttpGet("GetReturnAttribution/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PortfolioReturnAttributionResult))]
+    public async Task<IActionResult> GetReturnAttribution(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
+            ? Ok(await portfolioReturnAttributionService.GetAsync(
                 userId,
                 await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken),
                 start,
