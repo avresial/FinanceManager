@@ -12,6 +12,8 @@
             <MudAppBar Dense Elevation="0">
                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" aria-label="Toggle navigation menu" />
                 <SectionOutlet SectionName="page-title" />
+                <MudSpacer />
+                <SectionOutlet SectionName="page-actions" />
             </MudAppBar>
 
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">

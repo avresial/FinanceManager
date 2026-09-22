@@ -47,6 +47,7 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Move the Dashboard **Customize** action into the app bar while preserving its card visibility preferences. #803
 - Select transaction automation rule accounts by name instead of entering account IDs. #800
 - Hide transaction-rule preview and retroactive-apply controls until at least one automation rule exists. #801
 - Redesign the dashboard Alerts card as a compact triggered-alert list with an in-card detail view for matching occurrences. #794

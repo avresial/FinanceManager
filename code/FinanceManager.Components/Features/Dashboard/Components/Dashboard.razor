@@ -6,7 +6,7 @@
 @using FinanceManager.Components.Shared.Helpers
 
 <MudContainer Class="py-2">
-    <div class="d-flex justify-end mb-2">
+    <SectionContent SectionName="page-actions">
         <MudMenu Label="Customize" StartIcon="@Icons.Material.Filled.Tune" Variant="Variant.Text"
                  Color="Color.Default" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
             <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
@@ -25,7 +25,7 @@
                 </MudMenuItem>
             }
         </MudMenu>
-    </div>
+    </SectionContent>
 
     @if (_overview is null && _isLoading)
     {
@@ -65,7 +65,7 @@
         @if (!AnyCardVisible)
         {
             <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="false">
-                All cards are hidden. Use <b>Customize</b> above to show the cards you want to see.
+                All cards are hidden. Use <b>Customize</b> to choose the cards you want to see.
             </MudAlert>
         }
 
