@@ -69,6 +69,7 @@ public class PortfolioReturnAttributionService(
             .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
+        var ledger = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
         var ratesByCurrency = await LoadRatesAsync(
             listingCurrencies.Values
                 .Concat(bondDetails.Values.Select(details => NormalizeCurrency(details.Currency.ShortName)))
@@ -78,8 +79,7 @@ public class PortfolioReturnAttributionService(
             endDate,
             cancellationToken);
 
-        var pendingFlows = BuildPendingFlows(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
-        if (!TryConvertFlows(pendingFlows, currency, ratesByCurrency, out var externalCashMovement, out var feeEffect))
+        if (!TryConvertFlows(ledger.Movements, currency, ratesByCurrency, out var externalCashMovement, out var feeEffect))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var openingHoldings = investmentAccountIds.Length == 0
@@ -112,7 +112,7 @@ public class PortfolioReturnAttributionService(
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var (investmentFxEffect, investmentFxComplete) = await GetInvestmentFxEffectAsync(
-            transactionFlows,
+            ledger.QuantityChanges,
             openingHoldings,
             listingCurrencies,
             currency,
@@ -191,61 +191,6 @@ public class PortfolioReturnAttributionService(
         return true;
     }
 
-    private static List<PendingFlow> BuildPendingFlows(
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows,
-        IReadOnlyList<BondAccount> bondAccounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        DateTime startDate,
-        DateTime endDate)
-    {
-        List<PendingFlow> result = [];
-
-        foreach (var flow in transactionFlows)
-        {
-            var date = flow.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-            if (date < startDate
-                || date > endDate
-                || flow.Quantity <= 0m
-                || flow.UnitPrice < 0m
-                || flow.Type is not (InvestmentTransactionType.Buy or InvestmentTransactionType.Sell))
-                continue;
-
-            var sourceCurrency = NormalizeCurrency(flow.Currency);
-            var isMinorQuote = DefaultCurrency.MinorQuoteUnits.ContainsKey(flow.Currency.Trim());
-            var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
-            var principal = flow.Quantity * flow.UnitPrice * multiplier;
-            var fee = flow.Fee ?? 0m;
-
-            result.Add(new PendingFlow(
-                date,
-                flow.Type == InvestmentTransactionType.Buy ? principal : -principal,
-                -fee,
-                sourceCurrency,
-                flow.TransactionId));
-        }
-
-        foreach (var account in bondAccounts)
-        {
-            foreach (var entry in account.Entries)
-            {
-                var date = entry.PostingDate.Date;
-                if (date < startDate || date > endDate || entry.ValueChange == 0m)
-                    continue;
-                if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
-                    continue;
-
-                result.Add(new PendingFlow(
-                    DateTime.SpecifyKind(date, DateTimeKind.Utc),
-                    entry.ValueChange * details.UnitValue,
-                    0m,
-                    NormalizeCurrency(details.Currency.ShortName),
-                    entry.EntryId));
-            }
-        }
-
-        return result;
-    }
-
     private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadRatesAsync(
         IEnumerable<string> sourceCurrencies,
         Currency targetCurrency,
@@ -270,7 +215,7 @@ public class PortfolioReturnAttributionService(
     }
 
     private static bool TryConvertFlows(
-        IEnumerable<PendingFlow> pendingFlows,
+        IEnumerable<PortfolioMovement> movements,
         Currency targetCurrency,
         IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
         out decimal externalCashMovement,
@@ -278,14 +223,16 @@ public class PortfolioReturnAttributionService(
     {
         externalCashMovement = 0m;
         feeEffect = 0m;
-        foreach (var flow in pendingFlows.OrderBy(x => x.Date).ThenBy(x => x.Sequence))
+        foreach (var flow in movements.OrderBy(x => x.Date).ThenBy(x => x.SourceId))
         {
-            if (!TryConvert(flow.ExternalMovement, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var external)
-                || !TryConvert(flow.FeeEffect, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var fee))
+            var signedAmount = flow.Kind is PortfolioMovementKind.Sale or PortfolioMovementKind.BondWithdrawal or PortfolioMovementKind.Fee
+                ? -flow.Amount : flow.Amount;
+            if (!TryConvert(signedAmount, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var converted))
                 return false;
-
-            externalCashMovement += external;
-            feeEffect += fee;
+            if (flow.Kind is PortfolioMovementKind.Fee or PortfolioMovementKind.FeeRebate)
+                feeEffect += converted;
+            else
+                externalCashMovement += converted;
         }
 
         return true;
@@ -361,7 +308,7 @@ public class PortfolioReturnAttributionService(
     }
 
     private async Task<(decimal Effect, bool Complete)> GetInvestmentFxEffectAsync(
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows,
+        IReadOnlyList<PortfolioQuantityChange> quantityChanges,
         IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> openingHoldings,
         IReadOnlyDictionary<long, string> listingCurrencies,
         Currency targetCurrency,
@@ -380,15 +327,9 @@ public class PortfolioReturnAttributionService(
             }
         }
 
-        var flowsByListing = transactionFlows
-            .Where(flow => flow.Quantity > 0m
-                && flow.UnitPrice >= 0m
-                && flow.Type is (InvestmentTransactionType.Buy or InvestmentTransactionType.Sell)
-                && flow.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) is var date
-                && date >= startDate
-                && date <= endDate)
-            .GroupBy(flow => flow.AssetListingId)
-            .ToDictionary(group => group.Key, group => group.OrderBy(flow => flow.TradeDate).ThenBy(flow => flow.TransactionId).ToList());
+        var flowsByListing = quantityChanges
+            .GroupBy(flow => flow.InstrumentId)
+            .ToDictionary(group => group.Key, group => group.OrderBy(flow => flow.Date).ThenBy(flow => flow.SourceId).ToList());
 
         decimal fxEffect = 0m;
         foreach (var listingId in openingQuantities.Keys.Concat(flowsByListing.Keys).Distinct())
@@ -404,7 +345,7 @@ public class PortfolioReturnAttributionService(
             {
                 foreach (var flow in flows)
                 {
-                    var flowDate = flow.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                    var flowDate = flow.Date;
                     if (flowDate > currentDate && quantity != 0m)
                     {
                         var interval = await GetInvestmentFxIntervalAsync(
@@ -423,7 +364,7 @@ public class PortfolioReturnAttributionService(
                         fxEffect += interval.Effect;
                     }
 
-                    quantity += flow.Type == InvestmentTransactionType.Buy ? flow.Quantity : -flow.Quantity;
+                    quantity += flow.Kind == PortfolioMovementKind.Purchase ? flow.Quantity : -flow.Quantity;
                     currentDate = flowDate;
                 }
             }
@@ -664,11 +605,4 @@ public class PortfolioReturnAttributionService(
             ? majorCurrency
             : trimmed;
     }
-
-    private sealed record PendingFlow(
-        DateTime Date,
-        decimal ExternalMovement,
-        decimal FeeEffect,
-        string Currency,
-        long Sequence);
 }
