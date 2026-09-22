@@ -160,6 +160,24 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
+    public async Task GetTimeWeightedReturn_WithoutInvestmentHistory_ReturnsInsufficientData()
+    {
+        await SeedWithTestCurrencyAccount();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var start = _nowUtc.AddDays(-30).Date;
+        var response = await Client.GetAsync(
+            $"api/Assets/GetTimeWeightedReturn/1/{DefaultCurrency.PLN.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<TimeWeightedReturnResult>(TestContext.Current.CancellationToken);
+        Assert.NotNull(result);
+        Assert.Equal(TimeWeightedReturnStatus.InsufficientData, result.Status);
+        Assert.Null(result.TotalReturn);
+    }
+
+    [Fact]
     public async Task GetReturnAttribution_WithoutInvestmentHistory_ReturnsInsufficientData()
     {
         await SeedWithTestCurrencyAccount();
@@ -398,6 +416,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetAssetsTimeSeries/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}/{InvestmentType.Stock}",
         now => $"api/Assets/GetMoneyWeightedReturn/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
+        now => $"api/Assets/GetTimeWeightedReturn/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetReturnAttribution/2/{DefaultCurrency.USD.Id}/{now.AddDays(-2):O}/{now:O}",
         now => $"api/Assets/GetInvestmentPaycheckEstimate/2/{DefaultCurrency.USD.Id}/{now:O}",
         now => $"api/Assets/GetFeeDragAnalysis/2/{DefaultCurrency.USD.Id}/{now:O}",

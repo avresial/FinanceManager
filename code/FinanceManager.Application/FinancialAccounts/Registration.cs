@@ -85,6 +85,7 @@ internal static class Registration
                 .AddScoped<IBackfillService, CurrencyRateBackfillService>()
                 .AddScoped<IInvestmentValuationService, InvestmentValuationService>()
                 .AddScoped<IMoneyWeightedReturnService, PortfolioMoneyWeightedReturnService>()
+                .AddScoped<ITimeWeightedReturnService, PortfolioTimeWeightedReturnService>()
                 .AddScoped<IPortfolioReturnAttributionService, PortfolioReturnAttributionService>()
                 .AddScoped<IInvestmentTransactionValuationService, InvestmentTransactionValuationService>()
                 .AddScoped<IFeeDragService, FeeDragService>()
