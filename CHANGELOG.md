@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 - Detect recurring income in the dashboard and cash-flow forecast, and keep forecast chart legends readable in light and dark themes. #798
 
 ### Added
+- Transaction automation rules can now be tested against up to five existing transactions before saving, with read-only before-and-after results. #802
 - Portfolio-level Assets analytics now reconcile total return into external cash movement, market or valuation effect, known fees, and historical FX, with explicit unsupported-component states. #792
 - Add deterministic cash-flow forecasts for recurring income, expenses, and subscriptions. #153
 - Transaction automation rules can now label and normalize new, imported, or existing transactions in a deterministic order. #734
@@ -46,6 +47,8 @@ rules agents must follow when updating this file.
 - Users can now pick a preferred currency in **Settings → Preferences**. All dashboards, charts, and asset valuations are recalculated to that currency; when a rate to the preferred currency is unavailable, values fall back to USD instead of disappearing.
 
 ### Changed
+- Select transaction automation rule accounts by name instead of entering account IDs. #800
+- Hide transaction-rule preview and retroactive-apply controls until at least one automation rule exists. #801
 - Redesign the dashboard Alerts card as a compact triggered-alert list with an in-card detail view for matching occurrences. #794
 - Transaction automation rules now support multiple conditions and actions and refresh financial alerts after retroactive updates. #734
 - Polish the dashboard Alerts card with a compact hierarchy and responsive matching transactions. #786

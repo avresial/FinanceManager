@@ -21,6 +21,58 @@ namespace FinanceManager.Tests.Unit.Components.Features.TransactionRules;
 public sealed class TransactionRulesPageTests
 {
     [Fact]
+    public async Task EmptyRules_HidesApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No automation rules yet", cut.Markup);
+            Assert.DoesNotContain("Apply existing rules", cut.Markup);
+            Assert.DoesNotContain("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task CreatingFirstRule_ShowsApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("No automation rules yet", cut.Markup));
+
+        var nameLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Rule name", StringComparison.Ordinal));
+        cut.Find($"#{nameLabel.GetAttribute("for")}").Change("First rule");
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Create rule", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Apply existing rules", cut.Markup);
+            Assert.Contains("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task DeletingFinalRule_HidesApplyAndPreviewSections()
+    {
+        var handler = new RulesHandler(AccountRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Apply existing rules", cut.Markup));
+
+        cut.Find("button[aria-label='Delete Account rule']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No automation rules yet", cut.Markup);
+            Assert.DoesNotContain("Apply existing rules", cut.Markup);
+            Assert.DoesNotContain("Preview rules", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Edit_AccountCondition_ShowsNamesAndPersistsSelectedAccountIds()
     {
         var handler = new RulesHandler(AccountRule(), new AvailableAccount(1, "Main"), new AvailableAccount(2, "Savings"));
@@ -167,6 +219,32 @@ public sealed class TransactionRulesPageTests
         Assert.Equal(3, handler.LastUpdate.Actions.Count);
     }
 
+    [Fact]
+    public async Task Test_UsesUnsavedEditorState_AndShowsBeforeAfterResults()
+    {
+        var handler = new RulesHandler(AccountRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Account rule", cut.Markup));
+
+        cut.Find("button[aria-label='Edit Account rule']").Click();
+        var labelsLabel = cut.FindAll("label").Single(label => label.TextContent == "Labels");
+        cut.Find($"#{labelsLabel.GetAttribute("for")}").Change("Salary");
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Test").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(handler.LastTest);
+            Assert.Equal(["Salary"], handler.LastTest!.Actions.Single().Labels);
+            Assert.Contains("Test results", cut.Markup);
+            Assert.Contains("PAYPRO", cut.Markup);
+            Assert.Contains("Income, Salary", cut.Markup);
+        });
+
+        cut.Find($"#{labelsLabel.GetAttribute("for")}").Change("Bills");
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Test results", cut.Markup));
+    }
+
     private static BunitContext CreateContext(RulesHandler handler)
     {
         var context = new BunitContext();
@@ -193,11 +271,14 @@ public sealed class TransactionRulesPageTests
         DateTime.UtcNow,
         null);
 
-    private sealed class RulesHandler(TransactionRuleDto rule, params AvailableAccount[] accounts) : HttpMessageHandler
+    private sealed class RulesHandler(TransactionRuleDto? rule = null, params AvailableAccount[] accounts) : HttpMessageHandler
     {
+        private readonly List<TransactionRuleDto> _rules = rule is null ? [] : [rule];
+
         public UpdateTransactionRule? LastUpdate { get; private set; }
         public CreateTransactionRule? LastCreate { get; private set; }
         public TransactionRulePreviewFacts? LastPreview { get; private set; }
+        public CreateTransactionRule? LastTest { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -208,7 +289,7 @@ public sealed class TransactionRulesPageTests
                 };
 
             if (request.Method == HttpMethod.Get)
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { rule }) };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(_rules) };
 
             if (request.Method == HttpMethod.Post && request.RequestUri!.AbsolutePath.EndsWith("/preview", StringComparison.Ordinal))
             {
@@ -218,17 +299,37 @@ public sealed class TransactionRulesPageTests
 
             if (request.Method == HttpMethod.Post)
             {
+                if (request.RequestUri!.AbsolutePath.EndsWith("/test", StringComparison.Ordinal))
+                {
+                    LastTest = await request.Content!.ReadFromJsonAsync<CreateTransactionRule>(cancellationToken);
+                    var result = new TransactionRuleTestResultDto(
+                        1,
+                        "Cash",
+                        10,
+                        DateTime.UtcNow,
+                        -25m,
+                        new("PAYPRO", "Purchase", 1, 25m, TransactionDirection.Expense, ["Income"]),
+                        new("PAYPRO", "Purchase", 1, 25m, TransactionDirection.Expense, ["Income", "Salary"]),
+                        true);
+                    return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { result }) };
+                }
+
                 LastCreate = await request.Content!.ReadFromJsonAsync<CreateTransactionRule>(cancellationToken);
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(rule) };
+                var created = AccountRule() with { Name = LastCreate!.Name };
+                _rules.Add(created);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(created) };
             }
 
             if (request.Method == HttpMethod.Put)
             {
                 LastUpdate = await request.Content!.ReadFromJsonAsync<UpdateTransactionRule>(cancellationToken);
-                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(rule) };
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(_rules.Single()) };
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(rule) };
+            if (request.Method == HttpMethod.Delete)
+                _rules.Clear();
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }
     }
 }
