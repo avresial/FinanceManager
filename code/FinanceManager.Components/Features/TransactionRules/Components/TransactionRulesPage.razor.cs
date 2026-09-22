@@ -17,6 +17,7 @@ public partial class TransactionRulesPage : ComponentBase
 {
     private List<TransactionRuleDto> _rules = [];
     private List<AvailableAccount> _accounts = [];
+    private bool _accountsLoaded;
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isSaving;
@@ -53,23 +54,26 @@ public partial class TransactionRulesPage : ComponentBase
         _error = null;
         try
         {
-            var rulesTask = HttpClient.GetAsync();
-            var accountsTask = CurrencyAccountHttpClient.GetAvailableAccountsAsync();
-            await Task.WhenAll(rulesTask, accountsTask);
-
-            _rules = await rulesTask;
-            _accounts = [.. await accountsTask];
-            if (_previewAccountId is not int accountId || IsMissingAccount(accountId))
-                _previewAccountId = _accounts.FirstOrDefault()?.AccountId;
+            _rules = await HttpClient.GetAsync();
         }
         catch (Exception)
         {
             _error = "Unable to load transaction automation rules.";
         }
-        finally
+        try
         {
-            _isLoading = false;
+            _accounts = [.. await CurrencyAccountHttpClient.GetAvailableAccountsAsync()];
+            _accountsLoaded = true;
+            if (_previewAccountId is not int accountId || IsMissingAccount(accountId))
+                _previewAccountId = _accounts.FirstOrDefault()?.AccountId;
         }
+        catch (Exception)
+        {
+            _accounts = [];
+            _accountsLoaded = false;
+            _error ??= "Unable to load accounts for transaction automation rules.";
+        }
+        _isLoading = false;
     }
 
     private async Task SaveAsync()
@@ -332,7 +336,7 @@ public partial class TransactionRulesPage : ComponentBase
     private static ConditionEditorModel NewCondition() => new();
     private static ActionEditorModel NewAction() => new();
 
-    private bool IsMissingAccount(int accountId) => _accounts.All(account => account.AccountId != accountId);
+    private bool IsMissingAccount(int accountId) => _accountsLoaded && _accounts.All(account => account.AccountId != accountId);
 
     private string GetAccountLabel(AvailableAccount account)
     {
@@ -357,7 +361,8 @@ public partial class TransactionRulesPage : ComponentBase
     private string GetAccountLabel(int accountId)
     {
         var account = _accounts.FirstOrDefault(candidate => candidate.AccountId == accountId);
-        return account is null ? GetMissingAccountLabel(accountId) : GetAccountLabel(account);
+        if (account is not null) return GetAccountLabel(account);
+        return _accountsLoaded ? GetMissingAccountLabel(accountId) : $"Account #{accountId}";
     }
 
     private static string GetMissingAccountLabel(int accountId) => $"Deleted account (#{accountId})";

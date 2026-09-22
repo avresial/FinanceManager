@@ -21,6 +21,24 @@ namespace FinanceManager.Tests.Unit.Components.Features.TransactionRules;
 public sealed class TransactionRulesPageTests
 {
     [Fact]
+    public async Task AccountLoadFailure_StillShowsRulesWithoutDeletedAccountLabel()
+    {
+        var handler = new RulesHandler(AccountRule()) { FailAccountLoad = true };
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Account rule", cut.Markup);
+            Assert.Contains("Unable to load accounts", cut.Markup);
+        });
+
+        cut.Find("button[aria-label='Edit Account rule']").Click();
+        Assert.Contains("Account #1", cut.Markup);
+        Assert.DoesNotContain("Deleted account (#1)", cut.Markup);
+    }
+
+    [Fact]
     public async Task EmptyRules_HidesApplyAndPreviewSections()
     {
         var handler = new RulesHandler();
@@ -279,13 +297,16 @@ public sealed class TransactionRulesPageTests
         public CreateTransactionRule? LastCreate { get; private set; }
         public TransactionRulePreviewFacts? LastPreview { get; private set; }
         public CreateTransactionRule? LastTest { get; private set; }
+        public bool FailAccountLoad { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath.EndsWith("/CurrencyAccount", StringComparison.Ordinal))
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                return new HttpResponseMessage(FailAccountLoad ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
                 {
-                    Content = JsonContent.Create(accounts.Length == 0 ? [new AvailableAccount(1, "Main")] : accounts)
+                    Content = FailAccountLoad
+                        ? new StringContent("unavailable")
+                        : JsonContent.Create(accounts.Length == 0 ? [new AvailableAccount(1, "Main")] : accounts)
                 };
 
             if (request.Method == HttpMethod.Get)
