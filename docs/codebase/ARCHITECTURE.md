@@ -40,6 +40,8 @@ Representative flow for stock prices:
 
 ### 4) Reused Patterns
 
+Portfolio performance uses a native-currency portfolio period ledger to normalize investment trade principal, fees, and bond value changes into dated, positive, typed movements. It also records trade quantities, including zero-price trades. It does not value positions or convert currencies. Money-weighted return and return attribution each interpret movement direction, convert historical amounts to their target currency, and apply their own calculation. Portfolio period valuation remains a separate concern: it prices opening and closing holdings in the requested currency.
+
 | Pattern | Where found | Why it exists |
 |---------|-------------|---------------|
 | Dependency-injection registration extensions | `code\FinanceManager.Application\ServiceCollectionExtension.cs`, `code\FinanceManager.Infrastructure\ServiceCollectionExtension.cs`, `code\FinanceManager.Components\ServiceCollectionExtension.cs` | Keeps startup wiring grouped by layer/project |

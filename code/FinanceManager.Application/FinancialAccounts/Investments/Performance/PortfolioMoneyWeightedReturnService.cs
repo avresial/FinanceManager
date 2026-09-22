@@ -67,16 +67,16 @@ public class PortfolioMoneyWeightedReturnService(
             .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
-        var pendingFlows = BuildPendingFlows(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
+        var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate).Movements;
         var ratesByCurrency = await LoadRatesAsync(
-            pendingFlows,
+            movements,
             bondDetails.Values,
             currency,
             startDate,
             endDate,
             cancellationToken);
 
-        if (!TryConvertFlows(pendingFlows, currency, ratesByCurrency, out var cashFlows))
+        if (!TryConvertFlows(movements, currency, ratesByCurrency, out var cashFlows))
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
         var openingHoldings = investmentAccountIds.Length == 0 || startDate == DateTime.MinValue.Date
@@ -136,71 +136,15 @@ public class PortfolioMoneyWeightedReturnService(
         return XirrCalculator.Calculate(cashFlows, startDate, endDate);
     }
 
-    private static List<PendingFlow> BuildPendingFlows(
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows,
-        IReadOnlyList<BondAccount> bondAccounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        DateTime startDate,
-        DateTime endDate)
-    {
-        List<PendingFlow> result = [];
-
-        foreach (var flow in transactionFlows)
-        {
-            var date = flow.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-            if (date < startDate
-                || date > endDate
-                || flow.Quantity <= 0m
-                || flow.UnitPrice < 0m
-                || flow.Type is not (InvestmentTransactionType.Buy or InvestmentTransactionType.Sell))
-                continue;
-
-            var sourceCurrency = flow.Currency.Trim();
-            var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(sourceCurrency, out var majorCurrency);
-            var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
-            var amount = flow.Quantity * flow.UnitPrice * multiplier;
-            var fee = flow.Fee ?? 0m;
-            amount = flow.Type == InvestmentTransactionType.Buy ? amount + fee : amount - fee;
-            if (amount == 0m) continue;
-
-            result.Add(new PendingFlow(
-                date,
-                flow.Type == InvestmentTransactionType.Buy ? -amount : amount,
-                isMinorQuote ? majorCurrency! : sourceCurrency,
-                flow.TransactionId));
-        }
-
-        foreach (var account in bondAccounts)
-        {
-            foreach (var entry in account.Entries)
-            {
-                var date = entry.PostingDate.Date;
-                if (date < startDate || date > endDate || entry.ValueChange == 0m)
-                    continue;
-                if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
-                    throw new InvalidOperationException($"Bond valuation requires details for bond id {entry.BondDetailsId}.");
-
-                var amount = -entry.ValueChange * details.UnitValue;
-                result.Add(new PendingFlow(
-                    DateTime.SpecifyKind(date, DateTimeKind.Utc),
-                    amount,
-                    details.Currency.ShortName,
-                    entry.EntryId));
-            }
-        }
-
-        return result;
-    }
-
     private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadRatesAsync(
-        IReadOnlyCollection<PendingFlow> pendingFlows,
+        IReadOnlyCollection<PortfolioMovement> movements,
         IEnumerable<BondDetails> bondDetails,
         Currency targetCurrency,
         DateTime startDate,
         DateTime endDate,
         CancellationToken cancellationToken)
     {
-        var currencies = pendingFlows
+        var currencies = movements
             .Select(flow => flow.Currency)
             .Concat(bondDetails.Select(details => details.Currency.ShortName))
             .Where(currency => !string.IsNullOrWhiteSpace(currency))
@@ -224,15 +168,17 @@ public class PortfolioMoneyWeightedReturnService(
     }
 
     private static bool TryConvertFlows(
-        IEnumerable<PendingFlow> pendingFlows,
+        IEnumerable<PortfolioMovement> movements,
         Currency targetCurrency,
         IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
         out List<XirrCashFlow> cashFlows)
     {
         cashFlows = [];
-        foreach (var flow in pendingFlows.OrderBy(x => x.Date).ThenBy(x => x.Sequence))
+        foreach (var flow in movements.OrderBy(x => x.Date).ThenBy(x => x.SourceId))
         {
-            if (!TryConvert(flow.Amount, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var amount))
+            var signedAmount = flow.Kind is PortfolioMovementKind.Sale or PortfolioMovementKind.FeeRebate or PortfolioMovementKind.BondWithdrawal
+                ? flow.Amount : -flow.Amount;
+            if (!TryConvert(signedAmount, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var amount))
             {
                 cashFlows.Clear();
                 return false;
@@ -346,6 +292,4 @@ public class PortfolioMoneyWeightedReturnService(
         DateTime startDate,
         DateTime endDate) =>
         new(annualizedReturn, status, startDate, endDate);
-
-    private sealed record PendingFlow(DateTime Date, decimal Amount, string Currency, long Sequence);
 }
