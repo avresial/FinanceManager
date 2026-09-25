@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Fixed
+- Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
 - Keep distinct recurring payments to the same merchant separate by requiring their amounts to stay within 5% before detecting cadence. #799
 - Detect recurring income in the dashboard and cash-flow forecast, and keep forecast chart legends readable in light and dark themes. #798
 

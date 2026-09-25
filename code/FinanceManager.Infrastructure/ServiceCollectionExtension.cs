@@ -175,6 +175,7 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
     {
+        services.AddSingleton<PostgresConnectionOpenRetryInterceptor>();
         services.AddOpenIddict()
             .AddCore(options => options.UseEntityFrameworkCore().UseDbContext<AppDbContext>());
         services.AddScoped<McpOAuthConfigurationReconciler>();
@@ -207,12 +208,13 @@ public static class ServiceCollectionExtension
             var databaseProvider = InferDatabaseProvider(connectionString,
                 configuration.GetValue("DatabaseProvider", "SqlServer") ?? "SqlServer");
 
-            void ConfigureRelational(DbContextOptionsBuilder options)
+            void ConfigureRelational(IServiceProvider serviceProvider, DbContextOptionsBuilder options)
             {
                 if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) ||
                     databaseProvider.Equals("Supabase", StringComparison.OrdinalIgnoreCase))
                 {
                     options.UseNpgsql(connectionString, b => b.MigrationsAssembly("FinanceManager.Api"));
+                    options.AddInterceptors(serviceProvider.GetRequiredService<PostgresConnectionOpenRetryInterceptor>());
                 }
                 else
                 {
@@ -236,12 +238,12 @@ public static class ServiceCollectionExtension
                         options.UseOpenIddict();
                         return;
                     }
-                    ConfigureRelational(options);
+                    ConfigureRelational(sp, options);
                 });
             }
             else
             {
-                services.AddDbContextPool<AppDbContext>((_, options) => ConfigureRelational(options));
+                services.AddDbContextPool<AppDbContext>((sp, options) => ConfigureRelational(sp, options));
             }
         }
 
