@@ -99,6 +99,57 @@ public partial class PortfolioReturnAttributionCard
 
     internal string RangeText => $"{StartDateTime.ToString("d", CultureInfo.InvariantCulture)} – {EndDateTime.ToString("d", CultureInfo.InvariantCulture)}";
 
+    private IReadOnlyList<AttributionStep> AttributionSteps
+    {
+        get
+        {
+            if (_result is null)
+                return [];
+
+            var components = new (string Label, decimal Value)[]
+            {
+                ("External cash movement", _result.ExternalCashMovement ?? 0m),
+                ("Market / valuation effect", _result.MarketEffect ?? 0m),
+                ("FX effect", _result.FxEffect ?? 0m),
+                ("Known transaction fees", _result.FeeEffect ?? 0m),
+            };
+
+            var steps = new List<AttributionStep>(components.Length);
+            var runningTotal = 0m;
+            foreach (var component in components.OrderByDescending(component => component.Value))
+            {
+                var start = runningTotal;
+                runningTotal += component.Value;
+                steps.Add(new(component.Label, component.Value, start, runningTotal));
+            }
+
+            return steps;
+        }
+    }
+
+    private string AttributionSummary => $"Starting at {FormatAmount(0m)}. "
+        + string.Join(" ", AttributionSteps.Select(step =>
+            $"{step.Label}: {FormatAmount(step.Value)}; running total {FormatAmount(step.End)}."))
+        + $" Total change: {FormatAmount(_result?.TotalChange)}.";
+
+    private decimal ChartPosition(decimal value, IReadOnlyList<AttributionStep> steps)
+    {
+        var minimum = Math.Min(0m, Math.Min(_result?.TotalChange ?? 0m, steps.Min(step => Math.Min(step.Start, step.End))));
+        var maximum = Math.Max(0m, Math.Max(_result?.TotalChange ?? 0m, steps.Max(step => Math.Max(step.Start, step.End))));
+        return minimum == maximum ? 50m : 4m + 92m * (value - minimum) / (maximum - minimum);
+    }
+
+    private string BarStyle(decimal start, decimal end, IReadOnlyList<AttributionStep> steps)
+    {
+        var left = ChartPosition(Math.Min(start, end), steps).ToString("0.###", CultureInfo.InvariantCulture);
+        if (start == end)
+            return $"left:{left}%;width:2px";
+
+        var width = (ChartPosition(Math.Max(start, end), steps) - ChartPosition(Math.Min(start, end), steps))
+            .ToString("0.###", CultureInfo.InvariantCulture);
+        return $"left:{left}%;width:{width}%";
+    }
+
     private string FormatAmount(decimal? value)
     {
         if (value is not decimal amount)
@@ -107,4 +158,6 @@ public partial class PortfolioReturnAttributionCard
         var sign = amount > 0m ? "+" : string.Empty;
         return $"{sign}{amount.ToString("N2", CultureInfo.CurrentCulture)} {_currency.ShortName}";
     }
+
+    private sealed record AttributionStep(string Label, decimal Value, decimal Start, decimal End);
 }

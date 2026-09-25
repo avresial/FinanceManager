@@ -1,0 +1,123 @@
+.attribution-heading,
+.attribution-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.attribution-heading {
+    flex-wrap: wrap;
+}
+
+.attribution-range {
+    margin-left: auto;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.attribution-helper {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+}
+
+.attribution-total {
+    color: var(--mud-palette-text-primary);
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+}
+
+.attribution-total strong {
+    font-size: 1.15rem;
+    white-space: nowrap;
+}
+
+.attribution-chart {
+    border-top: 1px solid var(--mud-palette-divider);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    padding: 0.2rem 0;
+}
+
+.attribution-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(4.5rem, 1fr) max-content;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.72rem;
+    line-height: 1.1;
+}
+
+.attribution-label {
+    overflow-wrap: anywhere;
+}
+
+.attribution-value {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.72rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.attribution-plot {
+    position: relative;
+    height: 1.6rem;
+}
+
+.attribution-zero-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px dashed var(--mud-palette-divider);
+}
+
+.attribution-connector {
+    position: absolute;
+    top: 50%;
+    height: 1.75rem;
+    border-left: 1px solid var(--mud-palette-text-secondary);
+    opacity: 0.7;
+}
+
+.attribution-bar {
+    position: absolute;
+    top: 0.45rem;
+    height: 0.7rem;
+    min-width: 2px;
+    border-radius: 2px;
+}
+
+.attribution-bar.positive {
+    background: var(--mud-palette-success);
+}
+
+.attribution-bar.negative {
+    background: var(--mud-palette-error);
+}
+
+.attribution-bar.zero {
+    background: var(--mud-palette-text-secondary);
+}
+
+.attribution-bar.total {
+    background: var(--mud-palette-primary);
+    height: 0.9rem;
+    top: 0.35rem;
+}
+
+.attribution-final {
+    font-weight: 700;
+}
+
+.attribution-footer {
+    display: flex;
+    flex-direction: column;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    padding-top: 0.35rem;
+}

@@ -23,6 +23,40 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 public class PortfolioReturnAttributionCardTests
 {
     [Fact]
+    public async Task AvailableResult_RendersSortedCumulativeWaterfallWithoutDuplicateBreakdown()
+    {
+        var start = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddDays(6);
+        var handler = new QueuedAssetsHandler();
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<PortfolioReturnAttributionCard>(parameters => parameters
+            .Add(component => component.StartDateTime, start)
+            .Add(component => component.EndDateTime, end));
+        handler.Complete(0, PortfolioReturnAttributionResult.Available(
+            1554.81m, 0m, -51.18m, 0m, 1605.99m, start, end));
+
+        cut.WaitForAssertion(() => Assert.Equal(4, cut.FindAll("[data-testid='return-attribution-step']").Count));
+        var rows = cut.FindAll("[data-testid='return-attribution-step']");
+        Assert.Collection(rows,
+            row => Assert.Contains("FX effect", row.TextContent),
+            row => Assert.Contains("External cash movement", row.TextContent),
+            row => Assert.Contains("Known transaction fees", row.TextContent),
+            row => Assert.Contains("Market / valuation effect", row.TextContent));
+
+        Assert.Contains($"+{1605.99m.ToString("N2", CultureInfo.CurrentCulture)} PLN", rows[0].TextContent);
+        Assert.Contains($"-{51.18m.ToString("N2", CultureInfo.CurrentCulture)} PLN", rows[3].TextContent);
+        Assert.Equal(2, rows.Count(row => row.TextContent.Contains($"{0m.ToString("N2", CultureInfo.CurrentCulture)} PLN")));
+        Assert.Contains($"+{1554.81m.ToString("N2", CultureInfo.CurrentCulture)} PLN", cut.Find("[data-testid='return-attribution-total']").TextContent);
+        Assert.DoesNotContain("return-attribution-breakdown", cut.Markup);
+
+        var summary = cut.Find("[data-testid='return-attribution-chart']").GetAttribute("aria-label");
+        Assert.Contains($"running total +{1605.99m.ToString("N2", CultureInfo.CurrentCulture)} PLN", summary);
+        Assert.Contains($"running total +{1554.81m.ToString("N2", CultureInfo.CurrentCulture)} PLN", summary);
+        Assert.Contains("Unavailable: Dividends / income; ETF expense-ratio fees", cut.Markup);
+    }
+
+    [Fact]
     public async Task RangeChange_IgnoresSlowerPreviousResponse()
     {
         var firstStart = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
