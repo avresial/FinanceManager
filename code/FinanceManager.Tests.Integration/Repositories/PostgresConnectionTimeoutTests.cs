@@ -1,9 +1,12 @@
 using FinanceManager.Infrastructure;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Infrastructure.Persistence;
+using FinanceManager.Infrastructure.Shared.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -59,7 +62,8 @@ public sealed class PostgresConnectionTimeoutTests
         try
         {
             var connectionString = await StartPostgres(containerName, cancellationToken);
-            await using var provider = CreateProvider(connectionString);
+            var retryLogger = new RetrySignalLogger();
+            await using var provider = CreateProvider(connectionString, retryLogger);
             await using var scope = provider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -67,15 +71,13 @@ public sealed class PostgresConnectionTimeoutTests
             NpgsqlConnection.ClearPool(Assert.IsType<NpgsqlConnection>(context.Database.GetDbConnection()));
             await Docker(cancellationToken, "pause", containerName);
 
-            var restoreTask = Task.Run(async () =>
-            {
-                await Task.Delay(2500, cancellationToken);
-                await Docker(cancellationToken, "unpause", containerName);
-            }, cancellationToken);
-
+            var queryTask = context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken);
             try
             {
-                Assert.Equal(1, await context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken));
+                await retryLogger.RetryStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                await Docker(cancellationToken, "unpause", containerName);
+                Assert.Equal(1, await queryTask);
+                Assert.Equal(1, retryLogger.WarningCount);
 
                 await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
                 Assert.Equal(1, await context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken));
@@ -83,7 +85,7 @@ public sealed class PostgresConnectionTimeoutTests
             }
             finally
             {
-                await restoreTask;
+                await DockerExitCode(CancellationToken.None, "unpause", containerName);
             }
         }
         finally
@@ -93,7 +95,39 @@ public sealed class PostgresConnectionTimeoutTests
         }
     }
 
-    private static ServiceProvider CreateProvider(string connectionString)
+    [Fact]
+    public async Task RegisteredContext_DoesNotRetryExhaustedConnectionPool()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        Assert.SkipUnless(await DockerAvailable(cancellationToken), "Docker is required for the PostgreSQL pool test.");
+        var containerName = $"fm-timeout-test-{Guid.NewGuid():N}";
+
+        try
+        {
+            var connectionString = await StartPostgres(containerName, cancellationToken);
+            var connectionSettings = new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 1, Timeout = 1 };
+            var retryLogger = new RetrySignalLogger();
+            await using var provider = CreateProvider(connectionSettings.ConnectionString, retryLogger);
+            await using var heldConnection = new NpgsqlConnection(connectionSettings.ConnectionString);
+            await heldConnection.OpenAsync(cancellationToken);
+            await using var scope = provider.CreateAsyncScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken));
+
+            var providerFailure = Assert.IsType<NpgsqlException>(failure.InnerException);
+            Assert.IsType<TimeoutException>(providerFailure.InnerException);
+            Assert.StartsWith("The connection pool has been exhausted", providerFailure.Message);
+            Assert.Equal(0, retryLogger.WarningCount);
+        }
+        finally
+        {
+            await DockerExitCode(CancellationToken.None, "rm", "--force", containerName);
+        }
+    }
+
+    private static ServiceProvider CreateProvider(string connectionString, RetrySignalLogger? retryLogger = null)
     {
         var configuration = new ConfigurationManager();
         configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -103,8 +137,30 @@ public sealed class PostgresConnectionTimeoutTests
         });
         var services = new ServiceCollection();
         services.AddLogging();
+        if (retryLogger is not null)
+            services.AddSingleton<ILogger<PostgresConnectionOpenRetryInterceptor>>(retryLogger);
         services.AddDatabase(configuration);
         return services.BuildServiceProvider();
+    }
+
+    private sealed class RetrySignalLogger : ILogger<PostgresConnectionOpenRetryInterceptor>
+    {
+        private int _warningCount;
+
+        public TaskCompletionSource RetryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int WarningCount => Volatile.Read(ref _warningCount);
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullLogger.Instance.BeginScope(state);
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel != LogLevel.Warning)
+                return;
+
+            Interlocked.Increment(ref _warningCount);
+            RetryStarted.TrySetResult();
+        }
     }
 
     private static async Task<string> StartPostgres(string containerName, CancellationToken cancellationToken)

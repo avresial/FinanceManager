@@ -21,7 +21,9 @@ internal sealed class PostgresConnectionOpenRetryInterceptor(
         {
             await connection.OpenAsync(cancellationToken);
         }
-        catch (NpgsqlException exception) when (exception.InnerException is TimeoutException && !cancellationToken.IsCancellationRequested)
+        catch (NpgsqlException exception) when (exception.InnerException is TimeoutException
+            && !exception.Message.StartsWith("The connection pool has been exhausted", StringComparison.Ordinal)
+            && !cancellationToken.IsCancellationRequested)
         {
             // Opening a connection has not run application SQL, so this retry cannot replay a write.
             logger.LogWarning(exception, "PostgreSQL connection open timed out; retrying once.");
