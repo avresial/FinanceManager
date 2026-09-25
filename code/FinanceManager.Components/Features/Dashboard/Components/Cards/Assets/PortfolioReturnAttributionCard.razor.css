@@ -36,6 +36,8 @@
 }
 
 .attribution-chart {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(4.5rem, 1fr) max-content;
     border-top: 1px solid var(--mud-palette-divider);
     border-bottom: 1px solid var(--mud-palette-divider);
     padding: 0.2rem 0;
@@ -43,7 +45,8 @@
 
 .attribution-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(4.5rem, 1fr) max-content;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: center;
     gap: 0.35rem;
     min-height: 1.75rem;
