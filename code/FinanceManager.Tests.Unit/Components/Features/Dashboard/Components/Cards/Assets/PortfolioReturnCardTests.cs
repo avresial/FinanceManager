@@ -37,12 +37,14 @@ public class PortfolioReturnCardTests
 
         Assert.Contains("10.00%", cut.Markup);
         Assert.Contains("Net external inflows of", cut.Markup);
-        Assert.Contains("Net external cash flow:", cut.Markup);
-        Assert.Contains("Period length: 7 days", cut.Markup);
+        Assert.Contains("Net external cash flow", cut.Markup);
+        Assert.Contains("Period length", cut.Markup);
+        Assert.Contains("7 days", cut.Markup);
         Assert.Contains("Annualized · PLN", cut.Markup);
         Assert.Contains("Cumulative · PLN", cut.Markup);
         Assert.Equal(1, cut.Markup.Split("08/01/2026 – 08/07/2026").Length - 1);
         Assert.Equal(2, cut.FindAll(".portfolio-return-metric").Count);
+        Assert.Equal(2, cut.FindAll(".portfolio-return-fact").Count);
     }
 
     [Fact]

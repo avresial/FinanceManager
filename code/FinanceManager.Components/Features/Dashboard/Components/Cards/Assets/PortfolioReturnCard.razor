@@ -10,20 +10,23 @@
             </CardInfoTooltip>
             <MudText Typo="Typo.caption" Class="portfolio-return-muted">@RangeText</MudText>
         </div>
-        <MudText Typo="Typo.body2" Class="portfolio-return-muted mb-3">Performance for the selected range.</MudText>
+        <div class="portfolio-return-subtitle mb-3">Performance for the selected range.</div>
 
         <div class="portfolio-return-metrics">
-            <section class="portfolio-return-metric" aria-label="Money-weighted return">
-                <MudTooltip Text="Annualized investment performance that accounts for when contributions and withdrawals happened." Arrow="true">
-                    <span tabindex="0" aria-label="About money-weighted return">Money-weighted return (XIRR) ⓘ</span>
-                </MudTooltip>
+            <section class="portfolio-return-metric portfolio-return-metric--money" aria-label="Money-weighted return">
+                <div class="portfolio-return-metric-heading">
+                    <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small" /></span>
+                    <MudTooltip Text="Annualized investment performance that accounts for when contributions and withdrawals happened." Arrow="true">
+                        <span tabindex="0" aria-label="About money-weighted return">Money-weighted return (XIRR) ⓘ</span>
+                    </MudTooltip>
+                </div>
                 @if (_isLoading)
                 {
                     <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
                 }
                 else if (_moneyWeightedReturn?.IsAvailable == true && _moneyWeightedReturn.AnnualizedReturn is decimal annualizedReturn)
                 {
-                    <MudText Typo="Typo.h4" Color="@(annualizedReturn >= 0 ? Color.Success : Color.Error)">@FormatReturn(annualizedReturn)</MudText>
+                    <div class="@(annualizedReturn >= 0 ? "portfolio-return-value portfolio-return-value--money" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(annualizedReturn)</div>
                 }
                 else
                 {
@@ -33,17 +36,20 @@
                 <MudText Typo="Typo.caption" Class="portfolio-return-muted">Annualized · @_currency.ShortName</MudText>
             </section>
 
-            <section class="portfolio-return-metric" aria-label="Time-weighted return">
-                <MudTooltip Text="Portfolio performance with contributions and withdrawals removed from the return calculation." Arrow="true">
-                    <span tabindex="0" aria-label="About time-weighted return">Time-weighted return (TWR) ⓘ</span>
-                </MudTooltip>
+            <section class="portfolio-return-metric portfolio-return-metric--time" aria-label="Time-weighted return">
+                <div class="portfolio-return-metric-heading">
+                    <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" /></span>
+                    <MudTooltip Text="Portfolio performance with contributions and withdrawals removed from the return calculation." Arrow="true">
+                        <span tabindex="0" aria-label="About time-weighted return">Time-weighted return (TWR) ⓘ</span>
+                    </MudTooltip>
+                </div>
                 @if (_isLoading)
                 {
                     <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
                 }
                 else if (_timeWeightedReturn?.IsAvailable == true && _timeWeightedReturn.TotalReturn is decimal totalReturn)
                 {
-                    <MudText Typo="Typo.h4" Color="@(totalReturn >= 0 ? Color.Success : Color.Error)">@FormatReturn(totalReturn)</MudText>
+                    <div class="@(totalReturn >= 0 ? "portfolio-return-value portfolio-return-value--time" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(totalReturn)</div>
                 }
                 else
                 {
@@ -65,15 +71,24 @@
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry"
                            AriaLabel="Retry unavailable return">Retry unavailable return</MudButton>
             }
-            <div class="portfolio-return-insight" data-testid="portfolio-return-insight">@InsightText</div>
+            <div class="portfolio-return-insight" data-testid="portfolio-return-insight">
+                <span class="portfolio-return-insight-icon"><MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" /></span>
+                <span>@InsightText</span>
+            </div>
         }
 
         <div class="portfolio-return-footer">
             @if (ExternalCashMovement is decimal movement)
             {
-                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Net external cash flow: <strong>@FormatAmount(movement)</strong></MudText>
+                <div class="portfolio-return-fact">
+                    <span class="portfolio-return-muted">Net external cash flow</span>
+                    <strong>@FormatAmount(movement)</strong>
+                </div>
             }
-            <MudText Typo="Typo.caption" Class="portfolio-return-muted">Period length: @PeriodLength days</MudText>
+            <div class="portfolio-return-fact">
+                <span class="portfolio-return-muted">Period length</span>
+                <strong>@PeriodLength days</strong>
+            </div>
         </div>
     </MudCardContent>
 </MudCard>
