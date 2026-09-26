@@ -9,6 +9,9 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Changed
+- Combine money-weighted and time-weighted returns into one responsive Portfolio return card with cash-flow context. #814
+
 ### Fixed
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
 - Keep distinct recurring payments to the same merchant separate by requiring their amounts to stay within 5% before detecting cadence. #799
