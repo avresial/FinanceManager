@@ -1,0 +1,252 @@
+.attribution-heading,
+.attribution-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.attribution-heading {
+    flex-wrap: wrap;
+}
+
+.attribution-range {
+    margin-left: auto;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.attribution-helper {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    margin-bottom: 0.5rem;
+}
+
+.attribution-total {
+    color: var(--mud-palette-text-primary);
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+}
+
+.attribution-total strong {
+    font-size: 1.15rem;
+    white-space: nowrap;
+}
+
+.attribution-total strong.positive {
+    color: var(--mud-palette-success);
+}
+
+.attribution-total strong.negative {
+    color: var(--mud-palette-error);
+}
+
+.attribution-total strong.zero {
+    color: var(--mud-palette-text-secondary);
+}
+
+.attribution-chart {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: 2.55rem minmax(0, 1fr);
+    grid-template-rows: minmax(7rem, 1fr) auto;
+    min-height: 10rem;
+    border-top: 1px solid var(--mud-palette-divider);
+    border-bottom: 1px solid var(--mud-palette-divider);
+    padding: 0.35rem 0 0.2rem;
+}
+
+.attribution-axis {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.attribution-axis-track,
+.attribution-plot-area {
+    position: absolute;
+    inset: 0.8rem 0 0.25rem;
+}
+
+.attribution-axis-label {
+    position: absolute;
+    right: 0.3rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.62rem;
+    line-height: 1;
+    transform: translateY(50%);
+    white-space: nowrap;
+}
+
+.attribution-plot {
+    position: relative;
+    min-width: 0;
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.attribution-gridline {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 1px;
+    background: var(--mud-palette-divider);
+    transform: translateY(50%);
+}
+
+.attribution-gridline.baseline {
+    background: var(--mud-palette-text-secondary);
+    opacity: 0.75;
+}
+
+.attribution-columns {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.attribution-column {
+    position: relative;
+    min-width: 0;
+}
+
+.attribution-connector {
+    position: absolute;
+    z-index: 1;
+    height: 1px;
+    background: var(--mud-palette-text-secondary);
+    opacity: 0.65;
+    transform: translateY(50%);
+}
+
+.attribution-bar {
+    position: absolute;
+    z-index: 2;
+    left: 23%;
+    width: 54%;
+    min-height: 2px;
+    border-radius: 2px 2px 0 0;
+}
+
+.attribution-bar.positive {
+    background: var(--mud-palette-success);
+}
+
+.attribution-bar.negative {
+    background: var(--mud-palette-error);
+}
+
+.attribution-bar.zero {
+    background: var(--mud-palette-text-secondary);
+}
+
+.attribution-bar.total.positive {
+    background: var(--mud-palette-success);
+    left: 21%;
+    width: 58%;
+}
+
+.attribution-bar.total.negative {
+    background: var(--mud-palette-error);
+    left: 21%;
+    width: 58%;
+}
+
+.attribution-bar.total.zero {
+    background: var(--mud-palette-text-secondary);
+    left: 21%;
+    width: 58%;
+}
+
+.attribution-bar.total {
+    min-height: 3px;
+}
+
+.attribution-value {
+    position: absolute;
+    z-index: 3;
+    left: 50%;
+    margin-bottom: 0.12rem;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.61rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.attribution-value.positive {
+    color: var(--mud-palette-success);
+}
+
+.attribution-value.negative {
+    color: var(--mud-palette-error);
+    margin-bottom: 0;
+    transform: translate(-50%, 100%);
+}
+
+.attribution-value.zero {
+    color: var(--mud-palette-text-secondary);
+}
+
+.attribution-value.total {
+    font-weight: 700;
+}
+
+.attribution-axis-spacer {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.attribution-categories {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.1rem;
+    grid-column: 2;
+    grid-row: 2;
+    padding-top: 0.35rem;
+}
+
+.attribution-category {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.64rem;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.attribution-category.total {
+    color: var(--mud-palette-text-primary);
+    font-weight: 700;
+}
+
+.attribution-footer {
+    display: flex;
+    flex-direction: column;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    padding-top: 0.35rem;
+}
+
+@media (max-width: 380px) {
+    .attribution-chart {
+        grid-template-columns: 2.2rem minmax(0, 1fr);
+    }
+
+    .attribution-axis-label {
+        font-size: 0.58rem;
+    }
+
+    .attribution-value {
+        font-size: 0.55rem;
+    }
+
+    .attribution-category {
+        font-size: 0.59rem;
+    }
+}

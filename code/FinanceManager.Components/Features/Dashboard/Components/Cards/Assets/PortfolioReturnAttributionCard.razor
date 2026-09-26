@@ -1,15 +1,19 @@
 @using FinanceManager.Components.Shared.Components
 @using FinanceManager.Domain.MoneyFlow.Entities
+@using System.Globalization
 
 <MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")" data-testid="return-attribution-card">
     <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
-        <CardInfoTooltip Text="Explains the selected portfolio value change using external cash movement, known fees, currency translation, and the remaining investment effect."
-                         AriaLabel="About return attribution">
-            <MudText Typo="Typo.h6">Return attribution</MudText>
-        </CardInfoTooltip>
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+        <div class="attribution-heading">
+            <CardInfoTooltip Text="Explains the selected portfolio value change using external cash movement, known fees, currency translation, and the remaining investment effect."
+                             AriaLabel="About return attribution">
+                <MudText Typo="Typo.h6">Return attribution</MudText>
+            </CardInfoTooltip>
+            <span class="attribution-range">@RangeText</span>
+        </div>
+        <div class="attribution-helper">
             Why the portfolio changed over the selected range.
-        </MudText>
+        </div>
 
         @if (_isLoading)
         {
@@ -22,42 +26,76 @@
         }
         else if (_result?.IsAvailable == true)
         {
-            <div class="d-flex flex-column ga-1" data-testid="return-attribution-breakdown" role="list" aria-label="Portfolio return attribution breakdown">
-                <div class="d-flex justify-space-between" role="listitem">
-                    <MudText Typo="Typo.body2">Total change</MudText>
-                    <MudText Typo="Typo.body2"><strong>@FormatAmount(_result.TotalChange)</strong></MudText>
+            var columns = ChartColumns;
+            var scale = ChartScale;
+            var ticks = ChartTicks(scale);
+            <div class="attribution-total" data-testid="return-attribution-total">
+                <span>Total change</span>
+                <strong class="@ValueTone(_result.TotalChange!.Value)">@FormatAmount(_result.TotalChange)</strong>
+            </div>
+
+            <div class="attribution-chart" role="img" aria-label="@AttributionSummary" data-testid="return-attribution-chart">
+                <div class="attribution-axis" aria-hidden="true">
+                    <div class="attribution-axis-track">
+                        @foreach (var tick in ticks)
+                        {
+                            <span class="attribution-axis-label" style="@PositionStyle(tick, scale)">@FormatAxisValue(tick)</span>
+                        }
+                    </div>
                 </div>
-                <div class="d-flex justify-space-between" role="listitem">
-                    <MudText Typo="Typo.body2">External cash movement</MudText>
-                    <MudText Typo="Typo.body2"><strong>@FormatAmount(_result.ExternalCashMovement)</strong></MudText>
+                <div class="attribution-plot" aria-hidden="true">
+                    <div class="attribution-plot-area">
+                        @foreach (var tick in ticks)
+                        {
+                            <span class="attribution-gridline @(tick == 0m ? "baseline" : null)" style="@PositionStyle(tick, scale)"></span>
+                        }
+                        @for (var index = 0; index < columns.Count - 1; index++)
+                        {
+                            var column = columns[index];
+                            <span class="attribution-connector" style="@ConnectorStyle(index, columns.Count, column.End, scale)"></span>
+                        }
+                        <div class="attribution-columns">
+                            @foreach (var column in columns)
+                            {
+                                <div class="attribution-column"
+                                     data-testid="return-attribution-column"
+                                     data-start="@column.Start.ToString(CultureInfo.InvariantCulture)"
+                                     data-end="@column.End.ToString(CultureInfo.InvariantCulture)">
+                                    <span class="attribution-bar @BarTone(column)" style="@BarStyle(column, scale)"></span>
+                                    <span class="attribution-value @ValueTone(column.Value) @(column.IsTotal ? "total" : null)"
+                                          data-testid="return-attribution-value"
+                                          style="@PositionStyle(column.End, scale)">@FormatColumnValue(column)</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
-                <div class="d-flex justify-space-between" role="listitem">
-                    <MudText Typo="Typo.body2">Market / valuation effect</MudText>
-                    <MudText Typo="Typo.body2"><strong>@FormatAmount(_result.MarketEffect)</strong></MudText>
-                </div>
-                <div class="d-flex justify-space-between" role="listitem">
-                    <MudText Typo="Typo.body2">FX effect</MudText>
-                    <MudText Typo="Typo.body2"><strong>@FormatAmount(_result.FxEffect)</strong></MudText>
-                </div>
-                <div class="d-flex justify-space-between" role="listitem">
-                    <MudText Typo="Typo.body2">Known transaction fees</MudText>
-                    <MudText Typo="Typo.body2"><strong>@FormatAmount(_result.FeeEffect)</strong></MudText>
+                <div class="attribution-axis-spacer" aria-hidden="true"></div>
+                <div class="attribution-categories" aria-hidden="true">
+                    @foreach (var column in columns)
+                    {
+                        <span class="attribution-category @(column.IsTotal ? "total" : null)"
+                              data-testid="return-attribution-category">@column.Label</span>
+                    }
                 </div>
             </div>
 
-            <MudText Typo="Typo.caption" Color="Color.Warning" Class="mt-3">
-                Unavailable: @UnsupportedComponentsText
-            </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-auto">
-                Reconciliation difference: @FormatAmount(_result.ReconciliationDifference)
-            </MudText>
+            <div class="attribution-footer mt-auto">
+                <div>
+                    Reconciliation difference: @FormatAmount(_result.ReconciliationDifference)
+                </div>
+                @if (_result.UnsupportedComponents.Count > 0)
+                {
+                    <div>
+                        Unavailable: @UnsupportedComponentsText
+                    </div>
+                }
+            </div>
         }
         else
         {
             <MudText Typo="Typo.h5" Color="Color.Secondary">@StatusLabel</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">@StatusText</MudText>
         }
-
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">@RangeText</MudText>
     </MudCardContent>
 </MudCard>
