@@ -11,6 +11,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Combine money-weighted and time-weighted returns into one responsive Portfolio return card with cash-flow context. #814
+- Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
 ### Fixed
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
