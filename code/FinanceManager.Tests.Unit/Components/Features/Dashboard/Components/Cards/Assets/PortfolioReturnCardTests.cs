@@ -97,6 +97,63 @@ public class PortfolioReturnCardTests
         Assert.Contains("10.00%", cut.Markup);
     }
 
+    [Fact]
+    public async Task FailedMetricRequest_NormalReloadFetchesRecoveredResult()
+    {
+        var handler = new ReturnsHandler(
+            new(0.2m, MoneyWeightedReturnStatus.Available, _start, _end),
+            new(0.1m, TimeWeightedReturnStatus.Available, _start, _end),
+            null,
+            failMoneyWeightedOnce: true);
+        await using var context = CreateContext(handler);
+
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Contains("Could not load this return", cut.Markup));
+
+        cut.Render(parameters => parameters
+            .Add(component => component.StartDateTime, _start)
+            .Add(component => component.EndDateTime, _end));
+
+        cut.WaitForAssertion(() => Assert.Contains("20.00%", cut.Markup));
+        Assert.Contains("10.00%", cut.Markup);
+    }
+
+    [Fact]
+    public async Task RangeChange_IgnoresSlowerPreviousSnapshot()
+    {
+        var secondStart = _end.AddDays(1);
+        var secondEnd = secondStart.AddDays(6);
+        var handler = new QueuedReturnsHandler();
+        await using var context = CreateContext(handler);
+
+        var cut = Render(context);
+        cut.Render(parameters => parameters
+            .Add(component => component.StartDateTime, secondStart)
+            .Add(component => component.EndDateTime, secondEnd));
+        Assert.Equal(2, handler.MoneyWeightedRequestCount);
+        Assert.Equal(2, handler.TimeWeightedRequestCount);
+
+        handler.Complete(1,
+            new(0.2m, MoneyWeightedReturnStatus.Available, secondStart, secondEnd),
+            new(0.3m, TimeWeightedReturnStatus.Available, secondStart, secondEnd));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("20.00%", cut.Markup);
+            Assert.Contains("30.00%", cut.Markup);
+        });
+
+        var renderCount = cut.RenderCount;
+        handler.Complete(0,
+            new(0.1m, MoneyWeightedReturnStatus.Available, _start, _end),
+            new(0.4m, TimeWeightedReturnStatus.Available, _start, _end));
+        cut.WaitForState(() => cut.RenderCount > renderCount);
+
+        Assert.Contains("20.00%", cut.Markup);
+        Assert.Contains("30.00%", cut.Markup);
+        Assert.DoesNotContain("10.00%", cut.Markup);
+        Assert.DoesNotContain("40.00%", cut.Markup);
+    }
+
     private static IRenderedComponent<PortfolioReturnCard> Render(BunitContext context) =>
         context.Render<PortfolioReturnCard>(parameters => parameters
             .Add(component => component.StartDateTime, _start)
@@ -151,6 +208,52 @@ public class PortfolioReturnCardTests
                 return Task.FromResult(Response(timeWeighted));
             if (path.Contains("GetReturnAttribution", StringComparison.Ordinal))
                 return Task.FromResult(Response(attribution ?? PortfolioReturnAttributionResult.Unavailable(_start, _end)));
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("[]", Encoding.UTF8, "application/json"),
+            });
+        }
+
+        private static HttpResponseMessage Response<T>(T value) => new(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(value),
+        };
+    }
+
+    private sealed class QueuedReturnsHandler : HttpMessageHandler
+    {
+        private readonly TaskCompletionSource<HttpResponseMessage>[] _moneyWeightedResponses =
+        [
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+        ];
+        private readonly TaskCompletionSource<HttpResponseMessage>[] _timeWeightedResponses =
+        [
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+        ];
+        private int _moneyWeightedRequestCount;
+        private int _timeWeightedRequestCount;
+
+        public int MoneyWeightedRequestCount => Volatile.Read(ref _moneyWeightedRequestCount);
+        public int TimeWeightedRequestCount => Volatile.Read(ref _timeWeightedRequestCount);
+
+        public void Complete(int index, MoneyWeightedReturnResult moneyWeighted, TimeWeightedReturnResult timeWeighted)
+        {
+            _moneyWeightedResponses[index].SetResult(Response(moneyWeighted));
+            _timeWeightedResponses[index].SetResult(Response(timeWeighted));
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            if (path.Contains("GetMoneyWeightedReturn", StringComparison.Ordinal))
+                return _moneyWeightedResponses[Interlocked.Increment(ref _moneyWeightedRequestCount) - 1].Task;
+            if (path.Contains("GetTimeWeightedReturn", StringComparison.Ordinal))
+                return _timeWeightedResponses[Interlocked.Increment(ref _timeWeightedRequestCount) - 1].Task;
+            if (path.Contains("GetReturnAttribution", StringComparison.Ordinal))
+                return Task.FromResult(Response(PortfolioReturnAttributionResult.Unavailable(_start, _end)));
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

@@ -88,6 +88,9 @@ public class AssetsPageCardsCacheService(
         if (state.SchemaVersion != AssetsPageCardsCacheSnapshot.CurrentSchemaVersion)
             return false;
 
+        if (state.MoneyWeightedReturn is null || state.TimeWeightedReturn is null || state.ReturnAttribution is null)
+            return false;
+
         if (utcNow - state.FetchedAtUtc > _maxStale)
             return false;
 
