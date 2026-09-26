@@ -23,7 +23,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 public class PortfolioReturnAttributionCardTests
 {
     [Fact]
-    public async Task AvailableResult_RendersSortedCumulativeWaterfallWithoutDuplicateBreakdown()
+    public async Task AvailableResult_RendersSortedVerticalWaterfallWithoutDuplicateBreakdown()
     {
         var start = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddDays(6);
@@ -36,23 +36,40 @@ public class PortfolioReturnAttributionCardTests
         handler.Complete(0, PortfolioReturnAttributionResult.Available(
             1554.81m, 0m, -51.18m, 0m, 1605.99m, start, end));
 
-        cut.WaitForAssertion(() => Assert.Equal(4, cut.FindAll("[data-testid='return-attribution-step']").Count));
-        var rows = cut.FindAll("[data-testid='return-attribution-step']");
-        Assert.Collection(rows,
-            row => Assert.Contains("FX effect", row.TextContent),
-            row => Assert.Contains("External cash movement", row.TextContent),
-            row => Assert.Contains("Known transaction fees", row.TextContent),
-            row => Assert.Contains("Market / valuation effect", row.TextContent));
+        cut.WaitForAssertion(() => Assert.Equal(5, cut.FindAll("[data-testid='return-attribution-column']").Count));
+        var categories = cut.FindAll("[data-testid='return-attribution-category']");
+        Assert.Equal(
+            ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
+            categories.Select(category => category.TextContent.Trim()));
 
-        Assert.Contains($"+{1605.99m.ToString("N2", CultureInfo.CurrentCulture)} PLN", rows[0].TextContent);
-        Assert.Contains($"-{51.18m.ToString("N2", CultureInfo.CurrentCulture)} PLN", rows[3].TextContent);
-        Assert.Equal(2, rows.Count(row => row.TextContent.Contains($"{0m.ToString("N2", CultureInfo.CurrentCulture)} PLN")));
+        var values = cut.FindAll("[data-testid='return-attribution-value']");
+        Assert.Equal(
+            [
+                $"+{1605.99m.ToString("N2", CultureInfo.CurrentCulture)}",
+                0m.ToString("N2", CultureInfo.CurrentCulture),
+                0m.ToString("N2", CultureInfo.CurrentCulture),
+                $"-{51.18m.ToString("N2", CultureInfo.CurrentCulture)}",
+                1554.81m.ToString("N2", CultureInfo.CurrentCulture),
+            ],
+            values.Select(value => value.TextContent.Trim()));
+
+        var columns = cut.FindAll("[data-testid='return-attribution-column']");
+        Assert.Equal("0", columns[0].GetAttribute("data-start"));
+        Assert.Equal("1605.99", columns[0].GetAttribute("data-end"));
+        Assert.Equal("1605.99", columns[3].GetAttribute("data-start"));
+        Assert.Equal("1554.81", columns[3].GetAttribute("data-end"));
+        Assert.Equal("1554.81", columns[4].GetAttribute("data-end"));
+        Assert.Equal(
+            ["0", "500", "1.0k", "1.5k", "2.0k"],
+            cut.FindAll(".attribution-axis-label").Select(label => label.TextContent.Trim()));
+
         Assert.Contains($"+{1554.81m.ToString("N2", CultureInfo.CurrentCulture)} PLN", cut.Find("[data-testid='return-attribution-total']").TextContent);
         Assert.DoesNotContain("return-attribution-breakdown", cut.Markup);
 
         var summary = cut.Find("[data-testid='return-attribution-chart']").GetAttribute("aria-label");
         Assert.Contains($"running total +{1605.99m.ToString("N2", CultureInfo.CurrentCulture)} PLN", summary);
         Assert.Contains($"running total +{1554.81m.ToString("N2", CultureInfo.CurrentCulture)} PLN", summary);
+        Assert.Contains("Reconciliation difference: 0.00 PLN", cut.Markup);
         Assert.Contains("Unavailable: Dividends / income; ETF expense-ratio fees", cut.Markup);
     }
 

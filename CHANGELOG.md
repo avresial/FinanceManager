@@ -10,7 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
-- Show portfolio return attribution as a compact cumulative waterfall chart. #813
+- Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
 ### Fixed
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
