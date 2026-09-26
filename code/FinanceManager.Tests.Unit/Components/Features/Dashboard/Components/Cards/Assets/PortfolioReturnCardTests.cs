@@ -156,6 +156,36 @@ public class PortfolioReturnCardTests
         Assert.DoesNotContain("40.00%", cut.Markup);
     }
 
+    [Fact]
+    public async Task RangeChange_HidesPreviousCashFlowWhileLoading()
+    {
+        var secondStart = _end.AddDays(1);
+        var secondEnd = secondStart.AddDays(6);
+        var handler = new QueuedReturnsHandler();
+        await using var context = CreateContext(handler);
+
+        var cut = Render(context);
+        handler.Complete(0,
+            new(0.2m, MoneyWeightedReturnStatus.Available, _start, _end),
+            new(0.3m, TimeWeightedReturnStatus.Available, _start, _end),
+            PortfolioReturnAttributionResult.Available(300m, 100m, 200m, 0m, 0m, _start, _end));
+        cut.WaitForAssertion(() => Assert.Contains("Net external cash flow", cut.Markup));
+
+        cut.Render(parameters => parameters
+            .Add(component => component.StartDateTime, secondStart)
+            .Add(component => component.EndDateTime, secondEnd));
+        Assert.Equal(2, handler.MoneyWeightedRequestCount);
+        Assert.DoesNotContain("Net external cash flow", cut.Markup);
+        Assert.Single(cut.FindAll(".portfolio-return-fact"));
+
+        handler.Complete(1,
+            new(0.1m, MoneyWeightedReturnStatus.Available, secondStart, secondEnd),
+            new(0.4m, TimeWeightedReturnStatus.Available, secondStart, secondEnd),
+            PortfolioReturnAttributionResult.Available(400m, 200m, 200m, 0m, 0m, secondStart, secondEnd));
+        cut.WaitForAssertion(() => Assert.Contains("Net external cash flow", cut.Markup));
+        Assert.Equal(2, cut.FindAll(".portfolio-return-fact").Count);
+    }
+
     private static IRenderedComponent<PortfolioReturnCard> Render(BunitContext context) =>
         context.Render<PortfolioReturnCard>(parameters => parameters
             .Add(component => component.StartDateTime, _start)
@@ -235,16 +265,27 @@ public class PortfolioReturnCardTests
             new(TaskCreationOptions.RunContinuationsAsynchronously),
             new(TaskCreationOptions.RunContinuationsAsynchronously),
         ];
+        private readonly TaskCompletionSource<HttpResponseMessage>[] _attributionResponses =
+        [
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+            new(TaskCreationOptions.RunContinuationsAsynchronously),
+        ];
         private int _moneyWeightedRequestCount;
         private int _timeWeightedRequestCount;
+        private int _attributionRequestCount;
 
         public int MoneyWeightedRequestCount => Volatile.Read(ref _moneyWeightedRequestCount);
         public int TimeWeightedRequestCount => Volatile.Read(ref _timeWeightedRequestCount);
 
-        public void Complete(int index, MoneyWeightedReturnResult moneyWeighted, TimeWeightedReturnResult timeWeighted)
+        public void Complete(
+            int index,
+            MoneyWeightedReturnResult moneyWeighted,
+            TimeWeightedReturnResult timeWeighted,
+            PortfolioReturnAttributionResult? attribution = null)
         {
             _moneyWeightedResponses[index].SetResult(Response(moneyWeighted));
             _timeWeightedResponses[index].SetResult(Response(timeWeighted));
+            _attributionResponses[index].SetResult(Response(attribution ?? PortfolioReturnAttributionResult.Unavailable(_start, _end)));
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -255,7 +296,7 @@ public class PortfolioReturnCardTests
             if (path.Contains("GetTimeWeightedReturn", StringComparison.Ordinal))
                 return _timeWeightedResponses[Interlocked.Increment(ref _timeWeightedRequestCount) - 1].Task;
             if (path.Contains("GetReturnAttribution", StringComparison.Ordinal))
-                return Task.FromResult(Response(PortfolioReturnAttributionResult.Unavailable(_start, _end)));
+                return _attributionResponses[Interlocked.Increment(ref _attributionRequestCount) - 1].Task;
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

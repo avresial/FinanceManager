@@ -78,7 +78,7 @@
         }
 
         <div class="portfolio-return-footer">
-            @if (ExternalCashMovement is decimal movement)
+            @if (!_isLoading && ExternalCashMovement is decimal movement)
             {
                 <div class="portfolio-return-fact">
                     <span class="portfolio-return-muted">Net external cash flow</span>

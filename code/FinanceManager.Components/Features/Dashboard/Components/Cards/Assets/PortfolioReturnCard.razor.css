@@ -6,7 +6,7 @@
     gap: 0.25rem 1rem;
 }
 
-.portfolio-return-muted {
+::deep .portfolio-return-muted {
     color: var(--mud-palette-text-secondary);
 }
 
