@@ -39,9 +39,15 @@ public class AssetsPageCardsCacheService(
         var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, currency, startDate, endDate);
         var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
         var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
-        var moneyWeightedReturnTask = assetsHttpClient.GetMoneyWeightedReturn(refreshContext.UserId, currency, startDate, endDate);
-        var timeWeightedReturnTask = assetsHttpClient.GetTimeWeightedReturn(refreshContext.UserId, currency, startDate, endDate);
-        var returnAttributionTask = assetsHttpClient.GetReturnAttribution(refreshContext.UserId, currency, startDate, endDate);
+        var moneyWeightedReturnTask = GetOptionalAsync(
+            () => assetsHttpClient.GetMoneyWeightedReturn(refreshContext.UserId, currency, startDate, endDate),
+            "money-weighted return");
+        var timeWeightedReturnTask = GetOptionalAsync(
+            () => assetsHttpClient.GetTimeWeightedReturn(refreshContext.UserId, currency, startDate, endDate),
+            "time-weighted return");
+        var returnAttributionTask = GetOptionalAsync(
+            () => assetsHttpClient.GetReturnAttribution(refreshContext.UserId, currency, startDate, endDate),
+            "return attribution");
         await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask, moneyWeightedReturnTask, timeWeightedReturnTask, returnAttributionTask);
 
         return new AssetsPageCardsCacheSnapshot
@@ -61,12 +67,28 @@ public class AssetsPageCardsCacheService(
         };
     }
 
+    private async Task<T?> GetOptionalAsync<T>(Func<Task<T>> load, string name) where T : class
+    {
+        try
+        {
+            return await load();
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Could not load {Metric} for assets page", name);
+            return null;
+        }
+    }
+
     protected override bool IsUsable(AssetsPageCardsCacheSnapshot? state, string cacheKey, DateTime utcNow)
     {
         if (state is null)
             return false;
 
         if (state.SchemaVersion != AssetsPageCardsCacheSnapshot.CurrentSchemaVersion)
+            return false;
+
+        if (state.MoneyWeightedReturn is null || state.TimeWeightedReturn is null || state.ReturnAttribution is null)
             return false;
 
         if (utcNow - state.FetchedAtUtc > _maxStale)
