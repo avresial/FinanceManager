@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
