@@ -1,0 +1,94 @@
+@using FinanceManager.Components.Shared.Components
+@using FinanceManager.Domain.MoneyFlow.Entities
+
+<MudCard Outlined Class="rounded-lg" data-testid="portfolio-return-card">
+    <MudCardContent Class="pa-4">
+        <div class="portfolio-return-header">
+            <CardInfoTooltip Text="Compares annualized money-weighted return with cumulative time-weighted return for the selected period."
+                             AriaLabel="About portfolio return">
+                <MudText Typo="Typo.h6">Portfolio return</MudText>
+            </CardInfoTooltip>
+            <MudText Typo="Typo.caption" Class="portfolio-return-muted">@RangeText</MudText>
+        </div>
+        <div class="portfolio-return-subtitle mb-3">Performance for the selected range.</div>
+
+        <div class="portfolio-return-metrics">
+            <section class="portfolio-return-metric portfolio-return-metric--money" aria-label="Money-weighted return">
+                <div class="portfolio-return-metric-heading">
+                    <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small" /></span>
+                    <MudTooltip Text="Annualized investment performance that accounts for when contributions and withdrawals happened." Arrow="true">
+                        <span tabindex="0" aria-label="About money-weighted return">Money-weighted return (XIRR) ⓘ</span>
+                    </MudTooltip>
+                </div>
+                @if (_isLoading)
+                {
+                    <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
+                }
+                else if (_moneyWeightedReturn?.IsAvailable == true && _moneyWeightedReturn.AnnualizedReturn is decimal annualizedReturn)
+                {
+                    <div class="@(annualizedReturn >= 0 ? "portfolio-return-value portfolio-return-value--money" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(annualizedReturn)</div>
+                }
+                else
+                {
+                    <MudText Typo="Typo.h6" Class="portfolio-return-muted">@MoneyWeightedStatusLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="portfolio-return-muted">@MoneyWeightedStatusText</MudText>
+                }
+                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Annualized · @_currency.ShortName</MudText>
+            </section>
+
+            <section class="portfolio-return-metric portfolio-return-metric--time" aria-label="Time-weighted return">
+                <div class="portfolio-return-metric-heading">
+                    <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" /></span>
+                    <MudTooltip Text="Portfolio performance with contributions and withdrawals removed from the return calculation." Arrow="true">
+                        <span tabindex="0" aria-label="About time-weighted return">Time-weighted return (TWR) ⓘ</span>
+                    </MudTooltip>
+                </div>
+                @if (_isLoading)
+                {
+                    <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
+                }
+                else if (_timeWeightedReturn?.IsAvailable == true && _timeWeightedReturn.TotalReturn is decimal totalReturn)
+                {
+                    <div class="@(totalReturn >= 0 ? "portfolio-return-value portfolio-return-value--time" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(totalReturn)</div>
+                }
+                else
+                {
+                    <MudText Typo="Typo.h6" Class="portfolio-return-muted">@TimeWeightedStatusLabel</MudText>
+                    <MudText Typo="Typo.caption" Class="portfolio-return-muted">@TimeWeightedStatusText</MudText>
+                }
+                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Cumulative · @_currency.ShortName</MudText>
+            </section>
+        </div>
+
+        @if (!_isLoading)
+        {
+            @if (!HasAvailableReturn)
+            {
+                <MudText Typo="Typo.body2" Class="portfolio-return-muted mt-3">Neither return is available for this range.</MudText>
+            }
+            @if (_moneyWeightedReturn is null || _timeWeightedReturn is null)
+            {
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry"
+                           AriaLabel="Retry unavailable return">Retry unavailable return</MudButton>
+            }
+            <div class="portfolio-return-insight" data-testid="portfolio-return-insight">
+                <span class="portfolio-return-insight-icon"><MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" /></span>
+                <span>@InsightText</span>
+            </div>
+        }
+
+        <div class="portfolio-return-footer">
+            @if (!_isLoading && ExternalCashMovement is decimal movement)
+            {
+                <div class="portfolio-return-fact">
+                    <span class="portfolio-return-muted">Net external cash flow</span>
+                    <strong>@FormatAmount(movement)</strong>
+                </div>
+            }
+            <div class="portfolio-return-fact">
+                <span class="portfolio-return-muted">Period length</span>
+                <strong>@PeriodLength days</strong>
+            </div>
+        </div>
+    </MudCardContent>
+</MudCard>

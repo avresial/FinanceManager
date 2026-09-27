@@ -14,14 +14,8 @@
                                             Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
-        <MudItem xs="12" lg="4">
-            <MoneyWeightedReturnCard StartDateTime=StartDate EndDateTime="@EndDate"
-                                     Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <TimeWeightedReturnCard StartDateTime=StartDate EndDateTime="@EndDate"
-                                    Height="@($"{2 * _unitHeight}px")" />
+        <MudItem xs="12" lg="8">
+            <PortfolioReturnCard StartDateTime=StartDate EndDateTime="@EndDate" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
