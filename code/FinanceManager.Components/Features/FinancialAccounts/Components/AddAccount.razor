@@ -1,4 +1,5 @@
 ﻿@page "/AddAccount"
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <PageTitle>Add account</PageTitle>
 
@@ -18,6 +19,16 @@
                     }
                 </MudSelect>
             </MudStack>
+
+            @if (_selectedAccountType == "Currency account")
+            {
+                <MudSelect T="int" @bind-Value="_currencyId" Label="Currency" Required data-testid="account-currency">
+                    @foreach (var currency in _currencies)
+                    {
+                        <MudSelectItem Value="@currency.Id">@currency.ShortName</MudSelectItem>
+                    }
+                </MudSelect>
+            }
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add data-testid="account-submit">Add</MudButton>
         @if (_addedAccountId is not null)

@@ -11,20 +11,23 @@ public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
     public readonly CurrencyAccountEntry? NextOlderEntry = null;
     public readonly CurrencyAccountEntry? NextYoungerEntry = null;
     public AccountLabel AccountType { get; set; }
+    public int CurrencyId { get; set; }
 
     [JsonConstructorAttribute]
     public CurrencyAccount(int userId, int accountId, string name, IEnumerable<CurrencyAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
-        CurrencyAccountEntry? nextOlderEntry = null, CurrencyAccountEntry? nextYoungerEntry = null) : base(userId, accountId, name)
+        CurrencyAccountEntry? nextOlderEntry = null, CurrencyAccountEntry? nextYoungerEntry = null, int currencyId = 0) : base(userId, accountId, name)
     {
         this.UserId = userId;
         Entries = entries is null ? ([]) : entries.ToList();
         AccountType = accountType;
+        CurrencyId = currencyId;
         NextOlderEntry = nextOlderEntry;
         NextYoungerEntry = nextYoungerEntry;
     }
-    public CurrencyAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
+    public CurrencyAccount(int userId, int id, string name, AccountLabel accountType, int currencyId = 0) : base(userId, id, name)
     {
         AccountType = accountType;
+        CurrencyId = currencyId;
         Entries = [];
     }
 

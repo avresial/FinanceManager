@@ -10,4 +10,5 @@ public class FinancialAccountBaseDto
     public int AccountId { get; set; }
     public int UserId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public int CurrencyId { get; set; }
 };

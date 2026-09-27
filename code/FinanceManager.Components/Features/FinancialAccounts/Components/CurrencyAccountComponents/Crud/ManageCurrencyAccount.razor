@@ -1,5 +1,6 @@
 @using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 ﻿@using FinanceManager.Domain.Identity.Entities
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 @if (_currencyAccount is not null)
 {
@@ -29,6 +30,18 @@
                             <MudSelectItem Value="type">@type</MudSelectItem>
                         }
                     </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSelect T="int" @bind-Value="CurrencyId" Label="Currency" Disabled="_hasEntries">
+                        @foreach (var currency in _currencies)
+                        {
+                            <MudSelectItem Value="@currency.Id">@currency.ShortName</MudSelectItem>
+                        }
+                    </MudSelect>
+                    @if (_hasEntries)
+                    {
+                        <MudText Typo="Typo.caption">Currency is fixed after the first transaction.</MudText>
+                    }
                 </MudItem>
                 <MudItem xs="12">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>

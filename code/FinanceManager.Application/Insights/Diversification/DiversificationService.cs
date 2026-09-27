@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -17,7 +18,8 @@ namespace FinanceManager.Application.Insights.Diversification;
 public class DiversificationService(
     IFinancialAccountRepository financialAccountRepository,
     IBondDetailsRepository bondDetailsRepository,
-    IInvestmentTransactionRepository investmentTransactionRepository) : IDiversificationService
+    IInvestmentTransactionRepository investmentTransactionRepository,
+    ICurrencyRepository currencyRepository) : IDiversificationService
 {
     private const int _totalSupportedClasses = 6;
     private const int _holdingsBenchmark = 30;
@@ -45,8 +47,9 @@ public class DiversificationService(
         if (bondHoldings.Count > 0)
             groups.Add(new AssetClassHoldings("Bonds", bondHoldings));
 
-        if (await HasAnyCash(userId, asOfDate))
-            groups.Add(new AssetClassHoldings("Cash", ["Cash"]));
+        var cashCurrencies = await GetHeldCashCurrencyCodes(userId, asOfDate, cancellationToken);
+        if (cashCurrencies.Count > 0)
+            groups.Add(new AssetClassHoldings("Cash", cashCurrencies));
 
         return new DiversificationBreakdown(groups);
     }
@@ -99,13 +102,21 @@ public class DiversificationService(
         return names;
     }
 
-    private async Task<bool> HasAnyCash(int userId, DateTime asOfDate)
+    private async Task<List<string>> GetHeldCashCurrencyCodes(int userId, DateTime asOfDate, CancellationToken cancellationToken)
     {
+        var currencyIds = new SortedSet<int>();
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate))
             if (HasCurrentCash(account, asOfDate))
-                return true;
+                currencyIds.Add(account.CurrencyId);
 
-        return false;
+        var codes = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        await foreach (var currency in currencyRepository.GetCurrencies(cancellationToken))
+        {
+            if (currencyIds.Contains(currency.Id) && !string.IsNullOrWhiteSpace(currency.ShortName))
+                codes.Add(currency.ShortName.ToUpperInvariant());
+        }
+
+        return [.. codes];
     }
 
     private async Task<(HashSet<InvestmentType> AssetClasses, HashSet<string> Holdings)> GetCurrentHoldings(int userId, DateTime asOfDate)
@@ -135,7 +146,7 @@ public class DiversificationService(
         {
             if (HasCurrentCash(account, asOfDate))
             {
-                uniqueHoldings.Add("cash");
+                uniqueHoldings.Add($"cash_{account.CurrencyId}");
                 heldClasses.Add(InvestmentType.Cash);
             }
         }

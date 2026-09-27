@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -16,6 +17,8 @@ public partial class AddAccount : ComponentBase
     private int? _addedAccountId = null;
     private bool _success;
     private string[] _errors = { };
+    private int _currencyId;
+    private List<Currency> _currencies = [];
 
     private readonly string[] _accountTypes =
     {
@@ -25,8 +28,9 @@ public partial class AddAccount : ComponentBase
     // Lets the welcome screen deep-link straight to a preselected account type (e.g. AddAccount?type=Stock).
     [Parameter, SupplyParameterFromQuery] public string? Type { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        _currencies = await CurrencyHttpClient.GetAll();
         if (string.IsNullOrWhiteSpace(Type)) return;
 
         var match = Array.Find(_accountTypes, t => t.StartsWith(Type, StringComparison.OrdinalIgnoreCase));
@@ -37,6 +41,7 @@ public partial class AddAccount : ComponentBase
     [Inject] public required ILogger<AddAccount> Logger { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required InvestmentAccountHttpClient InvestmentAccountHttpClient { get; set; }
     [Inject] public required BondAccountHttpClient BondAccountHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -49,7 +54,7 @@ public partial class AddAccount : ComponentBase
             switch (_selectedAccountType)
             {
                 case "Currency account":
-                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
+                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName, _currencyId));
                     break;
 
                 case "Stock account":

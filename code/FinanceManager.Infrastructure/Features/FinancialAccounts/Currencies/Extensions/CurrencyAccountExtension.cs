@@ -29,6 +29,7 @@ public static class CurrencyAccountExtension
             UserId = account.UserId,
             Name = account.Name,
             AccountLabel = account.AccountType,
+            CurrencyId = account.CurrencyId,
             NextOlderEntry = older?.ToDto(),
             NextYoungerEntry = younger?.ToDto(),
             Entries = effectiveEntries.Select(e => e.ToDto()).ToList()

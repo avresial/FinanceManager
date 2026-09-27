@@ -18,7 +18,10 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
     public Task<int?> GetLastAccountId() =>
         context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Currency).MaxAsync(x => (int?)x.AccountId);
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
-    public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel)
+    public Task<int?> Add(int userId, string accountName, AccountLabel accountLabel) =>
+        Add(userId, accountName, accountLabel, 0);
+
+    public async Task<int?> Add(int userId, string accountName, AccountLabel accountLabel, int currencyId)
     {
         var result = context.Accounts.Add(new FinancialAccountBaseDto
         {
@@ -26,7 +29,8 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
             AccountId = 0,
             Name = accountName,
             AccountLabel = accountLabel,
-            AccountType = AccountType.Currency
+            AccountType = AccountType.Currency,
+            CurrencyId = currencyId
         });
 
         await context.SaveChangesAsync();
@@ -59,7 +63,7 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
             .ToListAsync();
 
         return accounts
-            .Select(x => new CurrencyAccount(x.UserId, x.AccountId, x.Name, x.AccountLabel))
+            .Select(x => new CurrencyAccount(x.UserId, x.AccountId, x.Name, x.AccountLabel, currencyId: x.CurrencyId))
             .ToList();
     }
 
@@ -70,7 +74,7 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
         var accountToReturn = await context.Accounts.AsNoTracking()
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency, cancellationToken);
         if (accountToReturn is null) return null;
-        return new CurrencyAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel);
+        return new CurrencyAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name, accountToReturn.AccountLabel, currencyId: accountToReturn.CurrencyId);
     }
 
     public async Task<bool> Update(int accountId, string accountName)
@@ -82,11 +86,19 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
         return true;
     }
     public async Task<bool> Update(int accountId, string accountName, AccountLabel accountType)
+        => await Update(accountId, accountName, accountType, null);
+
+    public Task<bool> Update(int accountId, string accountName, AccountLabel accountType, int currencyId) =>
+        Update(accountId, accountName, accountType, (int?)currencyId);
+
+    private async Task<bool> Update(int accountId, string accountName, AccountLabel accountType, int? currencyId)
     {
         var account = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);
         if (account is null) return false;
         account.Name = accountName;
         account.AccountLabel = accountType;
+        if (currencyId.HasValue)
+            account.CurrencyId = currencyId.Value;
         await context.SaveChangesAsync();
         return true;
     }

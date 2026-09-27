@@ -21,9 +21,12 @@ public partial class ManageCurrencyAccount
     private string[] _errors = [];
     private CurrencyAccount? _currencyAccount = null;
     private bool _isRecalculating;
+    private bool _hasEntries;
+    private List<Currency> _currencies = [];
 
     public string AccountName { get; set; } = string.Empty;
     public AccountLabel AccountType { get; set; }
+    public int CurrencyId { get; set; }
 
     [Parameter] public required int AccountId { get; set; }
 
@@ -34,6 +37,7 @@ public partial class ManageCurrencyAccount
     [Inject] public required ILogger<ManageCurrencyAccount> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override async Task OnParametersSetAsync()
@@ -42,6 +46,8 @@ public partial class ManageCurrencyAccount
         {
             var user = await LoginService.GetLoggedUser();
             if (user is null) return;
+            _currencies = await CurrencyHttpClient.GetAll();
+            _hasEntries = await FinancialAccountService.GetStartDate(AccountId) is not null;
 
             _currencyAccount = await FinancialAccountService.GetAccount<CurrencyAccount>(user.UserId, AccountId, DateTime.UtcNow, DateTime.UtcNow);
 
@@ -49,6 +55,7 @@ public partial class ManageCurrencyAccount
 
             AccountName = _currencyAccount.Name;
             AccountType = _currencyAccount.AccountType;
+            CurrencyId = _currencyAccount.CurrencyId;
         }
         catch (Exception ex)
         {
@@ -74,7 +81,7 @@ public partial class ManageCurrencyAccount
 
             if (_currencyAccount is null) return;
 
-            CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType);
+            CurrencyAccount updatedAccount = new CurrencyAccount(_currencyAccount.UserId, _currencyAccount.AccountId, AccountName, AccountType, CurrencyId);
             await FinancialAccountService.UpdateAccount(updatedAccount);
             await AccountDataSynchronizationService.AccountChanged();
             Navigation.NavigateTo($"AccountDetails/{AccountId}");

@@ -25,6 +25,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
+    ICurrencyRepository currencyRepository,
     IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
     ICacheInvalidator dashboardCacheInvalidator,
@@ -103,7 +104,10 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         if (!await userPlanVerifier.CanAddMoreAccounts(userId))
             return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
-        var result = await accountRepository.Add(userId, addAccount.AccountName);
+        if (await currencyRepository.GetCurrency(addAccount.CurrencyId, HttpContext.RequestAborted) is null)
+            return BadRequest("Select a valid account currency.");
+
+        var result = await accountRepository.Add(userId, addAccount.AccountName, AccountLabel.Other, addAccount.CurrencyId);
         await dashboardCacheInvalidator.InvalidateUser(userId);
         return Ok(result);
     }
@@ -117,7 +121,13 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
-        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType);
+        if (account.CurrencyId != updateAccount.CurrencyId
+            && await accountEntryRepository.GetOldest(updateAccount.AccountId) is not null)
+            return BadRequest("Account currency cannot change after transactions have been added.");
+        if (await currencyRepository.GetCurrency(updateAccount.CurrencyId, HttpContext.RequestAborted) is null)
+            return BadRequest("Select a valid account currency.");
+
+        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType, updateAccount.CurrencyId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok(result);
     }

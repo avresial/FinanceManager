@@ -47,8 +47,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         switch (account)
         {
-            case CurrencyAccount:
-                await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
+            case CurrencyAccount currencyAccount:
+                await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name, currencyAccount.CurrencyId));
                 break;
             case InvestmentAccount:
                 await investmentAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));

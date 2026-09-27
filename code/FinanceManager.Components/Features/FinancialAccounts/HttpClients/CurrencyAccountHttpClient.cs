@@ -11,7 +11,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class CurrencyAccountHttpClient(HttpClient httpClient)
 {
-    private sealed record CurrencyAccountSummaryDto(int UserId, int AccountId, string Name, AccountLabel AccountType);
+    private sealed record CurrencyAccountSummaryDto(int UserId, int AccountId, string Name, AccountLabel AccountType, int CurrencyId);
 
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
@@ -25,7 +25,7 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<CurrencyAccountSummaryDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}");
         if (result is null) return null;
 
-        return new CurrencyAccount(result.UserId, result.AccountId, result.Name, result.AccountType);
+        return new CurrencyAccount(result.UserId, result.AccountId, result.Name, result.AccountType, currencyId: result.CurrencyId);
     }
 
     public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
@@ -75,7 +75,7 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         .OrderByDescending(x => x.PostingDate)
         .ThenByDescending(x => x.EntryId);
 
-        return new(result.UserId, result.AccountId, result.Name, entries, result.AccountLabel, nextOlderEntry, nextYoungerEntry);
+        return new(result.UserId, result.AccountId, result.Name, entries, result.AccountLabel, nextOlderEntry, nextYoungerEntry, result.CurrencyId);
     }
 
     public async Task<int?> AddAccountAsync(AddAccount addAccount)

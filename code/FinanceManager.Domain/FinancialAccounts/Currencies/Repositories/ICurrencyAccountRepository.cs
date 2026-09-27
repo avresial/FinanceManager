@@ -7,5 +7,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 public interface ICurrencyAccountRepository<T> : IAccountRepository<T>
 {
     Task<int?> Add(int userId, string accountName, AccountLabel accountType);
+    Task<int?> Add(int userId, string accountName, AccountLabel accountType, int currencyId);
     Task<bool> Update(int accountId, string accountName, AccountLabel accountType);
+    Task<bool> Update(int accountId, string accountName, AccountLabel accountType, int currencyId);
 }

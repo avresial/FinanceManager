@@ -162,7 +162,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             if (entries.Count == 0 && older is not null)
                 entries = [older];
 
-            result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger));
+            result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger, account.CurrencyId));
         }
 
         return result;

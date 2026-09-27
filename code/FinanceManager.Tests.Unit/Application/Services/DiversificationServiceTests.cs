@@ -3,6 +3,7 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -18,6 +19,7 @@ public class DiversificationServiceTests
     private readonly Mock<IFinancialAccountRepository> _repositoryMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsMock = new();
     private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionMock = new();
+    private readonly Mock<ICurrencyRepository> _currencyMock = new();
     private readonly DiversificationService _service;
     private readonly DateTime _asOfDate = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -27,7 +29,14 @@ public class DiversificationServiceTests
             .ReturnsAsync((IReadOnlyList<InvestmentTransaction>)[]);
         SetupBondAccounts();
         SetupCurrencyAccounts();
-        _service = new(_repositoryMock.Object, _bondDetailsMock.Object, _investmentTransactionMock.Object);
+        _currencyMock.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>()))
+            .Returns(new[]
+            {
+                new Currency(0, "PLN", "zł"),
+                new Currency(2, "EUR", "€"),
+                new Currency(3, "USD", "$"),
+            }.ToAsyncEnumerable());
+        _service = new(_repositoryMock.Object, _bondDetailsMock.Object, _investmentTransactionMock.Object, _currencyMock.Object);
     }
 
     private void SetupInvestmentTransactions(params InvestmentTransaction[] transactions) =>
@@ -161,7 +170,7 @@ public class DiversificationServiceTests
     }
 
     [Fact]
-    public async Task GetDiversificationScore_MultipleCurrencyAccounts_CashCountsAsOneTicker()
+    public async Task GetDiversificationScore_MultipleCashAccountsWithSameCurrency_CountsOneHolding()
     {
         var cashAccount1 = new CurrencyAccount(1, 1, "checking", AccountLabel.Cash);
         cashAccount1.Add(new CurrencyAccountEntry(1, 1, _asOfDate, 500, 500), false);
@@ -177,6 +186,21 @@ public class DiversificationServiceTests
         Assert.Equal(expectedHoldingsScore, result.HoldingsScore);
         var expectedAssetClassScore = (int)(1 / 6.0 * 50);
         Assert.Equal(expectedAssetClassScore, result.AssetClassScore);
+    }
+
+    [Fact]
+    public async Task GetDiversificationScore_DifferentCashCurrencies_CountAsDistinctHoldingsButOneClass()
+    {
+        var pln = new CurrencyAccount(1, 1, "checking", AccountLabel.Cash);
+        pln.Add(new CurrencyAccountEntry(1, 1, _asOfDate, 500, 500), false);
+        var eur = new CurrencyAccount(1, 2, "euro", AccountLabel.Cash, currencyId: 2);
+        eur.Add(new CurrencyAccountEntry(2, 1, _asOfDate, 10, 10), false);
+        SetupCurrencyAccounts(pln, eur);
+
+        var result = await _service.GetDiversificationScore(1, _asOfDate);
+
+        Assert.Equal((int)(1 / 6.0 * 50), result.AssetClassScore);
+        Assert.Equal((int)(2 / 30.0 * 50), result.HoldingsScore);
     }
 
     [Fact]
@@ -307,7 +331,30 @@ public class DiversificationServiceTests
         Assert.Equal(["Stocks", "Bonds", "Cash"], result.AssetClasses.Select(g => g.AssetClass));
         Assert.Equal(["AAPL", "MSFT"], result.AssetClasses[0].Holdings);
         Assert.Equal(["Treasury 2030"], result.AssetClasses[1].Holdings);
-        Assert.Equal(["Cash"], result.AssetClasses[2].Holdings);
+        Assert.Equal(["PLN"], result.AssetClasses[2].Holdings);
+    }
+
+    [Fact]
+    public async Task GetDiversificationBreakdown_CashCurrencies_ArePositiveDeduplicatedAndSorted()
+    {
+        var accounts = new[]
+        {
+            Cash(1, 2, 10), Cash(2, 3, 50), Cash(3, 2, 5), Cash(4, 0, 0), Cash(5, 3, -1)
+        };
+        SetupCurrencyAccounts(accounts);
+
+        var result = await _service.GetDiversificationBreakdown(1, _asOfDate, TestContext.Current.CancellationToken);
+
+        var cash = Assert.Single(result.AssetClasses);
+        Assert.Equal("Cash", cash.AssetClass);
+        Assert.Equal(["EUR", "USD"], cash.Holdings);
+    }
+
+    private CurrencyAccount Cash(int accountId, int currencyId, decimal balance)
+    {
+        var account = new CurrencyAccount(1, accountId, $"cash {accountId}", AccountLabel.Cash, currencyId: currencyId);
+        account.Add(new CurrencyAccountEntry(accountId, 1, _asOfDate, balance, balance), false);
+        return account;
     }
 
     [Fact]

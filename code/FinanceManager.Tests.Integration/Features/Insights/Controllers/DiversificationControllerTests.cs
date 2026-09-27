@@ -63,6 +63,15 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
         var usd = new Currency(1, "USD", "$");
         _testDatabase.Context.Currencies.Add(usd);
+        _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
+        {
+            UserId = 1,
+            AccountId = 4,
+            Name = "USD cash",
+            AccountLabel = AccountLabel.Cash,
+            AccountType = AccountType.Currency,
+            CurrencyId = usd.Id
+        });
 
         // Investment holding: an AAPL listing held via a Buy transaction on the stock-type account.
         const long listingId = 100;
@@ -99,6 +108,8 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             new BondAccountEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5));
         _testDatabase.Context.CurrencyEntries.Add(
             new CurrencyAccountEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(
+            new CurrencyAccountEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -114,7 +125,7 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
         Assert.Equal(["Stocks", "Bonds", "Cash"], result.AssetClasses.Select(g => g.AssetClass));
         Assert.Equal(["AAPL"], result.AssetClasses[0].Holdings);
         Assert.Equal(["Treasury 2030"], result.AssetClasses[1].Holdings);
-        Assert.Equal(["Cash"], result.AssetClasses[2].Holdings);
+        Assert.Equal(["PLN", "USD"], result.AssetClasses[2].Holdings);
     }
 
     [Fact]
