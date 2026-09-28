@@ -55,7 +55,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
                     entries = [nextOlderEntry];
 
                 CurrencyAccount newResultAccount = new(resultAccount.UserId, resultAccount.AccountId, resultAccount.Name, entries,
-                    resultAccount.AccountType, nextOlderEntry, nextYoungerEntry);
+                    resultAccount.AccountType, nextOlderEntry, nextYoungerEntry, resultAccount.CurrencyId);
 
                 if (newResultAccount is T resultElement) return resultElement;
 
@@ -162,7 +162,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             if (entries.Count == 0 && older is not null)
                 entries = [older];
 
-            result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger));
+            result.Add(new CurrencyAccount(account.UserId, account.AccountId, account.Name, entries, account.AccountType, older, younger, account.CurrencyId));
         }
 
         return result;
@@ -205,7 +205,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         switch (account)
         {
             case CurrencyAccount currencyAccount:
-                var currencyAccountId = await currencyAccountRepository.Add(currencyAccount.UserId, currencyAccount.Name, currencyAccount.AccountType);
+                var currencyAccountId = await currencyAccountRepository.Add(currencyAccount.UserId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId);
 
                 if (currencyAccount is not null && currencyAccount.Entries is not null)
                     await currencyEntryRepository.Add(currencyAccount.Entries.Select(x =>
@@ -239,11 +239,22 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         _readCache.Clear();
-        if (account is CurrencyAccount currencyAccount) return currencyAccountRepository.Update(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType);
+        if (account is CurrencyAccount currencyAccount) return UpdateCurrencyAccount(currencyAccount);
         if (account is InvestmentAccount investmentAccount) return investmentAccountRepository.Update(investmentAccount.AccountId, investmentAccount.Name);
         if (account is BondAccount bondAccount) return bondAccountRepository.Update(bondAccount.AccountId, bondAccount.Name);
 
         throw new NotSupportedException($"Account type {account.GetType()} is not supported.");
+    }
+
+    private async Task UpdateCurrencyAccount(CurrencyAccount account)
+    {
+        var storedAccount = await currencyAccountRepository.Get(account.AccountId)
+            ?? throw new InvalidOperationException($"Currency account {account.AccountId} was not found.");
+        if (storedAccount.CurrencyId != account.CurrencyId
+            && await currencyEntryRepository.GetOldest(account.AccountId) is not null)
+            throw new InvalidOperationException("Account currency cannot change after transactions have been added.");
+
+        await currencyAccountRepository.Update(account.AccountId, account.Name, account.AccountType, account.CurrencyId);
     }
     public async Task RemoveAccount(Type accountType, int id)
     {

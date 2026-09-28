@@ -47,8 +47,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     {
         switch (account)
         {
-            case CurrencyAccount:
-                await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
+            case CurrencyAccount currencyAccount:
+                await currencyAccountHttpClient.AddAccountAsync(new AddAccount(account.Name, currencyAccount.CurrencyId));
                 break;
             case InvestmentAccount:
                 await investmentAccountHttpClient.AddAccountAsync(new AddAccount(account.Name));
@@ -314,7 +314,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is CurrencyAccount currencyAccount)
-            return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType));
+            return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId));
 
         if (account is InvestmentAccount)
             return investmentAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Stock));

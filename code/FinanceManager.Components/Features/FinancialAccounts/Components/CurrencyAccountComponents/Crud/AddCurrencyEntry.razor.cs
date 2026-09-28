@@ -37,6 +37,7 @@ public partial class AddCurrencyEntry : ComponentBase
     [Inject] public required ILogger<AddCurrencyEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
+    [Inject] public required FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyHttpClient CurrencyHttpClient { get; set; }
 
 
     protected override async Task OnInitializedAsync()
@@ -45,9 +46,10 @@ public partial class AddCurrencyEntry : ComponentBase
 
         _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
     }
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        _currency = SettingsService.GetCurrency();
+        var currencies = await CurrencyHttpClient.GetAll();
+        _currency = currencies.FirstOrDefault(x => x.Id == CurrencyAccount.CurrencyId) ?? SettingsService.GetCurrency();
     }
 
     public async Task Add()
