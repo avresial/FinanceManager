@@ -162,9 +162,9 @@ public class CurrencyAccountControllerTests
         // Arrange
         var userId = 1;
         UpdateAccount updateAccount = new(1, "Updated Account", AccountLabel.Cash);
-        CurrencyAccount account = new(userId, updateAccount.AccountId, "Test Account");
+        CurrencyAccount account = new(userId, updateAccount.AccountId, "Test Account", AccountLabel.Cash, currencyId: 2);
         _mockAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash, updateAccount.CurrencyId)).ReturnsAsync(true);
+        _mockAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash, account.CurrencyId)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Update(updateAccount);

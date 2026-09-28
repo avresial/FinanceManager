@@ -8,4 +8,4 @@ public record UpdateAccount(
     [Range(1, int.MaxValue)] int AccountId,
     [Required, StringLength(256)] string AccountName,
     AccountLabel AccountType,
-    int CurrencyId = 0);
+    int? CurrencyId = null);

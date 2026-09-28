@@ -121,13 +121,14 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
 
-        if (account.CurrencyId != updateAccount.CurrencyId
+        var currencyId = updateAccount.CurrencyId ?? account.CurrencyId;
+        if (account.CurrencyId != currencyId
             && await accountEntryRepository.GetOldest(updateAccount.AccountId) is not null)
             return BadRequest("Account currency cannot change after transactions have been added.");
-        if (await currencyRepository.GetCurrency(updateAccount.CurrencyId, HttpContext.RequestAborted) is null)
+        if (await currencyRepository.GetCurrency(currencyId, HttpContext.RequestAborted) is null)
             return BadRequest("Select a valid account currency.");
 
-        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType, updateAccount.CurrencyId);
+        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType, currencyId);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         return Ok(result);
     }

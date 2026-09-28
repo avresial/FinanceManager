@@ -31,8 +31,10 @@ public class AccountRepositoryTests
         currencyEntries
             .Setup(repository => repository.GetNextYounger(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>()))
             .ReturnsAsync([]);
+        currencyAccounts.Setup(repository => repository.Get(account.AccountId)).ReturnsAsync(account);
+        currencyEntries.Setup(repository => repository.GetOldest(account.AccountId)).ReturnsAsync((CurrencyAccountEntry?)null);
         currencyAccounts
-            .Setup(repository => repository.Update(account.AccountId, account.Name, account.AccountType))
+            .Setup(repository => repository.Update(account.AccountId, account.Name, account.AccountType, account.CurrencyId))
             .ReturnsAsync(true);
 
         var repository = new AccountRepository(
