@@ -18,7 +18,7 @@
             </MudText>
         </div>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@_isLoading" OnClick="RefreshAsync">Evaluate now</MudButton>
+                   Disabled="@_isRefreshing" OnClick="RefreshAsync">Evaluate now</MudButton>
     </div>
 
     @if (_errors.Count > 0)

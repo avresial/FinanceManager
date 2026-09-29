@@ -1,11 +1,15 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.HttpClients;
+using FinanceManager.Components.Features.Alerts.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Alerts.Components;
 
@@ -17,22 +21,81 @@ public partial class AlertsPage : ComponentBase
     private AlertFormModel _form = new();
     private Guid? _editingId;
     private bool _isLoading = true;
+    private bool _isRefreshing;
     private bool _isSaving;
+    private int? _userId;
+    private readonly RefreshVersionGate _refreshGate = new();
 
     [Inject] public required FinancialAlertsHttpClient HttpClient { get; set; }
     [Inject] public required ILogger<AlertsPage> Logger { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
+    [Inject] public required ISnapshotService SnapshotService { get; set; }
 
     protected override Task OnInitializedAsync() => RefreshAsync();
 
     private async Task RefreshAsync()
     {
-        _isLoading = true;
+        var version = _refreshGate.Claim();
+        _isRefreshing = true;
         _errors.Clear();
-
         try
         {
-            _alerts = await HttpClient.GetAsync();
+            var user = await LoginService.GetLoggedUser();
+            if (!_refreshGate.IsCurrent(version)) return;
+            if (user is null)
+            {
+                _isLoading = false;
+                _isRefreshing = false;
+                _errors.Add("Unable to load alerts. Please sign in.");
+                return;
+            }
+
+            if (_userId is int previousUserId && previousUserId != user.UserId)
+            {
+                _alerts = [];
+                _outcomes.Clear();
+                _isLoading = true;
+            }
+            _userId = user.UserId;
+            var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<AlertsPageSnapshot, AlertsPageModel>
+            {
+                Key = SnapshotKey(user.UserId),
+                Gate = _refreshGate,
+                ClaimedVersion = version,
+                ToModel = snapshot => snapshot.UserId == user.UserId
+                    && snapshot.Alerts is not null
+                    && snapshot.Outcomes is not null
+                    ? new AlertsPageModel(snapshot.Alerts, snapshot.Outcomes)
+                    : null,
+                FetchAsync = FetchAlertsAsync,
+                ContentComparer = AlertsPageContentComparer.Instance,
+                ToSnapshot = model => new AlertsPageSnapshot
+                {
+                    UserId = user.UserId,
+                    Alerts = model.Alerts,
+                    Outcomes = model.Outcomes,
+                },
+                OnSnapshotPainted = ShowAlertsAsync,
+                OnSnapshotMissing = () =>
+                {
+                    _isLoading = true;
+                    return InvokeAsync(StateHasChanged);
+                },
+                OnRefreshed = ShowAlertsAsync,
+            });
+
+            if (!_refreshGate.IsCurrent(version)) return;
+            if (result.Error is not null)
+            {
+                Logger.LogError(result.Error, "Unable to refresh financial alerts");
+                _errors.Add("Unable to refresh alerts. Showing the last known status.");
+            }
+            else if (result.Model is { } model && model.Outcomes.Any(outcome => outcome.Status == AlertTriggerStatus.Error))
+            {
+                _errors.Add("Unable to evaluate one or more alerts. Showing the last known status.");
+            }
         }
         catch (Exception ex)
         {
@@ -41,24 +104,68 @@ public partial class AlertsPage : ComponentBase
         }
         finally
         {
-            _isLoading = false;
+            if (_refreshGate.IsCurrent(version))
+            {
+                _isLoading = false;
+                _isRefreshing = false;
+                StateHasChanged();
+            }
         }
+    }
 
-        try
-        {
-            var outcomes = await HttpClient.EvaluateAsync();
-            _outcomes.Clear();
-            foreach (var outcome in outcomes)
-                _outcomes[outcome.AlertId] = outcome;
+    private Task ShowAlertsAsync(AlertsPageModel model)
+    {
+        _alerts = model.Alerts;
+        _outcomes.Clear();
+        foreach (var outcome in model.Outcomes)
+            _outcomes[outcome.AlertId] = outcome;
+        _isLoading = false;
+        return InvokeAsync(StateHasChanged);
+    }
 
-            if (outcomes.Any(outcome => outcome.Status == AlertTriggerStatus.Error))
-                _errors.Add("Unable to evaluate one or more alerts. Showing the last known status.");
-        }
-        catch (Exception ex)
+    private static string SnapshotKey(int userId) => $"alerts-page:{userId}";
+
+    private async Task<AlertsPageModel?> FetchAlertsAsync()
+    {
+        var alerts = await HttpClient.GetAsync();
+        var outcomes = await HttpClient.EvaluateAsync();
+        if (alerts.Any(alert => outcomes.All(outcome => outcome.AlertId != alert.Id)))
+            throw new InvalidOperationException("Alert evaluation returned incomplete results.");
+
+        return new AlertsPageModel(alerts, outcomes);
+    }
+
+    private sealed class AlertsPageContentComparer : IEqualityComparer<AlertsPageModel>
+    {
+        public static readonly AlertsPageContentComparer Instance = new();
+
+        public bool Equals(AlertsPageModel? x, AlertsPageModel? y) =>
+            ReferenceEquals(x, y) || x is not null && y is not null && RenderedContent(x) == RenderedContent(y);
+
+        public int GetHashCode(AlertsPageModel model) => RenderedContent(model).GetHashCode(StringComparison.Ordinal);
+
+        private static string RenderedContent(AlertsPageModel model) => JsonSerializer.Serialize(new
         {
-            Logger.LogError(ex, "Unable to evaluate financial alerts");
-            _errors.Add("Unable to evaluate alerts right now. Showing the last known status.");
-        }
+            model.Alerts,
+            Outcomes = model.Outcomes.Select(outcome => new
+            {
+                outcome.AlertId,
+                outcome.Status,
+                outcome.IsTriggered,
+                outcome.CurrentValue,
+                outcome.Message,
+                outcome.MatchingTransactions,
+                outcome.MatchingTransactionCount,
+            })
+        });
+    }
+
+    private async Task RefreshAfterMutationAsync()
+    {
+        _refreshGate.Claim();
+        if (_userId is int userId)
+            await SnapshotService.RemoveAsync(SnapshotKey(userId));
+        await RefreshAsync();
     }
 
     private async Task SaveAsync()
@@ -133,7 +240,7 @@ public partial class AlertsPage : ComponentBase
 
             Snackbar.Add(_editingId is null ? "Alert created." : "Alert updated.", Severity.Success);
             CancelEdit();
-            await RefreshAsync();
+            await RefreshAfterMutationAsync();
         }
         catch (Exception ex)
         {
@@ -156,7 +263,7 @@ public partial class AlertsPage : ComponentBase
                 return;
             }
 
-            await RefreshAsync();
+            await RefreshAfterMutationAsync();
         }
         catch (Exception ex)
         {
@@ -178,7 +285,7 @@ public partial class AlertsPage : ComponentBase
             if (_editingId == alert.Id)
                 CancelEdit();
             Snackbar.Add("Alert deleted.", Severity.Success);
-            await RefreshAsync();
+            await RefreshAfterMutationAsync();
         }
         catch (Exception ex)
         {
