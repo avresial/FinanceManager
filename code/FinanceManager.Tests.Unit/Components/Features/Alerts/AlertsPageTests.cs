@@ -20,7 +20,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Alerts;
 [Trait("Category", "Unit")]
 public sealed class AlertsPageTests
 {
-    private static readonly Guid AlertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid _alertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
     public async Task SnapshotHit_PaintsBeforeEvaluationAndKeepsItOnFailure()
@@ -145,13 +145,13 @@ public sealed class AlertsPageTests
     };
 
     private static FinancialAlertDto Alert(string title) => new(
-        AlertId, 7, title, AlertType.AccountBalance, true,
+        _alertId, 7, title, AlertType.AccountBalance, true,
         AlertComparisonOperator.GreaterThan, 100m, AlertEvaluationPeriod.CurrentMonth,
         null, null, null, null, null, AlertTriggerStatus.Healthy,
         null, null, new DateTime(2026, 9, 1), null);
 
     private static AlertEvaluationOutcome Outcome() => new(
-        AlertId, "Fresh alert", AlertType.AccountBalance, AlertTriggerStatus.Healthy,
+        _alertId, "Fresh alert", AlertType.AccountBalance, AlertTriggerStatus.Healthy,
         false, null, false, DeDuplicationReason.None, 50m, 100m,
         AlertComparisonOperator.GreaterThan, "stable", "Healthy",
         DateTime.UtcNow, new Dictionary<string, string>());
