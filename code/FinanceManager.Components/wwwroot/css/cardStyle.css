@@ -4,6 +4,10 @@
 
 /* ---- Utilities ---- */
 
+.cash-flow-forecast-card .mud-card-header-actions {
+    align-self: center;
+}
+
 /* Tabular figures — keeps currency columns aligned across rows. */
 .fm-tabular {
     font-variant-numeric: tabular-nums;

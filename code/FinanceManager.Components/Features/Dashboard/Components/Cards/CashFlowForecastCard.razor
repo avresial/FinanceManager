@@ -1,4 +1,4 @@
-<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+<MudCard Outlined Class="cash-flow-forecast-card rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
     <MudCardHeader Class="py-2 flex-shrink-0">
         <CardHeaderContent>
             <CardInfoTooltip Text="Projected cash-account balances based on recurring income, expenses, and active subscriptions."
@@ -9,7 +9,7 @@
         </CardHeaderContent>
         <CardHeaderActions>
             <MudButton Href="/CashFlowForecast" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                       EndIcon="@Icons.Material.Filled.ArrowForward" aria-label="See detailed cash flow forecast">
+                       aria-label="See detailed cash flow forecast">
                 More
             </MudButton>
         </CardHeaderActions>
@@ -35,11 +35,11 @@
                            Class="mt-2" OnClick="LoadData">Try again</MudButton>
             </div>
         }
-        else if (_forecast is not null)
+        else if (_model is not null)
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Current balance: <strong>@FormatMoney(CurrentBalance)</strong>
+                    Current balance: <strong>@FormatMoney(_model.CurrentBalance)</strong>
                 </MudText>
                 <MudGrid Spacing="1">
                     @foreach (var horizon in _horizons)
@@ -52,7 +52,7 @@
                         </MudItem>
                     }
                 </MudGrid>
-                @if (!_forecast.HasForecastableActivity)
+                @if (!_model.HasForecastableActivity)
                 {
                     <MudAlert Severity="Severity.Info" Dense>
                         No recurring activity is expected in the selected horizon.
