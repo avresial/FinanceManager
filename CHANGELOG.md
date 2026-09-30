@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Show the last Alerts and watchlists results immediately while checking for updates. #818
 - Combine money-weighted and time-weighted returns into one responsive Portfolio return card with cash-flow context. #814
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 

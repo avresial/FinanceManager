@@ -12,7 +12,7 @@ public sealed class FinancialAlertsHttpClient(HttpClient httpClient)
     public async Task<List<FinancialAlertDto>> GetAsync(CancellationToken cancellationToken = default)
     {
         var result = await httpClient.GetFromJsonAsync<List<FinancialAlertDto>>(_endpoint, cancellationToken);
-        return result ?? [];
+        return result ?? throw new InvalidDataException("Alert definitions response was empty.");
     }
 
     public async Task<FinancialAlertDto?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
@@ -61,7 +61,7 @@ public sealed class FinancialAlertsHttpClient(HttpClient httpClient)
         using var response = await httpClient.PostAsync($"{_endpoint}/evaluate", content: null, cancellationToken);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<List<AlertEvaluationOutcome>>(cancellationToken: cancellationToken);
-        return result ?? [];
+        return result ?? throw new InvalidDataException("Alert evaluation response was empty.");
     }
 
     public async Task<AlertEvaluationOutcome?> EvaluateAsync(
