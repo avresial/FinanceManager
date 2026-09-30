@@ -247,9 +247,12 @@ public class CashFlowForecastPageTests
 
         var selection = ClickHorizon(cut, horizonDays);
         await handler.Started(horizonDays);
-        Assert.Contains("MATCHING", cut.Markup);
-        Assert.DoesNotContain("INITIAL", cut.Markup);
-        Assert.DoesNotContain("mud-skeleton", cut.Markup);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("MATCHING", cut.Markup);
+            Assert.DoesNotContain("INITIAL", cut.Markup);
+            Assert.DoesNotContain("mud-skeleton", cut.Markup);
+        });
 
         handler.Complete(Forecast("REFRESHED", horizonDays));
         await selection;
