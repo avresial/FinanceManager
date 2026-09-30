@@ -17,11 +17,15 @@
         <div>
             <MudText Typo="Typo.h4" HtmlTag="h1">Transaction automation</MudText>
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Apply ordered labels and text clean-up automatically when transactions arrive.
+                Rules run from top to bottom. Each rule sees changes made by earlier rules.
             </MudText>
         </div>
+        <div class="d-flex flex-wrap gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   Disabled="@(_isLoading || _isSaving)" OnClick="BeginCreate" aria-label="Create a new rule">Create rule</MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@_isLoading" OnClick="LoadAsync">Refresh</MudButton>
+                   Disabled="@(_isLoading || IsBusy)" OnClick="RefreshAsync">Refresh</MudButton>
+        </div>
     </div>
 
     @if (_error is not null)
@@ -29,11 +33,212 @@
         <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
     }
 
-    <MudForm @ref="_ruleForm" FieldChanged="OnEditorChanged">
-        <MudPaper Outlined Class="pa-4 mb-5">
+    @if (_isLoading && _rules.Count == 0)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
+    }
+    else if (_rules.Count == 0 && _error is null && !_isCreating)
+    {
+        <MudPaper Outlined Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.h6" Class="mt-2">No automation rules yet</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Create your first rule to keep new and imported transactions tidy.</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="BeginCreate" Class="mt-3">Create your first rule</MudButton>
+        </MudPaper>
+    }
+    else if (_rules.Count > 0)
+    {
+        <div class="rules-heading">
+            <MudText Typo="Typo.h6">Rules · @_rules.Count</MudText>
+            <MudText Typo="Typo.caption">Change order in rule details</MudText>
+        </div>
+        <ol class="rule-list" aria-label="Ordered transaction rules">
+            @for (var index = 0; index < _rules.Count; index++)
+            {
+                var rule = _rules[index];
+                var number = (index + 1).ToString("D2");
+                var isExpanded = _expandedId == rule.Id;
+                <li @key="rule.Id" class="rule-item @(isExpanded ? "is-expanded" : null)" data-rule-id="@rule.Id">
+                    <button type="button" class="rule-row" aria-expanded="@isExpanded.ToString().ToLowerInvariant()"
+                            aria-controls="@DetailId(rule)" aria-label="@($"Rule {number}: {rule.Name}")"
+                            disabled="@_isSaving" @onclick="@(() => ExpandRuleAsync(rule))">
+                        <span class="rule-number">@number</span>
+                        <span class="rule-row-copy">
+                            <span class="rule-name">@rule.Name</span>
+                            <span class="rule-summary">@DescribeConditions(rule) → @DescribeActions(rule)</span>
+                        </span>
+                        <span class="rule-state @(rule.IsEnabled ? "enabled" : null)">@(rule.IsEnabled ? "Enabled" : "Disabled")</span>
+                        <span class="rule-chevron" aria-hidden="true">@(isExpanded ? "−" : "+")</span>
+                    </button>
+                    @if (isExpanded)
+                    {
+                        <section id="@DetailId(rule)" class="rule-detail" aria-label="@($"Details for {rule.Name}")">
+                            <div class="rule-detail-header">
+                                <div>
+                                    <MudText Typo="Typo.overline" Color="Color.Primary">Rule @number · @(rule.IsEnabled ? "Enabled" : "Disabled")</MudText>
+                                    <MudText Typo="Typo.h6">@rule.Name</MudText>
+                                </div>
+                                @if (_editingId != rule.Id)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="@(() => BeginEdit(rule))" aria-label="@($"Edit {rule.Name}")">Edit fields</MudButton>
+                                }
+                            </div>
+                            <div class="rule-workspace">
+                                <div class="rule-definition">
+                                    @if (_editingId == rule.Id)
+                                    {
+                                        @RuleEditor
+                                    }
+                                    else
+                                    {
+                                        <div class="rule-step">
+                                            <span class="step-label">IF</span>
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">All conditions must match</MudText>
+                                                <ul class="condition-list">
+                                                    @foreach (var condition in rule.Conditions)
+                                                    {
+                                                        <li>@DescribeCondition(condition, true)</li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="rule-step">
+                                            <span class="step-label do-label">DO</span>
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Apply actions in order</MudText>
+                                                <ol class="action-list">
+                                                    @foreach (var action in rule.Actions)
+                                                    {
+                                                        <li>@DescribeAction(action)</li>
+                                                    }
+                                                </ol>
+                                            </div>
+                                        </div>
+                                        <div class="rule-options">
+                                            <MudSwitch T="bool" Value="@rule.IsEnabled" ValueChanged="@(value => ToggleAsync(rule, value))" Disabled="@IsBusy" Color="Color.Primary" Label="Enabled" aria-label="@($"Enable {rule.Name}")" />
+                                            <MudText Typo="Typo.body2"><strong>Stop after match:</strong> @(rule.StopProcessing ? "On" : "Off")</MudText>
+                                            <MudText Typo="Typo.caption">When all conditions match, run this rule's actions first, then @(rule.StopProcessing ? "skip the remaining rules." : "continue to the next rule.")</MudText>
+                                        </div>
+                                    }
+                                </div>
+                                @RuleTestResults
+                            </div>
+                            <div class="rule-detail-actions">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.KeyboardArrowUp" Disabled="@(index == 0 || IsBusy)" OnClick="@(() => MoveAsync(rule, -1))" aria-label="@($"Move {rule.Name} up")">Move up</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.KeyboardArrowDown" Disabled="@(index == _rules.Count - 1 || IsBusy)" OnClick="@(() => MoveAsync(rule, 1))" aria-label="@($"Move {rule.Name} down")">Move down</MudButton>
+                                </div>
+                                @if (_confirmDeleteId == rule.Id)
+                                {
+                                    <div class="delete-confirmation" role="alert">
+                                        <MudText Typo="Typo.body2">Delete “@rule.Name”? This cannot be undone.</MudText>
+                                        <MudButton Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => DeleteAsync(rule))">Confirm delete</MudButton>
+                                        <MudButton Size="Size.Small" OnClick="@(() => _confirmDeleteId = null)">Cancel</MudButton>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <MudButton Color="Color.Error" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => _confirmDeleteId = rule.Id)" aria-label="@($"Delete {rule.Name}")">Delete rule</MudButton>
+                                }
+                            </div>
+                        </section>
+                    }
+                </li>
+            }
+        </ol>
+    }
+    @if (_isCreating)
+    {
+        <section class="creation-workspace mt-4" aria-label="Create a rule">
+            <div class="rule-workspace">
+                @RuleEditor
+                @RuleTestResults
+            </div>
+        </section>
+    }
+    @if (_rules.Count > 0)
+    {
+        <MudPaper Outlined Class="pa-4 mt-5">
+            <MudText Typo="Typo.h6">Test the full sequence</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Test the current saved rule set against a transaction without changing your data.
+            </MudText>
+            <MudGrid Spacing="2" Class="mx-0 w-100">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" @bind-Value="_previewContractor" @bind-Value:after="InvalidatePreview" Label="Contractor" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" @bind-Value="_previewDescription" @bind-Value:after="InvalidatePreview" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="int?" @bind-Value="_previewAccountId" @bind-Value:after="InvalidatePreview" Label="Account" Required="true"
+                               ToStringFunc="@(accountId => accountId is int id ? GetAccountLabel(id) : string.Empty)"
+                               Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var account in _accounts)
+                        {
+                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@GetAccountLabel(account)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudNumericField T="decimal" @bind-Value="_previewAmount" @bind-Value:after="InvalidatePreview" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="TransactionDirection" @bind-Value="_previewDirection" @bind-Value:after="InvalidatePreview" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var direction in Enum.GetValues<TransactionDirection>())
+                        {
+                            <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="3" Class="d-flex align-center">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@_isPreviewing" OnClick="PreviewAsync">Preview sequence</MudButton>
+                </MudItem>
+            </MudGrid>
+            @if (_preview is not null)
+            {
+                <div class="sequence-results mt-3" role="status" aria-live="polite">
+                    <MudText Typo="Typo.subtitle2">Saved sequence results</MudText>
+                    <ol class="sequence-trail">
+                        @foreach (var outcome in _preview.RuleOutcomes)
+                        {
+                            <li><strong>@outcome.RuleName</strong> · @DescribeOutcome(outcome)</li>
+                        }
+                    </ol>
+                    @BeforeAfter(_preview.OriginalFacts, _preview.FinalFacts)
+                    @if (!_preview.HasChanges)
+                    {
+                        <MudText Typo="Typo.body2">No effective change.</MudText>
+                    }
+                </div>
+            }
+        </MudPaper>
+        <MudPaper Outlined Class="pa-4 mt-5">
+            <MudText Typo="Typo.h6">Apply to existing currency transactions</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Retroactive application changes matching transactions in your accounts. Confirm before running it.
+            </MudText>
+            <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || _isApplying)" OnClick="ApplyAsync">
+                Apply to all currency transactions
+            </MudButton>
+            @if (_applyResult is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Success" Class="mt-2">Checked @_applyResult.Examined transactions and updated @_applyResult.Updated.</MudText>
+            }
+        </MudPaper>
+
+    }
+</MudContainer>
+
+@code {
+    private RenderFragment RuleEditor => @<text>
+<MudForm @ref="_ruleForm" FieldChanged="OnEditorChanged">
+        <MudPaper Outlined Class="pa-4 rule-editor">
             <div class="d-flex justify-space-between align-center mb-3">
                 <MudText Typo="Typo.h6">@(_editingId is null ? "Create a rule" : "Edit rule")</MudText>
-                @if (_editingId is not null)
+                @if (_editingId is not null || _isCreating)
                 {
                     <MudButton Variant="Variant.Text" OnClick="ResetForm">Cancel</MudButton>
                 }
@@ -51,8 +256,9 @@
                 <MudSwitch T="bool" @bind-Value="_stopProcessing" Color="Color.Primary" Label="Stop after match" />
             </MudItem>
         </MudGrid>
+        <MudText Typo="Typo.caption">Stop after match takes effect after this rule's actions, only when all conditions match.</MudText>
 
-        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+        <div class="d-flex flex-wrap justify-space-between align-center mt-4 mb-2">
             <MudText Typo="Typo.subtitle2">Match all of these conditions</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddCondition">
                 Add condition
@@ -144,12 +350,23 @@
                         <MudItem xs="12" sm="2">
                             <MudNumericField T="decimal?" @bind-Value="condition.Threshold" Label="Threshold" Variant="Variant.Outlined" Margin="Margin.Dense" />
                         </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="AmountComparison" @bind-Value="condition.Comparison" Label="Amount comparison" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                @foreach (var comparison in Enum.GetValues<AmountComparison>())
+                                {
+                                    <MudSelectItem T="AmountComparison" Value="@comparison">@DescribeComparison(comparison)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption">Use either an inclusive minimum/maximum range or a threshold with its comparison.</MudText>
+                        </MudItem>
                     }
                 </MudGrid>
             </MudPaper>
         }
 
-        <div class="d-flex justify-space-between align-center mt-4 mb-2">
+        <div class="d-flex flex-wrap justify-space-between align-center mt-4 mb-2">
             <MudText Typo="Typo.subtitle2">Actions</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAction">
                 Add action
@@ -197,169 +414,75 @@
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_isSaving || _isTesting)" OnClick="TestAsync">
                     @(_isTesting ? "Testing..." : "Test")
                 </MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSaving" OnClick="SaveAsync">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSaving || _isTesting)" OnClick="SaveAsync">
                     @(_editingId is null ? "Create rule" : "Save changes")
                 </MudButton>
             </div>
 
-            @if (_testResults is not null)
+        </MudPaper>
+    </MudForm>
+    </text>;
+
+    private RenderFragment RuleTestResults => @<aside class="rule-preview" aria-label="Transaction preview">
+        <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-3">
+            <MudText Typo="Typo.h6">Transaction preview</MudText>
+            @if (_editingId is null && !_isCreating && ExpandedRule is TransactionRuleDto rule)
             {
-                <MudDivider Class="my-4" />
-                <MudText Typo="Typo.h6">Test results</MudText>
-                @if (_testResults.Count == 0)
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@IsBusy" OnClick="@(() => TestSavedRuleAsync(rule))">@(_isTesting ? "Testing..." : "Test this rule")</MudButton>
+            }
+        </div>
+        <MudText Typo="Typo.caption">Read-only test against up to five existing transactions. No rule or transaction is saved.</MudText>
+        @if (_testResults is null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-4">@(_isTesting ? "Finding matching transactions…" : "Run a test to see actual before → after results.")</MudText>
+        }
+        else
+        {
+            <div role="status" aria-live="polite">
+                <MudText Typo="Typo.subtitle2" Class="mt-3">@(_editingId is not null || _isCreating ? "Draft test results" : "Test results")</MudText>
+                @if (!_testEnabled)
                 {
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">
-                        No matching transactions found
-                    </MudAlert>
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">Disabled rule: no actions are applied.</MudAlert>
+                }
+                else if (_testResults.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">No matching transactions found.</MudAlert>
                 }
                 else
                 {
                     @foreach (var result in _testResults)
                     {
-                        <MudPaper Outlined Class="pa-3 mt-3">
-                            <div class="d-flex flex-wrap justify-space-between gap-2">
+                        <div class="transaction-result">
+                            <div class="d-flex flex-wrap justify-space-between gap-2 mb-2">
                                 <MudText Typo="Typo.subtitle2">@result.AccountName · @result.Date.ToString("d")</MudText>
-                                <MudText Typo="Typo.subtitle2">@result.Amount.ToString("N2")</MudText>
+                                <MudText Typo="Typo.subtitle2">@result.Amount.ToString("N2") · @result.Before.Direction</MudText>
                             </div>
-                            <MudText Typo="Typo.body2"><b>Contractor:</b> @result.Before.Contractor</MudText>
-                            <MudText Typo="Typo.body2"><b>Description:</b> @result.Before.Description</MudText>
-                            <MudText Typo="Typo.body2"><b>Current labels:</b> @FormatLabels(result.Before.Labels)</MudText>
-
-                            @if (!result.HasChanges)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
-                                    Rule matches but produces no effective change.
-                                </MudText>
-                            }
-                            else
-                            {
-                                <div class="mt-2">
-                                    @if (!string.Equals(result.Before.Contractor, result.After.Contractor, StringComparison.Ordinal))
-                                    {
-                                        <MudText Typo="Typo.body2"><b>Contractor:</b> @result.Before.Contractor → @result.After.Contractor</MudText>
-                                    }
-                                    @if (!string.Equals(result.Before.Description, result.After.Description, StringComparison.Ordinal))
-                                    {
-                                        <MudText Typo="Typo.body2"><b>Description:</b> @result.Before.Description → @result.After.Description</MudText>
-                                    }
-                                    @if (!result.Before.Labels.SequenceEqual(result.After.Labels))
-                                    {
-                                        <MudText Typo="Typo.body2"><b>Labels:</b> @FormatLabels(result.Before.Labels) → @FormatLabels(result.After.Labels)</MudText>
-                                    }
-                                </div>
-                            }
-                        </MudPaper>
+                            @BeforeAfter(result.Before, result.After)
+                            <MudText Typo="Typo.caption">@(result.HasChanges ? "Matched · changes shown above." : "Rule matches but produces no effective change.")</MudText>
+                        </div>
                     }
                 }
-            }
-        </MudPaper>
-    </MudForm>
+            </div>
+        }
+    </aside>;
 
-    @if (_isLoading && _rules.Count == 0)
-    {
-        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
-    }
-    else if (_rules.Count == 0)
-    {
-        <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" Color="Color.Secondary" />
-            <MudText Typo="Typo.h6" Class="mt-2">No automation rules yet</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Create a rule above to keep imported and new transactions tidy.</MudText>
-        </MudPaper>
-    }
-    else
-    {
-        <MudTable Items="_rules" Dense="true" Hover="true" Outlined="true" Elevation="0">
-            <HeaderContent>
-                <MudTh>Rule</MudTh>
-                <MudTh>Match</MudTh>
-                <MudTh>Actions</MudTh>
-                <MudTh>Status</MudTh>
-                <MudTh Style="text-align:right">Manage</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Rule">
-                    <MudText Typo="Typo.body1" Class="font-weight-600">@context.Name</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Order @context.Order</MudText>
-                </MudTd>
-                <MudTd DataLabel="Match">@DescribeConditions(context)</MudTd>
-                <MudTd DataLabel="Actions">@DescribeActions(context)</MudTd>
-                <MudTd DataLabel="Status">
-                    <MudChip T="string" Size="Size.Small" Color="@(context.IsEnabled ? Color.Success : Color.Default)" Variant="Variant.Outlined">
-                        @(context.IsEnabled ? "Enabled" : "Disabled")
-                    </MudChip>
-                </MudTd>
-                <MudTd DataLabel="Manage" Style="text-align:right; white-space:nowrap">
-                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Small" Disabled="@(context.Order == 1)" OnClick="@(() => MoveAsync(context, -1))" aria-label="Move rule up" />
-                    <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Disabled="@(context.Order == _rules.Count)" OnClick="@(() => MoveAsync(context, 1))" aria-label="Move rule down" />
-                    <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleAsync(context, value))" Color="Color.Primary" Size="Size.Small" aria-label="@(string.Concat("Enable ", context.Name))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => BeginEdit(context))" aria-label="@(string.Concat("Edit ", context.Name))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteAsync(context))" aria-label="@(string.Concat("Delete ", context.Name))" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-
-        <MudPaper Outlined Class="pa-4 mt-5">
-            <MudText Typo="Typo.h6">Apply existing rules</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                Retroactive application changes matching transactions in your accounts. Confirm before running it.
-            </MudText>
-            <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />
-            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || _isApplying)" OnClick="ApplyAsync">
-                Apply to all currency transactions
-            </MudButton>
-            @if (_applyResult is not null)
-            {
-                <MudText Typo="Typo.body2" Color="Color.Success" Class="mt-2">Checked @_applyResult.Examined transactions and updated @_applyResult.Updated.</MudText>
-            }
-        </MudPaper>
-
-        <MudPaper Outlined Class="pa-4 mt-5">
-            <MudText Typo="Typo.h6">Preview rules</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                Test the current saved rule set against a transaction without changing your data.
-            </MudText>
-            <MudGrid Spacing="2" Class="mx-0 w-100">
-                <MudItem xs="12" sm="6">
-                    <MudTextField T="string" @bind-Value="_previewContractor" Label="Contractor" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField T="string" @bind-Value="_previewDescription" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudSelect T="int?" @bind-Value="_previewAccountId" Label="Account" Required="true"
-                               ToStringFunc="@(accountId => accountId is int id ? GetAccountLabel(id) : string.Empty)"
-                               Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var account in _accounts)
-                        {
-                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@GetAccountLabel(account)</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="3">
-                    <MudNumericField T="decimal" @bind-Value="_previewAmount" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudSelect T="TransactionDirection" @bind-Value="_previewDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var direction in Enum.GetValues<TransactionDirection>())
-                        {
-                            <MudSelectItem T="TransactionDirection" Value="@direction">@direction</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="3" Class="d-flex align-center">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@_isPreviewing" OnClick="PreviewAsync">Preview</MudButton>
-                </MudItem>
-            </MudGrid>
-            @if (_preview is not null)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">
-                    <MudText Typo="Typo.body2"><b>Contractor:</b> @_preview.FinalFacts.Contractor</MudText>
-                    <MudText Typo="Typo.body2"><b>Description:</b> @_preview.FinalFacts.Description</MudText>
-                    <MudText Typo="Typo.body2"><b>Labels:</b> @(string.Join(", ", _preview.FinalFacts.Labels))</MudText>
-                    <MudText Typo="Typo.caption">@_preview.AppliedRules.Count rule(s) applied.</MudText>
-                </MudAlert>
-            }
-        </MudPaper>
-    }
-</MudContainer>
+    private RenderFragment BeforeAfter(TransactionFacts before, TransactionFacts after) => @<div class="before-after">
+        <div class="facts-column">
+            <span class="facts-heading">Before</span>
+            <dl>
+                <dt>Contractor</dt><dd>@DisplayText(before.Contractor)</dd>
+                <dt>Description</dt><dd>@DisplayText(before.Description)</dd>
+                <dt>Labels</dt><dd>@FormatLabels(before.Labels)</dd>
+            </dl>
+        </div>
+        <span class="facts-arrow" aria-hidden="true">→</span>
+        <div class="facts-column">
+            <span class="facts-heading">After</span>
+            <dl>
+                <dt>Contractor</dt><dd class="@(before.Contractor != after.Contractor ? "changed-value" : null)">@DisplayText(after.Contractor)</dd>
+                <dt>Description</dt><dd class="@(before.Description != after.Description ? "changed-value" : null)">@DisplayText(after.Description)</dd>
+                <dt>Labels</dt><dd class="@(!before.Labels.SequenceEqual(after.Labels) ? "changed-value" : null)">@FormatLabels(after.Labels)</dd>
+            </dl>
+        </div>
+    </div>;
+}
