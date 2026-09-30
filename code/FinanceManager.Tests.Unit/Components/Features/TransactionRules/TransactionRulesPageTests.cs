@@ -480,6 +480,40 @@ public sealed class TransactionRulesPageTests
         Assert.DoesNotContain("No automation rules yet", cut.Markup);
     }
 
+    [Theory]
+    [InlineData("Apply to all currency transactions")]
+    [InlineData("Preview sequence")]
+    [InlineData("Save changes")]
+    public async Task PendingOperation_BlocksOtherRuleAndSequenceOperations(string operation)
+    {
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new RulesHandler(AccountRule()) { OperationCompletion = completion };
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".rule-row")));
+        cut.Find(".rule-row").Click();
+        cut.Find("button[aria-label='Edit Account rule']").Click();
+        var confirm = cut.FindComponents<MudCheckBox<bool>>().Single(component => component.Instance.Label == "I understand that matching transactions will be updated");
+        await cut.InvokeAsync(() => confirm.Instance.ValueChanged.InvokeAsync(true));
+        var pending = cut.FindAll("button").Single(button => button.TextContent.Trim() == operation).ClickAsync(new());
+        cut.WaitForAssertion(() => Assert.True(handler.OperationStarted));
+
+        try
+        {
+            foreach (var name in new[] { "Save changes", "Test", "Preview sequence", "Apply to all currency transactions" })
+                Assert.True(cut.FindAll("button").Single(button => button.TextContent.Trim() == name).HasAttribute("disabled"), name);
+            Assert.True(cut.Find("button[aria-label='Create a new rule']").HasAttribute("disabled"));
+            Assert.True(cut.Find("button[aria-label='Delete Account rule']").HasAttribute("disabled"));
+        }
+        finally
+        {
+            completion.SetResult(true);
+            await pending;
+        }
+
+        Assert.False(cut.FindAll("button").Single(button => button.TextContent.Trim() == "Preview sequence").HasAttribute("disabled"));
+    }
+
     private static TransactionRuleDto DetailedRule() => new(
         Guid.NewGuid(), "Clean up ACME", 2, true, true,
         [new() { Type = "Contractor", Pattern = "ACME" }, new() { Type = "Amount", MinAmount = 10, MaxAmount = 50 }],
@@ -535,9 +569,19 @@ public sealed class TransactionRulesPageTests
         public TaskCompletionSource<List<TransactionRuleTestResultDto>>? TestCompletion { get; init; }
         public TransactionRuleEngineResult PreviewResult { get; init; } = new();
         public ApplyTransactionRules? LastApply { get; private set; }
+        public TaskCompletionSource<bool>? OperationCompletion { get; init; }
+        public bool OperationStarted { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (OperationCompletion is not null && (request.Method == HttpMethod.Put ||
+                request.RequestUri!.AbsolutePath.EndsWith("/preview", StringComparison.Ordinal) ||
+                request.RequestUri.AbsolutePath.EndsWith("/apply", StringComparison.Ordinal)))
+            {
+                OperationStarted = true;
+                await OperationCompletion.Task;
+            }
+
             if (request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath.EndsWith("/CurrencyAccount", StringComparison.Ordinal))
                 return new HttpResponseMessage(FailAccountLoad ? HttpStatusCode.ServiceUnavailable : HttpStatusCode.OK)
                 {

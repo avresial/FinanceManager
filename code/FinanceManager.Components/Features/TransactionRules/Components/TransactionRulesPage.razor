@@ -22,7 +22,7 @@
         </div>
         <div class="d-flex flex-wrap gap-2">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                   Disabled="@(_isLoading || _isSaving)" OnClick="BeginCreate" aria-label="Create a new rule">Create rule</MudButton>
+                   Disabled="@(_isLoading || IsBusy)" OnClick="BeginCreate" aria-label="Create a new rule">Create rule</MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
                    Disabled="@(_isLoading || IsBusy)" OnClick="RefreshAsync">Refresh</MudButton>
         </div>
@@ -193,7 +193,7 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="3" Class="d-flex align-center">
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@_isPreviewing" OnClick="PreviewAsync">Preview sequence</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="PreviewAsync">Preview sequence</MudButton>
                 </MudItem>
             </MudGrid>
             @if (_preview is not null)
@@ -220,7 +220,7 @@
                 Retroactive application changes matching transactions in your accounts. Confirm before running it.
             </MudText>
             <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />
-            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || _isApplying)" OnClick="ApplyAsync">
+            <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || IsBusy)" OnClick="ApplyAsync">
                 Apply to all currency transactions
             </MudButton>
             @if (_applyResult is not null)
@@ -411,10 +411,10 @@
         }
 
             <div class="d-flex flex-wrap justify-end gap-2 mt-4">
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@(_isSaving || _isTesting)" OnClick="TestAsync">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="TestAsync">
                     @(_isTesting ? "Testing..." : "Test")
                 </MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSaving || _isTesting)" OnClick="SaveAsync">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@IsBusy" OnClick="SaveAsync">
                     @(_editingId is null ? "Create rule" : "Save changes")
                 </MudButton>
             </div>

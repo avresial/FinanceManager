@@ -28,7 +28,7 @@ public partial class TransactionRulesPage : ComponentBase
     private bool _testEnabled;
     private int _previewVersion;
 
-    private bool IsBusy => _isSaving || _isTesting || _isReordering || _isDeleting || _isToggling;
+    private bool IsBusy => _isSaving || _isTesting || _isReordering || _isDeleting || _isToggling || _isApplying || _isPreviewing;
     private TransactionRuleDto? ExpandedRule => _rules.FirstOrDefault(rule => rule.Id == _expandedId);
     private bool _isLoading = true;
     private bool _isSaving;
@@ -89,6 +89,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task RefreshAsync()
     {
+        if (IsBusy) return;
+
         await ResetForm();
         _expandedId = null;
         _confirmDeleteId = null;
@@ -98,6 +100,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task BeginCreate()
     {
+        if (IsBusy) return;
+
         await ResetForm();
         _expandedId = null;
         _confirmDeleteId = null;
@@ -116,6 +120,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task SaveAsync()
     {
+        if (IsBusy) return;
+
         _error = null;
         if (string.IsNullOrWhiteSpace(_name))
         {
@@ -166,6 +172,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task TestAsync()
     {
+        if (IsBusy) return;
+
         _error = null;
         if (string.IsNullOrWhiteSpace(_name))
         {
@@ -183,6 +191,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task RunTestAsync(CreateTransactionRule command)
     {
+        if (IsBusy) return;
+
         _error = null;
         _testResults = null;
         _isTesting = true;
@@ -209,6 +219,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ToggleAsync(TransactionRuleDto rule, bool enabled)
     {
+        if (IsBusy) return;
+
         _isToggling = true;
         try
         {
@@ -234,6 +246,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task DeleteAsync(TransactionRuleDto rule)
     {
+        if (IsBusy) return;
+
         _isDeleting = true;
         try
         {
@@ -262,6 +276,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task MoveAsync(TransactionRuleDto rule, int offset)
     {
+        if (IsBusy) return;
+
         var current = _rules.OrderBy(x => x.Order).ToList();
         var index = current.FindIndex(x => x.Id == rule.Id);
         var target = index + offset;
@@ -292,6 +308,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private void BeginEdit(TransactionRuleDto rule)
     {
+        if (IsBusy) return;
+
         EditorChanged();
         _expandedId = rule.Id;
         _isCreating = false;
@@ -351,6 +369,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ApplyAsync()
     {
+        if (IsBusy) return;
+
         _isApplying = true;
         _applyResult = null;
         try
@@ -371,6 +391,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task PreviewAsync()
     {
+        if (IsBusy) return;
+
         if (_previewAccountId is not int accountId)
         {
             _error = "Select an account to preview the current rules.";
