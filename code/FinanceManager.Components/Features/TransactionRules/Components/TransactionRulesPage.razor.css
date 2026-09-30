@@ -1,0 +1,61 @@
+.rules-heading,
+.rule-detail-header,
+.rule-detail-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.rules-heading { margin-bottom: .75rem; }
+.rule-list { list-style: none; padding: 0; margin: 0; }
+.rule-item { margin-bottom: .75rem; border: 1px solid var(--mud-palette-divider); border-radius: 8px; overflow: hidden; background: var(--mud-palette-surface); }
+.rule-row { display: flex; align-items: center; gap: 1rem; width: 100%; padding: 1rem; border: 0; text-align: left; cursor: pointer; color: var(--mud-palette-text-primary); background: transparent; font: inherit; }
+.rule-row:hover, .is-expanded > .rule-row { background: var(--mud-palette-action-default-hover); }
+.rule-row:focus-visible { outline: 3px solid var(--mud-palette-primary); outline-offset: -3px; }
+.rule-number { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--mud-palette-primary); }
+.rule-row-copy { flex: 1; min-width: 0; }
+.rule-name { display: block; font-weight: 600; }
+.rule-summary { display: block; color: var(--mud-palette-text-secondary); font-size: .875rem; margin-top: .25rem; overflow-wrap: anywhere; }
+.rule-state { font-size: .75rem; border: 1px solid var(--mud-palette-divider); padding: .25rem .5rem; border-radius: 1rem; white-space: nowrap; }
+.rule-state.enabled { color: var(--mud-palette-success-text); background: var(--mud-palette-success); }
+.rule-chevron { font-size: 1.5rem; width: 1rem; text-align: center; }
+.rule-detail { padding: 1.25rem; border-top: 2px solid var(--mud-palette-primary); }
+.rule-workspace { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1.5rem; margin-top: 1.25rem; }
+.rule-definition { min-width: 0; }
+.rule-step { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.rule-step > div { min-width: 0; }
+.step-label { display: inline-flex; flex-shrink: 0; justify-content: center; align-items: center; width: 2.5rem; height: 2rem; border-radius: 4px; color: var(--mud-palette-primary); background: var(--mud-palette-action-default-hover); font-weight: 700; font-size: .75rem; }
+.do-label { color: var(--mud-palette-text-primary); }
+.condition-list, .action-list, .sequence-trail { padding-left: 1.25rem; margin: .5rem 0; }
+.condition-list li, .action-list li, .sequence-trail li { padding: .3rem 0; overflow-wrap: anywhere; }
+.rule-options { border-top: 1px solid var(--mud-palette-divider); padding-top: .75rem; }
+.rule-preview { padding: 1rem; border: 1px solid var(--mud-palette-divider); border-radius: 6px; min-width: 0; align-self: start; }
+.rule-detail-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--mud-palette-divider); }
+.transaction-result { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--mud-palette-divider); }
+.before-after { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .75rem; margin: 1rem 0; }
+.facts-column { min-width: 0; }
+.facts-heading { text-transform: uppercase; font-size: .75rem; font-weight: 600; color: var(--mud-palette-text-secondary); }
+.facts-column dl { margin-top: .5rem; }
+.facts-column dt { font-size: .75rem; color: var(--mud-palette-text-secondary); }
+.facts-column dd { margin: 0 0 .75rem; overflow-wrap: anywhere; font-size: .875rem; }
+.facts-arrow { align-self: center; color: var(--mud-palette-primary); }
+.changed-value { font-weight: 700; }
+.delete-confirmation { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.creation-workspace { border: 1px solid var(--mud-palette-divider); border-radius: 8px; padding: 1rem; }
+.creation-workspace .rule-workspace { margin-top: 0; }
+
+@media (max-width: 959px) {
+    .rule-workspace { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 599px) {
+    .rule-row { gap: .5rem; padding: .75rem; flex-wrap: wrap; }
+    .rule-number { align-self: flex-start; }
+    .rule-row-copy { flex-basis: calc(100% - 3rem); }
+    .rule-state { margin-left: 1.5rem; }
+    .rule-chevron { margin-left: auto; }
+    .rule-detail { padding: .75rem; }
+    .rule-step { gap: .75rem; }
+}

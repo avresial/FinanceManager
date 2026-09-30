@@ -19,6 +19,17 @@ public partial class TransactionRulesPage : ComponentBase
     private List<AvailableAccount> _accounts = [];
     private bool _accountsLoaded;
     private Guid? _editingId;
+    private Guid? _expandedId;
+    private Guid? _confirmDeleteId;
+    private bool _isCreating;
+    private bool _isReordering;
+    private bool _isDeleting;
+    private bool _isToggling;
+    private bool _testEnabled;
+    private int _previewVersion;
+
+    private bool IsBusy => _isSaving || _isTesting || _isReordering || _isDeleting || _isToggling || _isApplying || _isPreviewing;
+    private TransactionRuleDto? ExpandedRule => _rules.FirstOrDefault(rule => rule.Id == _expandedId);
     private bool _isLoading = true;
     private bool _isSaving;
     private bool _isTesting;
@@ -36,8 +47,8 @@ public partial class TransactionRulesPage : ComponentBase
     private List<TransactionRuleTestResultDto>? _testResults;
     private int _editorVersion;
     private MudForm? _ruleForm;
-    private string _previewContractor = "ACME Corp";
-    private string _previewDescription = "Invoice";
+    private string _previewContractor = string.Empty;
+    private string _previewDescription = string.Empty;
     private int? _previewAccountId;
     private decimal _previewAmount = 100m;
     private TransactionDirection _previewDirection = TransactionDirection.Expense;
@@ -54,7 +65,7 @@ public partial class TransactionRulesPage : ComponentBase
         _error = null;
         try
         {
-            _rules = await HttpClient.GetAsync();
+            _rules = (await HttpClient.GetAsync()).OrderBy(rule => rule.Order).ToList();
         }
         catch (Exception)
         {
@@ -76,8 +87,41 @@ public partial class TransactionRulesPage : ComponentBase
         _isLoading = false;
     }
 
+    private async Task RefreshAsync()
+    {
+        if (IsBusy) return;
+
+        await ResetForm();
+        _expandedId = null;
+        _confirmDeleteId = null;
+        InvalidatePreview();
+        await LoadAsync();
+    }
+
+    private async Task BeginCreate()
+    {
+        if (IsBusy) return;
+
+        await ResetForm();
+        _expandedId = null;
+        _confirmDeleteId = null;
+        _isCreating = true;
+    }
+
+    private async Task ExpandRuleAsync(TransactionRuleDto rule)
+    {
+        var wasExpanded = _expandedId == rule.Id;
+        await ResetForm();
+        _confirmDeleteId = null;
+        _expandedId = wasExpanded ? null : rule.Id;
+    }
+
+    private static string DetailId(TransactionRuleDto rule) => $"rule-detail-{rule.Id:N}";
+
     private async Task SaveAsync()
     {
+        if (IsBusy) return;
+
         _error = null;
         if (string.IsNullOrWhiteSpace(_name))
         {
@@ -90,20 +134,23 @@ public partial class TransactionRulesPage : ComponentBase
         {
             var conditions = _conditions.Select(condition => condition.ToDto()).ToList();
             var actions = _actions.Select(action => action.ToDto()).ToList();
+            TransactionRuleDto? saved;
             if (_editingId is Guid id)
             {
-                var saved = await HttpClient.UpdateAsync(id, new UpdateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
+                saved = await HttpClient.UpdateAsync(id, new UpdateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
                 if (saved is null) throw new InvalidOperationException();
                 Snackbar.Add("Rule updated.", Severity.Success);
             }
             else
             {
-                var saved = await HttpClient.CreateAsync(new CreateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
+                saved = await HttpClient.CreateAsync(new CreateTransactionRule(_name.Trim(), conditions, actions, _enabled, _stopProcessing));
                 if (saved is null) throw new InvalidOperationException();
                 Snackbar.Add("Rule created.", Severity.Success);
             }
 
+            _expandedId = saved.Id;
             await ResetForm();
+            InvalidatePreview();
             await LoadAsync();
         }
         catch (FormatException ex)
@@ -120,37 +167,49 @@ public partial class TransactionRulesPage : ComponentBase
         }
     }
 
+    private Task TestSavedRuleAsync(TransactionRuleDto rule) => RunTestAsync(new CreateTransactionRule(
+        rule.Name, rule.Conditions, rule.Actions, rule.IsEnabled, rule.StopProcessing));
+
     private async Task TestAsync()
     {
+        if (IsBusy) return;
+
         _error = null;
-        _testResults = null;
         if (string.IsNullOrWhiteSpace(_name))
         {
             _error = "Rule name is required.";
             return;
         }
 
+        await RunTestAsync(new CreateTransactionRule(
+            _name.Trim(),
+            _conditions.Select(condition => condition.ToDto()).ToList(),
+            _actions.Select(action => action.ToDto()).ToList(),
+            _enabled,
+            _stopProcessing));
+    }
+
+    private async Task RunTestAsync(CreateTransactionRule command)
+    {
+        if (IsBusy) return;
+
+        _error = null;
+        _testResults = null;
         _isTesting = true;
+        var editorVersion = _editorVersion;
         try
         {
-            var command = new CreateTransactionRule(
-                _name.Trim(),
-                _conditions.Select(condition => condition.ToDto()).ToList(),
-                _actions.Select(action => action.ToDto()).ToList(),
-                _enabled,
-                _stopProcessing);
-            var editorVersion = _editorVersion;
             var results = await HttpClient.TestAsync(command) ?? throw new InvalidOperationException();
             if (editorVersion == _editorVersion)
+            {
+                _testEnabled = command.IsEnabled;
                 _testResults = results;
-        }
-        catch (FormatException ex)
-        {
-            _error = ex.Message;
+            }
         }
         catch (Exception)
         {
-            _error = "Unable to test this rule. Check the condition and action values.";
+            if (editorVersion == _editorVersion)
+                _error = "Unable to test this rule. Check the condition and action values.";
         }
         finally
         {
@@ -160,6 +219,9 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ToggleAsync(TransactionRuleDto rule, bool enabled)
     {
+        if (IsBusy) return;
+
+        _isToggling = true;
         try
         {
             if (!await HttpClient.SetEnabledAsync(rule.Id, enabled))
@@ -168,16 +230,25 @@ public partial class TransactionRulesPage : ComponentBase
                 return;
             }
 
+            EditorChanged();
+            InvalidatePreview();
             await LoadAsync();
         }
         catch (Exception)
         {
             Snackbar.Add("Unable to update this rule.", Severity.Error);
         }
+        finally
+        {
+            _isToggling = false;
+        }
     }
 
     private async Task DeleteAsync(TransactionRuleDto rule)
     {
+        if (IsBusy) return;
+
+        _isDeleting = true;
         try
         {
             if (!await HttpClient.DeleteAsync(rule.Id))
@@ -186,23 +257,33 @@ public partial class TransactionRulesPage : ComponentBase
                 return;
             }
 
-            _rules.Remove(rule);
-            if (_editingId == rule.Id) await ResetForm();
+            await ResetForm();
+            _expandedId = null;
+            _confirmDeleteId = null;
+            InvalidatePreview();
+            await LoadAsync();
             Snackbar.Add("Rule deleted.", Severity.Success);
         }
         catch (Exception)
         {
             Snackbar.Add("Unable to delete this rule.", Severity.Error);
         }
+        finally
+        {
+            _isDeleting = false;
+        }
     }
 
     private async Task MoveAsync(TransactionRuleDto rule, int offset)
     {
+        if (IsBusy) return;
+
         var current = _rules.OrderBy(x => x.Order).ToList();
         var index = current.FindIndex(x => x.Id == rule.Id);
         var target = index + offset;
         if (index < 0 || target < 0 || target >= current.Count) return;
         (current[index], current[target]) = (current[target], current[index]);
+        _isReordering = true;
         try
         {
             var reordered = await HttpClient.ReorderAsync(current.Select(x => x.Id).ToList());
@@ -212,17 +293,26 @@ public partial class TransactionRulesPage : ComponentBase
                 return;
             }
 
-            _rules = reordered;
+            _rules = reordered.OrderBy(rule => rule.Order).ToList();
+            InvalidatePreview();
         }
         catch (Exception)
         {
             Snackbar.Add("Unable to reorder rules.", Severity.Error);
         }
+        finally
+        {
+            _isReordering = false;
+        }
     }
 
     private void BeginEdit(TransactionRuleDto rule)
     {
-        _testResults = null;
+        if (IsBusy) return;
+
+        EditorChanged();
+        _expandedId = rule.Id;
+        _isCreating = false;
         _editingId = rule.Id;
         _name = rule.Name;
         _enabled = rule.IsEnabled;
@@ -234,6 +324,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ResetForm()
     {
+        EditorChanged();
+        _isCreating = false;
         _editingId = null;
         _name = string.Empty;
         _enabled = true;
@@ -277,6 +369,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task ApplyAsync()
     {
+        if (IsBusy) return;
+
         _isApplying = true;
         _applyResult = null;
         try
@@ -297,6 +391,8 @@ public partial class TransactionRulesPage : ComponentBase
 
     private async Task PreviewAsync()
     {
+        if (IsBusy) return;
+
         if (_previewAccountId is not int accountId)
         {
             _error = "Select an account to preview the current rules.";
@@ -305,15 +401,20 @@ public partial class TransactionRulesPage : ComponentBase
 
         _isPreviewing = true;
         _error = null;
+        _preview = null;
+        var previewVersion = _previewVersion;
         try
         {
-            _preview = await HttpClient.PreviewAsync(new TransactionRulePreviewFacts(
+            var preview = await HttpClient.PreviewAsync(new TransactionRulePreviewFacts(
                 _previewContractor, _previewDescription, accountId, _previewAmount, _previewDirection, []));
-            if (_preview is null) throw new InvalidOperationException();
+            if (preview is null) throw new InvalidOperationException();
+            if (previewVersion == _previewVersion)
+                _preview = preview;
         }
         catch (Exception)
         {
-            _error = "Unable to preview the current rules.";
+            if (previewVersion == _previewVersion)
+                _error = "Unable to preview the current rules.";
         }
         finally
         {
@@ -442,13 +543,77 @@ public partial class TransactionRulesPage : ComponentBase
         };
     }
 
-    private static string DescribeConditions(TransactionRuleDto rule) => rule.Conditions.Count == 0
+    private string DescribeConditions(TransactionRuleDto rule) => rule.Conditions.Count == 0
         ? "Every transaction"
-        : string.Join(" and ", rule.Conditions.Select(condition => condition.Type));
+        : string.Join(" and ", rule.Conditions.Select(condition => DescribeCondition(condition, false)));
+
+    private string DescribeCondition(TransactionRuleConditionDto condition, bool includeOptions) => condition.Type.ToLowerInvariant() switch
+    {
+        "contractor" or "description" => $"{condition.Type} {DescribeMatch(condition.MatchOperator)} “{condition.Pattern}”{(includeOptions ? condition.IgnoreCase ? " · ignore case" : " · case sensitive" : string.Empty)}",
+        "account" => $"Account is {string.Join(" or ", condition.AccountIds.Select(GetAccountLabel))}",
+        "direction" => $"Direction is {condition.Direction}",
+        "amount" => DescribeAmount(condition),
+        _ => condition.Type
+    };
+
+    private static string DescribeAmount(TransactionRuleConditionDto condition)
+    {
+        if (condition.Threshold is decimal threshold)
+            return $"{condition.Direction} amount {DescribeComparison(condition.Comparison)} {threshold:N2}";
+        var bounds = new List<string>();
+        if (condition.MinAmount is decimal min) bounds.Add($"at least {min:N2}");
+        if (condition.MaxAmount is decimal max) bounds.Add($"at most {max:N2}");
+        return $"{condition.Direction} amount {string.Join(" and ", bounds)} (inclusive)";
+    }
+
+    private static string DescribeMatch(TextMatchOperator match) => match switch
+    {
+        TextMatchOperator.Equals => "equals",
+        TextMatchOperator.Contains => "contains",
+        TextMatchOperator.StartsWith => "starts with",
+        TextMatchOperator.EndsWith => "ends with",
+        TextMatchOperator.RegularExpression => "matches regular expression",
+        _ => match.ToString()
+    };
+
+    private static string DescribeComparison(AmountComparison comparison) => comparison switch
+    {
+        AmountComparison.LessThan => "less than",
+        AmountComparison.LessThanOrEqual => "at most",
+        AmountComparison.Equal => "equals",
+        AmountComparison.GreaterThanOrEqual => "at least",
+        AmountComparison.GreaterThan => "greater than",
+        _ => comparison.ToString()
+    };
 
     private static string DescribeActions(TransactionRuleDto rule) => rule.Actions.Count == 0
         ? "No changes"
-        : string.Join(", ", rule.Actions.Select(action => action.Type));
+        : string.Join("; ", rule.Actions.Select(DescribeAction));
+
+    private static string DescribeAction(TransactionRuleActionDto action) => action.Type.ToLowerInvariant() switch
+    {
+        "setlabels" or "labels" => $"{(action.ReplaceExisting ? "Replace existing labels with" : "Add labels")} {FormatLabels(action.Labels)}",
+        "normalizecontractor" or "contractor" => $"Rename contractor to “{action.Value}”",
+        "normalizedescription" or "description" => $"Set description to “{action.Value}”",
+        _ => action.Type
+    };
+
+    private static string DescribeOutcome(TransactionRuleOutcome outcome) => outcome.Status switch
+    {
+        TransactionRuleOutcomeStatus.SkippedDisabled => "Disabled · not evaluated",
+        TransactionRuleOutcomeStatus.NotMatched => "No match",
+        TransactionRuleOutcomeStatus.SkippedAfterStop => "Skipped after an earlier rule stopped processing",
+        TransactionRuleOutcomeStatus.StoppedProcessing => $"Matched · {(outcome.HasChanges ? "changed transaction" : "no effective change")} · stopped after actions",
+        _ => $"Matched · {(outcome.HasChanges ? "changed transaction" : "no effective change")}"
+    };
+
+    private static string DisplayText(string? value) => string.IsNullOrEmpty(value) ? "None" : value;
+
+    private void InvalidatePreview()
+    {
+        _previewVersion++;
+        _preview = null;
+    }
 
     private void OnEditorChanged(FormFieldChangedEventArgs _) => EditorChanged();
 
