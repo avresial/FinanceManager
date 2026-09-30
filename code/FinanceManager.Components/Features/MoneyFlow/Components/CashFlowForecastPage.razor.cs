@@ -1,7 +1,10 @@
 using ApexCharts;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.MoneyFlow.Models;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Components.Shared.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
@@ -14,7 +17,8 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private readonly ApexChartOptions<TimeSeriesModel> _chartOptions = BuildChartOptions();
     private CancellationTokenSource? _loadCancellationTokenSource;
     private CashFlowForecast? _forecast;
-    private int _loadRequestVersion;
+    private readonly RefreshVersionGate _gate = new();
+    private string? _paintedKey;
     private int _horizonDays = CashFlowForecastHorizons.NinetyDays;
     private string _currency = "PLN";
     private bool _isLoading = true;
@@ -23,6 +27,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     [Inject] public required CashFlowForecastHttpClient CashFlowForecastHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ILogger<CashFlowForecastPage> Logger { get; set; }
 
     public IReadOnlyList<int> Horizons => CashFlowForecastHorizons.All;
@@ -38,7 +43,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
 
     private async Task LoadData()
     {
-        var requestVersion = Interlocked.Increment(ref _loadRequestVersion);
+        var requestVersion = _gate.Claim();
         var horizonDays = _horizonDays;
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
@@ -46,48 +51,92 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         previousRequest?.Cancel();
         previousRequest?.Dispose();
 
-        _isLoading = true;
+        if (_forecast?.HorizonDays != horizonDays)
+        {
+            _forecast = null;
+            _paintedKey = null;
+        }
+        _isLoading = _forecast is null;
         _hasError = false;
 
         try
         {
             var user = await LoginService.GetLoggedUser();
-            if (requestVersion != _loadRequestVersion) return;
+            if (!_gate.IsCurrent(requestVersion)) return;
 
             if (user is null)
             {
                 _forecast = null;
+                _paintedKey = null;
                 return;
             }
 
             var currency = await SettingsService.GetCurrencyAsync();
-            if (requestVersion != _loadRequestVersion) return;
+            if (!_gate.IsCurrent(requestVersion)) return;
 
-            var forecast = await CashFlowForecastHttpClient.GetAsync(
-                user.UserId,
-                currency.Id,
-                horizonDays,
-                cancellationToken);
-            if (requestVersion != _loadRequestVersion) return;
+            var key = $"cash-flow-forecast-page:{user.UserId}:{currency.Id}:{horizonDays}";
+            if (_paintedKey != key)
+                _forecast = null;
+            _isLoading = _forecast is null;
 
-            _currency = currency.ShortName;
-            _forecast = forecast;
-            _hasError = _forecast is null;
+            var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<CashFlowForecastPageSnapshot, CashFlowForecastPageModel>
+            {
+                Key = key,
+                Gate = _gate,
+                ClaimedVersion = requestVersion,
+                ToModel = snapshot => snapshot.UserId == user.UserId
+                    && snapshot.CurrencyId == currency.Id
+                    && snapshot.HorizonDays == horizonDays
+                    && snapshot.Model?.Forecast is { HistoricalSeries: not null, ForecastSeries: not null, ExpectedTransactions: not null } forecast
+                    && forecast.UserId == user.UserId
+                    && forecast.CurrencyId == currency.Id
+                    && forecast.HorizonDays == horizonDays
+                    && !string.IsNullOrWhiteSpace(snapshot.Model.Currency)
+                    ? snapshot.Model
+                    : null,
+                FetchAsync = async () =>
+                {
+                    var forecast = await CashFlowForecastHttpClient.GetAsync(user.UserId, currency.Id, horizonDays, cancellationToken)
+                        ?? throw new HttpRequestException("Cash-flow forecast response was empty.");
+                    return new CashFlowForecastPageModel(forecast, currency.ShortName);
+                },
+                ToSnapshot = model => new CashFlowForecastPageSnapshot
+                {
+                    UserId = user.UserId,
+                    CurrencyId = currency.Id,
+                    HorizonDays = horizonDays,
+                    Model = model
+                },
+                OnSnapshotPainted = model => ShowData(model, key),
+                OnSnapshotMissing = () =>
+                {
+                    _isLoading = _forecast is null;
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                },
+                OnRefreshed = model => ShowData(model, key)
+            });
+            if (!_gate.IsCurrent(requestVersion)) return;
+
+            if (result.Outcome == SnapshotRefreshOutcome.Failed)
+            {
+                _hasError = true;
+                Logger.LogError(result.Error, "Unable to refresh cash flow forecast page.");
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception ex)
         {
-            if (requestVersion != _loadRequestVersion) return;
+            if (!_gate.IsCurrent(requestVersion)) return;
 
-            _forecast = null;
             _hasError = true;
             Logger.LogError(ex, "Unable to load cash flow forecast page.");
         }
         finally
         {
-            if (requestVersion == _loadRequestVersion)
+            if (_gate.IsCurrent(requestVersion))
                 _isLoading = false;
 
             if (ReferenceEquals(
@@ -99,9 +148,20 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         }
     }
 
+    private Task ShowData(CashFlowForecastPageModel model, string key)
+    {
+        _forecast = model.Forecast;
+        _currency = model.Currency;
+        _paintedKey = key;
+        _isLoading = false;
+        _hasError = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
-        Interlocked.Increment(ref _loadRequestVersion);
+        _gate.Claim();
         var request = Interlocked.Exchange(ref _loadCancellationTokenSource, null);
         request?.Cancel();
         request?.Dispose();

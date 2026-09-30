@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Show the last cash flow forecast page immediately for each horizon while refreshing, and keep it visible if refresh fails. #819
 - Combine money-weighted and time-weighted returns into one responsive Portfolio return card with cash-flow context. #814
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
