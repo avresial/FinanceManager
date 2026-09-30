@@ -27,16 +27,17 @@
         </MudButtonGroup>
     </div>
 
+    @if (_hasError)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            @(_forecast is null ? "Unable to load the cash-flow forecast." : "Unable to refresh the cash-flow forecast. Showing the last available forecast.")
+            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Inherit" OnClick="LoadData">Retry</MudButton>
+        </MudAlert>
+    }
+
     @if (_isLoading)
     {
         <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="380px" Class="mb-4" />
-    }
-    else if (_hasError)
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
-            Unable to load the cash-flow forecast.
-            <MudButton Variant="Variant.Text" Color="MudBlazor.Color.Inherit" OnClick="LoadData">Retry</MudButton>
-        </MudAlert>
     }
     else if (_forecast is not null)
     {
@@ -48,7 +49,7 @@
                 </MudText>
             </div>
             <div class="cash-flow-forecast-chart">
-                <ApexChart TItem="TimeSeriesModel" Options="_chartOptions" Height="360">
+                <ApexChart @key="_forecast" TItem="TimeSeriesModel" Options="_chartOptions" Height="360">
                     @if (_forecast.HistoricalSeries.Count > 0)
                     {
                         <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.HistoricalSeries"
