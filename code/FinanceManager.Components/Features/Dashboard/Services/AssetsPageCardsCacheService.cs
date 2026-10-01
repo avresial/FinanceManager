@@ -4,6 +4,7 @@ using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,36 @@ public class AssetsPageCardsCacheService(
         logger,
         _cacheKeyPrefix)
 {
+    private readonly Dictionary<(int UserId, int CurrencyId, DateTime Start, DateTime End), Task<List<TimeSeriesModel>>> _timeSeriesRequests = [];
+
+    // Share only overlapping requests. A later visit always starts a fresh request, regardless of the TTL cache.
+    public async Task<List<TimeSeriesModel>> GetFreshTimeSeriesAsync(AssetsPageCardsRefreshContext context)
+    {
+        var key = (context.UserId, context.CurrencyId, context.StartDateTime.Date, context.EndDateTime);
+        Task<List<TimeSeriesModel>> request;
+        lock (_timeSeriesRequests)
+        {
+            if (!_timeSeriesRequests.TryGetValue(key, out request!))
+            {
+                request = assetsHttpClient.GetAssetsTimeSeries(context.UserId,
+                    new Currency { Id = context.CurrencyId }, context.StartDateTime.Date, context.EndDateTime);
+                _timeSeriesRequests.Add(key, request);
+            }
+        }
+        try
+        {
+            return await request;
+        }
+        finally
+        {
+            lock (_timeSeriesRequests)
+            {
+                if (_timeSeriesRequests.TryGetValue(key, out var current) && ReferenceEquals(current, request))
+                    _timeSeriesRequests.Remove(key);
+            }
+        }
+    }
+
     private const string _cacheKeyPrefix = "assets-page-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
@@ -36,7 +67,7 @@ public class AssetsPageCardsCacheService(
 
         // Only the id crosses the wire, so the requested currency can be rebuilt from the context.
         var currency = new Currency { Id = refreshContext.CurrencyId };
-        var assetsTimeSeriesTask = assetsHttpClient.GetAssetsTimeSeries(refreshContext.UserId, currency, startDate, endDate);
+        var assetsTimeSeriesTask = GetFreshTimeSeriesAsync(refreshContext);
         var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
         var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
         var moneyWeightedReturnTask = GetOptionalAsync(

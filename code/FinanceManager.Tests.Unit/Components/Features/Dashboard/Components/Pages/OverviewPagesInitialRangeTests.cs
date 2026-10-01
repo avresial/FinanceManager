@@ -49,7 +49,7 @@ public class OverviewPagesInitialRangeTests
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();
-        context.ComponentFactories.AddStub<AssetsTimeSeriesCard>();
+        context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
         context.ComponentFactories.AddStub<PortfolioReturnCard>();
         context.ComponentFactories.AddStub<PortfolioReturnAttributionCard>();
