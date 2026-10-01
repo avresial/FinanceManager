@@ -86,16 +86,10 @@ public class AssetsHttpClient(HttpClient httpClient)
         return result ?? throw new InvalidOperationException("Assets distribution response was missing.");
     }
 
-    public async Task<InvestmentPaycheckEstimate> GetInvestmentPaycheckEstimate(int userId, Currency currency, DateTime asOfDate, decimal withdrawalRate = 0.05m, int salaryMonths = 3)
+    public async Task<InvestmentPaycheckEstimate?> GetInvestmentPaycheckEstimate(int userId, Currency currency, DateTime asOfDate, decimal withdrawalRate = 0.05m, int salaryMonths = 3)
     {
         string endpoint = $"{httpClient.BaseAddress}api/Assets/GetInvestmentPaycheckEstimate/{userId}/{currency.Id}/{asOfDate:O}?withdrawalRate={withdrawalRate.ToString(CultureInfo.InvariantCulture)}&salaryMonths={salaryMonths}";
-        var result = await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
-        return result ?? new InvestmentPaycheckEstimate
-        {
-            AsOfDate = asOfDate,
-            AnnualWithdrawalRate = withdrawalRate,
-            SalaryMonthsRequested = salaryMonths,
-        };
+        return await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
     }
 
     public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
