@@ -1,123 +1,172 @@
-using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
-public partial class InvestmentPaycheckEstimatorCard
+public partial class InvestmentPaycheckEstimatorCard : IDisposable
 {
-    private const decimal _defaultRate = 0.04m;
-    private const decimal _rateMin = 0.02m;
-    private const decimal _rateMax = 0.08m;
-    private const decimal _rateStep = 0.001m;
-    private readonly DateTime _asOfDate = DateTime.UtcNow;
-
-    private readonly RatePreset[] _presets =
-    [
-        new(0.03m, "Conservative"),
-        new(0.04m, "Standard"),
-        new(0.05m, "Aggressive"),
-    ];
-
-    private bool _isLoading;
+    private readonly RefreshVersionGate _gate = new();
+    private InvestmentPaycheckSourceModel? _source;
     private Currency _currency = DefaultCurrency.PLN;
-    internal InvestmentPaycheckEstimate _estimate = new() { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = 3 };
-    internal decimal _annualWithdrawalRate = _defaultRate;
+    private bool _isLoading = true;
+    private bool _hasError;
+    private bool _disposed;
+    private int? _sourceUserId;
+    private int? _sourceCurrencyId;
+    private int? _sourceSalaryMonths;
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public int SalaryMonths { get; set; } = 3;
 
-    [Inject] public required ILogger<InvestmentPaycheckEstimatorCard> Logger { get; set; }
-    [Inject] public required InvestmentPaycheckEstimateCacheService InvestmentPaycheckEstimateCacheService { get; set; }
+    [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
+    [Inject] public required ILogger<InvestmentPaycheckEstimatorCard> Logger { get; set; }
 
-    // Rounded to the same precision as InvestmentPaycheckEstimatorService (paycheck to 2 decimals,
-    // ratio to 4 decimals from the rounded paycheck) so a local rate-change recompute yields the
-    // same figures as a server refresh instead of drifting by a fractional cent.
-    internal decimal MonthlyPaycheck => Math.Round(_estimate.InvestableAssetsValue * _annualWithdrawalRate / 12m, 2);
+    protected override Task OnParametersSetAsync() => RefreshSourceAsync();
 
-    internal decimal? ReplacementRatio
+    private async Task RefreshSourceAsync()
     {
-        get
-        {
-            if (_estimate.AverageMonthlySalary is not { } avg || avg == 0m)
-                return null;
-            return Math.Round(MonthlyPaycheck / avg, 4);
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        _currency = await SettingsService.GetCurrencyAsync();
-        await RefreshEstimate();
-    }
-
-    // Source data is loaded once during initialization. Withdrawal-rate changes are
-    // recomputed client-side from the (rate-independent) estimate, so they never re-fetch.
-    private async Task RefreshEstimate()
-    {
-        _isLoading = true;
+        var version = _gate.Claim();
+        var salaryMonths = SalaryMonths;
+        _hasError = false;
+        if (_source is not null && _sourceSalaryMonths != salaryMonths)
+            ClearSource();
+        _isLoading = _source is null;
         StateHasChanged();
 
         try
         {
             var user = await LoginService.GetLoggedUser();
+            if (!IsCurrent(version)) return;
+
             if (user is null)
             {
-                _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = SalaryMonths };
+                ClearSource();
+                _hasError = true;
+                _isLoading = false;
+                StateHasChanged();
                 return;
             }
 
-            var withdrawalRate = Math.Round(_annualWithdrawalRate, 4);
-            var context = new InvestmentPaycheckEstimateRefreshContext
+            if (_source is not null && _sourceUserId != user.UserId)
             {
-                UserId = user.UserId,
-                CurrencyId = _currency.Id,
-                EndDateTime = _asOfDate,
-                WithdrawalRate = withdrawalRate,
-                SalaryMonths = SalaryMonths,
-            };
+                ClearSource();
+                _isLoading = true;
+                StateHasChanged();
+            }
 
-            var snapshot = await InvestmentPaycheckEstimateCacheService.GetSnapshotAsync(context);
-            _estimate = snapshot.Estimate;
-            _annualWithdrawalRate = _estimate.AnnualWithdrawalRate;
+            var currency = await SettingsService.GetCurrencyAsync();
+            if (!IsCurrent(version)) return;
+
+            if (_source is not null && (_sourceUserId != user.UserId
+                || _sourceCurrencyId != currency.Id
+                || _sourceSalaryMonths != salaryMonths))
+            {
+                ClearSource();
+                _isLoading = true;
+                StateHasChanged();
+            }
+
+            _currency = currency;
+            var asOfDateUtc = DateTime.UtcNow;
+            var key = $"investment-paycheck-source:{user.UserId}:{currency.Id}:{salaryMonths}";
+            var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<InvestmentPaycheckSourceSnapshot, InvestmentPaycheckSourceModel>
+            {
+                Key = key,
+                Gate = _gate,
+                ClaimedVersion = version,
+                ToModel = snapshot => snapshot.UserId == user.UserId
+                    && snapshot.CurrencyId == currency.Id
+                    && snapshot.SalaryMonths == salaryMonths
+                    ? snapshot.Model
+                    : null,
+                FetchAsync = async () =>
+                {
+                    // The endpoint currently requires a rate, but its result is projected to rate-independent source facts.
+                    var estimate = await AssetsHttpClient.GetInvestmentPaycheckEstimate(
+                        user.UserId, currency, asOfDateUtc, withdrawalRate: 0.04m, salaryMonths: salaryMonths);
+                    return estimate is null ? null : InvestmentPaycheckSourceModel.FromEstimate(estimate);
+                },
+                ToSnapshot = model => new InvestmentPaycheckSourceSnapshot
+                {
+                    UserId = user.UserId,
+                    CurrencyId = currency.Id,
+                    SalaryMonths = salaryMonths,
+                    AsOfDateUtc = asOfDateUtc,
+                    Model = model,
+                },
+                OnSnapshotPainted = model => ShowSourceAsync(version, user.UserId, currency.Id, salaryMonths, model),
+                OnSnapshotMissing = () => ShowLoadingAsync(version),
+                OnRefreshed = model => ShowSourceAsync(version, user.UserId, currency.Id, salaryMonths, model),
+            });
+
+            if (!IsCurrent(version)) return;
+
+            if (result.Outcome is SnapshotRefreshOutcome.Empty or SnapshotRefreshOutcome.Failed)
+            {
+                _hasError = _source is null;
+                _isLoading = false;
+                StateHasChanged();
+                if (result.Error is not null)
+                    Logger.LogError(result.Error, "Unable to load investment paycheck source data.");
+            }
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Logger.LogError(ex, "Error while getting investment paycheck estimate");
-            _estimate = new InvestmentPaycheckEstimate { AnnualWithdrawalRate = _defaultRate, SalaryMonthsRequested = SalaryMonths };
-        }
-        finally
-        {
+            if (!IsCurrent(version)) return;
+
             _isLoading = false;
+            _hasError = _source is null;
+            Logger.LogError(exception, "Unable to load investment paycheck source data.");
             StateHasChanged();
         }
     }
 
-    // Rate changes only recompute the displayed paycheck locally (see MonthlyPaycheck /
-    // ReplacementRatio); no API request is made. Blazor re-renders after the event callback.
-    internal void OnRateChanged(decimal value) => _annualWithdrawalRate = value;
+    private Task ShowSourceAsync(int version, int userId, int currencyId, int salaryMonths, InvestmentPaycheckSourceModel source)
+    {
+        if (!IsCurrent(version)) return Task.CompletedTask;
 
-    internal void OnPresetSelected(decimal rate) => _annualWithdrawalRate = rate;
+        _source = source;
+        _sourceUserId = userId;
+        _sourceCurrencyId = currencyId;
+        _sourceSalaryMonths = salaryMonths;
+        _isLoading = false;
+        _hasError = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
-    private string FormatCurrency(decimal value) => $"{value:0.00} {_currency.ShortName}";
+    private Task ShowLoadingAsync(int version)
+    {
+        if (!IsCurrent(version)) return Task.CompletedTask;
 
-    private string FormatMonthly(decimal value) => value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        _isLoading = _source is null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
-    private static string FormatNumber(decimal value, int decimals)
-        => value.ToString($"N{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+    private bool IsCurrent(int version) => !_disposed && _gate.IsCurrent(version);
 
-    private static string FormatRate(decimal value) => $"{value * 100m:0.0}%";
+    private void ClearSource()
+    {
+        _source = null;
+        _sourceUserId = null;
+        _sourceCurrencyId = null;
+        _sourceSalaryMonths = null;
+    }
 
-    private static string FormatReplacement(decimal? value) => value.HasValue ? $"{value.Value * 100m:0.00}%" : "—";
-
-    private readonly record struct RatePreset(decimal Rate, string Label);
+    public void Dispose()
+    {
+        _disposed = true;
+        _gate.Claim();
+    }
 }
