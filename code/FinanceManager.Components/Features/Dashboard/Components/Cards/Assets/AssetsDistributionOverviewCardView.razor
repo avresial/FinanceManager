@@ -37,6 +37,10 @@
                 <ChartSpinner MaxHeight=@Height />
             </div>
         }
+        else if (HasError)
+        {
+            <MudAlert Severity="Severity.Error">Could not load assets distribution.</MudAlert>
+        }
         else if (ActiveData.Any())
         {
             <div class="fm-pie-body">

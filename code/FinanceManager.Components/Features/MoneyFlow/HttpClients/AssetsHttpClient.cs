@@ -77,13 +77,13 @@ public class AssetsHttpClient(HttpClient httpClient)
     public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerAccount/{userId}/{currency.Id}/{asOfDate:O}");
-        return result ?? [];
+        return result ?? throw new InvalidOperationException("Assets distribution response was missing.");
     }
 
     public async Task<List<NameValueResult>> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>($"{httpClient.BaseAddress}api/Assets/GetEndAssetsPerType/{userId}/{currency.Id}/{asOfDate:O}");
-        return result ?? [];
+        return result ?? throw new InvalidOperationException("Assets distribution response was missing.");
     }
 
     public async Task<InvestmentPaycheckEstimate> GetInvestmentPaycheckEstimate(int userId, Currency currency, DateTime asOfDate, decimal withdrawalRate = 0.05m, int salaryMonths = 3)

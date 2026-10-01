@@ -51,6 +51,44 @@ public class AssetsPageCardsCacheService(
         }
     }
 
+    private readonly Dictionary<(int UserId, int CurrencyId, DateTime End), Task<DistributionCardModel>> _distributionRequests = [];
+
+    // Share only requests that overlap with the aggregate load; never reuse a completed visit.
+    public async Task<DistributionCardModel> GetFreshDistributionAsync(AssetsPageCardsRefreshContext context)
+    {
+        var key = (context.UserId, context.CurrencyId, context.EndDateTime);
+        Task<DistributionCardModel> request;
+        lock (_distributionRequests)
+        {
+            if (!_distributionRequests.TryGetValue(key, out request!))
+            {
+                request = FetchDistributionAsync(context);
+                _distributionRequests.Add(key, request);
+            }
+        }
+        try
+        {
+            return await request;
+        }
+        finally
+        {
+            lock (_distributionRequests)
+            {
+                if (_distributionRequests.TryGetValue(key, out var current) && ReferenceEquals(current, request))
+                    _distributionRequests.Remove(key);
+            }
+        }
+    }
+
+    private async Task<DistributionCardModel> FetchDistributionAsync(AssetsPageCardsRefreshContext context)
+    {
+        var currency = new Currency { Id = context.CurrencyId };
+        var types = assetsHttpClient.GetEndAssetsPerType(context.UserId, currency, context.EndDateTime);
+        var accounts = assetsHttpClient.GetEndAssetsPerAccount(context.UserId, currency, context.EndDateTime);
+        await Task.WhenAll(types, accounts);
+        return new DistributionCardModel(await types, await accounts);
+    }
+
     private const string _cacheKeyPrefix = "assets-page-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
@@ -68,8 +106,7 @@ public class AssetsPageCardsCacheService(
         // Only the id crosses the wire, so the requested currency can be rebuilt from the context.
         var currency = new Currency { Id = refreshContext.CurrencyId };
         var assetsTimeSeriesTask = GetFreshTimeSeriesAsync(refreshContext);
-        var assetsPerTypeTask = assetsHttpClient.GetEndAssetsPerType(refreshContext.UserId, currency, endDate);
-        var assetsPerAccountTask = assetsHttpClient.GetEndAssetsPerAccount(refreshContext.UserId, currency, endDate);
+        var distributionTask = GetFreshDistributionAsync(refreshContext);
         var moneyWeightedReturnTask = GetOptionalAsync(
             () => assetsHttpClient.GetMoneyWeightedReturn(refreshContext.UserId, currency, startDate, endDate),
             "money-weighted return");
@@ -79,7 +116,7 @@ public class AssetsPageCardsCacheService(
         var returnAttributionTask = GetOptionalAsync(
             () => assetsHttpClient.GetReturnAttribution(refreshContext.UserId, currency, startDate, endDate),
             "return attribution");
-        await Task.WhenAll(assetsTimeSeriesTask, assetsPerTypeTask, assetsPerAccountTask, moneyWeightedReturnTask, timeWeightedReturnTask, returnAttributionTask);
+        await Task.WhenAll(assetsTimeSeriesTask, distributionTask, moneyWeightedReturnTask, timeWeightedReturnTask, returnAttributionTask);
 
         return new AssetsPageCardsCacheSnapshot
         {
@@ -90,8 +127,8 @@ public class AssetsPageCardsCacheService(
             EndDateTime = endDate,
             FetchedAtUtc = DateTime.UtcNow,
             AssetsTimeSeries = [.. (await assetsTimeSeriesTask)],
-            EndAssetsPerType = [.. (await assetsPerTypeTask)],
-            EndAssetsPerAccount = [.. (await assetsPerAccountTask)],
+            EndAssetsPerType = [.. (await distributionTask).TypeData],
+            EndAssetsPerAccount = [.. (await distributionTask).AccountData],
             MoneyWeightedReturn = await moneyWeightedReturnTask,
             TimeWeightedReturn = await timeWeightedReturnTask,
             ReturnAttribution = await returnAttributionTask,
