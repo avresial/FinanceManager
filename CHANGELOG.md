@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Show the last Assets distribution immediately while refreshing on every visit, and keep it visible if refresh fails. #831
 - Show the last Assets chart immediately while refreshing on every visit, and keep it visible if refresh fails. #830
 - Show transaction automation as an ordered list with inline rule details, editing, and read-only before/after tests. #820
 - Show the last cash flow forecast page immediately for each horizon while refreshing, and keep it visible if refresh fails. #819
