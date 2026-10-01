@@ -59,6 +59,24 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
     }
 
     [Fact]
+    public async Task EqualRenderedDecimalValuesWithDifferentScales_DoNotWriteSnapshot()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<InvestmentPaycheckSourceSnapshot>(_key))
+            .ReturnsAsync(Snapshot(Source(120_000.0m, 3, 5_000.0m)));
+        var handler = new DeferredEstimateHandler();
+        await using var context = CreateContext(snapshots, handler);
+
+        context.Render<InvestmentPaycheckEstimatorCard>();
+        await WaitFor(handler.Started.Task);
+        handler.Complete(Estimate(120_000.00m, 3, 5_000.00m));
+        await WaitFor(handler.Completed.Task);
+        await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
+
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<InvestmentPaycheckSourceSnapshot>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ChangedRenderedFacts_RefreshAndPersistWithStableScopedKey()
     {
         var snapshots = new Mock<ISnapshotService>();

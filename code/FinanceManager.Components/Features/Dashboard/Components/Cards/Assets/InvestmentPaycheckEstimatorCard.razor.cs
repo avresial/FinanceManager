@@ -82,6 +82,7 @@ public partial class InvestmentPaycheckEstimatorCard : IDisposable
             var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<InvestmentPaycheckSourceSnapshot, InvestmentPaycheckSourceModel>
             {
                 Key = key,
+                ContentComparer = EqualityComparer<InvestmentPaycheckSourceModel>.Default,
                 Gate = _gate,
                 ClaimedVersion = version,
                 ToModel = snapshot => snapshot.UserId == user.UserId
