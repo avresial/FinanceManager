@@ -1,9 +1,12 @@
 using ApexCharts;
 using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Security.Claims;
 
 namespace FinanceManager.Components.Features.Administration.Components;
 
@@ -66,6 +69,8 @@ public partial class AdminDashboard : ComponentBase
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
     [Inject] required public ILogger<AdminDashboard> Logger { get; set; }
+    [Inject] required public ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
+    [Inject] required public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,7 +85,25 @@ public partial class AdminDashboard : ComponentBase
             _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
             StateHasChanged();
 
-            _newUsers = await AdministrationUsersHttpClient.GetNewUsersDaily();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                Logger.LogError("User ID not found in authentication state.");
+                throw new InvalidOperationException("User ID not found in authentication state.");
+            }
+
+            var result = await SnapshotRefreshCoordinator.RunAsync<NewUsersSnapshot, List<ChartEntryModel>>(new SnapshotRefreshRequest<NewUsersSnapshot, List<ChartEntryModel>>
+            {
+                Key = $"new-users-chart-{userId}",
+                ToModel = (s) => s.Entries,
+                FetchAsync = async () => await AdministrationUsersHttpClient.GetNewUsersDaily(),
+                ToSnapshot = (m) => new NewUsersSnapshot { Entries = m },
+                OnSnapshotPainted = _ => { StateHasChanged(); return Task.CompletedTask; },
+                OnSnapshotMissing = () => { StateHasChanged(); return Task.CompletedTask; },
+                OnRefreshed = _ => { StateHasChanged(); return Task.CompletedTask; }
+            });
+            _newUsers = result.Model;
         }
         catch (Exception ex)
         {
