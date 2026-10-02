@@ -1,3 +1,4 @@
+using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
@@ -5,6 +6,12 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
+using FinanceManager.Components.Features.Dashboard.Services;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Pages;
 
@@ -49,9 +56,12 @@ public class OverviewPagesInitialRangeTests
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();
+        context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(),
+            new MemoryCache(new MemoryCacheOptions()), new AssetsHttpClient(new HttpClient()),
+            NullLogger<AssetsPageCardsCacheService>.Instance));
         context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
-        context.ComponentFactories.AddStub<PortfolioReturnCard>();
+        context.ComponentFactories.AddStub<PortfolioReturnCardContainer>();
         context.ComponentFactories.AddStub<PortfolioReturnAttributionCard>();
         context.ComponentFactories.AddStub<InvestmentPaycheckEstimatorCard>();
         context.ComponentFactories.AddStub<InvestmentRateCard>();

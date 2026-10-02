@@ -20,11 +20,11 @@
                         <span tabindex="0" aria-label="About money-weighted return">Money-weighted return (XIRR) ⓘ</span>
                     </MudTooltip>
                 </div>
-                @if (_isLoading)
+                @if (IsLoading)
                 {
                     <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
                 }
-                else if (_moneyWeightedReturn?.IsAvailable == true && _moneyWeightedReturn.AnnualizedReturn is decimal annualizedReturn)
+                else if (MoneyWeightedReturn?.IsAvailable == true && MoneyWeightedReturn.AnnualizedReturn is decimal annualizedReturn)
                 {
                     <div class="@(annualizedReturn >= 0 ? "portfolio-return-value portfolio-return-value--money" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(annualizedReturn)</div>
                 }
@@ -33,7 +33,7 @@
                     <MudText Typo="Typo.h6" Class="portfolio-return-muted">@MoneyWeightedStatusLabel</MudText>
                     <MudText Typo="Typo.caption" Class="portfolio-return-muted">@MoneyWeightedStatusText</MudText>
                 }
-                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Annualized · @_currency.ShortName</MudText>
+                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Annualized · @Currency.ShortName</MudText>
             </section>
 
             <section class="portfolio-return-metric portfolio-return-metric--time" aria-label="Time-weighted return">
@@ -43,11 +43,11 @@
                         <span tabindex="0" aria-label="About time-weighted return">Time-weighted return (TWR) ⓘ</span>
                     </MudTooltip>
                 </div>
-                @if (_isLoading)
+                @if (IsLoading)
                 {
                     <MudText Typo="Typo.h4" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
                 }
-                else if (_timeWeightedReturn?.IsAvailable == true && _timeWeightedReturn.TotalReturn is decimal totalReturn)
+                else if (TimeWeightedReturn?.IsAvailable == true && TimeWeightedReturn.TotalReturn is decimal totalReturn)
                 {
                     <div class="@(totalReturn >= 0 ? "portfolio-return-value portfolio-return-value--time" : "portfolio-return-value portfolio-return-value--negative")">@FormatReturn(totalReturn)</div>
                 }
@@ -56,17 +56,17 @@
                     <MudText Typo="Typo.h6" Class="portfolio-return-muted">@TimeWeightedStatusLabel</MudText>
                     <MudText Typo="Typo.caption" Class="portfolio-return-muted">@TimeWeightedStatusText</MudText>
                 }
-                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Cumulative · @_currency.ShortName</MudText>
+                <MudText Typo="Typo.caption" Class="portfolio-return-muted">Cumulative · @Currency.ShortName</MudText>
             </section>
         </div>
 
-        @if (!_isLoading)
+        @if (!IsLoading)
         {
             @if (!HasAvailableReturn)
             {
                 <MudText Typo="Typo.body2" Class="portfolio-return-muted mt-3">Neither return is available for this range.</MudText>
             }
-            @if (_moneyWeightedReturn is null || _timeWeightedReturn is null)
+            @if (MoneyWeightedReturn is null || TimeWeightedReturn is null)
             {
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry"
                            AriaLabel="Retry unavailable return">Retry unavailable return</MudButton>
@@ -78,7 +78,7 @@
         }
 
         <div class="portfolio-return-footer">
-            @if (!_isLoading && ExternalCashMovement is decimal movement)
+            @if (!IsLoading && ExternalCashMovement is decimal movement)
             {
                 <div class="portfolio-return-fact">
                     <span class="portfolio-return-muted">Net external cash flow</span>

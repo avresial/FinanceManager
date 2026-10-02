@@ -18,6 +18,10 @@
                 <StringSpinner CharactersCount="6" />
             </MudText>
         }
+        else if (_hasError)
+        {
+            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">Investment rate unavailable.</MudText>
+        }
         else
         {
             <div class="d-flex flex-wrap align-end gap-3 mb-2" style="row-gap:4px;">
@@ -53,7 +57,7 @@
                     <ApexChart TItem="MonthBar"
                                Options="@_chartOptions"
                                OnDataPointSelection="OnBarSelected"
-                               @key="_selectedRateIndex"
+                               @key="(_chartVersion, _selectedRateIndex)"
                                Height="@("100%")">
                         <ApexPointSeries TItem="MonthBar"
                                          Items="@_series"

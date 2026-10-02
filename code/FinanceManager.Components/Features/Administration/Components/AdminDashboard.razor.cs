@@ -3,11 +3,12 @@ using FinanceManager.Components.Features.Administration.HttpClients;
 using FinanceManager.Components.Features.Administration.Models;
 using FinanceManager.Components.Features.Administration.Services;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Security.Claims;
 
 namespace FinanceManager.Components.Features.Administration.Components;
 
@@ -18,10 +19,11 @@ public partial class AdminDashboard : ComponentBase
     private int? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
-    // Guards the accounts count card against a slower, earlier reload overwriting a newer one.
     private readonly RefreshVersionGate _accountsCountGate = new();
+    private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
+    private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
 
-    private static readonly ApexChartOptions<ChartEntryModel> _chartOptions = new()
+    private static ApexChartOptions<ChartEntryModel> CreateChartOptions() => new()
     {
         Chart = new Chart
         {
@@ -69,64 +71,85 @@ public partial class AdminDashboard : ComponentBase
 
     private List<ChartEntryModel>? _dailyActiveUsers;
     private List<ChartEntryModel>? _newUsers;
+    private readonly RefreshVersionGate _newUsersGate = new();
+    private int _newUsersChartVersion;
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
     [Inject] required public ILogger<AdminDashboard> Logger { get; set; }
-    [Inject] required public ILoginService LoginService { get; set; }
     [Inject] required public AdminDashboardSnapshotStore SnapshotStore { get; set; }
+    [Inject] required public ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
+    [Inject] required public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
 
+    /// <summary>Paints the admin card and chart snapshots while refreshing them and loading the other dashboard metrics.</summary>
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            await LoadAccountsCount();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirst(ClaimTypes.Sid)?.Value;
+            if (authState.User.Identity?.IsAuthenticated != true || !authState.User.IsInRole("Admin")
+                || !int.TryParse(userId, out var adminUserId))
+                throw new InvalidOperationException("An authenticated admin user is required.");
 
-            _userCount = await AdministrationUsersHttpClient.GetUsersCount();
-            _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
-            _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
-            StateHasChanged();
-
-            _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
-            StateHasChanged();
-
-            _newUsers = await AdministrationUsersHttpClient.GetNewUsersDaily();
+            await Task.WhenAll(LoadAccountsCountAsync(adminUserId), RefreshNewUsersAsync(userId!), LoadMetricsAsync());
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading admin dashboard data.");
             throw;
         }
+    }
 
+    private async Task LoadMetricsAsync()
+    {
+        _userCount = await AdministrationUsersHttpClient.GetUsersCount();
+        _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
+        _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
+        StateHasChanged();
+
+        _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
         StateHasChanged();
     }
 
-    // Stale-while-revalidate for the accounts count card: paint the stored value immediately, always
-    // re-fetch, and only repaint when the fresh count differs. The coordinator owns that workflow —
-    // see docs/codebase/UI-SNAPSHOTS.md. Runs first so the snapshot paints before any HTTP round-trip.
-    private async Task LoadAccountsCount()
-    {
-        var version = _accountsCountGate.Claim();
-        var user = await LoginService.GetLoggedUser();
-        if (!_accountsCountGate.IsCurrent(version)) return;
-
-        // The page requires an authenticated admin; without one there is nothing to scope the snapshot to.
-        if (user is null)
-            return;
-
-        await SnapshotStore.RefreshAccountsCountAsync(
-            user.UserId,
+    private Task LoadAccountsCountAsync(int userId) =>
+        SnapshotStore.RefreshAccountsCountAsync(
+            userId,
             _accountsCountGate,
-            version,
+            _accountsCountGate.Claim(),
             () => AdministrationUsersHttpClient.GetAccountsCount(),
             onSnapshotPainted: ShowAccountsCount,
             onRefreshed: ShowAccountsCount);
-    }
 
     private Task ShowAccountsCount(AdminAccountsCountCardModel model)
     {
-        // The coordinator only invokes the callbacks for a run that is still current.
         _accountsCount = model.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshNewUsersAsync(string userId)
+    {
+        var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<NewUsersSnapshot, List<ChartEntryModel>>
+        {
+            Key = $"new-users-chart-{userId}",
+            Gate = _newUsersGate,
+            ToModel = snapshot => snapshot.Entries,
+            FetchAsync = async () => await AdministrationUsersHttpClient.GetNewUsersDaily(),
+            ToSnapshot = model => new NewUsersSnapshot { Entries = model },
+            OnSnapshotPainted = PaintNewUsersAsync,
+            OnRefreshed = PaintNewUsersAsync,
+        });
+
+        if (result.IsBlockingFailure)
+            throw result.Error!;
+    }
+
+    private Task PaintNewUsersAsync(List<ChartEntryModel> model)
+    {
+        _newUsers = model;
+        // ApexCharts must rebuild its series when the rendered content changes.
+        _newUsersChartVersion++;
         StateHasChanged();
         return Task.CompletedTask;
     }

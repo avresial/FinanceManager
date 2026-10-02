@@ -86,7 +86,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<AdminDashboardSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
-                .AddScoped<InvestmentRateCacheService>()
                 .AddScoped<CurrencyHttpClient>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IFinancialAccountService, FinancialAccountService>()

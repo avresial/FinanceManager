@@ -89,6 +89,42 @@ public class AssetsPageCardsCacheService(
         return new DistributionCardModel(await types, await accounts);
     }
 
+    private readonly Dictionary<(int UserId, int CurrencyId, DateTime Start, DateTime End), Task<PortfolioReturnSourceModel>> _returnRequests = [];
+
+    // Only concurrent callers share a request; every later visit fetches again.
+    public async Task<PortfolioReturnSourceModel> GetFreshReturnsAsync(AssetsPageCardsRefreshContext context)
+    {
+        var key = (context.UserId, context.CurrencyId, context.StartDateTime.Date, context.EndDateTime);
+        Task<PortfolioReturnSourceModel> request;
+        lock (_returnRequests)
+        {
+            if (!_returnRequests.TryGetValue(key, out request!))
+            {
+                request = FetchReturnsAsync(context);
+                _returnRequests.Add(key, request);
+            }
+        }
+        try { return await request; }
+        finally
+        {
+            lock (_returnRequests)
+            {
+                if (_returnRequests.TryGetValue(key, out var current) && ReferenceEquals(current, request))
+                    _returnRequests.Remove(key);
+            }
+        }
+    }
+
+    private async Task<PortfolioReturnSourceModel> FetchReturnsAsync(AssetsPageCardsRefreshContext context)
+    {
+        var currency = new Currency { Id = context.CurrencyId };
+        var money = GetOptionalAsync(() => assetsHttpClient.GetMoneyWeightedReturn(context.UserId, currency, context.StartDateTime.Date, context.EndDateTime), "money-weighted return");
+        var time = GetOptionalAsync(() => assetsHttpClient.GetTimeWeightedReturn(context.UserId, currency, context.StartDateTime.Date, context.EndDateTime), "time-weighted return");
+        var attribution = GetOptionalAsync(() => assetsHttpClient.GetReturnAttribution(context.UserId, currency, context.StartDateTime.Date, context.EndDateTime), "return attribution");
+        await Task.WhenAll(money, time, attribution);
+        return new(await money, await time, await attribution);
+    }
+
     private const string _cacheKeyPrefix = "assets-page-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
@@ -107,16 +143,8 @@ public class AssetsPageCardsCacheService(
         var currency = new Currency { Id = refreshContext.CurrencyId };
         var assetsTimeSeriesTask = GetFreshTimeSeriesAsync(refreshContext);
         var distributionTask = GetFreshDistributionAsync(refreshContext);
-        var moneyWeightedReturnTask = GetOptionalAsync(
-            () => assetsHttpClient.GetMoneyWeightedReturn(refreshContext.UserId, currency, startDate, endDate),
-            "money-weighted return");
-        var timeWeightedReturnTask = GetOptionalAsync(
-            () => assetsHttpClient.GetTimeWeightedReturn(refreshContext.UserId, currency, startDate, endDate),
-            "time-weighted return");
-        var returnAttributionTask = GetOptionalAsync(
-            () => assetsHttpClient.GetReturnAttribution(refreshContext.UserId, currency, startDate, endDate),
-            "return attribution");
-        await Task.WhenAll(assetsTimeSeriesTask, distributionTask, moneyWeightedReturnTask, timeWeightedReturnTask, returnAttributionTask);
+        var returnsTask = GetFreshReturnsAsync(refreshContext);
+        await Task.WhenAll(assetsTimeSeriesTask, distributionTask, returnsTask);
 
         return new AssetsPageCardsCacheSnapshot
         {
@@ -129,9 +157,9 @@ public class AssetsPageCardsCacheService(
             AssetsTimeSeries = [.. (await assetsTimeSeriesTask)],
             EndAssetsPerType = [.. (await distributionTask).TypeData],
             EndAssetsPerAccount = [.. (await distributionTask).AccountData],
-            MoneyWeightedReturn = await moneyWeightedReturnTask,
-            TimeWeightedReturn = await timeWeightedReturnTask,
-            ReturnAttribution = await returnAttributionTask,
+            MoneyWeightedReturn = (await returnsTask).MoneyWeightedReturn,
+            TimeWeightedReturn = (await returnsTask).TimeWeightedReturn,
+            ReturnAttribution = (await returnsTask).Attribution,
         };
     }
 
