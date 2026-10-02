@@ -13,9 +13,10 @@ public class AdminLogsHttpClient(HttpClient httpClient)
 {
     public async Task<List<LogEntryDto>> GetLatest(int count = 5)
     {
-        var result = await httpClient.GetFromJsonAsync<List<LogEntryDto>>(
-            $"{httpClient.BaseAddress}api/admin/logs/latest?count={count}");
-        return result ?? [];
+        // An empty body is not "no logs": the card snapshots this result, so it must be reported as a failure.
+        return await httpClient.GetFromJsonAsync<List<LogEntryDto>>(
+            $"{httpClient.BaseAddress}api/admin/logs/latest?count={count}")
+            ?? throw new InvalidOperationException("The latest logs response was empty.");
     }
 
     public async Task<PagedLogEntriesDto> GetPaged(int skip, int take, string? level = null)
