@@ -1,5 +1,7 @@
 using ApexCharts;
 using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Features.Administration.Models;
+using FinanceManager.Components.Features.Administration.Services;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Shared.Charting;
 using Microsoft.AspNetCore.Components;
@@ -17,6 +19,7 @@ public partial class AdminDashboard : ComponentBase
     private int? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
+    private readonly RefreshVersionGate _accountsCountGate = new();
     private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
     private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
 
@@ -74,10 +77,11 @@ public partial class AdminDashboard : ComponentBase
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
     [Inject] required public ILogger<AdminDashboard> Logger { get; set; }
+    [Inject] required public AdminDashboardSnapshotStore SnapshotStore { get; set; }
     [Inject] required public ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] required public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
 
-    /// <summary>Paints the admin chart snapshot while refreshing it and loading the other dashboard metrics.</summary>
+    /// <summary>Paints the admin card and chart snapshots while refreshing them and loading the other dashboard metrics.</summary>
     protected override async Task OnInitializedAsync()
     {
         try
@@ -85,10 +89,10 @@ public partial class AdminDashboard : ComponentBase
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var userId = authState.User.FindFirst(ClaimTypes.Sid)?.Value;
             if (authState.User.Identity?.IsAuthenticated != true || !authState.User.IsInRole("Admin")
-                || string.IsNullOrWhiteSpace(userId))
+                || !int.TryParse(userId, out var adminUserId))
                 throw new InvalidOperationException("An authenticated admin user is required.");
 
-            await Task.WhenAll(RefreshNewUsersAsync(userId), LoadMetricsAsync());
+            await Task.WhenAll(LoadAccountsCountAsync(adminUserId), RefreshNewUsersAsync(userId!), LoadMetricsAsync());
         }
         catch (Exception ex)
         {
@@ -100,13 +104,28 @@ public partial class AdminDashboard : ComponentBase
     private async Task LoadMetricsAsync()
     {
         _userCount = await AdministrationUsersHttpClient.GetUsersCount();
-        _accountsCount = await AdministrationUsersHttpClient.GetAccountsCount();
         _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
         _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
         StateHasChanged();
 
         _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
         StateHasChanged();
+    }
+
+    private Task LoadAccountsCountAsync(int userId) =>
+        SnapshotStore.RefreshAccountsCountAsync(
+            userId,
+            _accountsCountGate,
+            _accountsCountGate.Claim(),
+            () => AdministrationUsersHttpClient.GetAccountsCount(),
+            onSnapshotPainted: ShowAccountsCount,
+            onRefreshed: ShowAccountsCount);
+
+    private Task ShowAccountsCount(AdminAccountsCountCardModel model)
+    {
+        _accountsCount = model.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task RefreshNewUsersAsync(string userId)

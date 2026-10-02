@@ -27,7 +27,7 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<int> GetAccountsCount()
+    public async Task<int?> GetAccountsCount()
     {
         try
         {
@@ -35,7 +35,9 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
         catch
         {
-            return 0;
+            // Null means no usable response came back; a genuine zero is returned as data. The admin
+            // dashboard snapshot surface relies on that distinction to keep stale content on failure.
+            return null;
         }
     }
 

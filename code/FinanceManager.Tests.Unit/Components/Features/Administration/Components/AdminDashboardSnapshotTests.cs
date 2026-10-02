@@ -3,6 +3,8 @@ using Bunit;
 using FinanceManager.Application.Identity;
 using FinanceManager.Components.Features.Administration.Components;
 using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Features.Administration.Models;
+using FinanceManager.Components.Features.Administration.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
@@ -19,6 +21,44 @@ namespace FinanceManager.Tests.Unit.Components.Features.Administration.Component
 
 public sealed class AdminDashboardSnapshotTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AccountsCountSnapshot_RefreshesIndependentlyOfChartAndMetrics(bool failedRefresh)
+    {
+        var snapshots = Snapshots("7", 3);
+        snapshots.Setup(service => service.GetAsync<AdminAccountsCountSnapshot>("admin-accounts-count:7"))
+            .ReturnsAsync(new AdminAccountsCountSnapshot { UserId = 7, Count = 42 });
+        var chart = new TaskCompletionSource<HttpResponseMessage>();
+        var metrics = new TaskCompletionSource<HttpResponseMessage>();
+        var accounts = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(chart.Task, metrics.Task, accounts.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("42", cut.Markup);
+            Assert.Equal(3, Series(cut).Single().Value);
+        });
+        Assert.Equal(1, handler.AccountsRequests);
+        accounts.SetResult(failedRefresh
+            ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            : Json(43));
+        await context.Services.GetRequiredService<TrackingCoordinator>().AccountsCompleted.Task
+            .WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(failedRefresh ? "42" : "43", cut.Markup);
+            snapshots.Verify(service => service.SetAsync("admin-accounts-count:7",
+                It.Is<AdminAccountsCountSnapshot>(snapshot => snapshot.Count == 43)),
+                failedRefresh ? Times.Never() : Times.Once());
+        });
+        chart.SetResult(Json(Entries(9)));
+        metrics.SetResult(Json(1));
+        cut.WaitForAssertion(() => Assert.Equal(9, Series(cut).Single().Value));
+        Assert.Equal(1, handler.AccountsRequests);
+    }
+
     [Theory]
     [InlineData(3, false)]
     [InlineData(9, true)]
@@ -128,6 +168,7 @@ public sealed class AdminDashboardSnapshotTests
     [Theory]
     [InlineData(false, "7")]
     [InlineData(true, "")]
+    [InlineData(true, "invalid")]
     public async Task MissingAdminContext_DoesNotReadSnapshot(bool admin, string userId)
     {
         var snapshots = new Mock<ISnapshotService>();
@@ -136,6 +177,7 @@ public sealed class AdminDashboardSnapshotTests
         Assert.Throws<InvalidOperationException>(() => context.Render<AdminDashboard>());
         snapshots.Verify(service => service.GetAsync<NewUsersSnapshot>(It.IsAny<string>()), Times.Never);
         Assert.Equal(0, handler.ChartRequests);
+        snapshots.Verify(service => service.GetAsync<AdminAccountsCountSnapshot>(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -184,6 +226,7 @@ public sealed class AdminDashboardSnapshotTests
         var coordinator = new TrackingCoordinator(snapshots.Object);
         context.Services.AddSingleton(coordinator);
         context.Services.AddSingleton<ISnapshotRefreshCoordinator>(coordinator);
+        context.Services.AddSingleton<AdminDashboardSnapshotStore>();
         var auth = new CustomAuthenticationStateProvider();
         auth.ChangeUser("local-admin", userId, admin ? UserRole.Admin : UserRole.User).GetAwaiter().GetResult();
         context.Services.AddSingleton<AuthenticationStateProvider>(auth);
@@ -194,19 +237,28 @@ public sealed class AdminDashboardSnapshotTests
     {
         private readonly SnapshotRefreshCoordinator _inner = new(snapshots, NullLogger<SnapshotRefreshCoordinator>.Instance);
         public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource AccountsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public RefreshVersionGate? Gate { get; private set; }
         public async Task<SnapshotRefreshResult<TModel>> RunAsync<TSnapshot, TModel>(SnapshotRefreshRequest<TSnapshot, TModel> request)
             where TSnapshot : SnapshotBase where TModel : class
         {
+            if (typeof(TSnapshot) != typeof(NewUsersSnapshot))
+            {
+                try { return await _inner.RunAsync(request); }
+                finally { AccountsCompleted.TrySetResult(); }
+            }
+
             Gate = request.Gate;
             try { return await _inner.RunAsync(request); }
             finally { Completed.TrySetResult(); }
         }
     }
 
-    private sealed class ChartHandler(Task<HttpResponseMessage> chart, Task<HttpResponseMessage>? metrics = null) : HttpMessageHandler
+    private sealed class ChartHandler(Task<HttpResponseMessage> chart, Task<HttpResponseMessage>? metrics = null,
+        Task<HttpResponseMessage>? accounts = null) : HttpMessageHandler
     {
         public int ChartRequests { get; private set; }
+        public int AccountsRequests { get; private set; }
         public TaskCompletionSource Finished { get; } = new();
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -218,6 +270,12 @@ public sealed class AdminDashboardSnapshotTests
             }
             if (request.RequestUri.AbsolutePath.EndsWith("GetUsersCount") && metrics is not null)
                 return await metrics;
+            if (request.RequestUri.AbsolutePath.EndsWith("GetAccountsCount"))
+            {
+                AccountsRequests++;
+                if (accounts is not null)
+                    return await accounts;
+            }
             return request.RequestUri.AbsolutePath.EndsWith("GetDailyActiveUsers") ? Json(new List<ChartEntryModel>()) : Json(1);
         }
     }
