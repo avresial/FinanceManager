@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Show the last return attribution immediately while refreshing on every Assets visit, and retain it when refresh fails. #833
 - Show the last total users count on the admin dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #838
 - Require a gift code to change tiers and start every new account on Free. #859
 - Show the last accounts count on the admin dashboard immediately while refreshing on every visit, and keep it visible if refresh fails. #839

@@ -15,23 +15,23 @@
             Why the portfolio changed over the selected range.
         </div>
 
-        @if (_isLoading)
+        @if (IsLoading)
         {
             <MudText Typo="Typo.h3" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
         }
-        else if (_hasError)
+        else if (HasError)
         {
             <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load return attribution.</MudAlert>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Reload" AriaLabel="Retry return attribution">Retry</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Retry" AriaLabel="Retry return attribution">Retry</MudButton>
         }
-        else if (_result?.IsAvailable == true)
+        else if (Model?.IsAvailable == true)
         {
             var columns = ChartColumns;
             var scale = ChartScale;
             var ticks = ChartTicks(scale);
             <div class="attribution-total" data-testid="return-attribution-total">
                 <span>Total change</span>
-                <strong class="@ValueTone(_result.TotalChange!.Value)">@FormatAmount(_result.TotalChange)</strong>
+                <strong class="@ValueTone(Model.TotalChange!.Value)">@FormatAmount(Model.TotalChange)</strong>
             </div>
 
             <div class="attribution-chart" role="img" aria-label="@AttributionSummary" data-testid="return-attribution-chart">
@@ -82,9 +82,9 @@
 
             <div class="attribution-footer mt-auto">
                 <div>
-                    Reconciliation difference: @FormatAmount(_result.ReconciliationDifference)
+                    Reconciliation difference: @FormatAmount(Model.ReconciliationDifference)
                 </div>
-                @if (_result.UnsupportedComponents.Count > 0)
+                @if (Model.UnsupportedComponents.Count > 0)
                 {
                     <div>
                         Unavailable: @UnsupportedComponentsText
