@@ -1,8 +1,10 @@
 using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -186,16 +188,109 @@ public class PortfolioReturnCardTests
         Assert.Equal(2, cut.FindAll(".portfolio-return-fact").Count);
     }
 
-    private static IRenderedComponent<PortfolioReturnCard> Render(BunitContext context) =>
-        context.Render<PortfolioReturnCard>(parameters => parameters
+    [Fact]
+    public async Task Hydration_SameCalendarRangePaintsBeforeFreshRequest_EqualContentDoesNotWrite()
+    {
+        var model = Model(0.2m, 0.1m);
+        var snapshots = Snapshots(model);
+        var handler = new QueuedReturnsHandler();
+        await using var context = CreateContext(handler, snapshots.Object);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Contains("20.00%", cut.Markup));
+        Assert.Equal(1, handler.MoneyWeightedRequestCount);
+        var renders = cut.RenderCount;
+        handler.Complete(0, model.MoneyWeightedReturn!, model.TimeWeightedReturn!, model.Attribution);
+        cut.WaitForState(() => cut.RenderCount > renders);
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<PortfolioReturnCardSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task FailedRefresh_KeepsPaintedSnapshotWithoutWriting()
+    {
+        var snapshots = Snapshots(Model(0.5m, 0.4m));
+        await using var context = CreateContext(new ReturnsHandler(
+            new(0.2m, MoneyWeightedReturnStatus.Available, _start, _end),
+            new(0.1m, TimeWeightedReturnStatus.Available, _start, _end), null, true), snapshots.Object);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Contains("50.00%", cut.Markup));
+        Assert.Contains("40.00%", cut.Markup);
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<PortfolioReturnCardSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SuccessfulNoData_ReplacesPaintedSnapshot()
+    {
+        var snapshots = Snapshots(Model(0.5m, 0.4m));
+        await using var context = CreateContext(new ReturnsHandler(
+            new(null, MoneyWeightedReturnStatus.InsufficientData, _start, _end),
+            new(null, TimeWeightedReturnStatus.InsufficientData, _start, _end), null), snapshots.Object);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Contains("Neither return is available", cut.Markup));
+        Assert.DoesNotContain("50.00%", cut.Markup);
+        snapshots.Verify(service => service.SetAsync($"portfolio-return:1:{DefaultCurrency.PLN.Id}", It.Is<PortfolioReturnCardSnapshot>(value => value.Model!.MoneyWeightedStatus == MoneyWeightedReturnStatus.InsufficientData)), Times.Once);
+    }
+
+    [Fact]
+    public async Task BrokenStorage_StillRendersFreshReturns()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<PortfolioReturnCardSnapshot>(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException("storage"));
+        snapshots.Setup(service => service.SetAsync(It.IsAny<string>(), It.IsAny<PortfolioReturnCardSnapshot>())).ThrowsAsync(new InvalidOperationException("storage"));
+        await using var context = CreateContext(new ReturnsHandler(
+            new(0.2m, MoneyWeightedReturnStatus.Available, _start, _end),
+            new(0.1m, TimeWeightedReturnStatus.Available, _start, _end), null), snapshots.Object);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Contains("20.00%", cut.Markup));
+    }
+
+    [Fact]
+    public async Task ConcurrentSourceLoads_ShareRequest_AndLaterVisitFetchesAgain()
+    {
+        var handler = new QueuedReturnsHandler();
+        await using var context = CreateContext(handler);
+        var cache = context.Services.GetRequiredService<AssetsPageCardsCacheService>();
+        var range = new AssetsPageCardsRefreshContext { UserId = 1, CurrencyId = 1, StartDateTime = _start, EndDateTime = _end };
+        var first = cache.GetFreshReturnsAsync(range);
+        var second = cache.GetFreshReturnsAsync(range);
+        Assert.Equal(1, handler.MoneyWeightedRequestCount);
+        handler.Complete(0, Model(0.2m, 0.1m).MoneyWeightedReturn!, Model(0.2m, 0.1m).TimeWeightedReturn!);
+        Assert.Same(await first, await second);
+        var later = cache.GetFreshReturnsAsync(range);
+        Assert.Equal(2, handler.MoneyWeightedRequestCount);
+        handler.Complete(1, Model(0.3m, 0.2m).MoneyWeightedReturn!, Model(0.3m, 0.2m).TimeWeightedReturn!);
+        await later;
+    }
+
+    private static PortfolioReturnSourceModel Model(decimal money, decimal time) => new(
+        new(money, MoneyWeightedReturnStatus.Available, _start, _end),
+        new(time, TimeWeightedReturnStatus.Available, _start, _end),
+        PortfolioReturnAttributionResult.Unavailable(_start, _end));
+
+    private static Mock<ISnapshotService> Snapshots(PortfolioReturnSourceModel model)
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<PortfolioReturnCardSnapshot>(It.IsAny<string>())).ReturnsAsync(new PortfolioReturnCardSnapshot
+        {
+            UserId = 1,
+            CurrencyId = DefaultCurrency.PLN.Id,
+            StartDateTime = _start,
+            EndDateTime = _end.AddHours(1),
+            Model = PortfolioReturnCardModel.FromSource(model),
+        });
+        return snapshots;
+    }
+
+    private static IRenderedComponent<PortfolioReturnCardContainer> Render(BunitContext context) =>
+        context.Render<PortfolioReturnCardContainer>(parameters => parameters
             .Add(component => component.StartDateTime, _start)
             .Add(component => component.EndDateTime, _end));
 
-    private static BunitContext CreateContext(HttpMessageHandler handler)
+    private static BunitContext CreateContext(HttpMessageHandler handler, ISnapshotService? snapshots = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
+        context.Services.AddSingleton<ISnapshotRefreshCoordinator>(new SnapshotRefreshCoordinator(snapshots ?? Mock.Of<ISnapshotService>(), NullLogger<SnapshotRefreshCoordinator>.Instance));
         context.Services.AddMudServices();
 
         var settings = new Mock<ISettingsService>();
