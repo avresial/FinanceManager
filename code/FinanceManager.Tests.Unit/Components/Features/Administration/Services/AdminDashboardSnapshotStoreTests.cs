@@ -298,4 +298,201 @@ public class AdminDashboardSnapshotStoreTests
         Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
         _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminUsersCountSnapshot>()), Times.Never);
     }
+
+    private static readonly DateTime _today = new(2026, 10, 2);
+
+    [Fact]
+    public async Task NewVisitorsToday_PreviousDaysSnapshot_IsNotPaintedEvenWhenRefreshFails()
+    {
+        const string key = "admin-new-visitors-today:1";
+        _snapshots.Setup(x => x.GetAsync<AdminNewVisitorsTodaySnapshot>(key))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 1, Day = _today.AddDays(-1), Count = 5 });
+        var painted = false;
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => throw new HttpRequestException(),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Null(result.Model);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminNewVisitorsTodaySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_FetchesAndStoresTheCapturedDay()
+    {
+        DateTime? fetchedDay = null;
+
+        await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today.AddHours(23).AddMinutes(59),
+            new RefreshVersionGate(),
+            null,
+            day =>
+            {
+                fetchedDay = day;
+                return Task.FromResult<int?>(4);
+            });
+
+        Assert.Equal(_today, fetchedDay);
+        _snapshots.Verify(x => x.SetAsync("admin-new-visitors-today:1", It.Is<AdminNewVisitorsTodaySnapshot>(s => s.Day == _today && s.Count == 4)), Times.Once);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
+    {
+        const string key = "admin-new-visitors-today:1";
+        _snapshots.Setup(x => x.GetAsync<AdminNewVisitorsTodaySnapshot>(key))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 1, Day = _today, Count = 5 });
+        var painted = false;
+        var fetchedAfterPaint = false;
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ =>
+            {
+                fetchedAfterPaint = painted;
+                return Task.FromResult<int?>(5);
+            },
+            model =>
+            {
+                painted = model.Count == 5;
+                return Task.CompletedTask;
+            });
+
+        Assert.True(fetchedAfterPaint);
+        Assert.Equal(SnapshotRefreshOutcome.Unchanged, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminNewVisitorsTodaySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_Changed_WritesUserScopedSnapshot()
+    {
+        const string key = "admin-new-visitors-today:1";
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => Task.FromResult<int?>(7));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminNewVisitorsTodaySnapshot>(s => s.UserId == 1 && s.Day == _today && s.Count == 7)), Times.Once);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_RejectsAnotherUsersSnapshot()
+    {
+        const string key = "admin-new-visitors-today:1";
+        _snapshots.Setup(x => x.GetAsync<AdminNewVisitorsTodaySnapshot>(key))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 2, Day = _today, Count = 9 });
+        var painted = false;
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => Task.FromResult<int?>(3),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminNewVisitorsTodaySnapshot>(s => s.UserId == 1 && s.Count == 3)), Times.Once);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_FailedRefresh_KeepsPaintedModel()
+    {
+        const string key = "admin-new-visitors-today:1";
+        _snapshots.Setup(x => x.GetAsync<AdminNewVisitorsTodaySnapshot>(key))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 1, Day = _today, Count = 5 });
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.True(result.SnapshotPainted);
+        Assert.False(result.IsBlockingFailure);
+        Assert.Equal(5, result.Model!.Count);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminNewVisitorsTodaySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_NoUsableResponseWithoutSnapshot_LeavesCardLoading()
+    {
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => Task.FromResult<int?>(null));
+
+        Assert.Equal(SnapshotRefreshOutcome.Empty, result.Outcome);
+        Assert.Null(result.Model);
+        Assert.False(result.IsBlockingFailure);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminNewVisitorsTodaySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_GenuinelyZero_RefreshesToZero()
+    {
+        const string key = "admin-new-visitors-today:1";
+        _snapshots.Setup(x => x.GetAsync<AdminNewVisitorsTodaySnapshot>(key))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 1, Day = _today, Count = 5 });
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            new RefreshVersionGate(),
+            null,
+            _ => Task.FromResult<int?>(0));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.Equal(0, result.Model!.Count);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminNewVisitorsTodaySnapshot>(s => s.Count == 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task NewVisitorsToday_SupersededRequest_DoesNotWrite()
+    {
+        var gate = new RefreshVersionGate();
+        var claimed = gate.Claim();
+
+        var result = await CreateStore().RefreshNewVisitorsTodayAsync(
+            1,
+            _today,
+            gate,
+            claimed,
+            _ =>
+            {
+                gate.Claim();
+                return Task.FromResult<int?>(4);
+            });
+
+        Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminNewVisitorsTodaySnapshot>()), Times.Never);
+    }
 }

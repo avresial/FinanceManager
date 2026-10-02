@@ -21,6 +21,7 @@ public partial class AdminDashboard : ComponentBase
 
     private readonly RefreshVersionGate _userCountGate = new();
     private readonly RefreshVersionGate _accountsCountGate = new();
+    private readonly RefreshVersionGate _newVisitorsTodayGate = new();
     private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
     private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
 
@@ -96,6 +97,7 @@ public partial class AdminDashboard : ComponentBase
             await Task.WhenAll(
                 LoadUserCountAsync(adminUserId),
                 LoadAccountsCountAsync(adminUserId),
+                LoadNewVisitorsTodayAsync(adminUserId),
                 RefreshNewUsersAsync(userId!),
                 LoadMetricsAsync());
         }
@@ -109,7 +111,6 @@ public partial class AdminDashboard : ComponentBase
     private async Task LoadMetricsAsync()
     {
         _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
-        _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
         StateHasChanged();
 
         _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
@@ -144,6 +145,23 @@ public partial class AdminDashboard : ComponentBase
     private Task ShowAccountsCount(AdminAccountsCountCardModel model)
     {
         _accountsCount = model.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task LoadNewVisitorsTodayAsync(int userId) =>
+        SnapshotStore.RefreshNewVisitorsTodayAsync(
+            userId,
+            DateTime.UtcNow.Date,
+            _newVisitorsTodayGate,
+            _newVisitorsTodayGate.Claim(),
+            day => NewVisitorsHttpClient.GetVisit(day),
+            onSnapshotPainted: ShowNewVisitorsToday,
+            onRefreshed: ShowNewVisitorsToday);
+
+    private Task ShowNewVisitorsToday(AdminNewVisitorsTodayCardModel model)
+    {
+        _newVisitorsToday = model.Count;
         StateHasChanged();
         return Task.CompletedTask;
     }
