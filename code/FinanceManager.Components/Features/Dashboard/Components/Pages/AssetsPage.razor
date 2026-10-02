@@ -15,11 +15,11 @@
         </MudItem>
 
         <MudItem xs="12" lg="8">
-            <PortfolioReturnCard StartDateTime=StartDate EndDateTime="@EndDate" />
+            <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" />
         </MudItem>
 
         <MudItem xs="12" lg="4">
-            <PortfolioReturnAttributionCard StartDateTime=StartDate EndDateTime="@EndDate"
+            <PortfolioReturnAttributionCard StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns"
                                             Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 

@@ -45,7 +45,7 @@ public class AssetsHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<MoneyWeightedReturnResult>(
             $"{httpClient.BaseAddress}api/Assets/GetMoneyWeightedReturn/{userId}/{currency.Id}/{start:O}/{end:O}",
             cancellationToken);
-        return result ?? new(null, MoneyWeightedReturnStatus.Unavailable, start.Date, end.Date);
+        return result ?? throw new InvalidOperationException("Money-weighted return response was missing.");
     }
 
     public async Task<TimeWeightedReturnResult> GetTimeWeightedReturn(
@@ -58,7 +58,7 @@ public class AssetsHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<TimeWeightedReturnResult>(
             $"{httpClient.BaseAddress}api/Assets/GetTimeWeightedReturn/{userId}/{currency.Id}/{start:O}/{end:O}",
             cancellationToken);
-        return result ?? new(null, TimeWeightedReturnStatus.Unavailable, start.Date, end.Date);
+        return result ?? throw new InvalidOperationException("Time-weighted return response was missing.");
     }
 
     public async Task<PortfolioReturnAttributionResult> GetReturnAttribution(
@@ -71,7 +71,7 @@ public class AssetsHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<PortfolioReturnAttributionResult>(
             $"{httpClient.BaseAddress}api/Assets/GetReturnAttribution/{userId}/{currency.Id}/{start:O}/{end:O}",
             cancellationToken);
-        return result ?? PortfolioReturnAttributionResult.Unavailable(start.Date, end.Date);
+        return result ?? throw new InvalidOperationException("Return attribution response was missing.");
     }
 
     public async Task<List<NameValueResult>> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)

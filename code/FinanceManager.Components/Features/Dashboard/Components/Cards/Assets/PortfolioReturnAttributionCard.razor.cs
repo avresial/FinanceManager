@@ -28,6 +28,8 @@ public partial class PortfolioReturnAttributionCard
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
+    [Parameter] public Func<AssetsPageCardsRefreshContext, Task<PortfolioReturnSourceModel>>? FetchReturns { get; set; }
+
     protected override Task OnParametersSetAsync() => Reload();
 
     private async Task Reload()
@@ -60,7 +62,7 @@ public partial class PortfolioReturnAttributionCard
                 EndDateTime = endDateTime,
             };
 
-            var result = (await AssetsPageCardsCacheService.GetSnapshotAsync(context)).ReturnAttribution;
+            var result = (await (FetchReturns is null ? AssetsPageCardsCacheService.GetFreshReturnsAsync(context) : FetchReturns(context))).Attribution;
             if (!_refreshGate.IsCurrent(version)) return;
 
             _currency = currency;
