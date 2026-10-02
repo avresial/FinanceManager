@@ -19,6 +19,7 @@ public partial class AdminDashboard : ComponentBase
     private int? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
+    private readonly RefreshVersionGate _userCountGate = new();
     private readonly RefreshVersionGate _accountsCountGate = new();
     private readonly RefreshVersionGate _newVisitorsTodayGate = new();
     private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
@@ -93,7 +94,12 @@ public partial class AdminDashboard : ComponentBase
                 || !int.TryParse(userId, out var adminUserId))
                 throw new InvalidOperationException("An authenticated admin user is required.");
 
-            await Task.WhenAll(LoadAccountsCountAsync(adminUserId), LoadNewVisitorsTodayAsync(adminUserId), RefreshNewUsersAsync(userId!), LoadMetricsAsync());
+            await Task.WhenAll(
+                LoadUserCountAsync(adminUserId),
+                LoadAccountsCountAsync(adminUserId),
+                LoadNewVisitorsTodayAsync(adminUserId),
+                RefreshNewUsersAsync(userId!),
+                LoadMetricsAsync());
         }
         catch (Exception ex)
         {
@@ -104,12 +110,27 @@ public partial class AdminDashboard : ComponentBase
 
     private async Task LoadMetricsAsync()
     {
-        _userCount = await AdministrationUsersHttpClient.GetUsersCount();
         _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
         StateHasChanged();
 
         _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
         StateHasChanged();
+    }
+
+    private Task LoadUserCountAsync(int userId) =>
+        SnapshotStore.RefreshUsersCountAsync(
+            userId,
+            _userCountGate,
+            _userCountGate.Claim(),
+            () => AdministrationUsersHttpClient.GetUsersCount(),
+            onSnapshotPainted: ShowUserCount,
+            onRefreshed: ShowUserCount);
+
+    private Task ShowUserCount(AdminUsersCountCardModel model)
+    {
+        _userCount = model.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private Task LoadAccountsCountAsync(int userId) =>

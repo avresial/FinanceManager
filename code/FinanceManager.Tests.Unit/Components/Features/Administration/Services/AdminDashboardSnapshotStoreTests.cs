@@ -158,6 +158,148 @@ public class AdminDashboardSnapshotStoreTests
     }
 
     [Fact]
+    public async Task UsersCount_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
+    {
+        const string key = "admin-users-count:1";
+        _snapshots.Setup(x => x.GetAsync<AdminUsersCountSnapshot>(key))
+            .ReturnsAsync(new AdminUsersCountSnapshot { UserId = 1, Count = 5 });
+        var painted = false;
+        var fetchedAfterPaint = false;
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () =>
+            {
+                fetchedAfterPaint = painted;
+                return Task.FromResult<int?>(5);
+            },
+            model =>
+            {
+                painted = model.Count == 5;
+                return Task.CompletedTask;
+            });
+
+        Assert.True(fetchedAfterPaint);
+        Assert.Equal(SnapshotRefreshOutcome.Unchanged, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminUsersCountSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UsersCount_Changed_WritesUserScopedSnapshot()
+    {
+        const string key = "admin-users-count:1";
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<int?>(7));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminUsersCountSnapshot>(s => s.UserId == 1 && s.Count == 7)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UsersCount_RejectsAnotherUsersSnapshot()
+    {
+        const string key = "admin-users-count:1";
+        _snapshots.Setup(x => x.GetAsync<AdminUsersCountSnapshot>(key))
+            .ReturnsAsync(new AdminUsersCountSnapshot { UserId = 2, Count = 9 });
+        var painted = false;
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<int?>(3),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminUsersCountSnapshot>(s => s.UserId == 1 && s.Count == 3)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UsersCount_FailedRefresh_KeepsPaintedModel()
+    {
+        const string key = "admin-users-count:1";
+        _snapshots.Setup(x => x.GetAsync<AdminUsersCountSnapshot>(key))
+            .ReturnsAsync(new AdminUsersCountSnapshot { UserId = 1, Count = 5 });
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.True(result.SnapshotPainted);
+        Assert.False(result.IsBlockingFailure);
+        Assert.Equal(5, result.Model!.Count);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminUsersCountSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UsersCount_NoUsableResponseWithoutSnapshot_LeavesCardLoading()
+    {
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<int?>(null));
+
+        Assert.Equal(SnapshotRefreshOutcome.Empty, result.Outcome);
+        Assert.Null(result.Model);
+        Assert.False(result.IsBlockingFailure);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminUsersCountSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UsersCount_GenuinelyZero_RefreshesToZero()
+    {
+        const string key = "admin-users-count:1";
+        _snapshots.Setup(x => x.GetAsync<AdminUsersCountSnapshot>(key))
+            .ReturnsAsync(new AdminUsersCountSnapshot { UserId = 1, Count = 5 });
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            new RefreshVersionGate(),
+            null,
+            () => Task.FromResult<int?>(0));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.Equal(0, result.Model!.Count);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminUsersCountSnapshot>(s => s.Count == 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task UsersCount_SupersededRequest_DoesNotWrite()
+    {
+        var gate = new RefreshVersionGate();
+        var claimed = gate.Claim();
+
+        var result = await CreateStore().RefreshUsersCountAsync(
+            1,
+            gate,
+            claimed,
+            () =>
+            {
+                gate.Claim();
+                return Task.FromResult<int?>(4);
+            });
+
+        Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminUsersCountSnapshot>()), Times.Never);
+    }
+
+    [Fact]
     public async Task NewVisitorsToday_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
     {
         const string key = "admin-new-visitors-today:1";

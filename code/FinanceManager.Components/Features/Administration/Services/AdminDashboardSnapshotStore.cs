@@ -56,8 +56,55 @@ public sealed class AdminDashboardSnapshotStore(ISnapshotRefreshCoordinator coor
             OnRefreshed = onRefreshed
         });
 
+    /// <summary>Stale-while-revalidate for the total users count card, scoped to the authenticated admin user.</summary>
+    /// <param name="userId">The admin who owns the view; scopes the snapshot key.</param>
+    /// <param name="gate">Race protection shared with the card's other reloads.</param>
+    /// <param name="claimedVersion">
+    /// The version the caller already claimed from <paramref name="gate"/> before this call. Forwarded to the
+    /// coordinator so it reuses that version instead of claiming a newer one — otherwise the caller's own
+    /// post-run <c>IsCurrent</c> guard would never match. Pass <c>null</c> only when the caller has not pre-claimed.
+    /// </param>
+    /// <param name="fetchAsync">Loads the current total users count from the API; returns null when no usable response came back.</param>
+    /// <param name="onSnapshotPainted">Renders the stored count before the fresh request completes.</param>
+    /// <param name="onSnapshotMissing">Runs instead of <paramref name="onSnapshotPainted"/> when no usable snapshot exists.</param>
+    /// <param name="onRefreshed">Renders the fresh count; only invoked when it differs from what was painted.</param>
+    public Task<SnapshotRefreshResult<AdminUsersCountCardModel>> RefreshUsersCountAsync(
+        int userId,
+        RefreshVersionGate gate,
+        int? claimedVersion,
+        Func<Task<int?>> fetchAsync,
+        Func<AdminUsersCountCardModel, Task>? onSnapshotPainted = null,
+        Func<Task>? onSnapshotMissing = null,
+        Func<AdminUsersCountCardModel, Task>? onRefreshed = null) =>
+        coordinator.RunAsync(new SnapshotRefreshRequest<AdminUsersCountSnapshot, AdminUsersCountCardModel>
+        {
+            Key = BuildUsersCountKey(userId),
+            Gate = gate,
+            ClaimedVersion = claimedVersion,
+
+            // A snapshot stored for a different user is unusable; rejecting it falls back to a plain load.
+            ToModel = snapshot => snapshot.UserId == userId
+                ? new AdminUsersCountCardModel(snapshot.Count)
+                : null,
+            FetchAsync = async () =>
+            {
+                var count = await fetchAsync();
+                return count is null ? null : new AdminUsersCountCardModel(count.Value);
+            },
+            ToSnapshot = model => new AdminUsersCountSnapshot
+            {
+                UserId = userId,
+                Count = model.Count
+            },
+            OnSnapshotPainted = onSnapshotPainted,
+            OnSnapshotMissing = onSnapshotMissing,
+            OnRefreshed = onRefreshed
+        });
+
     // Per-user key with no date component, so a single snapshot per card is overwritten on each save.
     private static string BuildAccountsCountKey(int userId) => $"admin-accounts-count:{userId}";
+
+    private static string BuildUsersCountKey(int userId) => $"admin-users-count:{userId}";
 
     /// <summary>Stale-while-revalidate for the today's new visitors card, scoped to the authenticated admin user.</summary>
     /// <param name="userId">The admin who owns the view; scopes the snapshot key.</param>

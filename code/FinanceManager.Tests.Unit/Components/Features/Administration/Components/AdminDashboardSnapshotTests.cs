@@ -217,6 +217,7 @@ public sealed class AdminDashboardSnapshotTests
         Assert.Equal(0, handler.ChartRequests);
         snapshots.Verify(service => service.GetAsync<AdminAccountsCountSnapshot>(It.IsAny<string>()), Times.Never);
         snapshots.Verify(service => service.GetAsync<AdminNewVisitorsTodaySnapshot>(It.IsAny<string>()), Times.Never);
+        snapshots.Verify(service => service.GetAsync<AdminUsersCountSnapshot>(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

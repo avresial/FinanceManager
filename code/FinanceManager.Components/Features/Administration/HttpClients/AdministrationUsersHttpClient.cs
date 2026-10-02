@@ -1,6 +1,5 @@
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared.Charting;
-using System.Diagnostics;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.Administration.HttpClients;
@@ -53,16 +52,17 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<int> GetUsersCount()
+    public async Task<int?> GetUsersCount()
     {
         try
         {
             return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsersCount");
         }
-        catch (Exception ex)
+        catch
         {
-            Debug.WriteLine(ex.ToString());
-            return 0;
+            // Null means no usable response came back; a genuine zero is returned as data. The admin
+            // dashboard snapshot surface relies on that distinction to keep stale content on failure.
+            return null;
         }
     }
 
