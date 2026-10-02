@@ -1,5 +1,7 @@
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -24,6 +26,7 @@ public partial class FeeDragCard : IDisposable
     private Currency _currency = DefaultCurrency.PLN;
     private decimal _assumedAnnualReturnRate = _defaultReturnRate;
     private DateTime? _lastRequestedAsOfDate;
+    private readonly RefreshVersionGate _gate = new();
     private CancellationTokenSource? _loadCancellationTokenSource;
 
     internal FeeDragAnalysisResult? Analysis
@@ -41,6 +44,7 @@ public partial class FeeDragCard : IDisposable
     [Inject] public required AssetsHttpClient AssetsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
 
     internal decimal AssumedAnnualReturnRate => _assumedAnnualReturnRate;
 
@@ -72,11 +76,6 @@ public partial class FeeDragCard : IDisposable
         }
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        _currency = await SettingsService.GetCurrencyAsync();
-    }
-
     protected override async Task OnParametersSetAsync()
     {
         if (_lastRequestedAsOfDate == AsOfDate)
@@ -88,71 +87,119 @@ public partial class FeeDragCard : IDisposable
 
     internal async Task LoadFeeDragDataAsync()
     {
+        var version = _gate.Claim();
         _loadCancellationTokenSource?.Cancel();
         var cancellationTokenSource = new CancellationTokenSource();
         _loadCancellationTokenSource = cancellationTokenSource;
         var asOfDate = AsOfDate;
 
-        _isLoading = true;
         _hasError = false;
+        _isLoading = _analysis is null;
 
         try
         {
             var user = await LoginService.GetLoggedUser();
-            if (!ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+            if (!_gate.IsCurrent(version))
                 return;
 
             if (user is null)
             {
                 _analysis = null;
+                _isLoading = false;
                 return;
             }
 
-            var analysis = await AssetsHttpClient.GetFeeDragAnalysis(
-                user.UserId,
-                _currency,
-                asOfDate,
-                _assumedAnnualReturnRate,
-                cancellationTokenSource.Token);
+            var currency = await SettingsService.GetCurrencyAsync();
+            if (!_gate.IsCurrent(version))
+                return;
 
-            if (ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
-                _analysis = analysis;
-        }
-        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
-        {
+            _currency = currency;
+            var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<FeeDragSnapshot, FeeDragAnalysisResult>
+            {
+                Key = $"fee-drag:{user.UserId}:{currency.Id}",
+                Gate = _gate,
+                ClaimedVersion = version,
+                // The as-of date is metadata: never show an old analysis under a different date.
+                ToModel = snapshot => snapshot.UserId == user.UserId && snapshot.CurrencyId == currency.Id
+                    && snapshot.AsOfDate.Date == asOfDate.Date
+                    ? Normalize(snapshot.Analysis) : null,
+                // Always the default rate: the rendered facts must not depend on the slider.
+                FetchAsync = async () =>
+                {
+                    var analysis = await AssetsHttpClient.GetFeeDragAnalysis(
+                        user.UserId,
+                        currency,
+                        asOfDate,
+                        _defaultReturnRate,
+                        cancellationTokenSource.Token);
+                    return analysis is null ? null : Normalize(analysis);
+                },
+                ToSnapshot = model => new FeeDragSnapshot
+                {
+                    UserId = user.UserId,
+                    CurrencyId = currency.Id,
+                    AsOfDate = asOfDate,
+                    Analysis = model,
+                },
+                OnSnapshotPainted = ShowAnalysis,
+                OnSnapshotMissing = () =>
+                {
+                    _analysis = null;
+                    _isLoading = true;
+                    return InvokeAsync(StateHasChanged);
+                },
+                OnRefreshed = ShowAnalysis,
+            });
+
+            if (!_gate.IsCurrent(version))
+                return;
+
+            _hasError = result.IsBlockingFailure;
+            _isLoading = false;
         }
         catch (Exception exception)
         {
-            if (!ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
+            if (!_gate.IsCurrent(version))
                 return;
 
+            _analysis = null;
             _hasError = true;
+            _isLoading = false;
             Logger.LogError(exception, "Error loading ETF fee drag analysis");
-        }
-        finally
-        {
-            if (ReferenceEquals(_loadCancellationTokenSource, cancellationTokenSource))
-            {
-                _isLoading = false;
-                _loadCancellationTokenSource = null;
-            }
-
-            cancellationTokenSource.Dispose();
         }
     }
 
     public void Dispose()
     {
+        // Supersede any in-flight run so it cannot render into a disposed component.
+        _gate.Claim();
         _loadCancellationTokenSource?.Cancel();
         _loadCancellationTokenSource = null;
     }
 
-    internal void OnReturnRateChanged(decimal value)
-    {
+    internal void OnReturnRateChanged(decimal value) =>
         _assumedAnnualReturnRate = Math.Clamp(value, _minimumReturnRate, _maximumReturnRate);
-        if (_analysis is not null)
-            _analysis.AssumedAnnualReturnRate = _assumedAnnualReturnRate;
+
+    private Task ShowAnalysis(FeeDragAnalysisResult analysis)
+    {
+        _analysis = analysis;
+        _isLoading = false;
+        return InvokeAsync(StateHasChanged);
     }
+
+    // Keeps only what the card renders; the projections are recomputed locally from the slider.
+    private static FeeDragAnalysisResult Normalize(FeeDragAnalysisResult analysis) => new()
+    {
+        TotalHoldingsValue = analysis.TotalHoldingsValue,
+        AnnualFeeCost = analysis.AnnualFeeCost,
+        WeightedExpenseRatio = analysis.WeightedExpenseRatio,
+        MissingTerCount = analysis.MissingTerCount,
+        MissingTerHoldingsValue = analysis.MissingTerHoldingsValue,
+        TotalHoldingsCount = analysis.TotalHoldingsCount,
+        Holdings = [.. analysis.Holdings],
+        Projections = [],
+        AssumedAnnualReturnRate = 0m,
+    };
 
     internal static string FormatPercentage(decimal value) => $"{value * 100m:0.0}%";
 
