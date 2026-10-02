@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
+using FinanceManager.Components.Features.Administration.Services;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Services;
@@ -82,6 +83,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<DashboardCardsSnapshotStore>()
                 .AddScoped<DiversificationSnapshotStore>()
                 .AddScoped<SubscriptionsSnapshotStore>()
+                .AddScoped<AdminDashboardSnapshotStore>()
                 .AddTransient<CurrencyImportJobTracker>()
                 .AddScoped<AssetsPageCardsCacheService>()
                 .AddScoped<InvestmentRateCacheService>()
