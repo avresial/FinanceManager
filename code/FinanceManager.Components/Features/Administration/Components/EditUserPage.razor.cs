@@ -17,14 +17,11 @@ public partial class EditUserPage : ComponentBase
 
     private bool _isLoadingPage;
     private bool _success;
-    private string _selectedPlan = $"{PricingLevel.Free}";
     private bool _isAdmin;
     private string? _password;
     private string? _confirmPassword;
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
-    private List<string> _plans = [$"{PricingLevel.Free}", $"{PricingLevel.Basic}", $"{PricingLevel.Premium}"];
-    private RecordCapacity? _recordCapacity;
 
     [Parameter] public required int UserId { get; set; }
 
@@ -40,7 +37,6 @@ public partial class EditUserPage : ComponentBase
         {
             _userData = await UserService.GetUser(UserId);
             _isAdmin = _userData?.UserRole == UserRole.Admin;
-            _selectedPlan = _userData?.PricingLevel.ToString() ?? $"{PricingLevel.Free}";
         }
         catch (Exception ex)
         {
@@ -104,45 +100,6 @@ public partial class EditUserPage : ComponentBase
             _errors.Insert(0, "Failed to change role.");
             return;
         }
-    }
-    private async Task UpgradePricingPlan()
-    {
-        if (_userData is null) return;
-
-        bool result = false;
-        try
-        {
-            result = await UserService.UpdatePricingPlan(_userData.UserId, (PricingLevel)Enum.Parse(typeof(PricingLevel), _selectedPlan));
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, ex.Message);
-            _errors.Insert(0, "Failed to change plan.");
-            return;
-        }
-
-        _errors.Clear();
-        if (!result)
-        {
-            _errors.Insert(0, "Failed to change plan.");
-        }
-        else
-        {
-            _info.Insert(0, $"Successfully upgraded plan to {_selectedPlan}");
-
-            _userData = await UserService.GetUser(_userData.UserId);
-            if (_userData is null) return;
-
-            try
-            {
-                _recordCapacity = await UserService.GetRecordCapacity(_userData.UserId);
-            }
-            catch (Exception ex)
-            {
-                _errors.Insert(0, ex.Message);
-            }
-        }
-
     }
     private async Task ChangePasswordAsync()
     {

@@ -161,45 +161,31 @@
 
                 <section id="subscription">
                     <MudText Typo="Typo.h6">Subscription</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                        You're on @_userData.PricingLevel.
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
+                        You're on the lifetime @_userData.PricingLevel plan.
                     </MudText>
 
                     @if (_recordCapacity is not null)
                     {
                         <MudText Typo="Typo.body2" Class="mb-1">Storage usage</MudText>
                         <MudProgressLinear Color="@GetStorageIndicatorColor()" Size="Size.Medium" Value="@_recordCapacity.GetStorageUsedPercentage()" Class="mb-1" />
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
                             @($"{_recordCapacity.UsedCapacity} of {_recordCapacity.TotalCapacity} records")
                         </MudText>
                     }
 
-                    <MudGrid>
-                        @foreach (var plan in _planOptions)
-                        {
-                            var isSelected = plan.Level.ToString() == _selectedPlan;
-                            var isCurrent = plan.Level == _userData.PricingLevel;
-                            <MudItem xs="12" md="4">
-                                <MudPaper Outlined="true" Class="pa-4" Style="@(isSelected ? "border-color: var(--mud-palette-primary); cursor: pointer; position: relative;" : "cursor: pointer; position: relative;")"
-                                          @onclick="@(() => SelectPlan(plan.Level))">
-                                    @if (isCurrent)
-                                    {
-                                        <div style="position:absolute; top:8px; right:8px;">
-                                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Text">Current</MudChip>
-                                        </div>
-                                    }
-                                    <MudText Typo="Typo.subtitle1" Color="@(isSelected ? Color.Primary : Color.Default)">@plan.DisplayName</MudText>
-                                    <MudText Typo="Typo.h5" Class="mb-2">@plan.Price</MudText>
-                                    <MudStack Spacing="1">
-                                        @foreach (var feature in plan.Features)
-                                        {
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">• @feature</MudText>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            </MudItem>
-                        }
-                    </MudGrid>
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mb-3">
+                        Paid tiers are granted with one-time gift codes. Redeemed upgrades remain active for the lifetime of your account.
+                    </MudText>
+                    <MudStack Row AlignItems="AlignItems.Start" Spacing="2" Class="flex-wrap">
+                        <MudTextField T="string" @bind-Value="_giftCode" Label="Gift code" Variant="Variant.Outlined"
+                                      Immediate="true" MaxLength="64" Disabled="_isRedeemingGiftCode" Class="flex-grow-1" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RedeemGiftCode"
+                                   Disabled="@(_isRedeemingGiftCode || string.IsNullOrWhiteSpace(_giftCode))"
+                                   StartIcon="@Icons.Material.Filled.CardGiftcard" Class="mt-2">
+                            @(_isRedeemingGiftCode ? "Redeeming…" : "Redeem")
+                        </MudButton>
+                    </MudStack>
                 </section>
 
                 <MudDivider Class="my-6" />

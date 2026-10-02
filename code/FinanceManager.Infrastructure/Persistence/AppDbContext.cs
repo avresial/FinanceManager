@@ -10,6 +10,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Shared.Ai.Entities;
@@ -25,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<ActiveUser> ActiveUsers { get; set; } = default!;
     public DbSet<UserDto> Users { get; set; } = default!;
+    public DbSet<GiftCode> GiftCodes { get; set; } = default!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = default!;
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = default!;
     public DbSet<Currency> Currencies { get; set; } = default!;
@@ -71,6 +73,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new InvestmentTransactionConfiguration());
         modelBuilder.ApplyConfiguration(new PriceQuoteConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
+        modelBuilder.ApplyConfiguration(new GiftCodeConfiguration());
         modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
         modelBuilder.ApplyConfiguration(new PasswordResetTokenConfiguration());
         modelBuilder.ApplyConfiguration(new BondDetailsConfiguration());

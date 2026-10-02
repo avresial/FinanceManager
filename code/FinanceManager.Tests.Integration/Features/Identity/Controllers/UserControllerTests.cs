@@ -109,6 +109,20 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
+    public async Task Add_RequestedPremiumPlan_StillCreatesFreeUser()
+    {
+        const string email = "free-registration@example.com";
+
+        using var response = await Client.PostAsJsonAsync(
+            "api/User/Add", new AddUser(email, "password", PricingLevel.Premium), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var persisted = await _testDatabase!.Context.Users.SingleAsync(
+            user => user.Login == email, TestContext.Current.CancellationToken);
+        Assert.Equal(PricingLevel.Free, persisted.PricingLevel);
+    }
+
+    [Fact]
     public async Task Get_ReturnsUser()
     {
         // arrange
@@ -176,28 +190,35 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
-    public async Task UpdatePricingPlan_ChangesPricingLevel()
+    public async Task UpdatePricingPlan_ReturnsForbiddenForAdminAndUserWithoutChangingPlan()
     {
         // arrange
         await SeedUser();
         Authorize(_testUserName, _testUserId, UserRole.Admin);
         Assert.NotNull(_testDatabase);
-        var userClient = new UserHttpClient(Client);
         var originalPricing = (await _testDatabase!.Context.Users
             .FirstAsync(u => u.Id == _testUserId, TestContext.Current.CancellationToken)).PricingLevel;
         Assert.Equal(PricingLevel.Basic, originalPricing); // seeded value
 
         UpdatePricingPlan cmd = new(_testUserId, PricingLevel.Premium);
 
-        // act
-        var result = await userClient.UpdatePricingPlan(cmd);
+        ClearAuthorization();
+        using var anonymousResponse = await Client.PutAsJsonAsync(
+            "api/User/UpdatePricingPlan", cmd, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymousResponse.StatusCode);
 
-        // assert 
-        Assert.True(result);
+        Authorize(_testUserName, _testUserId, UserRole.Admin);
+        using var adminResponse = await Client.PutAsJsonAsync(
+            "api/User/UpdatePricingPlan", cmd, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, adminResponse.StatusCode);
 
-        var apiUser = await userClient.GetUser(_testUserId);
-        Assert.NotNull(apiUser);
-        Assert.Equal(PricingLevel.Premium, apiUser!.PricingLevel);
+        Authorize(_testUserName, _testUserId, UserRole.User);
+        using var userResponse = await Client.PutAsJsonAsync(
+            "api/User/UpdatePricingPlan", cmd, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Forbidden, userResponse.StatusCode);
+
+        Assert.Equal(PricingLevel.Basic, (await _testDatabase.Context.Users
+            .FirstAsync(u => u.Id == _testUserId, TestContext.Current.CancellationToken)).PricingLevel);
     }
 
     [Fact]

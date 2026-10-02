@@ -43,7 +43,7 @@ public class UserController(
         var encryptedPassword = PasswordEncryptionProvider.EncryptPassword(addUserCommand.Password);
         try
         {
-            var result = await userRepository.AddUser(login, encryptedPassword, addUserCommand.PricingLevel, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
+            var result = await userRepository.AddUser(login, encryptedPassword, PricingLevel.Free, UserRole.User, addUserCommand.FirstName, addUserCommand.LastName);
             return result ? Ok(result) : BadRequest();
         }
         catch (DuplicateLoginException)
@@ -176,16 +176,10 @@ public class UserController(
         return result ? Ok(result) : BadRequest();
     }
 
-    [Authorize(Roles = "Admin")]
-    [HttpPut]
-    [Route("UpdatePricingPlan")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan, CancellationToken cancellationToken = default)
-    {
-        var result = await userRepository.UpdatePricingPlan(updatePricingPlan.UserId, updatePricingPlan.PricingLevel);
-        return result ? Ok(result) : NotFound();
-    }
+    // Keep the former endpoint explicitly forbidden for older clients; tier changes require a gift code.
+    [Authorize]
+    [HttpPut("UpdatePricingPlan")]
+    public IActionResult UpdatePricingPlan(UpdatePricingPlan updatePricingPlan, CancellationToken cancellationToken = default) => Forbid();
 
     [Authorize(Roles = "Admin")]
     [HttpPut]
