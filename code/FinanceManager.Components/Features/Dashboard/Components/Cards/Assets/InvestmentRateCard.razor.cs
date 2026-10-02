@@ -1,8 +1,10 @@
 using ApexCharts;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -14,8 +16,9 @@ using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
-public partial class InvestmentRateCard
+public partial class InvestmentRateCard : IDisposable
 {
+    private const int _horizonMonths = 12;
     private const string _highlightColor = "#FF9800";
     private const decimal _maximumChartPercentage = 300m;
     private const string _mutedBarColor = "#5F6368";
@@ -27,7 +30,11 @@ public partial class InvestmentRateCard
     internal DateTime AsOfDate { get; set; } = DateTime.UtcNow;
 
     private bool _isLoading;
+    private bool _hasError;
     private Currency _currency = DefaultCurrency.PLN;
+    private readonly RefreshVersionGate _gate = new();
+    private (int UserId, int CurrencyId, int Year, int Month)? _scope;
+    private bool _hasDisplayedModel;
 
     public List<InvestmentRate> MonthlyInvestmentRates { get; set; } = [];
 
@@ -40,6 +47,8 @@ public partial class InvestmentRateCard
 
     internal decimal? CurrentMonthPercentage => _currentMonthPercentage;
     internal decimal? YtdAveragePercentage => _ytdAveragePercentage;
+    internal decimal? EndOfYearProjection => _endOfYearProjection;
+    internal bool IsLoading => _isLoading;
     internal IReadOnlyList<MonthBar> Series => _series;
 
     private string SelectedMonthName =>
@@ -49,60 +58,200 @@ public partial class InvestmentRateCard
     private decimal? _ytdAveragePercentage;
     private decimal? _endOfYearProjection;
     private int _selectedRateIndex;
+    private int _chartVersion;
     private List<MonthBar> _series = [];
     private ApexChartOptions<MonthBar>? _chartOptions;
 
     [Parameter] public string Height { get; set; } = "300px";
 
     [Inject] public required ILogger<InvestmentRateCard> Logger { get; set; }
-    [Inject] public required InvestmentRateCacheService InvestmentRateCacheService { get; set; }
+    [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        _currency = await SettingsService.GetCurrencyAsync();
         await LoadInvestmentRatesAsync();
     }
 
-    private async Task LoadInvestmentRatesAsync()
+    internal async Task LoadInvestmentRatesAsync()
     {
-        _isLoading = true;
+        var version = _gate.Claim();
+        var asOf = AsOfDate;
+        var month = new DateOnly(asOf.Year, asOf.Month, 1);
+        _isLoading = !_hasDisplayedModel;
+        if (_scope is { } knownScope && (knownScope.Year != month.Year || knownScope.Month != month.Month))
+            ClearDisplayedModel();
+        StateHasChanged();
+
         try
         {
-            MonthlyInvestmentRates.Clear();
-
             var user = await LoginService.GetLoggedUser();
-            if (user is null) return;
-
-            try
+            if (!_gate.IsCurrent(version)) return;
+            if (user is null)
             {
-                var context = new InvestmentRateRefreshContext
+                ClearDisplayedModel();
+                _scope = null;
+                _isLoading = false;
+                _hasError = true;
+                StateHasChanged();
+                return;
+            }
+            var userId = user.UserId;
+
+            if (_scope is { } current && (current.UserId != userId || current.Year != month.Year || current.Month != month.Month))
+            {
+                ClearDisplayedModel();
+                StateHasChanged();
+            }
+
+            var resolvedCurrency = await SettingsService.GetCurrencyAsync();
+            if (!_gate.IsCurrent(version)) return;
+            var currency = resolvedCurrency with { };
+            var currencyId = currency.Id;
+
+            var scope = (userId, currencyId, month.Year, month.Month);
+            var sameScope = _scope == scope && _hasDisplayedModel;
+            if (_scope != scope)
+            {
+                ClearDisplayedModel();
+                StateHasChanged();
+            }
+            _scope = scope;
+            _currency = currency;
+
+            var firstMonth = month.AddMonths(-(_horizonMonths - 1));
+            var key = $"investment-rate-card:{userId}:{currencyId}:{_horizonMonths}";
+            var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<InvestmentRateCardSnapshot, InvestmentRateCardModel>
+            {
+                Key = key,
+                Gate = _gate,
+                ClaimedVersion = version,
+                ToModel = snapshot => snapshot.SchemaVersion == SnapshotBase.CurrentSchemaVersion
+                    && snapshot.UserId == userId && snapshot.CurrencyId == currencyId
+                    && snapshot.HorizonMonths == _horizonMonths && snapshot.AsOfMonth == month
+                    && IsExpectedMonths(snapshot.Model, firstMonth)
+                    ? snapshot.Model : null,
+                FetchAsync = async () => await FetchMonthlyRatesAsync(userId, currency, asOf, firstMonth),
+                ToSnapshot = model => new InvestmentRateCardSnapshot
                 {
-                    UserId = user.UserId,
-                    CurrencyId = _currency.Id,
-                    EndDateTime = AsOfDate,
-                };
-
-                var snapshot = await InvestmentRateCacheService.GetSnapshotAsync(context);
-                MonthlyInvestmentRates = [.. snapshot.MonthlyInvestmentRates];
-
-                BuildDerivedState();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error while getting investment rate");
-            }
-        }
-        finally
-        {
+                    SchemaVersion = SnapshotBase.CurrentSchemaVersion,
+                    UserId = userId,
+                    CurrencyId = currencyId,
+                    HorizonMonths = _horizonMonths,
+                    AsOfMonth = month,
+                    AsOfDateTime = asOf,
+                    Model = model,
+                },
+                ContentComparer = InvestmentRateCardModelComparer.Instance,
+                OnSnapshotPainted = model => ShowModel(model),
+                OnSnapshotMissing = () =>
+                {
+                    if (!sameScope)
+                    {
+                        _isLoading = true;
+                        StateHasChanged();
+                    }
+                    return Task.CompletedTask;
+                },
+                OnRefreshed = model => ShowModel(model),
+            });
+            if (!_gate.IsCurrent(version)) return;
             _isLoading = false;
+            if (result.IsBlockingFailure && !_hasDisplayedModel)
+            {
+                _hasError = true;
+                Logger.LogWarning("Could not load investment rates for the current scope.");
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            if (!_gate.IsCurrent(version)) return;
+            _isLoading = false;
+            _hasError = !_hasDisplayedModel;
+            Logger.LogError(ex, "Error while getting investment rate");
+            StateHasChanged();
+        }
+    }
+
+    private async Task<InvestmentRateCardModel> FetchMonthlyRatesAsync(int userId, Currency currency, DateTime asOf, DateOnly firstMonth)
+    {
+        var requests = Enumerable.Range(0, _horizonMonths).Select(async offset =>
+        {
+            var month = firstMonth.AddMonths(offset);
+            var start = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var end = start.AddMonths(1).AddTicks(-1);
+            if (offset == _horizonMonths - 1 && end > asOf) end = asOf;
+            var results = await MoneyFlowHttpClient.GetInvestmentRate(userId, currency, start, end).ToListAsync();
+            var rate = results.FirstOrDefault();
+            return new InvestmentRateMonthModel(month, rate?.Salary ?? 0m, rate?.InvestmentsChange ?? 0m);
+        });
+
+        return new InvestmentRateCardModel(await Task.WhenAll(requests));
+    }
+
+    private static bool IsExpectedMonths(InvestmentRateCardModel? model, DateOnly firstMonth) =>
+        model?.Months is { Count: _horizonMonths } months
+        && months.Select((rate, index) => rate is not null && rate.Month == firstMonth.AddMonths(index)).All(matches => matches);
+
+    private Task ShowModel(InvestmentRateCardModel model)
+    {
+        var selectedMonth = SelectedMonthRate is { } selected
+            ? new DateOnly(selected.Start.Year, selected.Start.Month, 1)
+            : (DateOnly?)null;
+        MonthlyInvestmentRates = [.. model.Months.Select(rate => new InvestmentRate
+        {
+            Start = new DateTime(rate.Month.Year, rate.Month.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            Salary = rate.Salary,
+            InvestmentsChange = rate.InvestmentsChange,
+        })];
+        _selectedRateIndex = selectedMonth is { } selectedDate
+            ? MonthlyInvestmentRates.FindIndex(rate => rate.Start.Year == selectedDate.Year && rate.Start.Month == selectedDate.Month)
+            : -1;
+        if (_selectedRateIndex < 0) _selectedRateIndex = MonthlyInvestmentRates.Count - 1;
+        _hasDisplayedModel = true;
+        _isLoading = false;
+        _hasError = false;
+        _chartVersion++;
+        BuildDerivedState();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ClearDisplayedModel()
+    {
+        MonthlyInvestmentRates = [];
+        _selectedRateIndex = -1;
+        _hasDisplayedModel = false;
+        _hasError = false;
+        _isLoading = true;
+        BuildDerivedState();
+    }
+
+    public void Dispose()
+    {
+        _gate.Claim();
+    }
+
+    private sealed class InvestmentRateCardModelComparer : IEqualityComparer<InvestmentRateCardModel>
+    {
+        public static InvestmentRateCardModelComparer Instance { get; } = new();
+
+        public bool Equals(InvestmentRateCardModel? x, InvestmentRateCardModel? y) =>
+            ReferenceEquals(x, y) || x is not null && y is not null && x.Months.SequenceEqual(y.Months);
+
+        public int GetHashCode(InvestmentRateCardModel obj)
+        {
+            var hash = new HashCode();
+            foreach (var month in obj.Months) hash.Add(month);
+            return hash.ToHashCode();
         }
     }
 
     internal void BuildDerivedState()
     {
-        _selectedRateIndex = MonthlyInvestmentRates.Count - 1;
         _currentMonthPercentage = CurrentMonthRate?.GetPercentage();
 
         var currentYear = AsOfDate.Year;
