@@ -12,7 +12,6 @@ public interface IUserRepository
     IAsyncEnumerable<User> GetUsers(int recordIndex, int recordsCount);
     IAsyncEnumerable<int> GetUsersIds(int recordIndex, int recordsCount);
     Task<bool> UpdatePassword(int userId, string password);
-    Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel);
     Task<bool> UpdatePreferredCurrency(int userId, int currencyId);
     Task<bool> UpdatePreferredBenchmark(int userId, long? assetListingId);
     Task<bool> UpdateRole(int userId, UserRole userRole);

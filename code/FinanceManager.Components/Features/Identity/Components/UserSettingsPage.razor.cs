@@ -1,14 +1,18 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Identity.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Identity.Components;
 
@@ -38,8 +42,8 @@ public partial class UserSettingsPage : ComponentBase
     private MudForm? _passwordForm;
     private MudTextField<string>? _passwordField;
 
-    private string _selectedPlan = $"{PricingLevel.Free}";
-    private string _initialPlan = $"{PricingLevel.Free}";
+    private string _giftCode = string.Empty;
+    private bool _isRedeemingGiftCode;
     private List<Currency> _currencies = [];
     private int _selectedCurrencyId = DefaultCurrency.PLN.Id;
     private int _initialCurrencyId = DefaultCurrency.PLN.Id;
@@ -48,20 +52,15 @@ public partial class UserSettingsPage : ComponentBase
     private string? _selectedSection = "profile";
     private string? _deleteConfirmation;
 
-    private readonly List<PlanOption> _planOptions =
-    [
-        new(PricingLevel.Free, "Beginner", "Free", ["No currency synchronization", $"{PricingProvider.GetMaxAllowedEntries(PricingLevel.Free)} transactions", $"Up to {PricingProvider.GetMaxAccountCount(PricingLevel.Free)} accounts"]),
-        new(PricingLevel.Basic, "Starter", "$10 / mo", ["No currency synchronization", $"{PricingProvider.GetMaxAllowedEntries(PricingLevel.Basic)} transactions", $"Up to {PricingProvider.GetMaxAccountCount(PricingLevel.Basic)} accounts"]),
-        new(PricingLevel.Premium, "Professional", "$15 / mo", ["Currency synchronization", $"{PricingProvider.GetMaxAllowedEntries(PricingLevel.Premium)} transactions", $"Up to {PricingProvider.GetMaxAccountCount(PricingLevel.Premium)} accounts"]),
-    ];
-
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required InvestmentTransactionHttpClient InvestmentTransactionHttpClient { get; set; }
     [Inject] public required UserSettingsService UserSettingsService { get; set; }
+    [Inject] public required GiftCodeHttpClient GiftCodeHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
+    [Inject] public required ILogger<UserSettingsPage> Logger { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -83,8 +82,6 @@ public partial class UserSettingsPage : ComponentBase
         _displayName = _userData.Login;
         _email = _userData.Login;
         _initialDisplayName = _displayName;
-        _selectedPlan = _userData.PricingLevel.ToString();
-        _initialPlan = _selectedPlan;
 
         try
         {
@@ -118,19 +115,12 @@ public partial class UserSettingsPage : ComponentBase
     private bool HasChanges()
     {
         if (_displayName != _initialDisplayName) return true;
-        if (_selectedPlan != _initialPlan) return true;
         if (_selectedCurrencyId != _initialCurrencyId) return true;
         if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId) return true;
         if (!string.IsNullOrEmpty(_currentPassword)) return true;
         if (!string.IsNullOrEmpty(_newPassword)) return true;
         if (!string.IsNullOrEmpty(_confirmPassword)) return true;
         return false;
-    }
-
-    private void SelectPlan(PricingLevel level)
-    {
-        _selectedPlan = level.ToString();
-        MarkDirty();
     }
 
     private async Task OnSectionSelectedAfter()
@@ -153,11 +143,6 @@ public partial class UserSettingsPage : ComponentBase
             await ChangePasswordAsync();
         }
 
-        if (_selectedPlan != _initialPlan)
-        {
-            await UpgradePricingPlan();
-        }
-
         if (_selectedCurrencyId != _initialCurrencyId)
         {
             await UpdatePreferredCurrency();
@@ -175,7 +160,6 @@ public partial class UserSettingsPage : ComponentBase
     private void DiscardChanges()
     {
         _displayName = _initialDisplayName;
-        _selectedPlan = _initialPlan;
         _selectedCurrencyId = _initialCurrencyId;
         _selectedBenchmark = _initialBenchmark;
         _currentPassword = null;
@@ -219,30 +203,83 @@ public partial class UserSettingsPage : ComponentBase
 #endif
     }
 
-    private async Task UpgradePricingPlan()
+    private async Task RedeemGiftCode()
     {
-        if (_loggedUser is null) return;
+        if (_loggedUser is null || _userData is null || _isRedeemingGiftCode || string.IsNullOrWhiteSpace(_giftCode)) return;
 
-        var result = await UserService.UpdatePricingPlan(_loggedUser.UserId, (PricingLevel)Enum.Parse(typeof(PricingLevel), _selectedPlan));
-        if (!result)
-        {
-            _errors.Insert(0, "Failed to change plan.");
-            return;
-        }
-
-        _info.Insert(0, $"Successfully changed plan to {_selectedPlan}");
-        _userData = await UserService.GetUser(_loggedUser.UserId);
-        if (_userData is null) return;
-        _initialPlan = _selectedPlan;
-
+        _errors.Clear();
+        _warnings.Clear();
+        _info.Clear();
+        _isRedeemingGiftCode = true;
         try
         {
+            using var response = await GiftCodeHttpClient.Redeem(_giftCode.Trim());
+            if (!response.IsSuccessStatusCode)
+            {
+                if ((int)response.StatusCode == 429)
+                {
+                    _errors.Insert(0, "Too many redemption attempts. Please wait a few minutes before trying again.");
+                    return;
+                }
+                var error = await ReadRedemptionErrorAsync(response.Content);
+                _errors.Insert(0, string.IsNullOrWhiteSpace(error)
+                    ? "This gift code could not be redeemed. Check the code and try again."
+                    : error);
+                return;
+            }
+
+            _giftCode = string.Empty;
+            var refreshedUser = await UserService.GetUser(_loggedUser.UserId);
+            if (refreshedUser is null)
+            {
+                _errors.Insert(0, "Gift code redeemed, but your account could not be refreshed. Reload the page to see your new plan.");
+                return;
+            }
+
+            _userData = refreshedUser;
+            UserService.NotifyUserChanged(refreshedUser);
             _recordCapacity = await UserService.GetRecordCapacity(_loggedUser.UserId);
+            _info.Insert(0, $"Gift code redeemed. Your lifetime {refreshedUser.PricingLevel} plan is now active.");
         }
         catch (Exception ex)
         {
-            _errors.Insert(0, ex.Message);
+            _errors.Insert(0, "Could not confirm redemption. Refresh the page to check your tier before trying again.");
+            // Code values are deliberately excluded from logs.
+            Logger.LogError(ex, "Failed to redeem gift code for user {UserId}", _loggedUser.UserId);
         }
+        finally
+        {
+            _isRedeemingGiftCode = false;
+        }
+    }
+
+    private static async Task<string?> ReadRedemptionErrorAsync(HttpContent content)
+    {
+        var body = await content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(body)) return null;
+
+        if (content.Headers.ContentType?.MediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(body);
+                if (document.RootElement.ValueKind == JsonValueKind.String)
+                    return document.RootElement.GetString();
+                if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
+                if (document.RootElement.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+                    return detail.GetString();
+                if (document.RootElement.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
+                    return title.GetString();
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        return body;
     }
 
     private async Task UpdatePreferredCurrency()
@@ -357,5 +394,4 @@ public partial class UserSettingsPage : ComponentBase
         return Color.Primary;
     }
 
-    private sealed record PlanOption(PricingLevel Level, string DisplayName, string Price, IReadOnlyList<string> Features);
 }

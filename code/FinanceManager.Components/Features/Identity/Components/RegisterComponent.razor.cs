@@ -27,8 +27,6 @@ public partial class RegisterComponent
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
 
-    [Parameter] public PricingLevel PricingLevel { get; set; }
-
     private async Task Register()
     {
         if (_form is not null)
@@ -43,7 +41,7 @@ public partial class RegisterComponent
         List<string> newErrors = [];
         if (_loginModel.Login is not null && _loginModel.Password is not null)
         {
-            if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel, FirstName, LastName))
+            if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel.Free, FirstName, LastName))
                 newErrors.Add("Incorrect username or password.");
             else if ((await LoginService.Login(_loginModel.Login, _loginModel.Password)).IsSuccess)
                 Navigation.NavigateTo("");

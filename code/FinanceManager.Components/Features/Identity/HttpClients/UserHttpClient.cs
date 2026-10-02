@@ -28,12 +28,6 @@ public class UserHttpClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> UpdatePricingPlan(UpdatePricingPlan updatePricingPlan)
-    {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdatePricingPlan/", updatePricingPlan);
-        return response.IsSuccessStatusCode;
-    }
-
     public async Task<bool> UpdatePreferredCurrency(UpdatePreferredCurrency updatePreferredCurrency)
     {
         var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/User/UpdatePreferredCurrency/", updatePreferredCurrency);

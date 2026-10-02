@@ -9,8 +9,12 @@ rules agents must follow when updating this file.
 
 ## [Unreleased]
 
+### Added
+- Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
+
 ### Changed
 - Show the last total users count on the admin dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #838
+- Require a gift code to change tiers and start every new account on Free. #859
 - Show the last accounts count on the admin dashboard immediately while refreshing on every visit, and keep it visible if refresh fails. #839
 - Show the last investment-rate card immediately while refreshing its 12 monthly inputs on every visit, and retain it when refresh fails. #835
 - Show the last portfolio return immediately and refresh it on every Assets visit, retaining it when a refresh fails. #832

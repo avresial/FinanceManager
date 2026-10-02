@@ -1,0 +1,118 @@
+@page "/Admin/GiftCodes"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+
+@using FinanceManager.Domain.Identity.Entities
+@using FinanceManager.Domain.Identity.GiftCodes
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Gift codes - Admin</PageTitle>
+
+<MudStack Spacing="4">
+    @foreach (var message in _errors)
+    {
+        <MudAlert Severity="Severity.Error">@message</MudAlert>
+    }
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <MudAlert Severity="Severity.Success">@_successMessage</MudAlert>
+    }
+
+    <MudPaper Outlined Class="pa-4">
+        <MudText Typo="Typo.h6" Class="mb-3">Generate a lifetime gift code</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="PricingLevel" @bind-Value="_pricingLevel" Label="Plan" Variant="Variant.Outlined" Disabled="_isBusy">
+                    <MudSelectItem Value="PricingLevel.Basic">Basic</MudSelectItem>
+                    <MudSelectItem Value="PricingLevel.Premium">Premium</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="8">
+                <MudTextField T="string" @bind-Value="_note" Label="Purpose or note (optional)" MaxLength="200" Immediate="true"
+                              Variant="Variant.Outlined" Disabled="_isBusy" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="GenerateAsync" Disabled="_isBusy">
+                    @(_isBusy ? "Working…" : "Generate code")
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+        @if (_generated is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mt-4">
+                Copy this code now. It will only be shown once.
+                <MudStack Row AlignItems="AlignItems.Center" Class="mt-2 flex-wrap">
+                    <code style="overflow-wrap: anywhere; color: var(--mud-palette-text-primary); font-size: inherit;">@_generated.Code</code>
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyCodeAsync">
+                        Copy code
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+    </MudPaper>
+
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.h6">Gift code history</MudText>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadPageAsync" Disabled="_isBusy">
+            Refresh
+        </MudButton>
+    </MudStack>
+
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate Color="Color.Primary" />
+    }
+    else if (_giftCodes.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No gift codes on this page.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_giftCodes" Dense Hover Breakpoint="Breakpoint.Sm" Elevation="0">
+            <HeaderContent>
+                <MudTh>Code</MudTh>
+                <MudTh>Plan</MudTh>
+                <MudTh>Purpose / note</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Created</MudTh>
+                <MudTh>Redemption / revocation</MudTh>
+                <MudTh>Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Code">#@context.Id · ••••@context.CodeSuffix</MudTd>
+                <MudTd DataLabel="Plan">Lifetime @context.PricingLevel</MudTd>
+                <MudTd DataLabel="Purpose / note">@(string.IsNullOrWhiteSpace(context.Note) ? "—" : context.Note)</MudTd>
+                <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStateColor(context.State)">@context.State</MudChip></MudTd>
+                <MudTd DataLabel="Created">@FormatMetadata(context.CreatedAtUtc, context.CreatedByUserId)</MudTd>
+                <MudTd DataLabel="Redemption / revocation">
+                    @if (context.RedeemedAtUtc is DateTime redeemedAt)
+                    {
+                        <MudText Typo="Typo.body2">Redeemed @FormatMetadata(redeemedAt, context.RedeemedByUserId)</MudText>
+                    }
+                    @if (context.RevokedAtUtc is DateTime revokedAt)
+                    {
+                        <MudText Typo="Typo.body2">Revoked @FormatMetadata(revokedAt, context.RevokedByUserId)</MudText>
+                    }
+                    @if (context.RedeemedAtUtc is null && context.RevokedAtUtc is null)
+                    {
+                        <MudText Typo="Typo.body2">—</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Action">
+                    @if (context.State == GiftCodeState.Active)
+                    {
+                        <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                                   OnClick="@(() => RevokeAsync(context))" Disabled="_isBusy">Revoke</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="2">
+        <MudButton Variant="Variant.Outlined" OnClick="PreviousPageAsync" Disabled="@(_isBusy || _page == 0)">Previous</MudButton>
+        <MudText>Page @(_page + 1)</MudText>
+        <MudButton Variant="Variant.Outlined" OnClick="NextPageAsync" Disabled="@(_isBusy || !_hasNextPage)">Next</MudButton>
+    </MudStack>
+</MudStack>

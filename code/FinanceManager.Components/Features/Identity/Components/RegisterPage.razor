@@ -4,17 +4,9 @@
 
 <PageTitle>Register</PageTitle>
 
-<RegisterComponent PricingLevel="pricing" />
+<RegisterComponent />
 
 @code {
     [Parameter] public string? PricingLevel { get; set; } = Domain.Identity.Entities.PricingLevel.Free.ToString();
 
-    private PricingLevel pricing = Domain.Identity.Entities.PricingLevel.Free;
-    protected override void OnParametersSet()
-    {
-        if (!Enum.TryParse<PricingLevel>(PricingLevel, true, out pricing))
-            pricing = Domain.Identity.Entities.PricingLevel.Free;
-
-        base.OnParametersSet();
-    }
 }

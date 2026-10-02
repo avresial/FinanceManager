@@ -22,6 +22,7 @@
                 @if (_drawerOpen && !string.IsNullOrWhiteSpace(_greeting))
                 {
                     <MudText Typo="Typo.body2" Class="px-4 py-1" Style="color: var(--mud-palette-text-secondary);">@_greeting</MudText>
+                    <MudText Typo="Typo.caption" Class="px-4 pb-2" Style="color: var(--mud-palette-text-secondary);">Lifetime @_pricingLevel</MudText>
                 }
                 <MudNavMenu aria-label="Account">
                     <AuthorizeView Roles="Admin" Context="adminContext">
@@ -57,23 +58,32 @@
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private string? _greeting;
+    private PricingLevel _pricingLevel = PricingLevel.Free;
+    private int? _currentUserId;
     private bool _drawerOpen = true;
     private bool _isMobile;
     private DrawerVariant _drawerVariant = DrawerVariant.Mini;
     private ErrorBoundary? _errorBoundary;
 
-    protected override void OnInitialized() => Navigation.LocationChanged += OnLocationChanged;
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        UserService.OnUserChangeEvent += OnUserChanged;
+    }
 
     protected override async Task OnInitializedAsync()
     {
         var loggedUser = await LoginService.GetLoggedUser();
         if (loggedUser is null) return;
+        _currentUserId = loggedUser.UserId;
 
         // Warm the preferred-currency cache before pages render, so components that read the
         // display currency synchronously already see the user's preference.
         await SettingsService.GetCurrencyAsync();
 
         var user = await UserService.GetUser(loggedUser.UserId);
+        if (user is not null)
+            _pricingLevel = user.PricingLevel;
         var firstName = user?.FirstName;
         var displayName = string.IsNullOrWhiteSpace(firstName) ? loggedUser.UserName : firstName;
         _greeting = string.IsNullOrWhiteSpace(displayName) ? null : $"Hello, {displayName}";
@@ -82,6 +92,16 @@
     // The ErrorBoundary latches its error state; recover on navigation so a failure on one page
     // doesn't leave every subsequent page stuck on the fallback message.
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _errorBoundary?.Recover();
+
+    private void OnUserChanged(User user)
+    {
+        if (user.UserId != _currentUserId) return;
+        _ = InvokeAsync(() =>
+        {
+            _pricingLevel = user.PricingLevel;
+            StateHasChanged();
+        });
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -115,6 +135,7 @@
     public async ValueTask DisposeAsync()
     {
         Navigation.LocationChanged -= OnLocationChanged;
+        UserService.OnUserChangeEvent -= OnUserChanged;
         await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
     }
 }

@@ -25,6 +25,7 @@
             <MudDivider Class="my-2" />
             <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="Admin/Dashboard" data-testid="nav-admin-dashboard">Dashboard</MudNavLink>
             <MudNavLink Icon="@Icons.Material.Filled.People" Href="Admin/Users" data-testid="nav-admin-users">Users</MudNavLink>
+            <MudNavLink Icon="@Icons.Material.Filled.CardGiftcard" Href="Admin/GiftCodes" data-testid="nav-admin-gift-codes">Gift codes</MudNavLink>
             <MudNavLink Icon="@Icons.Material.Filled.Label" Href="Admin/Labels" data-testid="nav-admin-labels">Labels</MudNavLink>
             <MudNavLink Icon="@Icons.Material.Filled.AccountBalance" Href="Admin/Bonds" data-testid="nav-admin-bonds">Bonds</MudNavLink>
             <MudNavLink Icon="@Icons.Material.Filled.Inventory" Href="Admin/Assets" data-testid="nav-admin-assets">Assets</MudNavLink>
@@ -84,6 +85,7 @@
             var label = section switch
             {
                 "Users" => "Users",
+                "GiftCodes" => "Gift codes",
                 "Labels" => "Labels",
                 "Bonds" => "Bonds",
                 "Assets" => "Assets",
