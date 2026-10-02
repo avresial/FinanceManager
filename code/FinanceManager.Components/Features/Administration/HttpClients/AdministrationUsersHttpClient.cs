@@ -15,15 +15,9 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
 
     public async Task<List<ChartEntryModel>> GetDailyActiveUsers()
     {
-        try
-        {
-            var result = await httpClient.GetFromJsonAsync<List<ChartEntryModel>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetDailyActiveUsers");
-            return result ?? [];
-        }
-        catch
-        {
-            return [];
-        }
+        // Failures must reach the coordinator so they cannot overwrite a painted snapshot with an empty series.
+        return await httpClient.GetFromJsonAsync<List<ChartEntryModel>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetDailyActiveUsers")
+            ?? throw new InvalidOperationException("The daily active users response was empty.");
     }
 
     public async Task<int?> GetAccountsCount()
