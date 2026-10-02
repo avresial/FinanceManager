@@ -28,7 +28,7 @@ public partial class AdminUsers : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        _usersCount = await AdministrationUsersHttpClient.GetUsersCount();
+        _usersCount = await AdministrationUsersHttpClient.GetUsersCount() ?? 0;
         if (_usersCount > 0)
         {
             _allElements = await AdministrationUsersHttpClient.GetUsers(0, _usersCount);
@@ -83,7 +83,7 @@ public partial class AdminUsers : ComponentBase
             return;
         }
 
-        _usersCount = await AdministrationUsersHttpClient.GetUsersCount();
+        _usersCount = await AdministrationUsersHttpClient.GetUsersCount() ?? 0;
 
         _allElements = await AdministrationUsersHttpClient.GetUsers(0, _usersCount);
         ApplyFilter();
