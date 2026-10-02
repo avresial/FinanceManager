@@ -88,18 +88,14 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetNewUsersDaily_WithoutAuth_ReturnsEmptyList()
+    public async Task GetNewUsersDaily_WithoutAuth_Throws()
     {
         // Arrange - No authorization
         await SeedTestUsers(10);
         var context = new AdministrationUsersHttpClient(Client);
 
-        // Act
-        var result = await context.GetNewUsersDaily();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        // Failed requests must not look like a successful empty chart refresh.
+        await Assert.ThrowsAsync<HttpRequestException>(() => context.GetNewUsersDaily());
     }
 
     [Fact]
