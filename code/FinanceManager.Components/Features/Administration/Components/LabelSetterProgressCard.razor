@@ -26,9 +26,16 @@
             {
                 <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
             }
-            else if (_snapshot is null)
+            @if (_liveUpdatesError is not null)
             {
-                <StringSpinner CharactersCount="6" />
+                <MudAlert Severity="Severity.Warning" Dense>@_liveUpdatesError</MudAlert>
+            }
+            @if (_snapshot is null)
+            {
+                @if (_loadError is null)
+                {
+                    <StringSpinner CharactersCount="6" />
+                }
             }
             else if (_snapshot.CurrentJob is null)
             {
