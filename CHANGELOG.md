@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Show the last investment-rate card immediately while refreshing its 12 monthly inputs on every visit, and retain it when refresh fails. #835
 - Show the last portfolio return immediately and refresh it on every Assets visit, retaining it when a refresh fails. #832
 - Show the last admin new users chart immediately while refreshing on every visit, and retain it when refresh fails. #843
 - Show the last Assets distribution immediately while refreshing on every visit, and keep it visible if refresh fails. #831

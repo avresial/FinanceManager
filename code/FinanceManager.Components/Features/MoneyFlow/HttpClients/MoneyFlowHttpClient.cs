@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Features.MoneyFlow.HttpClients;
 
@@ -85,7 +86,7 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
     {
         var results = await httpClient.GetFromJsonAsync<List<InvestmentRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetInvestmentRate?userId={userId}&currencyId={currency.Id}&start={start:O}&end={end:O}");
-        if (results is null) yield break;
+        if (results is null) throw new JsonException("The investment-rate response body was null.");
         foreach (var r in results) yield return r;
     }
 
