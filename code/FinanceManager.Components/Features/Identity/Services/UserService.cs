@@ -88,25 +88,7 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         }
         return false;
     }
-    public async Task<bool> UpdatePricingPlan(int userId, PricingLevel newPricingLevel)
-    {
-        try
-        {
-            var existingUser = await GetUser(userId);
-            if (existingUser is null) return false;
-            if (await httpClient.UpdatePricingPlan(new(userId, newPricingLevel)))
-            {
-                OnUserChangeEvent?.Invoke(existingUser);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, $"Error removing user {userId}", userId);
-        }
-
-        return false;
-    }
+    public void NotifyUserChanged(User user) => OnUserChangeEvent?.Invoke(user);
 
     public async Task<bool> UpdatePreferredCurrency(int userId, int currencyId)
     {

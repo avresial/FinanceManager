@@ -197,7 +197,6 @@ public class UserRepository(AppDbContext context) : IUserRepository
         if (user is null) return await Task.FromResult(false);
 
         user.Password = password;
-        context.Update(user);
         await context.SaveChangesAsync();
 
         return await Task.FromResult(true);
@@ -223,18 +222,6 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return true;
     }
-    public async Task<bool> UpdatePricingPlan(int userId, PricingLevel pricingLevel)
-    {
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
-        if (user is null) return await Task.FromResult(false);
-
-        user.PricingLevel = pricingLevel;
-        context.Update(user);
-        await context.SaveChangesAsync();
-
-        return await Task.FromResult(true);
-    }
-
     public async Task<bool> UpdateRole(int userId, UserRole userRole)
     {
         var user = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);

@@ -21,6 +21,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Repositories;
@@ -110,6 +111,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
+                .AddScoped<IGiftCodeRepository, GiftCodeRepository>()
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
                 .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()

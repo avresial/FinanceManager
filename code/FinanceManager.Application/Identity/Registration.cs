@@ -1,3 +1,4 @@
+using FinanceManager.Application.Identity.GiftCodes;
 using FinanceManager.Application.Identity.Lockout;
 using FinanceManager.Application.Identity.PasswordReset;
 using FinanceManager.Application.Identity.RefreshTokens;
@@ -19,6 +20,7 @@ internal static class Registration
                 .AddScoped<IPasswordResetService, PasswordResetService>()
                 .AddScoped<IAccountLockoutService, AccountLockoutService>()
                 .AddScoped<UsersService>()
+                .AddScoped<GiftCodeService>()
                 .AddScoped<IUserPlanVerifier, UserPlanVerifier>()
                 .AddScoped<PricingProvider>()
                 .AddScoped<GuestAccountSeeder>()
