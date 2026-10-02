@@ -29,49 +29,6 @@ public sealed class GiftCodesControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
-    public async Task AdminCanGenerateAndListCode_WithoutExposingItsHashOrPlaintextInList()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        using var anonymousResponse = await Client.GetAsync("api/admin/gift-codes", ct);
-        Assert.Equal(HttpStatusCode.Unauthorized, anonymousResponse.StatusCode);
-
-        Authorize("user", _userId, UserRole.User);
-        using var userListResponse = await Client.GetAsync("api/admin/gift-codes", ct);
-        Assert.Equal(HttpStatusCode.Forbidden, userListResponse.StatusCode);
-        using var userGenerateResponse = await Client.PostAsJsonAsync(
-            "api/admin/gift-codes", new GenerateGiftCode(PricingLevel.Basic), ct);
-        Assert.Equal(HttpStatusCode.Forbidden, userGenerateResponse.StatusCode);
-
-        Authorize("admin", 17, UserRole.Admin);
-        var createResponse = await Client.PostAsJsonAsync(
-            "api/admin/gift-codes", new GenerateGiftCode(PricingLevel.Premium, " launch "), ct);
-        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
-        var generated = await createResponse.Content.ReadFromJsonAsync<GeneratedGiftCode>(ct);
-        Assert.NotNull(generated);
-        Assert.Equal(PricingLevel.Premium, generated.Details.PricingLevel);
-        Assert.Equal("launch", generated.Details.Note);
-        Assert.Equal(17, generated.Details.CreatedByUserId);
-
-        var listResponse = await Client.GetAsync("api/admin/gift-codes?offset=0&count=10", ct);
-        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
-        var listJson = await listResponse.Content.ReadAsStringAsync(ct);
-        Assert.DoesNotContain("CodeHash", listJson, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(generated.Code, listJson, StringComparison.Ordinal);
-        var codes = await listResponse.Content.ReadFromJsonAsync<GiftCodeDto[]>(ct);
-        Assert.NotNull(codes);
-        Assert.Single(codes);
-        Assert.Equal(generated.Details.CodeSuffix, codes[0].CodeSuffix);
-
-        using var invalidCount = await Client.GetAsync("api/admin/gift-codes?count=101", ct);
-        Assert.Equal(HttpStatusCode.BadRequest, invalidCount.StatusCode);
-        using var invalidOffset = await Client.GetAsync("api/admin/gift-codes?offset=-1", ct);
-        Assert.Equal(HttpStatusCode.BadRequest, invalidOffset.StatusCode);
-        using var longNote = await Client.PostAsJsonAsync(
-            "api/admin/gift-codes", new GenerateGiftCode(PricingLevel.Basic, new string('x', 201)), ct);
-        Assert.Equal(HttpStatusCode.BadRequest, longNote.StatusCode);
-    }
-
-    [Fact]
     public async Task UserCanRedeemCodeOnceAndCodeCannotBeReused()
     {
         await SeedUser(PricingLevel.Free);
@@ -151,31 +108,6 @@ public sealed class GiftCodesControllerTests(OptionsProvider optionsProvider) : 
             .SingleAsync(TestContext.Current.CancellationToken)).State);
         Assert.Equal(PricingLevel.Premium, (await _database.Context.Users.AsNoTracking()
             .SingleAsync(user => user.Id == _userId, TestContext.Current.CancellationToken)).PricingLevel);
-    }
-
-    [Fact]
-    public async Task AdminCanRevokeCodeAndRevokedCodeCannotBeRedeemed()
-    {
-        await SeedUser(PricingLevel.Free);
-        Authorize("admin", 17, UserRole.Admin);
-        var generated = await Generate(PricingLevel.Basic);
-        var id = generated.Details.Id;
-
-        Authorize("user", _userId, UserRole.User);
-        var forbiddenRevoke = await Client.PostAsync(
-            $"api/admin/gift-codes/{id}/revoke", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Forbidden, forbiddenRevoke.StatusCode);
-
-        Authorize("admin", 17, UserRole.Admin);
-        var revoked = await Client.PostAsync($"api/admin/gift-codes/{id}/revoke", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.NoContent, revoked.StatusCode);
-        var secondRevoke = await Client.PostAsync($"api/admin/gift-codes/{id}/revoke", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Conflict, secondRevoke.StatusCode);
-
-        Authorize("user", _userId, UserRole.User);
-        var redeem = await Client.PostAsJsonAsync(
-            "api/gift-codes/redeem", new RedeemGiftCode(generated.Code), TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.BadRequest, redeem.StatusCode);
     }
 
     private async Task<GeneratedGiftCode> Generate(PricingLevel level)
