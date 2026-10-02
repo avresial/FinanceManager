@@ -1,99 +1,33 @@
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.Dashboard.Services;
-using FinanceManager.Components.Features.Identity.Services;
-using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
 public partial class PortfolioReturnAttributionCard
 {
-    private bool _isLoading;
-    private bool _hasError;
-    private Currency _currency = DefaultCurrency.PLN;
-    private PortfolioReturnAttributionResult? _result;
-    private readonly RefreshVersionGate _refreshGate = new();
-
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "380px";
+    [Parameter] public PortfolioReturnAttributionCardModel? Model { get; set; }
+    [Parameter] public Currency Currency { get; set; } = DefaultCurrency.PLN;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public EventCallback Retry { get; set; }
 
-    [Inject] public required ILogger<PortfolioReturnAttributionCard> Logger { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
-    [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required ILoginService LoginService { get; set; }
-
-    [Parameter] public Func<AssetsPageCardsRefreshContext, Task<PortfolioReturnSourceModel>>? FetchReturns { get; set; }
-
-    protected override Task OnParametersSetAsync() => Reload();
-
-    private async Task Reload()
-    {
-        var version = _refreshGate.Claim();
-        var startDateTime = StartDateTime;
-        var endDateTime = EndDateTime;
-        _isLoading = true;
-        _hasError = false;
-
-        var user = await LoginService.GetLoggedUser();
-        if (!_refreshGate.IsCurrent(version)) return;
-        if (user is null)
-        {
-            _result = null;
-            _isLoading = false;
-            return;
-        }
-
-        try
-        {
-            var currency = await SettingsService.GetCurrencyAsync();
-            if (!_refreshGate.IsCurrent(version)) return;
-
-            var context = new AssetsPageCardsRefreshContext
-            {
-                UserId = user.UserId,
-                CurrencyId = currency.Id,
-                StartDateTime = startDateTime,
-                EndDateTime = endDateTime,
-            };
-
-            var result = (await (FetchReturns is null ? AssetsPageCardsCacheService.GetFreshReturnsAsync(context) : FetchReturns(context))).Attribution;
-            if (!_refreshGate.IsCurrent(version)) return;
-
-            _currency = currency;
-            _result = result;
-        }
-        catch (Exception exception)
-        {
-            if (_refreshGate.IsCurrent(version))
-            {
-                _hasError = true;
-                Logger.LogError(exception, "Error getting portfolio return attribution");
-            }
-        }
-        finally
-        {
-            if (_refreshGate.IsCurrent(version))
-                _isLoading = false;
-        }
-    }
-
-    internal string UnsupportedComponentsText => _result is { UnsupportedComponents.Count: > 0 }
-        ? string.Join("; ", _result.UnsupportedComponents.Select(component => component.Name))
+    internal string UnsupportedComponentsText => Model is { UnsupportedComponents.Count: > 0 }
+        ? string.Join("; ", Model.UnsupportedComponents)
         : "none";
 
-    internal string StatusLabel => _result?.Status switch
+    internal string StatusLabel => Model?.Status switch
     {
         PortfolioReturnAttributionStatus.InsufficientData => "Insufficient data",
         _ => "Attribution unavailable",
     };
 
-    internal string StatusText => _result?.Status switch
+    internal string StatusText => Model?.Status switch
     {
         PortfolioReturnAttributionStatus.InsufficientData => "Add investment history or select a range with portfolio activity.",
         _ => "Prices or historical exchange rates are missing for this range.",
@@ -105,15 +39,15 @@ public partial class PortfolioReturnAttributionCard
     {
         get
         {
-            if (_result is null)
+            if (Model is null)
                 return [];
 
             var components = new (string Label, decimal Value)[]
             {
-                ("External cash movement", _result.ExternalCashMovement ?? 0m),
-                ("Market / valuation effect", _result.MarketEffect ?? 0m),
-                ("FX effect", _result.FxEffect ?? 0m),
-                ("Known transaction fees", _result.FeeEffect ?? 0m),
+                ("External cash movement", Model.ExternalCashMovement ?? 0m),
+                ("Market / valuation effect", Model.MarketEffect ?? 0m),
+                ("FX effect", Model.FxEffect ?? 0m),
+                ("Known transaction fees", Model.FeeEffect ?? 0m),
             };
 
             var steps = new List<AttributionStep>(components.Length);
@@ -137,7 +71,7 @@ public partial class PortfolioReturnAttributionCard
                 .Select(step => new AttributionColumn(step.Label, step.Value, step.Start, step.End, false))
                 .ToList();
 
-            if (_result?.TotalChange is decimal totalChange)
+            if (Model?.TotalChange is decimal totalChange)
                 columns.Add(new("End", totalChange, 0m, totalChange, true));
 
             return columns;
@@ -178,7 +112,7 @@ public partial class PortfolioReturnAttributionCard
     private string AttributionSummary => $"Starting at {FormatAmount(0m)}. "
         + string.Join(" ", AttributionSteps.Select(step =>
             $"{step.Label}: {FormatAmount(step.Value)}; running total {FormatAmount(step.End)}."))
-        + $" Total change: {FormatAmount(_result?.TotalChange)}.";
+        + $" Total change: {FormatAmount(Model?.TotalChange)}.";
 
     private static decimal NiceInterval(decimal range)
     {
@@ -252,7 +186,7 @@ public partial class PortfolioReturnAttributionCard
             return "—";
 
         var sign = amount > 0m ? "+" : string.Empty;
-        return $"{sign}{amount.ToString("N2", CultureInfo.CurrentCulture)} {_currency.ShortName}";
+        return $"{sign}{amount.ToString("N2", CultureInfo.CurrentCulture)} {Currency.ShortName}";
     }
 
     private sealed record AttributionStep(string Label, decimal Value, decimal Start, decimal End);
