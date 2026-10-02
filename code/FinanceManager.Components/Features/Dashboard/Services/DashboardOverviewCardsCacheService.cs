@@ -23,8 +23,37 @@ public class DashboardOverviewCardsCacheService(
     private const string _cacheKeyPrefix = "dashboard-overview-cards-cache-v1";
     private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
 
+    private readonly Dictionary<(int UserId, int CurrencyId, DateTime Start, DateTime End), Task<DashboardOverviewCardsCacheSnapshot>> _freshRequests = [];
+
     public virtual Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
         => GetOrRefreshAsync(context);
+
+    // Share only overlapping requests. A later visit always starts a fresh request, and the TTL cache is neither read nor written.
+    public virtual async Task<DashboardOverviewCardsCacheSnapshot> GetFreshAsync(DashboardOverviewCardsRefreshContext context)
+    {
+        var key = (context.UserId, context.CurrencyId, context.StartDateTime.Date, context.EndDateTime);
+        Task<DashboardOverviewCardsCacheSnapshot> request;
+        lock (_freshRequests)
+        {
+            if (!_freshRequests.TryGetValue(key, out request!))
+            {
+                request = BuildStateAsync(context);
+                _freshRequests.Add(key, request);
+            }
+        }
+        try
+        {
+            return await request;
+        }
+        finally
+        {
+            lock (_freshRequests)
+            {
+                if (_freshRequests.TryGetValue(key, out var current) && ReferenceEquals(current, request))
+                    _freshRequests.Remove(key);
+            }
+        }
+    }
 
     protected override string GetCacheKey(DashboardOverviewCardsRefreshContext refreshContext)
         => BuildCacheKey(refreshContext.UserId, refreshContext.CurrencyId, refreshContext.StartDateTime, refreshContext.EndDateTime);
