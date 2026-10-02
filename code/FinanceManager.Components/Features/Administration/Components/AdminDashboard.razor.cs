@@ -152,9 +152,10 @@ public partial class AdminDashboard : ComponentBase
     private Task LoadNewVisitorsTodayAsync(int userId) =>
         SnapshotStore.RefreshNewVisitorsTodayAsync(
             userId,
+            DateTime.UtcNow.Date,
             _newVisitorsTodayGate,
             _newVisitorsTodayGate.Claim(),
-            () => NewVisitorsHttpClient.GetVisit(DateTime.UtcNow),
+            day => NewVisitorsHttpClient.GetVisit(day),
             onSnapshotPainted: ShowNewVisitorsToday,
             onRefreshed: ShowNewVisitorsToday);
 

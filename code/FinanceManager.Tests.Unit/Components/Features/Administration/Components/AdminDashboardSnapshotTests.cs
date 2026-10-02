@@ -66,7 +66,7 @@ public sealed class AdminDashboardSnapshotTests
     {
         var snapshots = Snapshots("7", 3);
         snapshots.Setup(service => service.GetAsync<AdminNewVisitorsTodaySnapshot>("admin-new-visitors-today:7"))
-            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 7, Count = 42 });
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 7, Day = DateTime.UtcNow.Date, Count = 42 });
         var chart = new TaskCompletionSource<HttpResponseMessage>();
         var metrics = new TaskCompletionSource<HttpResponseMessage>();
         var newVisitors = new TaskCompletionSource<HttpResponseMessage>();
