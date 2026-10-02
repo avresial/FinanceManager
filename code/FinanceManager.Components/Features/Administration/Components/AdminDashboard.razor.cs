@@ -17,7 +17,10 @@ public partial class AdminDashboard : ComponentBase
     private int? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
-    private static readonly ApexChartOptions<ChartEntryModel> _chartOptions = new()
+    private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
+    private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
+
+    private static ApexChartOptions<ChartEntryModel> CreateChartOptions() => new()
     {
         Chart = new Chart
         {
@@ -65,6 +68,8 @@ public partial class AdminDashboard : ComponentBase
 
     private List<ChartEntryModel>? _dailyActiveUsers;
     private List<ChartEntryModel>? _newUsers;
+    private readonly RefreshVersionGate _newUsersGate = new();
+    private int _newUsersChartVersion;
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
     [Inject] required public NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
@@ -72,45 +77,61 @@ public partial class AdminDashboard : ComponentBase
     [Inject] required public ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] required public AuthenticationStateProvider AuthenticationStateProvider { get; set; }
 
+    /// <summary>Paints the admin chart snapshot while refreshing it and loading the other dashboard metrics.</summary>
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _userCount = await AdministrationUsersHttpClient.GetUsersCount();
-            _accountsCount = await AdministrationUsersHttpClient.GetAccountsCount();
-            _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
-            _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
-            StateHasChanged();
-
-            _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
-            StateHasChanged();
-
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                Logger.LogError("User ID not found in authentication state.");
-                throw new InvalidOperationException("User ID not found in authentication state.");
-            }
+            var userId = authState.User.FindFirst(ClaimTypes.Sid)?.Value;
+            if (authState.User.Identity?.IsAuthenticated != true || !authState.User.IsInRole("Admin")
+                || string.IsNullOrWhiteSpace(userId))
+                throw new InvalidOperationException("An authenticated admin user is required.");
 
-            var result = await SnapshotRefreshCoordinator.RunAsync<NewUsersSnapshot, List<ChartEntryModel>>(new SnapshotRefreshRequest<NewUsersSnapshot, List<ChartEntryModel>>
-            {
-                Key = $"new-users-chart-{userId}",
-                ToModel = (s) => s.Entries,
-                FetchAsync = async () => await AdministrationUsersHttpClient.GetNewUsersDaily(),
-                ToSnapshot = (m) => new NewUsersSnapshot { Entries = m },
-                OnSnapshotPainted = _ => { StateHasChanged(); return Task.CompletedTask; },
-                OnSnapshotMissing = () => { StateHasChanged(); return Task.CompletedTask; },
-                OnRefreshed = _ => { StateHasChanged(); return Task.CompletedTask; }
-            });
-            _newUsers = result.Model;
+            await Task.WhenAll(RefreshNewUsersAsync(userId), LoadMetricsAsync());
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading admin dashboard data.");
             throw;
         }
+    }
 
+    private async Task LoadMetricsAsync()
+    {
+        _userCount = await AdministrationUsersHttpClient.GetUsersCount();
+        _accountsCount = await AdministrationUsersHttpClient.GetAccountsCount();
+        _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
+        _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
         StateHasChanged();
+
+        _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
+        StateHasChanged();
+    }
+
+    private async Task RefreshNewUsersAsync(string userId)
+    {
+        var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<NewUsersSnapshot, List<ChartEntryModel>>
+        {
+            Key = $"new-users-chart-{userId}",
+            Gate = _newUsersGate,
+            ToModel = snapshot => snapshot.Entries,
+            FetchAsync = async () => await AdministrationUsersHttpClient.GetNewUsersDaily(),
+            ToSnapshot = model => new NewUsersSnapshot { Entries = model },
+            OnSnapshotPainted = PaintNewUsersAsync,
+            OnRefreshed = PaintNewUsersAsync,
+        });
+
+        if (result.IsBlockingFailure)
+            throw result.Error!;
+    }
+
+    private Task PaintNewUsersAsync(List<ChartEntryModel> model)
+    {
+        _newUsers = model;
+        // ApexCharts must rebuild its series when the rendered content changes.
+        _newUsersChartVersion++;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

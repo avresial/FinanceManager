@@ -5,5 +5,5 @@ namespace FinanceManager.Components.Features.Administration.Components;
 
 public class NewUsersSnapshot : SnapshotBase
 {
-    public List<ChartEntryModel> Entries { get; set; } = new();
+    public List<ChartEntryModel> Entries { get; set; } = [];
 }

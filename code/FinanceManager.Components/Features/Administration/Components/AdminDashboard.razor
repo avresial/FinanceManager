@@ -181,7 +181,7 @@
                 </div>
                 @if (_newUsers is not null)
                 {
-                    <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
+                    <ApexChart @key="_newUsersChartVersion" TItem="ChartEntryModel" Options="_newUsersChartOptions" Height="300">
                         <ApexPointSeries TItem="ChartEntryModel"
                                          Items="_newUsers"
                                          Name="Users count"

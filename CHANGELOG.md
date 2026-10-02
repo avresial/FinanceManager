@@ -10,6 +10,7 @@ rules agents must follow when updating this file.
 ## [Unreleased]
 
 ### Changed
+- Show the last admin new users chart immediately while refreshing on every visit, and retain it when refresh fails. #843
 - Show the last Assets distribution immediately while refreshing on every visit, and keep it visible if refresh fails. #831
 - Show the last investment paycheck source immediately while refreshing on every Assets visit, and keep it visible if refresh fails. #834
 - Show the last Assets chart immediately while refreshing on every visit, and keep it visible if refresh fails. #830
