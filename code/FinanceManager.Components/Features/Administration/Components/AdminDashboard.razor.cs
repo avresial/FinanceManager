@@ -20,6 +20,7 @@ public partial class AdminDashboard : ComponentBase
     private int? _newVisitorsToday = default;
 
     private readonly RefreshVersionGate _accountsCountGate = new();
+    private readonly RefreshVersionGate _newVisitorsTodayGate = new();
     private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
     private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
 
@@ -92,7 +93,7 @@ public partial class AdminDashboard : ComponentBase
                 || !int.TryParse(userId, out var adminUserId))
                 throw new InvalidOperationException("An authenticated admin user is required.");
 
-            await Task.WhenAll(LoadAccountsCountAsync(adminUserId), RefreshNewUsersAsync(userId!), LoadMetricsAsync());
+            await Task.WhenAll(LoadAccountsCountAsync(adminUserId), LoadNewVisitorsTodayAsync(adminUserId), RefreshNewUsersAsync(userId!), LoadMetricsAsync());
         }
         catch (Exception ex)
         {
@@ -105,7 +106,6 @@ public partial class AdminDashboard : ComponentBase
     {
         _userCount = await AdministrationUsersHttpClient.GetUsersCount();
         _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
-        _newVisitorsToday = await NewVisitorsHttpClient.GetVisit(DateTime.UtcNow);
         StateHasChanged();
 
         _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
@@ -124,6 +124,22 @@ public partial class AdminDashboard : ComponentBase
     private Task ShowAccountsCount(AdminAccountsCountCardModel model)
     {
         _accountsCount = model.Count;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task LoadNewVisitorsTodayAsync(int userId) =>
+        SnapshotStore.RefreshNewVisitorsTodayAsync(
+            userId,
+            _newVisitorsTodayGate,
+            _newVisitorsTodayGate.Claim(),
+            () => NewVisitorsHttpClient.GetVisit(DateTime.UtcNow),
+            onSnapshotPainted: ShowNewVisitorsToday,
+            onRefreshed: ShowNewVisitorsToday);
+
+    private Task ShowNewVisitorsToday(AdminNewVisitorsTodayCardModel model)
+    {
+        _newVisitorsToday = model.Count;
         StateHasChanged();
         return Task.CompletedTask;
     }

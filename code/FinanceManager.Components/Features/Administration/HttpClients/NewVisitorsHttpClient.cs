@@ -19,17 +19,19 @@ public class NewVisitorsHttpClient(HttpClient httpClient, ILogger<NewVisitorsHtt
         }
     }
 
-    public async Task<int> GetVisit(DateTime dateTime)
+    public async Task<int?> GetVisit(DateTime dateTime)
     {
         try
         {
             var encodedDate = Uri.EscapeDataString(dateTime.Date.ToString("O"));
             return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/NewVisitors/GetNewVisitor/{encodedDate}");
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
+            // Null means no usable response came back; a genuine zero is returned as data. The admin
+            // dashboard snapshot surface relies on that distinction to keep stale content on failure.
             logger.LogWarning(ex, "Failed to retrieve visit count.");
-            return 0;
+            return null;
         }
     }
 }

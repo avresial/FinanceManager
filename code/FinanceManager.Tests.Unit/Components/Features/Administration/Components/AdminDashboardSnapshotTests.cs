@@ -60,6 +60,44 @@ public sealed class AdminDashboardSnapshotTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewVisitorsTodaySnapshot_RefreshesIndependentlyOfChartAndMetrics(bool failedRefresh)
+    {
+        var snapshots = Snapshots("7", 3);
+        snapshots.Setup(service => service.GetAsync<AdminNewVisitorsTodaySnapshot>("admin-new-visitors-today:7"))
+            .ReturnsAsync(new AdminNewVisitorsTodaySnapshot { UserId = 7, Count = 42 });
+        var chart = new TaskCompletionSource<HttpResponseMessage>();
+        var metrics = new TaskCompletionSource<HttpResponseMessage>();
+        var newVisitors = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(chart.Task, metrics.Task, newVisitors: newVisitors.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("42", cut.Markup);
+            Assert.Equal(3, Series(cut).Single().Value);
+        });
+        Assert.Equal(1, handler.NewVisitorsRequests);
+        newVisitors.SetResult(failedRefresh
+            ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            : Json(43));
+        await context.Services.GetRequiredService<TrackingCoordinator>().NewVisitorsCompleted.Task
+            .WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains(failedRefresh ? "42" : "43", cut.Markup);
+            snapshots.Verify(service => service.SetAsync("admin-new-visitors-today:7",
+                It.Is<AdminNewVisitorsTodaySnapshot>(snapshot => snapshot.Count == 43)),
+                failedRefresh ? Times.Never() : Times.Once());
+        });
+        chart.SetResult(Json(Entries(9)));
+        metrics.SetResult(Json(1));
+        cut.WaitForAssertion(() => Assert.Equal(9, Series(cut).Single().Value));
+        Assert.Equal(1, handler.NewVisitorsRequests);
+    }
+
+    [Theory]
     [InlineData(3, false)]
     [InlineData(9, true)]
     public async Task SnapshotPaintsBeforeMetricsAndRefresh_OnlyChangedContentWrites(int freshValue, bool changed)
@@ -178,6 +216,7 @@ public sealed class AdminDashboardSnapshotTests
         snapshots.Verify(service => service.GetAsync<NewUsersSnapshot>(It.IsAny<string>()), Times.Never);
         Assert.Equal(0, handler.ChartRequests);
         snapshots.Verify(service => service.GetAsync<AdminAccountsCountSnapshot>(It.IsAny<string>()), Times.Never);
+        snapshots.Verify(service => service.GetAsync<AdminNewVisitorsTodaySnapshot>(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -238,10 +277,17 @@ public sealed class AdminDashboardSnapshotTests
         private readonly SnapshotRefreshCoordinator _inner = new(snapshots, NullLogger<SnapshotRefreshCoordinator>.Instance);
         public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AccountsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource NewVisitorsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public RefreshVersionGate? Gate { get; private set; }
         public async Task<SnapshotRefreshResult<TModel>> RunAsync<TSnapshot, TModel>(SnapshotRefreshRequest<TSnapshot, TModel> request)
             where TSnapshot : SnapshotBase where TModel : class
         {
+            if (typeof(TSnapshot) == typeof(AdminNewVisitorsTodaySnapshot))
+            {
+                try { return await _inner.RunAsync(request); }
+                finally { NewVisitorsCompleted.TrySetResult(); }
+            }
+
             if (typeof(TSnapshot) != typeof(NewUsersSnapshot))
             {
                 try { return await _inner.RunAsync(request); }
@@ -255,10 +301,11 @@ public sealed class AdminDashboardSnapshotTests
     }
 
     private sealed class ChartHandler(Task<HttpResponseMessage> chart, Task<HttpResponseMessage>? metrics = null,
-        Task<HttpResponseMessage>? accounts = null) : HttpMessageHandler
+        Task<HttpResponseMessage>? accounts = null, Task<HttpResponseMessage>? newVisitors = null) : HttpMessageHandler
     {
         public int ChartRequests { get; private set; }
         public int AccountsRequests { get; private set; }
+        public int NewVisitorsRequests { get; private set; }
         public TaskCompletionSource Finished { get; } = new();
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -275,6 +322,12 @@ public sealed class AdminDashboardSnapshotTests
                 AccountsRequests++;
                 if (accounts is not null)
                     return await accounts;
+            }
+            if (request.RequestUri.AbsolutePath.Contains("GetNewVisitor"))
+            {
+                NewVisitorsRequests++;
+                if (newVisitors is not null)
+                    return await newVisitors;
             }
             return request.RequestUri.AbsolutePath.EndsWith("GetDailyActiveUsers") ? Json(new List<ChartEntryModel>()) : Json(1);
         }
