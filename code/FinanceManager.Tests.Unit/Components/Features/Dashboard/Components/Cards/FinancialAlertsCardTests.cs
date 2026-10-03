@@ -3,9 +3,15 @@ using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.Components;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
+using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 using System.Net;
@@ -17,6 +23,11 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 [Trait("Category", "Unit")]
 public sealed class FinancialAlertsCardTests
 {
+    private const string _key = "financial-alerts:1";
+    private static readonly Guid _storedAlertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
+    private readonly Mock<ISnapshotService> _snapshots = new();
+
     [Fact]
     public async Task Header_PlacesAlertsAndManageActionOnOneHeaderRow_WithIconOnlyButtonAndTooltip()
     {
@@ -312,7 +323,7 @@ public sealed class FinancialAlertsCardTests
         Assert.DoesNotContain("/AccountDetails/", cut.Markup);
     }
 
-    private static BunitContext CreateContext(
+    private BunitContext CreateContext(
         List<AlertEvaluationOutcome>? outcomes = null,
         List<FinancialAlertDto>? alerts = null,
         bool throwOnEvaluate = false,
@@ -376,10 +387,289 @@ public sealed class FinancialAlertsCardTests
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
 
+        AddCardServices(context, handler);
+        return context;
+    }
+
+    private void AddCardServices(BunitContext context, HttpMessageHandler handler)
+    {
+        var login = new Mock<ILoginService>();
+        login.Setup(x => x.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = 1, UserName = "tester", Password = "", UserRole = UserRole.User });
+        context.Services.AddSingleton(login.Object);
+        context.Services.AddSingleton<ISnapshotRefreshCoordinator>(
+            new SnapshotRefreshCoordinator(_snapshots.Object, NullLogger<SnapshotRefreshCoordinator>.Instance));
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         context.Services.AddSingleton(new FinancialAlertsHttpClient(httpClient));
+    }
 
+    [Fact]
+    public async Task HydratesBeforeRequestCompletes_AndFetchesOnEveryVisit()
+    {
+        Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var first = context.Render<FinancialAlertsCard>();
+        first.WaitForAssertion(() => Assert.Contains("1 triggered of 2 configured", Subtitle(first)), _timeout);
+        Assert.Contains("Stored alert", first.Find("[data-testid='alert-summary-row']").TextContent);
+        first.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [StoredOutcome()], StoredAlerts());
+        await Drain(first);
+        first.Dispose();
+
+        var second = context.Render<FinancialAlertsCard>();
+        second.WaitForAssertion(() => Assert.Equal(2, handler.EvaluationCount), _timeout);
+        Assert.Contains("Stored alert", second.Find("[data-testid='alert-summary-row']").TextContent);
+        handler.Complete(1, [StoredOutcome()], StoredAlerts());
+        await Drain(second);
+    }
+
+    [Fact]
+    public async Task EqualSummary_DoesNotWrite_EvenWhenNonRenderedFieldsDiffer()
+    {
+        Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        var outcome = StoredOutcome() with
+        {
+            EvaluatedAt = DateTime.UtcNow.AddDays(3),
+            Message = "different message",
+            ConditionFingerprint = "other",
+            Context = new Dictionary<string, string> { ["k"] = "v" },
+        };
+        handler.Complete(0, [outcome], StoredAlerts());
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialAlertsSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ChangedSummary_RepaintsAndWritesWithKey()
+    {
+        Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [StoredOutcome() with { CurrentValue = 300m }], StoredAlerts());
+        cut.WaitForAssertion(() => Assert.Contains(300m.ToString("N2"), cut.Find("[data-testid='alert-summary-row']").TextContent), _timeout);
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(_key, It.Is<FinancialAlertsSnapshot>(s =>
+            s.UserId == 1 && s.Summary.ConfiguredCount == 2 && s.Summary.Triggered.Count == 1
+            && s.Summary.Triggered[0].CurrentValue == 300m && !s.Summary.HasEvaluationError)), Times.Once);
+    }
+
+    [Fact]
+    public async Task EmptySuccess_ClearsAndWrites()
+    {
+        Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [], []);
+        cut.WaitForAssertion(() => Assert.Contains("All configured alerts are healthy.", cut.Markup), _timeout);
+        await Drain(cut);
+        Assert.DoesNotContain("Unable to load alerts.", cut.Markup);
+        _snapshots.Verify(x => x.SetAsync(_key, It.Is<FinancialAlertsSnapshot>(s =>
+            s.Summary.ConfiguredCount == 0 && s.Summary.Triggered.Count == 0 && !s.Summary.HasEvaluationError)), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    public async Task EvaluateOrListFailure_PreservesSnapshotOrShowsBlockingError(bool stored, bool evaluateFails)
+    {
+        if (stored) Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        if (evaluateFails) handler.FailEvaluation(0); else handler.CompleteEvaluation(0, [StoredOutcome()]);
+        if (evaluateFails) handler.CompleteList(0, StoredAlerts()); else handler.FailList(0);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(!stored, cut.Markup.Contains("Unable to load alerts."));
+            Assert.Equal(stored, cut.FindAll("[data-testid='alert-summary-row']").Count == 1);
+        }, _timeout);
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialAlertsSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EvaluationErrorOutcome_ShowsErrorAndIsStored()
+    {
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [CreateOutcome(title: "Broken", isTriggered: false, status: AlertTriggerStatus.Error)], StoredAlerts());
+        cut.WaitForAssertion(() => Assert.Contains("Unable to load alerts.", cut.Markup), _timeout);
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(_key, It.Is<FinancialAlertsSnapshot>(s => s.Summary.HasEvaluationError)), Times.Once);
+    }
+
+    [Fact]
+    public async Task SnapshotOfAnotherUser_IsNotPainted()
+    {
+        Stored(userId: 2);
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        Assert.Empty(cut.FindAll("[data-testid='alert-summary-row']"));
+        Assert.DoesNotContain("Stored alert", cut.Markup);
+        Assert.DoesNotContain("triggered of", cut.Markup);
+        handler.Complete(0, [], []);
+        cut.WaitForAssertion(() => Assert.Contains("All configured alerts are healthy.", cut.Markup), _timeout);
+        await Drain(cut);
+    }
+
+    [Fact]
+    public async Task DisposedRun_DoesNotCommit()
+    {
+        Stored();
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        await context.DisposeComponentsAsync();
+        handler.Complete(0, [StoredOutcome() with { CurrentValue = 999m }], StoredAlerts());
+        await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialAlertsSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task StorageReadFailure_StillFetchesAndRenders()
+    {
+        _snapshots.Setup(x => x.GetAsync<FinancialAlertsSnapshot>(_key)).ThrowsAsync(new InvalidOperationException());
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [StoredOutcome()], StoredAlerts());
+        cut.WaitForAssertion(() => Assert.Contains("Stored alert", cut.Markup), _timeout);
+        _snapshots.Verify(x => x.RemoveAsync(_key), Times.Once);
+        await Drain(cut);
+    }
+
+    [Fact]
+    public async Task StorageWriteFailure_KeepsFreshSummary()
+    {
+        _snapshots.Setup(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialAlertsSnapshot>())).ThrowsAsync(new InvalidOperationException());
+        var handler = new AlertsHandler();
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        handler.Complete(0, [StoredOutcome()], StoredAlerts());
+        cut.WaitForAssertion(() => Assert.Contains("Stored alert", cut.Markup), _timeout);
+        await Drain(cut);
+        Assert.DoesNotContain("Unable to load alerts.", cut.Markup);
+    }
+
+    [Fact]
+    public async Task ClickOpenDetail_WorksOnPaintedSnapshot_AndIsNeverSnapshotted()
+    {
+        Stored();
+        var tx = new AlertTransactionReference(5, 42, new DateTime(2026, 9, 10), 5000m, "Tech Store", "Apple Inc");
+        var detailed = StoredOutcome() with { MatchingTransactions = [tx], OccurrenceCount = 1 };
+        var handler = new AlertsHandler(new Dictionary<Guid, AlertEvaluationOutcome> { [_storedAlertId] = detailed });
+        await using var context = NewContext(handler);
+        var cut = context.Render<FinancialAlertsCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
+        await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
+        cut.WaitForAssertion(() => Assert.Contains("Transaction #42", cut.Find("[data-testid='alert-detail-occurrences']").TextContent), _timeout);
+        Assert.Contains("Stored alert", cut.Find("[data-testid='alert-card-header']").TextContent);
+
+        handler.Complete(0, [StoredOutcome()], StoredAlerts());
+        await Drain(cut);
+        Assert.NotNull(cut.Find("[data-testid='alert-detail-occurrences']"));
+        await cut.Find("button[aria-label='Back to alerts']").ClickAsync();
+        Assert.NotNull(cut.Find("[data-testid='alert-summary-list']"));
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialAlertsSnapshot>()), Times.Never);
+    }
+
+    private BunitContext NewContext(HttpMessageHandler handler)
+    {
+        var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        AddCardServices(context, handler);
         return context;
+    }
+
+    private void Stored(int userId = 1) =>
+        _snapshots.Setup(x => x.GetAsync<FinancialAlertsSnapshot>(_key)).ReturnsAsync(new FinancialAlertsSnapshot
+        {
+            UserId = userId,
+            FetchedAtUtc = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Summary = new FinancialAlertsSummaryModel(
+                2,
+                [new FinancialAlertSummaryItem(_storedAlertId, "Stored alert", 100m, 50m, AlertComparisonOperator.GreaterThan, 2)],
+                false),
+        });
+
+    private static AlertEvaluationOutcome StoredOutcome() =>
+        CreateOutcome(alertId: _storedAlertId, title: "Stored alert", currentValue: 100m, threshold: 50m, matchingCount: 2);
+
+    private static List<FinancialAlertDto> StoredAlerts() => [CreateAlertDto(title: "One"), CreateAlertDto(title: "Two")];
+
+    private static string Subtitle(IRenderedComponent<FinancialAlertsCard> cut) =>
+        cut.Find(".mud-typography-subtitle1.text-muted").TextContent;
+
+    private static Task Drain(IRenderedComponent<FinancialAlertsCard> cut) => cut.InvokeAsync(async () => await Task.Delay(50));
+
+    private sealed class AlertsHandler(IReadOnlyDictionary<Guid, AlertEvaluationOutcome>? details = null) : HttpMessageHandler
+    {
+        private readonly Lock _lock = new();
+        private readonly List<TaskCompletionSource<HttpResponseMessage>> _evaluations = [];
+        private readonly List<TaskCompletionSource<HttpResponseMessage>> _lists = [];
+
+        public int EvaluationCount { get { lock (_lock) return _evaluations.Count; } }
+
+        public void Complete(int index, List<AlertEvaluationOutcome> outcomes, List<FinancialAlertDto> alerts)
+        {
+            CompleteEvaluation(index, outcomes);
+            CompleteList(index, alerts);
+        }
+
+        public void CompleteEvaluation(int index, List<AlertEvaluationOutcome> outcomes) => Pending(_evaluations, index).SetResult(Json(outcomes));
+
+        public void CompleteList(int index, List<FinancialAlertDto> alerts) => Pending(_lists, index).SetResult(Json(alerts));
+
+        public void FailEvaluation(int index) => Pending(_evaluations, index).SetResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        public void FailList(int index) => Pending(_lists, index).SetResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (path.EndsWith("/evaluate", StringComparison.OrdinalIgnoreCase) && segments.Length >= 4)
+            {
+                if (details is not null && Guid.TryParse(segments[^2], out var id) && details.TryGetValue(id, out var detail))
+                    return Task.FromResult(Json(detail));
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+
+            var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_lock)
+                (path.EndsWith("/evaluate", StringComparison.OrdinalIgnoreCase) ? _evaluations : _lists).Add(pending);
+            return pending.Task;
+        }
+
+        private TaskCompletionSource<HttpResponseMessage> Pending(List<TaskCompletionSource<HttpResponseMessage>> list, int index)
+        {
+            lock (_lock) return list[index];
+        }
+
+        private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json"),
+        };
     }
 
     private sealed class MockHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
