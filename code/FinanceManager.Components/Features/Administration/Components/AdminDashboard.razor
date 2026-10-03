@@ -151,7 +151,7 @@
                 </div>
                 @if (_dailyActiveUsers is not null)
                 {
-                    <ApexChart TItem="ChartEntryModel" Options="_chartOptions" Height="300">
+                    <ApexChart @key="_dailyActiveUsersChartVersion" TItem="ChartEntryModel" Options="_chartOptions" Height="300">
                         <ApexPointSeries TItem="ChartEntryModel"
                                          Items="_dailyActiveUsers"
                                          Name="Users count"
