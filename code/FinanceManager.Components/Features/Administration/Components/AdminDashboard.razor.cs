@@ -74,6 +74,8 @@ public partial class AdminDashboard : ComponentBase
     private List<ChartEntryModel>? _dailyActiveUsers;
     private List<ChartEntryModel>? _newUsers;
     private readonly RefreshVersionGate _newUsersGate = new();
+    private readonly RefreshVersionGate _dailyActiveUsersGate = new();
+    private int _dailyActiveUsersChartVersion;
     private int _newUsersChartVersion;
 
     [Inject] required public AdministrationUsersHttpClient AdministrationUsersHttpClient { get; set; }
@@ -99,6 +101,7 @@ public partial class AdminDashboard : ComponentBase
                 LoadAccountsCountAsync(adminUserId),
                 LoadNewVisitorsTodayAsync(adminUserId),
                 RefreshNewUsersAsync(userId!),
+                RefreshDailyActiveUsersAsync(userId!),
                 LoadMetricsAsync());
         }
         catch (Exception ex)
@@ -111,9 +114,6 @@ public partial class AdminDashboard : ComponentBase
     private async Task LoadMetricsAsync()
     {
         _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
-        StateHasChanged();
-
-        _dailyActiveUsers = await AdministrationUsersHttpClient.GetDailyActiveUsers();
         StateHasChanged();
     }
 
@@ -188,6 +188,34 @@ public partial class AdminDashboard : ComponentBase
         _newUsers = model;
         // ApexCharts must rebuild its series when the rendered content changes.
         _newUsersChartVersion++;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task RefreshDailyActiveUsersAsync(string userId)
+    {
+        var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<DailyActiveUsersSnapshot, List<ChartEntryModel>>
+        {
+            Key = $"daily-active-users-chart-{userId}",
+            Gate = _dailyActiveUsersGate,
+            ToModel = snapshot => snapshot.Entries,
+            FetchAsync = async () => await AdministrationUsersHttpClient.GetDailyActiveUsers(),
+            ToSnapshot = model => new DailyActiveUsersSnapshot { Entries = model },
+            OnSnapshotPainted = PaintDailyActiveUsersAsync,
+            OnRefreshed = PaintDailyActiveUsersAsync,
+        });
+
+        // Unlike the new users chart, this chart never failed the dashboard before snapshots existed (it stayed
+        // on its loading state), so a failure with nothing painted is logged instead of failing the other cards.
+        if (result.IsBlockingFailure)
+            Logger.LogError(result.Error, "Error loading admin daily active users chart.");
+    }
+
+    private Task PaintDailyActiveUsersAsync(List<ChartEntryModel> model)
+    {
+        _dailyActiveUsers = model;
+        // ApexCharts must rebuild its series when the rendered content changes.
+        _dailyActiveUsersChartVersion++;
         StateHasChanged();
         return Task.CompletedTask;
     }
