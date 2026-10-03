@@ -238,10 +238,143 @@ public sealed class AdminDashboardSnapshotTests
         snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<NewUsersSnapshot>()), Times.Never);
     }
 
+    private static readonly TimeSpan _dailyActiveTimeout = TimeSpan.FromSeconds(5);
+
+    [Fact]
+    public async Task DailyActiveUsers_PaintsSnapshotBeforeFetchCompletes_AndAlwaysFetches()
+    {
+        var snapshots = DailyActiveSnapshots("7", 3);
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        Assert.Equal(1, handler.DailyActiveRequests);
+        response.SetResult(Json(Entries(3)));
+    }
+
+    [Fact]
+    public async Task DailyActiveUsers_ChangedData_RepaintsAndWrites()
+    {
+        var snapshots = DailyActiveSnapshots("7", 3);
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        response.SetResult(Json(Entries(9)));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(9, DailyActiveSeries(cut).Single().Value);
+            snapshots.Verify(service => service.SetAsync("daily-active-users-chart-7",
+                It.Is<DailyActiveUsersSnapshot>(snapshot => snapshot.Entries.Single().Value == 9)), Times.Once);
+        }, _dailyActiveTimeout);
+    }
+
+    [Fact]
+    public async Task DailyActiveUsers_UnchangedData_DoesNotRepaintOrWrite()
+    {
+        var snapshots = DailyActiveSnapshots("7", 3);
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        var initialChart = DailyActiveChart(cut);
+        var coordinator = context.Services.GetRequiredService<TrackingCoordinator>();
+        response.SetResult(Json(Entries(3)));
+        await coordinator.DailyActiveCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        Assert.Same(initialChart, DailyActiveChart(cut));
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<DailyActiveUsersSnapshot>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("failure")]
+    [InlineData("null")]
+    [InlineData("malformed")]
+    public async Task DailyActiveUsers_RefreshFailure_KeepsPaintedSnapshot(string mode)
+    {
+        var snapshots = DailyActiveSnapshots("7", 3);
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        response.SetResult(mode switch
+        {
+            "failure" => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+            "null" => Json((List<ChartEntryModel>?)null),
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("invalid JSON") },
+        });
+        await context.Services.GetRequiredService<TrackingCoordinator>().DailyActiveCompleted.Task
+            .WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<DailyActiveUsersSnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DailyActiveUsers_FailureWithoutSnapshot_DoesNotFailDashboard()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(9))),
+            dailyActive: Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(9, Series(cut).Single().Value), _dailyActiveTimeout);
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<DailyActiveUsersSnapshot>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("7", "8")]
+    [InlineData("8", "7")]
+    public async Task DailyActiveUsers_KeyIsScopedToAuthenticatedAdmin(string userId, string otherUserId)
+    {
+        var snapshots = DailyActiveSnapshots(userId, 3);
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: Task.FromResult(Json(Entries(9))));
+        await using var context = Context(snapshots, handler, userId);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(9, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        snapshots.Verify(service => service.GetAsync<DailyActiveUsersSnapshot>($"daily-active-users-chart-{userId}"), Times.Once);
+        snapshots.Verify(service => service.GetAsync<DailyActiveUsersSnapshot>($"daily-active-users-chart-{otherUserId}"), Times.Never);
+        snapshots.Verify(service => service.SetAsync($"daily-active-users-chart-{userId}", It.IsAny<DailyActiveUsersSnapshot>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DailyActiveUsers_SupersededRefresh_DoesNotReplaceChartOrStorage()
+    {
+        var snapshots = DailyActiveSnapshots("7", 3);
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))), dailyActive: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Equal(3, DailyActiveSeries(cut).Single().Value), _dailyActiveTimeout);
+        var coordinator = context.Services.GetRequiredService<TrackingCoordinator>();
+        Assert.NotNull(coordinator.DailyActiveGate);
+        coordinator.DailyActiveGate.Claim();
+        response.SetResult(Json(Entries(9)));
+        await coordinator.DailyActiveCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        Assert.Equal(3, DailyActiveSeries(cut).Single().Value);
+        snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<DailyActiveUsersSnapshot>()), Times.Never);
+    }
+
     private static List<ChartEntryModel> Entries(int value) => [new(new DateTime(2026, 10, 1), value)];
     private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
     private static IEnumerable<ChartEntryModel> Series(IRenderedComponent<AdminDashboard> cut) =>
         cut.FindComponents<ApexPointSeries<ChartEntryModel>>().Last().Instance.Items;
+
+    private static IEnumerable<ChartEntryModel> DailyActiveSeries(IRenderedComponent<AdminDashboard> cut) =>
+        cut.FindComponents<ApexPointSeries<ChartEntryModel>>().First().Instance.Items;
+
+    private static ApexChart<ChartEntryModel> DailyActiveChart(IRenderedComponent<AdminDashboard> cut) =>
+        cut.FindComponents<ApexChart<ChartEntryModel>>().First().Instance;
+
+    private static Mock<ISnapshotService> DailyActiveSnapshots(string userId, int value)
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<DailyActiveUsersSnapshot>($"daily-active-users-chart-{userId}"))
+            .ReturnsAsync(new DailyActiveUsersSnapshot { Entries = Entries(value), FetchedAtUtc = DateTime.UtcNow.AddDays(-30) });
+        return snapshots;
+    }
 
     private static Mock<ISnapshotService> Snapshots(string userId, int value)
     {
@@ -279,7 +412,9 @@ public sealed class AdminDashboardSnapshotTests
         public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AccountsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource NewVisitorsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource DailyActiveCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public RefreshVersionGate? Gate { get; private set; }
+        public RefreshVersionGate? DailyActiveGate { get; private set; }
         public async Task<SnapshotRefreshResult<TModel>> RunAsync<TSnapshot, TModel>(SnapshotRefreshRequest<TSnapshot, TModel> request)
             where TSnapshot : SnapshotBase where TModel : class
         {
@@ -287,6 +422,13 @@ public sealed class AdminDashboardSnapshotTests
             {
                 try { return await _inner.RunAsync(request); }
                 finally { NewVisitorsCompleted.TrySetResult(); }
+            }
+
+            if (typeof(TSnapshot) == typeof(DailyActiveUsersSnapshot))
+            {
+                DailyActiveGate = request.Gate;
+                try { return await _inner.RunAsync(request); }
+                finally { DailyActiveCompleted.TrySetResult(); }
             }
 
             if (typeof(TSnapshot) != typeof(NewUsersSnapshot))
@@ -302,11 +444,13 @@ public sealed class AdminDashboardSnapshotTests
     }
 
     private sealed class ChartHandler(Task<HttpResponseMessage> chart, Task<HttpResponseMessage>? metrics = null,
-        Task<HttpResponseMessage>? accounts = null, Task<HttpResponseMessage>? newVisitors = null) : HttpMessageHandler
+        Task<HttpResponseMessage>? accounts = null, Task<HttpResponseMessage>? newVisitors = null,
+        Task<HttpResponseMessage>? dailyActive = null) : HttpMessageHandler
     {
         public int ChartRequests { get; private set; }
         public int AccountsRequests { get; private set; }
         public int NewVisitorsRequests { get; private set; }
+        public int DailyActiveRequests { get; private set; }
         public TaskCompletionSource Finished { get; } = new();
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -330,7 +474,12 @@ public sealed class AdminDashboardSnapshotTests
                 if (newVisitors is not null)
                     return await newVisitors;
             }
-            return request.RequestUri.AbsolutePath.EndsWith("GetDailyActiveUsers") ? Json(new List<ChartEntryModel>()) : Json(1);
+            if (request.RequestUri.AbsolutePath.EndsWith("GetDailyActiveUsers"))
+            {
+                DailyActiveRequests++;
+                return dailyActive is not null ? await dailyActive : Json(new List<ChartEntryModel>());
+            }
+            return Json(1);
         }
     }
 }

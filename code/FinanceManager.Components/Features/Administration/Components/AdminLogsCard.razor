@@ -1,5 +1,3 @@
-@using FinanceManager.Domain.Administration.Logging
-@using FinanceManager.Domain.FinancialAccounts.Shared.Dtos
 @using FinanceManager.Domain.Identity.Entities
 @implements IAsyncDisposable
 
@@ -23,11 +21,18 @@
             {
                 <MudAlert Severity="Severity.Error" Dense>@_loadError</MudAlert>
             }
-            else if (_entries is null)
+            @if (_liveUpdatesError is not null)
             {
-                <StringSpinner CharactersCount="6" />
+                <MudAlert Severity="Severity.Warning" Dense>@_liveUpdatesError</MudAlert>
             }
-            else if (_entries.Count == 0)
+            @if (Entries is not List<AdminLogEntryView> entries)
+            {
+                @if (_loadError is null)
+                {
+                    <StringSpinner CharactersCount="6" />
+                }
+            }
+            else if (entries.Count == 0)
             {
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     No warnings or errors recorded.
@@ -35,10 +40,10 @@
             }
             else
             {
-                <MudList T="LogEntryDto" Dense DisablePadding>
-                    @foreach (var entry in _entries)
+                <MudList T="AdminLogEntryView" Dense DisablePadding>
+                    @foreach (var entry in entries)
                     {
-                        <MudListItem T="LogEntryDto">
+                        <MudListItem T="AdminLogEntryView">
                             <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="w-100">
                                 <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled">
                                     @entry.Level.ToString()

@@ -13,6 +13,9 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
+- Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837
+- Show the last recent warnings and errors on the admin dashboard immediately while refreshing on every visit, merge live entries into it, and keep it visible if refresh fails. #844
 - Show the last label setter progress on the admin dashboard immediately while refreshing on every visit, keep live updates flowing into it, and keep it visible if refresh fails. #845
 - Show the last today's-new-visitors count on the admin dashboard immediately while refreshing on every visit, and keep it visible if refresh fails. #841
 - Show the last net-worth chart immediately when the Dashboard falls back to loading it on its own, refresh it on every visit, and keep it visible if refresh fails. #846
