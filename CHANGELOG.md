@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837
+- Show the last recent warnings and errors on the admin dashboard immediately while refreshing on every visit, merge live entries into it, and keep it visible if refresh fails. #844
 - Show the last today's-new-visitors count on the admin dashboard immediately while refreshing on every visit, and keep it visible if refresh fails. #841
 - Show the last net-worth chart immediately when the Dashboard falls back to loading it on its own, refresh it on every visit, and keep it visible if refresh fails. #846
 - Show the last return attribution immediately while refreshing on every Assets visit, and retain it when refresh fails. #833
