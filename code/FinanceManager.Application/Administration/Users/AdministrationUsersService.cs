@@ -1,6 +1,13 @@
 ﻿using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Administration.Users;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
@@ -11,7 +18,9 @@ using FinanceManager.Domain.Shared.Charting;
 namespace FinanceManager.Application.Administration.Users;
 
 public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
-    IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier) : IAdministrationUsersService
+    IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier,
+    ICurrencyRepository currencyRepository, ICurrencyExchangeService currencyExchangeService,
+    IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService investmentValuationService) : IAdministrationUsersService
 {
 
     public Task<int> GetAccountsCount() => financialAccountRepository.GetAccountsCount();
@@ -42,7 +51,61 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
         for (DateTime i = start; i <= end; i = i.AddDays(1))
             yield return new(i, users.Count(x => x.CreationDate.Date == i.Date));
     }
-    public Task<int?> GetTotalTrackedMoney() => Task.FromResult<int?>(null);
+    public async Task<decimal?> GetTotalTrackedMoney()
+    {
+        var now = DateTime.UtcNow;
+        var pln = await currencyRepository.GetByCode("PLN")
+            ?? throw new InvalidOperationException("PLN currency is required to value tracked money.");
+        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
+        var currencies = new Dictionary<int, Currency>();
+        decimal total = 0;
+
+        // Queries share a scoped DbContext, so enumerate users and accounts sequentially.
+        var userIds = await userRepository.GetUsersIds(0, int.MaxValue).ToListAsync();
+        foreach (var userId in userIds)
+        {
+            var cashAccounts = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, now, now, false).ToListAsync();
+            foreach (var account in cashAccounts)
+            {
+                var value = account.GetThisOrNextOlder(now)?.Value ?? 0;
+                if (value == 0) continue;
+                if (!currencies.TryGetValue(account.CurrencyId, out var currency))
+                {
+                    currency = await currencyRepository.GetCurrency(account.CurrencyId)
+                        ?? throw new InvalidOperationException($"Currency {account.CurrencyId} is required to value account {account.AccountId}.");
+                    currencies.Add(account.CurrencyId, currency);
+                }
+                total += await ConvertToPln(value, currency);
+            }
+
+            var bonds = await financialAccountRepository.GetAccounts<BondAccount>(userId, now, now, false).ToListAsync();
+            foreach (var account in bonds)
+            {
+                foreach (var bondId in account.GetStoredBondsIds())
+                {
+                    var entry = account.GetThisOrNextOlder(now, bondId);
+                    if (entry is null) continue;
+                    if (!bondDetails.TryGetValue(bondId, out var details))
+                        throw new InvalidOperationException($"Bond valuation requires details for bond id {bondId}.");
+                    total += await ConvertToPln(entry.GetPriceAt(DateOnly.FromDateTime(now), details), details.Currency);
+                }
+            }
+
+            var investments = await financialAccountRepository.GetAccounts<InvestmentAccount>(userId, now, now, false).ToListAsync();
+            var investmentValues = await investmentValuationService.GetAccountValueAsync(investments.Select(x => x.AccountId).ToList(), pln, now);
+            total += investmentValues.Values.Sum();
+        }
+        return total;
+
+        async Task<decimal> ConvertToPln(decimal value, Currency currency)
+        {
+            if (value == 0 || string.Equals(currency.ShortName, "PLN", StringComparison.OrdinalIgnoreCase)) return value;
+            var rate = await currencyExchangeService.GetExchangeRateAsync(currency, pln, now);
+            if (rate is not decimal usableRate || usableRate <= 0)
+                throw new InvalidOperationException($"No exchange rate from {currency.ShortName} to PLN is available.");
+            return value * usableRate;
+        }
+    }
     public async IAsyncEnumerable<UserDetails> GetUsers(int recordIndex, int recordsCount)
     {
         var users = await userRepository.GetUsers(recordIndex, recordsCount).ToListAsync();

@@ -101,6 +101,29 @@ public sealed class AdminDashboardSnapshotStore(ISnapshotRefreshCoordinator coor
             OnRefreshed = onRefreshed
         });
 
+    public Task<SnapshotRefreshResult<AdminTotalTrackedMoneyCardModel>> RefreshTotalTrackedMoneyAsync(
+        int userId,
+        RefreshVersionGate gate,
+        Func<Task<decimal?>> fetchAsync,
+        Func<AdminTotalTrackedMoneyCardModel, Task>? onSnapshotPainted = null,
+        Func<AdminTotalTrackedMoneyCardModel, Task>? onRefreshed = null) =>
+        coordinator.RunAsync(new SnapshotRefreshRequest<AdminTotalTrackedMoneySnapshot, AdminTotalTrackedMoneyCardModel>
+        {
+            Key = $"admin-total-tracked-money-pln:{userId}",
+            // Compare the displayed cents; decimal scale and sub-cent changes do not repaint the card.
+            ContentComparer = EqualityComparer<AdminTotalTrackedMoneyCardModel>.Default,
+            Gate = gate,
+            ToModel = snapshot => snapshot.UserId == userId
+                ? new AdminTotalTrackedMoneyCardModel(decimal.Round(snapshot.Amount, 2))
+                : null,
+            FetchAsync = async () => await fetchAsync() is decimal amount
+                ? new AdminTotalTrackedMoneyCardModel(decimal.Round(amount, 2))
+                : null,
+            ToSnapshot = model => new AdminTotalTrackedMoneySnapshot { UserId = userId, Amount = model.Amount },
+            OnSnapshotPainted = onSnapshotPainted,
+            OnRefreshed = onRefreshed
+        });
+
     // Per-user key with no date component, so a single snapshot per card is overwritten on each save.
     private static string BuildAccountsCountKey(int userId) => $"admin-accounts-count:{userId}";
 

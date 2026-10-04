@@ -9,6 +9,23 @@ namespace FinanceManager.Tests.Unit.Components.Features.Administration.HttpClien
 public class AdministrationUsersHttpClientTests
 {
     [Fact]
+    public async Task GetTotalTrackedMoney_PreservesDecimalAmount()
+    {
+        var client = CreateClient(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(3000000000.25m)
+        });
+        Assert.Equal(3000000000.25m, await client.GetTotalTrackedMoney());
+    }
+
+    [Fact]
+    public async Task GetTotalTrackedMoney_Failure_ReturnsNoUsableResponse()
+    {
+        var client = CreateClient(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        Assert.Null(await client.GetTotalTrackedMoney());
+    }
+
+    [Fact]
     public async Task GetAccountsCount_Success_ReturnsCount()
     {
         var client = CreateClient(new HttpResponseMessage(HttpStatusCode.OK)

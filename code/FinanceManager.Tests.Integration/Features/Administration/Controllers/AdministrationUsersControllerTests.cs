@@ -1,5 +1,6 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
 using FinanceManager.Domain.Administration.Monitoring;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Dtos;
@@ -167,11 +168,22 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         Authorize("AdminUser", 1, UserRole.Admin);
         var context = new AdministrationUsersHttpClient(Client);
 
+        _testDatabase!.Context.Currencies.Add(DefaultCurrency.PLN);
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(1, 1, _nowUtc.AddDays(-10), 12.25m, 12.25m));
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
         // Act
         var result = await context.GetTotalTrackedMoney();
 
         // Assert
-        Assert.True(result is null || result >= 0);
+        Assert.Equal(12.25m, result);
+    }
+
+    [Fact]
+    public async Task GetTotalTrackedMoney_NonAdmin_ReturnsNoUsableResponse()
+    {
+        Authorize("User", 1, UserRole.User);
+        Assert.Null(await new AdministrationUsersHttpClient(Client).GetTotalTrackedMoney());
     }
 
     [Fact]
