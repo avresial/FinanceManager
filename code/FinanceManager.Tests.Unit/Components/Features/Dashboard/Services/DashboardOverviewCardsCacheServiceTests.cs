@@ -1,12 +1,8 @@
-using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -17,9 +13,7 @@ public class DashboardOverviewCardsCacheServiceTests
 {
     private static readonly DateTime _start = new(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = _start.AddDays(30).AddHours(12);
-    private readonly Mock<ILocalStorageService> _storage = new();
     private readonly ControlledHandler _handler = new();
-    private readonly MemoryCache _memory = new(new MemoryCacheOptions());
 
     [Fact]
     public async Task GetFreshAsync_OverlappingCalls_ShareOneRequestPerSeries()
@@ -69,18 +63,6 @@ public class DashboardOverviewCardsCacheServiceTests
     }
 
     [Fact]
-    public async Task GetFreshAsync_DoesNotReadOrWriteTtlCache()
-    {
-        var service = Service();
-        var fresh = service.GetFreshAsync(Context());
-        _handler.CompleteAll("GetNetCashFlow", []);
-        _handler.CompleteAll("GetClosingBalance", []);
-        await fresh;
-        Assert.Empty(_storage.Invocations);
-        Assert.Equal(0, _memory.Count);
-    }
-
-    [Fact]
     public async Task GetFreshAsync_PropagatesExceptions_AndAllowsRetry()
     {
         var service = Service();
@@ -96,9 +78,7 @@ public class DashboardOverviewCardsCacheServiceTests
     }
 
     private DashboardOverviewCardsCacheService Service() =>
-        new(_storage.Object, _memory,
-            new MoneyFlowHttpClient(new HttpClient(_handler) { BaseAddress = new Uri("http://localhost/") }),
-            NullLogger<DashboardOverviewCardsCacheService>.Instance);
+        new(new MoneyFlowHttpClient(new HttpClient(_handler) { BaseAddress = new Uri("http://localhost/") }));
 
     private static DashboardOverviewCardsRefreshContext Context() => new()
     {
