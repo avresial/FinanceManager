@@ -98,6 +98,28 @@ public class NetCashFlowOverviewCardTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public async Task NullResponse_PreservesSnapshotOrShowsBlockingError(bool stored)
+    {
+        if (stored) Stored(10);
+        var handler = new NetCashFlowHandler();
+        using var context = Context(handler);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+        handler.Complete(0, null);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(View(cut).IsLoading);
+            Assert.Equal(!stored, View(cut).HasError);
+            if (stored) Assert.Equal(10, View(cut).Data.Single().Value);
+            else Assert.Empty(View(cut).Data);
+        }, _timeout);
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<NetCashFlowSnapshot>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public async Task FailedRefresh_PreservesSnapshotOrShowsBlockingError(bool stored)
     {
         if (stored) Stored(10);
@@ -272,7 +294,7 @@ public class NetCashFlowOverviewCardTests
         private readonly List<TaskCompletionSource<HttpResponseMessage>> _responses = [];
         public int Count => _responses.Count;
 
-        public void Complete(int index, List<TimeSeriesModel> points) =>
+        public void Complete(int index, List<TimeSeriesModel>? points) =>
             _responses[index].SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(points) });
 
         public void Fail(int index) => _responses[index].SetResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));

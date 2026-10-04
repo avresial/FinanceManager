@@ -34,7 +34,7 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     {
         string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetNetCashFlow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The net-cash-flow response body was null.");
     }
 
     public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
