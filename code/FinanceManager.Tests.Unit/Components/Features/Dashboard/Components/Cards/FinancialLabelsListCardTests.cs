@@ -110,6 +110,28 @@ public class FinancialLabelsListCardTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task NullResponse_PreservesSnapshotOrShowsBlockingError(bool stored)
+    {
+        if (stored) Stored(10);
+        var handler = new LabelsHandler();
+        using var context = Context(handler);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count));
+        handler.Complete(0, null);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(View(cut).IsLoading);
+            Assert.Equal(!stored, View(cut).HasError);
+            if (stored) Assert.Equal(10, View(cut).Data.Single().Value);
+            else Assert.Empty(View(cut).Data);
+        });
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<FinancialLabelsSnapshot>()), Times.Never);
+    }
+
+    [Theory]
     [InlineData(-20, 1, 0)]
     [InlineData(0, 2, 0)]
     [InlineData(0, 1, 5)]
@@ -283,7 +305,7 @@ public class FinancialLabelsListCardTests
         private readonly List<TaskCompletionSource<HttpResponseMessage>> _responses = [];
         public int Count => _responses.Count;
 
-        public void Complete(int index, List<NameValueResult> items) =>
+        public void Complete(int index, List<NameValueResult>? items) =>
             _responses[index].SetResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(items),
