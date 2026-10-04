@@ -4,28 +4,21 @@
 
 <PageTitle>Cash flow forecast</PageTitle>
 
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6">Cash flow forecast</MudText>
-</SectionContent>
-
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
-        <div>
-            <MudText Typo="Typo.h4" HtmlTag="h1">Cash flow forecast</MudText>
-            <MudText Typo="Typo.body1" Color="MudBlazor.Color.Secondary">
-                A deterministic projection from your current cash balances and recurring activity.
-            </MudText>
-        </div>
-        <MudButtonGroup Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" aria-label="Forecast horizon">
-            @foreach (var horizon in Horizons)
-            {
-                <MudButton Variant="@(horizon == _horizonDays ? Variant.Filled : Variant.Outlined)"
-                           OnClick="@(() => SelectHorizon(horizon))">
-                    @horizon days
-                </MudButton>
-            }
-        </MudButtonGroup>
-    </div>
+    <PageHeader Title="Cash flow forecast"
+                Subtitle="A deterministic projection from your current cash balances and recurring activity.">
+        <Actions>
+            <MudButtonGroup Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" aria-label="Forecast horizon">
+                @foreach (var horizon in Horizons)
+                {
+                    <MudButton Variant="@(horizon == _horizonDays ? Variant.Filled : Variant.Outlined)"
+                               OnClick="@(() => SelectHorizon(horizon))">
+                        @horizon days
+                    </MudButton>
+                }
+            </MudButtonGroup>
+        </Actions>
+    </PageHeader>
 
     @if (_hasError)
     {

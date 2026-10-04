@@ -5,21 +5,14 @@
 
 <PageTitle>Alerts and watchlists</PageTitle>
 
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6">Alerts and watchlists</MudText>
-</SectionContent>
-
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
-        <div>
-            <MudText Typo="Typo.h4" HtmlTag="h1">Alerts and watchlists</MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Define deterministic checks for balances, spending, transactions, and subscription changes.
-            </MudText>
-        </div>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@_isRefreshing" OnClick="RefreshAsync">Evaluate now</MudButton>
-    </div>
+    <PageHeader Title="Alerts and watchlists"
+                Subtitle="Define deterministic checks for balances, spending, transactions, and subscription changes.">
+        <Actions>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@_isRefreshing" OnClick="RefreshAsync">Evaluate now</MudButton>
+        </Actions>
+    </PageHeader>
 
     @if (_errors.Count > 0)
     {

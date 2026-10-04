@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Give Dashboard, Assets, Liabilities, Add account, Subscriptions, Cash flow forecast, Alerts and Automation one shared page header, move the date-range picker from a floating pill into that header, size dashboard cards so rows fill without empty cells, and stop the landing page title from overflowing on phones. #876
 - Show total tracked money in PLN on the admin dashboard, paint its last value immediately while refreshing, and retain it if refresh fails. #840
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837

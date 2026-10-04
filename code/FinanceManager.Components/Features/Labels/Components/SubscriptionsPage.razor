@@ -2,22 +2,14 @@
 
 <PageTitle>Subscriptions</PageTitle>
 
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6">Subscriptions</MudText>
-</SectionContent>
-
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
-        <div>
-            <MudText Typo="Typo.h4" HtmlTag="h1">Subscriptions</MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Upcoming recurring charges and price changes in one place.
-            </MudText>
-        </div>
-        <MudCheckBox T="bool" @bind-Value="_showInactive"
-                     Label="Show muted and cancelled"
-                     Color="Color.Primary" />
-    </div>
+    <PageHeader Title="Subscriptions" Subtitle="Upcoming recurring charges and price changes in one place.">
+        <Actions>
+            <MudCheckBox T="bool" @bind-Value="_showInactive"
+                         Label="Show muted and cancelled"
+                         Color="Color.Primary" />
+        </Actions>
+    </PageHeader>
 
     <SubscriptionsSummaryView Model="_summary"
                               IsLoading="_isSummaryLoading"
