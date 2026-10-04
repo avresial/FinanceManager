@@ -40,18 +40,21 @@
         else if (ActiveData.Any())
         {
             <div class="fm-pie-body">
-                <div class="fm-chart-wrap">
-                    <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
-                        <ApexPointSeries TItem="NameValueResult"
-                                         Items="ActiveData"
-                                         Name="Liabilities"
-                                         SeriesType="SeriesType.Pie"
-                                         XValue="e => e.Name"
-                                         YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
-                                         OrderByDescending="@(e => e.Y)" />
-                    </ApexChart>
-                </div>
-                <div class="fm-legend">
+                @if (!IsSingleCategory)
+                {
+                    <div class="fm-chart-wrap">
+                        <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
+                            <ApexPointSeries TItem="NameValueResult"
+                                             Items="ActiveData"
+                                             Name="Liabilities"
+                                             SeriesType="SeriesType.Pie"
+                                             XValue="e => e.Name"
+                                             YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
+                                             OrderByDescending="@(e => e.Y)" />
+                        </ApexChart>
+                    </div>
+                }
+                <div class="fm-legend" data-testid="distribution-legend">
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
