@@ -2,6 +2,8 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Models;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -14,7 +16,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
 public partial class ExpenseDistributionOverviewCard
 {
-    private bool _isLoading;
+    private readonly RefreshVersionGate _gate = new();
+    private bool _isLoading = true;
     private Currency _currency = DefaultCurrency.PLN;
     private List<NameValueResult> _data = [];
 
@@ -31,44 +34,100 @@ public partial class ExpenseDistributionOverviewCard
     [Inject] public required MoneyFlowHttpClient MoneyFlowHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnParametersSetAsync() => LoadData();
+
+    private async Task LoadData()
     {
-        _currency = await SettingsService.GetCurrencyAsync();
-    }
+        // Claimed first on both paths so a parent-supplied model supersedes any in-flight self-load.
+        var version = _gate.Claim();
+        if (Model is not null)
+        {
+            var model = Model;
+            var supplied = await SettingsService.GetCurrencyAsync();
+            if (!_gate.IsCurrent(version)) return;
+            _currency = supplied;
+            _data = [.. model.Items];
+            _isLoading = false;
+            return;
+        }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        _isLoading = true;
-        StateHasChanged();
-
+        var start = StartDateTime.Date;
+        var end = EndDateTime;
         try
         {
-            if (Model is not null)
-            {
-                _data = [.. Model.Items];
-                return;
-            }
-
             var user = await LoginService.GetLoggedUser();
+            if (!_gate.IsCurrent(version)) return;
             if (user is null)
             {
                 _data = [];
+                _isLoading = false;
                 return;
             }
 
-            var data = await MoneyFlowHttpClient.GetExpenseDistribution(user.UserId, _currency, StartDateTime, EndDateTime);
-            _data = [.. data];
+            var currency = await SettingsService.GetCurrencyAsync();
+            if (!_gate.IsCurrent(version)) return;
+            _currency = currency;
+            var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<ExpenseDistributionSnapshot, NameValueListCardModel>
+            {
+                Key = $"expense-distribution:{user.UserId}:{currency.Id}",
+                Gate = _gate,
+                ClaimedVersion = version,
+                // The range is metadata: never show old amounts under a different range or currency.
+                ToModel = snapshot => snapshot.UserId == user.UserId && snapshot.CurrencyId == currency.Id
+                    && snapshot.StartDate == start && snapshot.EndDate.Date == end.Date
+                    ? new NameValueListCardModel([.. snapshot.Items]) : null,
+                FetchAsync = async () =>
+                {
+                    var items = await MoneyFlowHttpClient.GetExpenseDistribution(user.UserId, currency, start, end);
+                    return new NameValueListCardModel([.. items]);
+                },
+                ToSnapshot = model => new ExpenseDistributionSnapshot
+                {
+                    UserId = user.UserId,
+                    CurrencyId = currency.Id,
+                    StartDate = start,
+                    EndDate = end,
+                    Items = [.. model.Items],
+                },
+                OnSnapshotPainted = ShowData,
+                OnSnapshotMissing = () =>
+                {
+                    _data = [];
+                    _isLoading = true;
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                },
+                OnRefreshed = ShowData,
+            });
+            if (!_gate.IsCurrent(version)) return;
+            _isLoading = false;
+            if (result.IsBlockingFailure)
+                ReportLoadFailure(result.Error);
+            else if (result.Outcome == SnapshotRefreshOutcome.Failed)
+                Logger.LogWarning(result.Error, "Expense distribution refresh failed; keeping the last distribution.");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, ex.Message);
-            Snackbar.Add("Unable to load expense distribution.", Severity.Error);
-        }
-        finally
-        {
+            if (!_gate.IsCurrent(version)) return;
+            _data = [];
             _isLoading = false;
-            StateHasChanged();
+            ReportLoadFailure(ex);
         }
+    }
+
+    private Task ShowData(NameValueListCardModel model)
+    {
+        _data = [.. model.Items];
+        _isLoading = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ReportLoadFailure(Exception? ex)
+    {
+        Logger.LogError(ex, "Unable to load expense distribution.");
+        Snackbar.Add("Unable to load expense distribution.", Severity.Error);
     }
 }
