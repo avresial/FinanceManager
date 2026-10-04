@@ -57,6 +57,7 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
         var pln = await currencyRepository.GetByCode("PLN")
             ?? throw new InvalidOperationException("PLN currency is required to value tracked money.");
         var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
+        var currencies = new Dictionary<int, Currency>();
         decimal total = 0;
 
         // Queries share a scoped DbContext, so enumerate users and accounts sequentially.
@@ -68,8 +69,12 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
             {
                 var value = account.GetThisOrNextOlder(now)?.Value ?? 0;
                 if (value == 0) continue;
-                var currency = await currencyRepository.GetCurrency(account.CurrencyId)
-                    ?? throw new InvalidOperationException($"Currency {account.CurrencyId} is required to value account {account.AccountId}.");
+                if (!currencies.TryGetValue(account.CurrencyId, out var currency))
+                {
+                    currency = await currencyRepository.GetCurrency(account.CurrencyId)
+                        ?? throw new InvalidOperationException($"Currency {account.CurrencyId} is required to value account {account.AccountId}.");
+                    currencies.Add(account.CurrencyId, currency);
+                }
                 total += await ConvertToPln(value, currency);
             }
 
