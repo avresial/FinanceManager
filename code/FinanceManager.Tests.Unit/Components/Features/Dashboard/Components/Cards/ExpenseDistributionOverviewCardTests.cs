@@ -114,6 +114,29 @@ public class ExpenseDistributionOverviewCardTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task NullResponse_PreservesSnapshotSilently_OrShowsSnackbarWhenNothingPainted(bool stored)
+    {
+        if (stored) Stored(10);
+        var handler = new DistributionHandler();
+        using var context = Context(handler);
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _wait);
+        handler.Complete(0, null);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.False(View(cut).IsLoading);
+            if (stored) Assert.Equal(10, View(cut).Data.Single().Value);
+            else Assert.Empty(View(cut).Data);
+        }, _wait);
+        await Drain(cut);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<ExpenseDistributionSnapshot>()), Times.Never);
+        if (stored) VerifyNoSnackbar();
+        else _snackbar.Verify(x => x.Add("Unable to load expense distribution.", Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Theory]
     [InlineData(-20, 1, 0)]
     [InlineData(0, 2, 0)]
     [InlineData(0, 1, 5)]
@@ -279,7 +302,7 @@ public class ExpenseDistributionOverviewCardTests
         private readonly List<TaskCompletionSource<HttpResponseMessage>> _responses = [];
         public int Count => _responses.Count;
 
-        public void Complete(int index, List<NameValueResult> items) =>
+        public void Complete(int index, List<NameValueResult>? items) =>
             _responses[index].SetResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(items),

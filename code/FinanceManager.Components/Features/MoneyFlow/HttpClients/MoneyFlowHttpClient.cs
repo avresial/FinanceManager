@@ -80,7 +80,7 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     {
         string endpoint = $"{httpClient.BaseAddress}api/ExpenseDistribution/GetExpenseDistribution/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The expense-distribution response body was null.");
     }
 
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
