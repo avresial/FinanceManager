@@ -16,6 +16,7 @@ rules agents must follow when updating this file.
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837
 - Show the last recent warnings and errors on the admin dashboard immediately while refreshing on every visit, merge live entries into it, and keep it visible if refresh fails. #844
+- Show the last net cash flow immediately when the Dashboard falls back to loading it on its own, and always refresh it instead of reusing a five-minute cache; keep it visible if refresh fails or returns no usable response. #847
 - Show the last expense distribution immediately when the Dashboard falls back to loading it on its own, refresh it on every visit, and keep it visible if refresh fails or returns no usable response. #850
 - Show the last financial labels list immediately when the Dashboard falls back to loading it on its own, refresh it on every visit, and keep it visible if refresh fails or returns no usable response. #849
 - Show the last ETF fee drag analysis immediately while refreshing it on every Assets visit, and keep it visible if refresh fails. #836
