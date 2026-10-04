@@ -73,7 +73,7 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     {
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetLabelsValue?userId={userId}&start={start:O}&end={end:O}";
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The financial-label response body was null.");
     }
 
     public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
