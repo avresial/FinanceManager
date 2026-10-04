@@ -43,9 +43,17 @@ public class TransactionRowPresentationTests
     [Theory]
     [InlineData(null, 10.0)]
     [InlineData("Something unusual", 10.0)]
+    [InlineData("Coffee", 10.0)]
+    [InlineData("Current account", 10.0)]
     public void IconFor_FallsBackToDirectionOfMoneyFlow(string? label, double amount)
     {
         Assert.Equal(Icons.Material.Filled.ArrowDownward, TransactionRowPresentation.IconFor(label, (decimal)amount));
         Assert.Equal(Icons.Material.Filled.ArrowUpward, TransactionRowPresentation.IconFor(label, -(decimal)amount));
     }
+
+    [Theory]
+    [InlineData("Car-insurance")]
+    [InlineData("Rental fees")]
+    public void IconFor_MatchesKeywordsAtTheStartOfAWord(string label) =>
+        Assert.NotEqual(Icons.Material.Filled.ArrowDownward, TransactionRowPresentation.IconFor(label, 1m));
 }

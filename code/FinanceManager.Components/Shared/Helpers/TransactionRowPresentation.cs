@@ -5,8 +5,9 @@ namespace FinanceManager.Components.Shared.Helpers;
 /// <summary>Presentation rules shared by transaction list rows: when to show a time and which icon stands in for a category.</summary>
 public static class TransactionRowPresentation
 {
-    // Ordered: first matching keyword wins. Labels are free text, so matching is keyword based
-    // and anything unknown falls back to the direction of the money flow.
+    // Ordered: first matching keyword wins. Labels are free text, so a keyword matches the start of a
+    // word ("grocer" matches "Groceries", but "fee" does not match "Coffee"); anything unknown falls
+    // back to the direction of the money flow.
     private static readonly (string[] Keywords, string Icon)[] _labelIcons =
     [
         (["salary", "wage", "payroll", "paycheck", "income"], Icons.Material.Filled.Payments),
@@ -21,13 +22,16 @@ public static class TransactionRowPresentation
         (["tax", "insurance", "fee"], Icons.Material.Filled.Receipt)
     ];
 
+    private static readonly char[] _wordSeparators = [' ', '-', '_', '/', '&', ',', '.', '(', ')'];
+
     public static string IconFor(string? labelName, decimal valueChange)
     {
         if (!string.IsNullOrWhiteSpace(labelName))
         {
+            var words = labelName.Split(_wordSeparators, StringSplitOptions.RemoveEmptyEntries);
             foreach (var (keywords, icon) in _labelIcons)
             {
-                if (keywords.Any(keyword => labelName.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                if (keywords.Any(keyword => words.Any(word => word.StartsWith(keyword, StringComparison.OrdinalIgnoreCase))))
                     return icon;
             }
         }
