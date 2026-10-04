@@ -16,9 +16,10 @@ public partial class AdminDashboard : ComponentBase
 {
     private int? _userCount = default;
     private int? _accountsCount = default;
-    private int? _totalTrackedMoney = default;
+    private decimal? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
 
+    private readonly RefreshVersionGate _totalTrackedMoneyGate = new();
     private readonly RefreshVersionGate _userCountGate = new();
     private readonly RefreshVersionGate _accountsCountGate = new();
     private readonly RefreshVersionGate _newVisitorsTodayGate = new();
@@ -102,7 +103,7 @@ public partial class AdminDashboard : ComponentBase
                 LoadNewVisitorsTodayAsync(adminUserId),
                 RefreshNewUsersAsync(userId!),
                 RefreshDailyActiveUsersAsync(userId!),
-                LoadMetricsAsync());
+                LoadTotalTrackedMoneyAsync(adminUserId));
         }
         catch (Exception ex)
         {
@@ -111,10 +112,17 @@ public partial class AdminDashboard : ComponentBase
         }
     }
 
-    private async Task LoadMetricsAsync()
+    private Task LoadTotalTrackedMoneyAsync(int userId) =>
+        SnapshotStore.RefreshTotalTrackedMoneyAsync(userId, _totalTrackedMoneyGate,
+            () => AdministrationUsersHttpClient.GetTotalTrackedMoney(),
+            onSnapshotPainted: ShowTotalTrackedMoney,
+            onRefreshed: ShowTotalTrackedMoney);
+
+    private Task ShowTotalTrackedMoney(AdminTotalTrackedMoneyCardModel model)
     {
-        _totalTrackedMoney = await AdministrationUsersHttpClient.GetTotalTrackedMoney();
+        _totalTrackedMoney = model.Amount;
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private Task LoadUserCountAsync(int userId) =>

@@ -24,6 +24,36 @@ public sealed class AdminDashboardSnapshotTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task TotalTrackedMoney_PaintsAndRefreshesIndependently_AndPreservesOnFailure(bool failure)
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>("admin-total-tracked-money-pln:7"))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 7, Amount = 42.25m });
+        var response = new TaskCompletionSource<HttpResponseMessage>();
+        using var handler = new ChartHandler(new TaskCompletionSource<HttpResponseMessage>().Task, totalMoney: response.Task);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<AdminDashboard>();
+        cut.WaitForAssertion(() => Assert.Contains(42.25m.ToString("N2"), cut.Markup));
+        response.SetResult(failure ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) : Json(43.75m));
+        await context.Services.GetRequiredService<TrackingCoordinator>().TotalMoneyCompleted.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        cut.WaitForAssertion(() => Assert.Contains((failure ? 42.25m : 43.75m).ToString("N2"), cut.Markup));
+        snapshots.Verify(x => x.SetAsync("admin-total-tracked-money-pln:7", It.Is<AdminTotalTrackedMoneySnapshot>(v => v.Amount == 43.75m)), failure ? Times.Never() : Times.Once());
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_NonAdmin_DoesNotReadSnapshotOrFetch()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        using var handler = new ChartHandler(Task.FromResult(Json(Entries(1))));
+        await using var context = Context(snapshots, handler, admin: false);
+        Assert.Throws<InvalidOperationException>(() => context.Render<AdminDashboard>());
+        snapshots.Verify(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(It.IsAny<string>()), Times.Never());
+        Assert.Equal(0, handler.TotalMoneyRequests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task AccountsCountSnapshot_RefreshesIndependentlyOfChartAndMetrics(bool failedRefresh)
     {
         var snapshots = Snapshots("7", 3);
@@ -409,6 +439,7 @@ public sealed class AdminDashboardSnapshotTests
     private sealed class TrackingCoordinator(ISnapshotService snapshots) : ISnapshotRefreshCoordinator
     {
         private readonly SnapshotRefreshCoordinator _inner = new(snapshots, NullLogger<SnapshotRefreshCoordinator>.Instance);
+        public TaskCompletionSource TotalMoneyCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Completed { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AccountsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource NewVisitorsCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -418,6 +449,11 @@ public sealed class AdminDashboardSnapshotTests
         public async Task<SnapshotRefreshResult<TModel>> RunAsync<TSnapshot, TModel>(SnapshotRefreshRequest<TSnapshot, TModel> request)
             where TSnapshot : SnapshotBase where TModel : class
         {
+            if (typeof(TSnapshot) == typeof(AdminTotalTrackedMoneySnapshot))
+            {
+                try { return await _inner.RunAsync(request); }
+                finally { TotalMoneyCompleted.TrySetResult(); }
+            }
             if (typeof(TSnapshot) == typeof(AdminNewVisitorsTodaySnapshot))
             {
                 try { return await _inner.RunAsync(request); }
@@ -445,8 +481,9 @@ public sealed class AdminDashboardSnapshotTests
 
     private sealed class ChartHandler(Task<HttpResponseMessage> chart, Task<HttpResponseMessage>? metrics = null,
         Task<HttpResponseMessage>? accounts = null, Task<HttpResponseMessage>? newVisitors = null,
-        Task<HttpResponseMessage>? dailyActive = null) : HttpMessageHandler
+        Task<HttpResponseMessage>? dailyActive = null, Task<HttpResponseMessage>? totalMoney = null) : HttpMessageHandler
     {
+        public int TotalMoneyRequests { get; private set; }
         public int ChartRequests { get; private set; }
         public int AccountsRequests { get; private set; }
         public int NewVisitorsRequests { get; private set; }
@@ -454,7 +491,12 @@ public sealed class AdminDashboardSnapshotTests
         public TaskCompletionSource Finished { get; } = new();
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (request.RequestUri!.AbsolutePath.EndsWith("GetNewUsersDaily"))
+            if (request.RequestUri!.AbsolutePath.EndsWith("GetTotalTrackedMoney"))
+            {
+                TotalMoneyRequests++;
+                return totalMoney is not null ? await totalMoney : Json(1m);
+            }
+            if (request.RequestUri.AbsolutePath.EndsWith("GetNewUsersDaily"))
             {
                 ChartRequests++;
                 try { return await chart; }

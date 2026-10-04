@@ -158,6 +158,174 @@ public class AdminDashboardSnapshotStoreTests
     }
 
     [Fact]
+    public async Task TotalTrackedMoney_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+        _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(key))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 1, Amount = 5, FetchedAtUtc = DateTime.UtcNow.AddYears(-1) });
+        var painted = false;
+        var fetchedAfterPaint = false;
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () =>
+            {
+                fetchedAfterPaint = painted;
+                return Task.FromResult<decimal?>(5);
+            },
+            model =>
+            {
+                painted = model.Amount == 5;
+                return Task.CompletedTask;
+            });
+
+        Assert.True(fetchedAfterPaint);
+        Assert.Equal(SnapshotRefreshOutcome.Unchanged, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminTotalTrackedMoneySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_Changed_WritesUserScopedSnapshot()
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () => Task.FromResult<decimal?>(7));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminTotalTrackedMoneySnapshot>(s => s.UserId == 1 && s.Amount == 7)), Times.Once);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_RejectsAnotherUsersSnapshot()
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+        _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(key))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 2, Amount = 9 });
+        var painted = false;
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () => Task.FromResult<decimal?>(3),
+            _ =>
+            {
+                painted = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(painted);
+        Assert.False(result.SnapshotPainted);
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminTotalTrackedMoneySnapshot>(s => s.UserId == 1 && s.Amount == 3)), Times.Once);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_FailedRefresh_KeepsPaintedModel()
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+        _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(key))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 1, Amount = 5, FetchedAtUtc = DateTime.UtcNow.AddYears(-1) });
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () => throw new HttpRequestException());
+
+        Assert.Equal(SnapshotRefreshOutcome.Failed, result.Outcome);
+        Assert.True(result.SnapshotPainted);
+        Assert.False(result.IsBlockingFailure);
+        Assert.Equal(5, result.Model!.Amount);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminTotalTrackedMoneySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_NoUsableResponseWithoutSnapshot_LeavesCardLoading()
+    {
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () => Task.FromResult<decimal?>(null));
+
+        Assert.Equal(SnapshotRefreshOutcome.Empty, result.Outcome);
+        Assert.Null(result.Model);
+        Assert.False(result.IsBlockingFailure);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminTotalTrackedMoneySnapshot>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_GenuinelyZero_RefreshesToZero()
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+        _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(key))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 1, Amount = 5, FetchedAtUtc = DateTime.UtcNow.AddYears(-1) });
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            new RefreshVersionGate(),
+            () => Task.FromResult<decimal?>(0));
+
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.Equal(0, result.Model!.Amount);
+        _snapshots.Verify(x => x.SetAsync(key, It.Is<AdminTotalTrackedMoneySnapshot>(s => s.Amount == 0)), Times.Once);
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_SupersededRequest_DoesNotWrite()
+    {
+        var gate = new RefreshVersionGate();
+        var claimed = gate.Claim();
+
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(
+            1,
+            gate,
+            () =>
+            {
+                gate.Claim();
+                return Task.FromResult<decimal?>(4);
+            });
+
+        Assert.Equal(SnapshotRefreshOutcome.Superseded, result.Outcome);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminTotalTrackedMoneySnapshot>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("1", "1.000")]
+    [InlineData("1.254", "1.251")]
+    public async Task TotalTrackedMoney_SameDisplayedCents_DoesNotRepaintOrWrite(string stored, string fetched)
+    {
+        _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>("admin-total-tracked-money-pln:1"))
+            .ReturnsAsync(new AdminTotalTrackedMoneySnapshot { UserId = 1, Amount = decimal.Parse(stored, System.Globalization.CultureInfo.InvariantCulture) });
+        var repainted = false;
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(1, new RefreshVersionGate(),
+            () => Task.FromResult<decimal?>(decimal.Parse(fetched, System.Globalization.CultureInfo.InvariantCulture)),
+            onRefreshed: _ => { repainted = true; return Task.CompletedTask; });
+        Assert.Equal(SnapshotRefreshOutcome.Unchanged, result.Outcome);
+        Assert.False(repainted);
+        _snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<AdminTotalTrackedMoneySnapshot>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TotalTrackedMoney_StorageFailures_DoNotDiscardFreshAmount(bool readFails)
+    {
+        const string key = "admin-total-tracked-money-pln:1";
+        if (readFails)
+            _snapshots.Setup(x => x.GetAsync<AdminTotalTrackedMoneySnapshot>(key)).ThrowsAsync(new InvalidOperationException("Storage unavailable"));
+        else
+            _snapshots.Setup(x => x.SetAsync(key, It.IsAny<AdminTotalTrackedMoneySnapshot>())).ThrowsAsync(new InvalidOperationException("Storage unavailable"));
+        decimal? rendered = null;
+        var result = await CreateStore().RefreshTotalTrackedMoneyAsync(1, new RefreshVersionGate(), () => Task.FromResult<decimal?>(1.25m),
+            onRefreshed: model => { rendered = model.Amount; return Task.CompletedTask; });
+        Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
+        Assert.Equal(1.25m, rendered);
+    }
+
+    [Fact]
     public async Task UsersCount_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
     {
         const string key = "admin-users-count:1";

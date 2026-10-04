@@ -34,11 +34,11 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<int?> GetTotalTrackedMoney()
+    public async Task<decimal?> GetTotalTrackedMoney()
     {
         try
         {
-            return await httpClient.GetFromJsonAsync<int?>($"{httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
+            return await httpClient.GetFromJsonAsync<decimal?>($"{httpClient.BaseAddress}api/AdministrationUsers/GetTotalTrackedMoney");
         }
         catch
         {

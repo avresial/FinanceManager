@@ -81,16 +81,16 @@
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <div class="fm-card-info-header">
-                        <CardInfoTooltip Text="Combined balance of all tracked accounts across all users."
+                        <CardInfoTooltip Text="Combined balance of all tracked accounts across all users, converted to PLN."
                                          AriaLabel="About total tracked money card">
                             <MudText>Total tracked money</MudText>
                         </CardInfoTooltip>
                     </div>
-                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
+                    <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary" Style="overflow-wrap: anywhere;">
                         <b>
                             @if (_totalTrackedMoney.HasValue)
                             {
-                                @_totalTrackedMoney
+                                @(_totalTrackedMoney.Value.ToString("N2"))<span> PLN</span>
                             }
                             else
                             {
