@@ -7,7 +7,7 @@ public static class TransactionRowPresentation
 {
     // Ordered: first matching keyword wins. Labels are free text, so matching is keyword based
     // and anything unknown falls back to the direction of the money flow.
-    private static readonly (string[] Keywords, string Icon)[] LabelIcons =
+    private static readonly (string[] Keywords, string Icon)[] _labelIcons =
     [
         (["salary", "wage", "payroll", "paycheck", "income"], Icons.Material.Filled.Payments),
         (["grocer", "food", "supermarket", "restaurant", "cafe", "dining"], Icons.Material.Filled.ShoppingCart),
@@ -25,7 +25,7 @@ public static class TransactionRowPresentation
     {
         if (!string.IsNullOrWhiteSpace(labelName))
         {
-            foreach (var (keywords, icon) in LabelIcons)
+            foreach (var (keywords, icon) in _labelIcons)
             {
                 if (keywords.Any(keyword => labelName.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
                     return icon;
