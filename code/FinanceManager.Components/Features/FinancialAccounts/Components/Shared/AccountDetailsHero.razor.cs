@@ -15,6 +15,8 @@ public partial class AccountDetailsHero
     [Parameter] public decimal BalanceChange { get; set; }
     [Parameter] public decimal? BalanceChangePercent { get; set; }
     [Parameter] public string ChangeLabel { get; set; } = "Change";
+    /// <summary>Optional caption under the change figure that says what it measures.</summary>
+    [Parameter] public string? ChangeDescription { get; set; }
     [Parameter] public bool ShowChangeRange { get; set; } = true;
     /// <summary>
     /// Label of the range currently on screen. The hero only reports it beside the balance

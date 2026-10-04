@@ -1,5 +1,7 @@
 @page "/CashFlowForecast"
 @using ApexCharts
+@using FinanceManager.Components.Features.MoneyFlow.Models
+@using FinanceManager.Components.Shared.Helpers
 @using FinanceManager.Domain.MoneyFlow.Entities
 
 <PageTitle>Cash flow forecast</PageTitle>
@@ -16,15 +18,14 @@
                 A deterministic projection from your current cash balances and recurring activity.
             </MudText>
         </div>
-        <MudButtonGroup Variant="Variant.Outlined" Color="MudBlazor.Color.Primary" aria-label="Forecast horizon">
+        <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
+                        SelectionMode="SelectionMode.SingleSelection" Color="MudBlazor.Color.Primary"
+                        Outlined="true" CheckMark="true" aria-label="Forecast horizon">
             @foreach (var horizon in Horizons)
             {
-                <MudButton Variant="@(horizon == _horizonDays ? Variant.Filled : Variant.Outlined)"
-                           OnClick="@(() => SelectHorizon(horizon))">
-                    @horizon days
-                </MudButton>
+                <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
             }
-        </MudButtonGroup>
+        </MudToggleGroup>
     </div>
 
     @if (_hasError)
@@ -81,24 +82,37 @@
         {
             <MudPaper Outlined Class="pa-4">
                 <MudText Typo="Typo.h6" Class="mb-2">Expected activity</MudText>
-                <MudList T="CashFlowForecastTransaction" Dense="true" ReadOnly="true">
-                    @foreach (var transaction in _forecast.ExpectedTransactions)
+                @foreach (var month in _activityMonths)
+                {
+                    <div class="d-flex justify-space-between align-baseline gap-3 mt-3 pb-1 cash-flow-month-heading">
+                        <MudText Typo="Typo.subtitle2" HtmlTag="h3">@month.Month.ToString("MMMM yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Color="@AmountSign.ColorFor(month.Net)" Class="fm-tabular">
+                            Net @FormatAmount(month.Net)
+                        </MudText>
+                    </div>
+                    @foreach (var row in month.Rows)
                     {
-                        <MudListItem T="CashFlowForecastTransaction">
-                            <div class="d-flex justify-space-between align-center gap-3 w-100">
-                                <div class="text-truncate">
-                                    <MudText Typo="Typo.body2" Class="text-truncate">@transaction.Description</MudText>
-                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">
-                                        @transaction.Date.ToString("d MMM yyyy") · @transaction.Cadence
-                                    </MudText>
-                                </div>
-                                <MudText Typo="Typo.body2" Class="@(transaction.Amount >= 0 ? "cash-flow-inflow" : "cash-flow-outflow")">
-                                    @FormatAmount(transaction.Amount)
+                        <div class="d-flex justify-space-between align-center gap-3 py-2 cash-flow-row">
+                            <div class="cash-flow-row-name">
+                                <MudText Typo="Typo.body2" Class="text-truncate">@row.Transaction.Description</MudText>
+                                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">
+                                    @row.Transaction.Date.ToString("d MMM") · @row.Transaction.Cadence
                                 </MudText>
                             </div>
-                        </MudListItem>
+                            <div class="cash-flow-row-amounts">
+                                <MudText Typo="Typo.body2" Color="@AmountSign.ColorFor(row.Transaction.Amount)" Class="fm-tabular cash-flow-amount">
+                                    @FormatAmount(row.Transaction.Amount)
+                                </MudText>
+                                @if (row.RunningBalance is decimal runningBalance)
+                                {
+                                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default" Class="fm-tabular cash-flow-amount">
+                                        Balance @($"{runningBalance:N2} {_currency}")
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
                     }
-                </MudList>
+                }
             </MudPaper>
         }
     }

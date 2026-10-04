@@ -1,3 +1,4 @@
+@using FinanceManager.Components.Shared.Helpers
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
@@ -11,19 +12,23 @@
                 <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-actions">
                     <MudText Typo="Typo.caption" Color="Color.Default">@Entries.Count() @(Entries.Count() == 1 ? "entry" : "entries")</MudText>
                     <MudText Typo="Typo.caption" Class="fm-tabular"
-                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
-                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @Currency
+                             Color="@AmountSign.ColorFor(DailyNet)">
+                        @AmountSign.PrefixFor(DailyNet)@DailyNet.ToString("N2") @Currency
                     </MudText>
                 </MudStack>
             </MudStack>
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent Class="pa-0">
+        <div class="@(IsMobile ? "px-4" : "px-2") d-flex justify-end">
+            <MudText Typo="Typo.overline" Color="Color.Default" Style="@(IsMobile ? "" : "min-width: 110px; text-align: right;")">Balance</MudText>
+        </div>
         <MudStack Spacing="0">
             @foreach (var entry in Entries)
             {
                 <TransactionRow @key="entry.EntryId" Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile"
-                                InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)" />
+                                InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)"
+                                SiblingsShareSameTime="@_siblingsShareSameTime" />
                 <MudDivider />
             }
         </MudStack>
@@ -37,6 +42,9 @@
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public int? HighlightedEntryId { get; set; }
+
+    private bool _siblingsShareSameTime =>
+        TransactionRowPresentation.AllShareSameTime(Entries.Select(e => e.PostingDate.ToLocalTime()));
 
     private decimal DailyNet => Entries.Sum(e => e.ValueChange);
 }

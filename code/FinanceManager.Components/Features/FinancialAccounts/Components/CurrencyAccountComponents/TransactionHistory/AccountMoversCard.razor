@@ -77,12 +77,12 @@
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@entryRank.ToString("00")</MudText>
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-                        <MudText Typo="Typo.body2">@GetTitle(entry)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Default">
+                        <MudText Typo="Typo.body2" Class="text-truncate">@GetTitle(entry)</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate">
                             @entry.PostingDate.ToString("dd MMM") · @GetCategory(entry)
                         </MudText>
                     </MudStack>
-                    <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent">
+                    <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent" Style="white-space: nowrap; flex-shrink: 0;">
                         @(entry.ValueChange >= 0 ? "+" : "")@entry.ValueChange.ToString("N2") @Currency
                     </MudText>
                 </MudStack>

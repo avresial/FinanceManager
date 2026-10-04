@@ -2,12 +2,25 @@
     min-height: 360px;
 }
 
-.cash-flow-inflow {
-    color: var(--mud-palette-success);
-    white-space: nowrap;
+.cash-flow-month-heading {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
-.cash-flow-outflow {
-    color: var(--mud-palette-error);
+.cash-flow-row + .cash-flow-row {
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
+.cash-flow-row-name {
+    min-width: 0;
+}
+
+.cash-flow-row-amounts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.cash-flow-amount {
     white-space: nowrap;
 }

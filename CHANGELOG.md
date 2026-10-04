@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Make the forecast, transaction, subscription and investment lists easier to scan: a visible selected state, coloured signed amounts, month headings and a running balance on the cash flow forecast; one Balance column header, no repeated or placeholder times and category icons on transaction rows; a per-card actions menu and cadence filter on subscriptions; separate Cash impact and Gain / loss columns on investment trades; and clearer captions on the bond header and appreciation card. #877
 - Show total tracked money in PLN on the admin dashboard, paint its last value immediately while refreshing, and retain it if refresh fails. #840
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837
