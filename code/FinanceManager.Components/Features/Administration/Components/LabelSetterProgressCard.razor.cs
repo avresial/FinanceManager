@@ -1,5 +1,6 @@
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Dtos;
@@ -46,18 +47,28 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
             return;
         }
 
+        LabelSetterProgressSnapshot? fetched = null;
         var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<LabelSetterProgressCardSnapshot, LabelSetterProgressSnapshot>
         {
             Key = $"admin-label-setter-progress:{userId}",
             Gate = _gate,
             ClaimedVersion = version,
             ToModel = snapshot => snapshot.UserId == userId ? snapshot.Progress : null,
-            FetchAsync = () => ProgressHttpClient.GetSnapshot(),
+            FetchAsync = async () => fetched = await ProgressHttpClient.GetSnapshot(),
             ToSnapshot = progress => ToSnapshot(userId, progress),
             ContentComparer = DisplayedContentComparer.Instance,
             OnSnapshotPainted = PaintStoredAsync,
             OnRefreshed = ShowAsync,
         });
+
+        // The coordinator compares against storage, which lags the screen when a live event's write failed,
+        // so a current successful read is applied to whatever is displayed even when it reports Unchanged.
+        if (fetched is not null && result.Outcome != SnapshotRefreshOutcome.Failed && _gate.IsCurrent(version))
+        {
+            _loadError = null;
+            await ShowAsync(fetched);
+            return;
+        }
 
         // A failed read only blocks the card while nothing is on screen (a live event may already have filled it).
         if (result.IsBlockingFailure && _snapshot is null)
@@ -73,7 +84,10 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
         {
             var progress = await ProgressHttpClient.GetSnapshot();
             if (progress is not null && _gate.IsCurrent(version))
+            {
+                _loadError = null;
                 await ShowAsync(progress);
+            }
         }
         catch (Exception ex)
         {
@@ -90,6 +104,7 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
     {
         _gate.Claim();
         _loadError = null;
+        _liveUpdatesError = null;
         await ShowAsync(progress);
 
         if (_userId is not int userId)
@@ -139,6 +154,9 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
             _hubConnection.Reconnected += async _ =>
             {
                 await _hubConnection.InvokeAsync("Subscribe");
+                _liveUpdatesError = null;
+                if (!_disposed)
+                    await InvokeAsync(StateHasChanged);
                 // Events missed while disconnected are recovered by a read that a newer event can still outrank.
                 await RefreshAsync();
             };

@@ -205,6 +205,66 @@ public sealed class LabelSetterProgressCardTests
         response.SetResult(Json(Progress(processed: 3)));
     }
 
+    [Fact]
+    public async Task ReconnectRead_EqualToStorage_ReplacesLiveStateWhoseWriteFailed()
+    {
+        var snapshots = SnapshotsWith(7, Progress(processed: 3));
+        snapshots.Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<LabelSetterProgressCardSnapshot>()))
+            .ThrowsAsync(new InvalidOperationException("quota"));
+        var initial = Task.FromResult(Json(Progress(processed: 3)));
+        var reconnect = Task.FromResult(Json(Progress(processed: 3)));
+        using var handler = new StubHandler(initial, reconnect);
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<LabelSetterProgressCard>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Requests), _timeout);
+
+        await cut.InvokeAsync(() => cut.Instance.ApplyLiveProgressAsync(Progress(processed: 8)));
+        cut.WaitForAssertion(() => Assert.Contains("8 / 10", cut.Markup), _timeout);
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+
+        cut.WaitForAssertion(() => Assert.Contains("3 / 10", cut.Markup), _timeout);
+        Assert.DoesNotContain("8 / 10", cut.Markup);
+    }
+
+    [Fact]
+    public async Task InitialFailure_ThenSuccessfulIdleReconnectRead_ClearsLoadError()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        using var handler = new StubHandler(
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)),
+            Task.FromResult(Json(new LabelSetterProgressSnapshot(null, 0))));
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<LabelSetterProgressCard>();
+        cut.WaitForAssertion(() => Assert.Contains("Failed to load progress", cut.Markup), _timeout);
+
+        await cut.InvokeAsync(() => cut.Instance.RefreshAsync());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No active labelling job.", cut.Markup);
+            Assert.DoesNotContain("Failed to load progress", cut.Markup);
+        }, _timeout);
+    }
+
+    [Fact]
+    public async Task LiveEvent_ClearsLiveUpdatesWarning()
+    {
+        var snapshots = SnapshotsWith(7, Progress(processed: 3));
+        using var handler = new StubHandler(Task.FromResult(Json(Progress(processed: 3))));
+        await using var context = Context(snapshots, handler);
+        var cut = context.Render<LabelSetterProgressCard>();
+        // No hub listens in tests, so the connection attempt fails and shows the warning.
+        cut.WaitForAssertion(() => Assert.Contains("Live updates disabled", cut.Markup), _timeout);
+
+        await cut.InvokeAsync(() => cut.Instance.ApplyLiveProgressAsync(Progress(processed: 8)));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("8 / 10", cut.Markup);
+            Assert.DoesNotContain("Live updates disabled", cut.Markup);
+        }, _timeout);
+    }
+
     private static LabelSetterProgressSnapshot Progress(int processed, int queued = 0) =>
         new(new LabelSetterJobProgress(5, 7, 10, processed, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)), queued);
 
