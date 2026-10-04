@@ -34,7 +34,7 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     {
         string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetNetCashFlow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The net-cash-flow response body was null.");
     }
 
     public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
@@ -73,14 +73,14 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
     {
         string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetLabelsValue?userId={userId}&start={start:O}&end={end:O}";
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The financial-label response body was null.");
     }
 
     public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
     {
         string endpoint = $"{httpClient.BaseAddress}api/ExpenseDistribution/GetExpenseDistribution/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<NameValueResult>>(endpoint);
-        return result ?? [];
+        return result ?? throw new JsonException("The expense-distribution response body was null.");
     }
 
     public async IAsyncEnumerable<InvestmentRate> GetInvestmentRate(int userId, Currency currency, DateTime start, DateTime end)
