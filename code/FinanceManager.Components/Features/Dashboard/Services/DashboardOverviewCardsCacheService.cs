@@ -1,34 +1,14 @@
-using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Components.Shared.Helpers;
-using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Components.Features.Dashboard.Services;
 
-public class DashboardOverviewCardsCacheService(
-    ILocalStorageService localStorageService,
-    IMemoryCache memoryCache,
-    MoneyFlowHttpClient moneyFlowHttpClient,
-    ILogger<DashboardOverviewCardsCacheService> logger)
-    : LocalStorageStateCacheService<DashboardOverviewCardsCacheSnapshot, DashboardOverviewCardsRefreshContext, string>(
-        localStorageService,
-        memoryCache,
-        logger,
-        _cacheKeyPrefix)
+public class DashboardOverviewCardsCacheService(MoneyFlowHttpClient moneyFlowHttpClient)
 {
-    private const string _cacheKeyPrefix = "dashboard-overview-cards-cache-v1";
-    private static readonly TimeSpan _maxStale = TimeSpan.FromMinutes(5);
-
     private readonly Dictionary<(int UserId, int CurrencyId, DateTime Start, DateTime End), Task<DashboardOverviewCardsCacheSnapshot>> _freshRequests = [];
 
-    public virtual Task<DashboardOverviewCardsCacheSnapshot> GetSnapshotAsync(DashboardOverviewCardsRefreshContext context)
-        => GetOrRefreshAsync(context);
-
-    // Share only overlapping requests. A later visit always starts a fresh request, and the TTL cache is neither read nor written.
+    // Share only overlapping requests. A later visit always starts a fresh request.
     public virtual async Task<DashboardOverviewCardsCacheSnapshot> GetFreshAsync(DashboardOverviewCardsRefreshContext context)
     {
         var key = (context.UserId, context.CurrencyId, context.StartDateTime.Date, context.EndDateTime);
@@ -55,10 +35,7 @@ public class DashboardOverviewCardsCacheService(
         }
     }
 
-    protected override string GetCacheKey(DashboardOverviewCardsRefreshContext refreshContext)
-        => BuildCacheKey(refreshContext.UserId, refreshContext.CurrencyId, refreshContext.StartDateTime, refreshContext.EndDateTime);
-
-    protected override async Task<DashboardOverviewCardsCacheSnapshot> BuildStateAsync(DashboardOverviewCardsRefreshContext refreshContext)
+    private async Task<DashboardOverviewCardsCacheSnapshot> BuildStateAsync(DashboardOverviewCardsRefreshContext refreshContext)
     {
         var startDate = refreshContext.StartDateTime.Date;
         var endDate = refreshContext.EndDateTime;
@@ -72,35 +49,14 @@ public class DashboardOverviewCardsCacheService(
 
         var snapshot = new DashboardOverviewCardsCacheSnapshot
         {
-            SchemaVersion = DashboardOverviewCardsCacheSnapshot.CurrentSchemaVersion,
             UserId = refreshContext.UserId,
             CurrencyId = refreshContext.CurrencyId,
             StartDateTime = startDate,
             EndDateTime = endDate,
-            FetchedAtUtc = DateTime.UtcNow,
             NetCashFlowSeries = [.. (await netCashFlowTask)],
             ClosingBalanceSeries = [.. (await closingBalanceTask)],
         };
 
         return snapshot;
     }
-
-    protected override bool IsUsable(DashboardOverviewCardsCacheSnapshot? state, string cacheKey, DateTime utcNow)
-    {
-        if (state is null)
-            return false;
-
-        if (state.SchemaVersion != DashboardOverviewCardsCacheSnapshot.CurrentSchemaVersion)
-            return false;
-
-        if (utcNow - state.FetchedAtUtc > _maxStale)
-            return false;
-
-        return BuildCacheKey(state.UserId, state.CurrencyId, state.StartDateTime, state.EndDateTime) == cacheKey;
-    }
-
-    // Presets clamp the range end to the current clock, so only the day of each bound reaches the key —
-    // see CacheKeyDate. One entry per picked range is intended here; one per visit is not.
-    private static string BuildCacheKey(int userId, int currencyId, DateTime startDateTime, DateTime endDateTime)
-        => $"{userId}:{currencyId}:{CacheKeyDate.ToSegment(startDateTime)}:{CacheKeyDate.ToSegment(endDateTime)}";
 }
