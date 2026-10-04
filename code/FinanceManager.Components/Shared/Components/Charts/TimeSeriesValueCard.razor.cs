@@ -220,7 +220,7 @@ public partial class TimeSeriesValueCard
                 Animations = new Animations { Enabled = true, Speed = 400 },
             },
             Colors = [Accent],
-            Stroke = new Stroke { Curve = Curve.Smooth, Width = 2.5, LineCap = LineCap.Round },
+            Stroke = new Stroke { Curve = Curve.Stepline, Width = 2.5, LineCap = LineCap.Round },
             DataLabels = new DataLabels { Enabled = false },
             Legend = new Legend { Show = false },
             Fill = new Fill
