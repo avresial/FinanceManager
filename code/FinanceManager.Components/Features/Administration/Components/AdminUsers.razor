@@ -36,7 +36,7 @@
             <MudProgressLinear Color="Color.Primary" Value="@context.RecordCapacity.GetStorageUsedPercentage()" />
         </MudTd>
         <MudTd DataLabel="Last logged at">
-            @(context.LastLoggedAt is DateTime lastLoggedAt ? lastLoggedAt.ToString("yyyy-MM-dd") : "Never")
+            @(context.LastLoggedAt is DateTime lastLoggedAt ? DateFormatter.Format(lastLoggedAt) : "Never")
         </MudTd>
         <MudTd DataLabel="Action">
             <MudMenu Label="Action" Variant="Variant.Text">

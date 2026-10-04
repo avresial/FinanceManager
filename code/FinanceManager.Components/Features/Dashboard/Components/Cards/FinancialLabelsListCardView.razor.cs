@@ -1,3 +1,4 @@
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -56,12 +57,12 @@ public partial class FinancialLabelsListCardView
         _maxOut = _spending.Count > 0 ? _spending.Max(x => Math.Abs(x.Value)) : 1m;
     }
 
-    // Signed money — space thousands, dot decimal, currency suffix. Tabular figures applied in markup.
+    // Money via the shared formatter; tabular figures are applied in markup.
     private string Fmt(decimal value, bool showPlus = false)
     {
-        var body = Math.Abs(value).ToString("#,##0.00", CultureInfo.InvariantCulture).Replace(",", " ");
-        var prefix = value < 0 ? "-" : (showPlus && value > 0 ? "+" : string.Empty);
-        return $"{prefix}{body} {CurrencyShortName}";
+        return showPlus
+            ? MoneyFormatter.FormatSigned(value, CurrencyShortName)
+            : MoneyFormatter.Format(value, CurrencyShortName);
     }
 
     private static double BarPercentage(decimal value, decimal groupMax) =>

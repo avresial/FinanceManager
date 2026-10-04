@@ -197,12 +197,7 @@ public partial class TimeSeriesValueCard
         StateHasChanged();
     }
 
-    // "12 480.00 PLN" - two decimals, non-breaking-space (U+00A0) thousands separator, currency suffix.
-    private string FormatMoney(decimal value)
-    {
-        var nbsp = ((char)0x00A0).ToString();
-        return value.ToString("N2", CultureInfo.InvariantCulture).Replace(",", nbsp) + nbsp + CurrencyShortName;
-    }
+    private string FormatMoney(decimal value) => MoneyFormatter.Format(value, CurrencyShortName);
 
     private void BuildOptions()
     {

@@ -1,6 +1,7 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Alerts.Models;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Dtos;
@@ -352,7 +353,7 @@ public partial class AlertsPage : ComponentBase
     };
 
     private static string GetConditionLabel(FinancialAlertDto alert) =>
-        $"{ComparisonLabel(alert.ComparisonOperator)} {alert.Threshold:N2}";
+        $"{ComparisonLabel(alert.ComparisonOperator)} {MoneyFormatter.FormatNumber(alert.Threshold)}";
 
     private string StatusLabel(FinancialAlertDto alert) =>
         _outcomes.TryGetValue(alert.Id, out var outcome)

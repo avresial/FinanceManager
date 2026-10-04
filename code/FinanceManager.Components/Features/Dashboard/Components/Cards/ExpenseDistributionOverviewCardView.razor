@@ -18,7 +18,7 @@
             }
             else if (TotalExpenses != 0)
             {
-                <MudText Class="ed-total">@TotalExpenses.ToString("0.00") @CurrencyShortName</MudText>
+                <MudText Class="ed-total">@MoneyFormatter.Format(TotalExpenses, CurrencyShortName)</MudText>
             }
         </div>
     </MudPaper>
@@ -57,7 +57,7 @@
                                 <span class="ed-legend-dot" style="background: @color"></span>
                                 <span class="ed-legend-name">@item.Name</span>
                                 <span class="ed-legend-vals">
-                                    <span class="ed-legend-amt">@item.Value.ToString("0.00")</span>
+                                    <span class="ed-legend-amt">@MoneyFormatter.Format(item.Value, CurrencyShortName)</span>
                                     <span class="ed-legend-pct">@pct.ToString("0.0")%</span>
                                 </span>
                             </div>

@@ -124,7 +124,7 @@
                         <div class="d-flex align-start justify-space-between gap-2">
                             <div>
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Date</MudText>
-                                <MudText Typo="Typo.body2">@transaction.PostingDate.ToString("yyyy-MM-dd")</MudText>
+                                <MudText Typo="Typo.body2">@DateFormatter.Format(transaction.PostingDate)</MudText>
                             </div>
                             <div class="text-right">
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Account</MudText>
@@ -145,7 +145,7 @@
                             </div>
                             <div class="text-right flex-shrink-0">
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Value</MudText>
-                                <MudText Typo="Typo.body2">@transaction.Amount.ToString("N2")</MudText>
+                                <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(transaction.Amount)</MudText>
                             </div>
                         </div>
                     </div>

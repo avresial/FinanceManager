@@ -123,10 +123,10 @@
                                     @foreach (var row in _mappedPreview)
                                     {
                                         <tr>
-                                            <td>@row.PostingDate.ToString("dd-MM-yyyy")</td>
+                                            <td>@DateFormatter.Format(row.PostingDate)</td>
                                             <td>
                                                 <MudText Inline="true" Color="@(row.ValueChange < 0 ? Color.Error : Color.Success)">
-                                                    @(row.ValueChange > 0 ? "+" : "")@row.ValueChange.ToString("0.00")
+                                                    @MoneyFormatter.FormatSigned(row.ValueChange)
                                                 </MudText>
                                             </td>
                                             <td>@(row.ContractorDetails ?? "-")</td>

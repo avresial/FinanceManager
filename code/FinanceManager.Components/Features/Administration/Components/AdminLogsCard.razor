@@ -53,7 +53,7 @@
                                         @entry.Message
                                     </MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @entry.Category · @entry.TimestampUtc.ToLocalTime().ToString("g")
+                                        @entry.Category · @DateFormatter.FormatDateTime(entry.TimestampUtc.ToLocalTime())
                                     </MudText>
                                 </MudStack>
                             </MudStack>

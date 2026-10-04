@@ -167,7 +167,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         request?.Dispose();
     }
 
-    private string FormatAmount(decimal amount) => $"{(amount >= 0 ? "+" : string.Empty)}{amount:N2} {_currency}";
+    private string FormatAmount(decimal amount) => MoneyFormatter.FormatSigned(amount, _currency);
 
     private static ApexChartOptions<TimeSeriesModel> BuildChartOptions() => new()
     {

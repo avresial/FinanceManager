@@ -50,7 +50,7 @@ else
                                 {
                                     <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                                              Icon="@Icons.Material.Filled.TrendingUp">
-                                        @($"+{item.PriceDelta:N2} {Currency}")
+                                        @MoneyFormatter.FormatSigned(item.PriceDelta, Currency)
                                     </MudChip>
                                 }
                             </div>
@@ -68,22 +68,22 @@ else
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Next expected</MudText>
                             <MudText Typo="Typo.body1" Class="font-weight-600">
-                                @(item.IsCancelled ? "—" : item.NextExpectedChargeDate.ToString("dd MMM yyyy"))
+                                @(item.IsCancelled ? "—" : DateFormatter.Format(item.NextExpectedChargeDate))
                             </MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Last charge</MudText>
                             <MudText Typo="Typo.body1" Class="font-weight-600">
-                                @($"{item.LastAmount:N2} {Currency}")
+                                @MoneyFormatter.Format(item.LastAmount, Currency)
                             </MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Monthly equivalent</MudText>
-                            <MudText Typo="Typo.body1">@($"{item.MonthlyCost:N2} {Currency}")</MudText>
+                            <MudText Typo="Typo.body1">@MoneyFormatter.Format(item.MonthlyCost, Currency)</MudText>
                         </MudItem>
                         <MudItem xs="6">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Annual cost</MudText>
-                            <MudText Typo="Typo.body1">@($"{item.AnnualCost:N2} {Currency}")</MudText>
+                            <MudText Typo="Typo.body1">@MoneyFormatter.Format(item.AnnualCost, Currency)</MudText>
                         </MudItem>
                     </MudGrid>
 

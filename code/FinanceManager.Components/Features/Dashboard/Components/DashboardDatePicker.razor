@@ -38,7 +38,7 @@
 @* Hidden picker opened programmatically by the Custom range option; the Dialog variant matches
    the custom-range picker on the account details pages. *@
 <div class="fm-dashboard-custom-range-picker">
-    <MudDateRangePicker @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="dd/MM/yyyy"
+    <MudDateRangePicker @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
                         DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
 </div>
 
@@ -72,9 +72,7 @@
     private string CurrentDisplayLabel => _selected switch
     {
         DateRangeHelper.CustomRangeKey when _customRange is { Start: DateTime start, End: DateTime end } =>
-            start.Year == end.Year
-                ? $"{start:dd MMM} \u2013 {end:dd MMM yyyy}"
-                : $"{start:dd MMM yyyy} \u2013 {end:dd MMM yyyy}",
+            DateFormatter.FormatRange(start, end),
         DateRangeHelper.CustomRangeKey => "Custom range",
         _ => _presets.FirstOrDefault(preset => preset.Key == _selected).Label ?? "Select range"
     };

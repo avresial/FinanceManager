@@ -35,7 +35,7 @@
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.subtitle2">Unit value</MudText>
-                    <MudText>@Details.UnitValue.ToString("0.00") @Details.Currency.ShortName</MudText>
+                    <MudText>@MoneyFormatter.Format(Details.UnitValue, Details.Currency.ShortName)</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.subtitle2">Capitalization</MudText>
@@ -82,5 +82,5 @@
 
     private void Close() => MudDialog?.Close();
 
-    private static string FormatDate(DateOnly date) => date.ToString("dd-MM-yyyy");
+    private static string FormatDate(DateOnly date) => DateFormatter.Format(date);
 }

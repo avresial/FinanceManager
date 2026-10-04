@@ -27,7 +27,7 @@ public class RecurringTransactionDetectorCardViewTests
 
         Assert.Contains("Monthly salary", cut.Markup);
         var incomeAmount = cut.FindAll(".mud-typography")
-            .Single(element => Regex.IsMatch(element.TextContent, @"\+5000[.,]00 PLN/mo"));
+            .Single(element => Regex.IsMatch(element.TextContent, @"\+5,000\.00 PLN/mo"));
         Assert.Contains("mud-success-text", incomeAmount.ClassList);
     }
 }

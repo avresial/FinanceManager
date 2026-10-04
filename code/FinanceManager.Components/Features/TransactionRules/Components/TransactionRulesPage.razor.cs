@@ -1,6 +1,7 @@
 using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
@@ -559,10 +560,10 @@ public partial class TransactionRulesPage : ComponentBase
     private static string DescribeAmount(TransactionRuleConditionDto condition)
     {
         if (condition.Threshold is decimal threshold)
-            return $"{condition.Direction} amount {DescribeComparison(condition.Comparison)} {threshold:N2}";
+            return $"{condition.Direction} amount {DescribeComparison(condition.Comparison)} {MoneyFormatter.FormatNumber(threshold)}";
         var bounds = new List<string>();
-        if (condition.MinAmount is decimal min) bounds.Add($"at least {min:N2}");
-        if (condition.MaxAmount is decimal max) bounds.Add($"at most {max:N2}");
+        if (condition.MinAmount is decimal min) bounds.Add($"at least {MoneyFormatter.FormatNumber(min)}");
+        if (condition.MaxAmount is decimal max) bounds.Add($"at most {MoneyFormatter.FormatNumber(max)}");
         return $"{condition.Direction} amount {string.Join(" and ", bounds)} (inclusive)";
     }
 

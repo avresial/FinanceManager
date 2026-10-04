@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Show money and dates the same way everywhere: amounts as `27,771.00 PLN` with the currency, and dates as `4 Oct 2026` or `4 Sep – 4 Oct 2026` instead of mixed numeric day/month formats. #875
 - Show total tracked money in PLN on the admin dashboard, paint its last value immediately while refreshing, and retain it if refresh fails. #840
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837

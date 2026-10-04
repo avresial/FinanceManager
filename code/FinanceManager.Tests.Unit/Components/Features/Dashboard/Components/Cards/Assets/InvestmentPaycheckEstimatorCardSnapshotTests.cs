@@ -40,7 +40,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         {
             cut.WaitForAssertion(() => Assert.Contains("400.00", cut.Markup));
             Assert.Contains("5,000", cut.Markup);
-            Assert.Contains("120000.00 PLN", cut.Markup);
+            Assert.Contains("120,000.00 PLN", cut.Markup);
             Assert.Contains("withdrawalRate=0.04", handler.Request!.RequestUri!.Query);
         }
         finally
@@ -92,7 +92,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("600.00", cut.Markup);
-            Assert.Contains("180000.00 PLN", cut.Markup);
+            Assert.Contains("180,000.00 PLN", cut.Markup);
         });
         await WaitFor(handler.Completed.Task);
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
@@ -149,7 +149,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
 
         cut.WaitForAssertion(() => Assert.Contains("400.00", cut.Markup));
-        Assert.Contains("120000.00 PLN", cut.Markup);
+        Assert.Contains("120,000.00 PLN", cut.Markup);
         snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<InvestmentPaycheckSourceSnapshot>()), Times.Never);
     }
 
@@ -209,7 +209,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
 
         cut.WaitForAssertion(() => Assert.Contains("400.00", cut.Markup));
-        Assert.Contains("120000.00 PLN", cut.Markup);
+        Assert.Contains("120,000.00 PLN", cut.Markup);
         snapshots.Verify(service => service.RemoveAsync(_key), Times.Once);
         snapshots.Verify(service => service.SetAsync(_key, It.IsAny<InvestmentPaycheckSourceSnapshot>()), Times.Once);
     }
@@ -255,7 +255,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(newReadStarted.Task);
         newRead.SetResult(Snapshot(Source(999_000m, 3, 90_000m), userId: 7, currencyId: 0));
         await WaitFor(handler.Started.Task);
-        Assert.DoesNotContain("999000.00", cut.Markup);
+        Assert.DoesNotContain("999,000.00", cut.Markup);
         Assert.DoesNotContain("90,000", cut.Markup);
 
         handler.Complete(Estimate(180_000m, 3, 6_000m));
@@ -268,7 +268,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("600.00", cut.Markup);
-            Assert.Contains("180000.00 USD", cut.Markup);
+            Assert.Contains("180,000.00 USD", cut.Markup);
         });
         snapshots.Verify(service => service.SetAsync(newKey, It.Is<InvestmentPaycheckSourceSnapshot>(snapshot => snapshot.UserId == 8 && snapshot.CurrencyId == 1)), Times.Once);
         snapshots.Verify(service => service.SetAsync(_key, It.IsAny<InvestmentPaycheckSourceSnapshot>()), Times.Never);
@@ -308,7 +308,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(handler.WaitCompleted(1));
         var coordinator = context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>();
         await WaitFor(coordinator.WaitCompleted(1));
-        cut.WaitForAssertion(() => Assert.Contains("120000.00 PLN", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("120,000.00 PLN", cut.Markup));
 
         var refresh = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(
             Microsoft.AspNetCore.Components.ParameterView.FromDictionary(new Dictionary<string, object?>
@@ -316,7 +316,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
                 [nameof(InvestmentPaycheckEstimatorCard.SalaryMonths)] = _salaryMonths,
             })));
         await WaitFor(usdReadStarted.Task);
-        Assert.DoesNotContain("120000.00", cut.Markup);
+        Assert.DoesNotContain("120,000.00", cut.Markup);
 
         usdRead.SetResult(null);
         await WaitFor(handler.WaitStarted(2));
@@ -328,7 +328,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("600.00", cut.Markup);
-            Assert.Contains("180000.00 USD", cut.Markup);
+            Assert.Contains("180,000.00 USD", cut.Markup);
         });
         snapshots.Verify(service => service.SetAsync(usdKey, It.IsAny<InvestmentPaycheckSourceSnapshot>()), Times.Once);
     }
@@ -365,7 +365,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(2));
 
         Assert.Contains("400.00", cut.Markup);
-        Assert.Contains("120000.00 PLN", cut.Markup);
+        Assert.Contains("120,000.00 PLN", cut.Markup);
         Assert.DoesNotContain("currently unavailable", cut.Markup);
         if (readFails)
             snapshots.Verify(service => service.RemoveAsync(_key), Times.Once);
@@ -391,7 +391,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         handler.Complete(1, Estimate(120_000m, 3, 5_000m));
         await WaitFor(handler.WaitCompleted(1));
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
-        cut.WaitForAssertion(() => Assert.Contains("120000.00 PLN", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("120,000.00 PLN", cut.Markup));
 
         var refresh = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(
             Microsoft.AspNetCore.Components.ParameterView.FromDictionary(new Dictionary<string, object?>
@@ -401,7 +401,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(refresh);
 
         Assert.Contains("Investment paycheck data is currently unavailable.", cut.Markup);
-        Assert.DoesNotContain("120000.00 PLN", cut.Markup);
+        Assert.DoesNotContain("120,000.00 PLN", cut.Markup);
     }
 
     [Fact]
@@ -420,7 +420,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         handler.Complete(1, Estimate(120_000m, 3, 5_000m));
         await WaitFor(handler.WaitCompleted(1));
         await WaitFor(context.Services.GetRequiredService<TrackingSnapshotRefreshCoordinator>().WaitCompleted(1));
-        cut.WaitForAssertion(() => Assert.Contains("120000.00 PLN", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("120,000.00 PLN", cut.Markup));
 
         var refresh = cut.InvokeAsync(() => cut.Instance.SetParametersAsync(
             Microsoft.AspNetCore.Components.ParameterView.FromDictionary(new Dictionary<string, object?>
@@ -430,7 +430,7 @@ public sealed class InvestmentPaycheckEstimatorCardSnapshotTests
         await WaitFor(refresh);
 
         Assert.Contains("Investment paycheck data is currently unavailable.", cut.Markup);
-        Assert.DoesNotContain("120000.00 PLN", cut.Markup);
+        Assert.DoesNotContain("120,000.00 PLN", cut.Markup);
         handler.VerifyStartedCount(1);
     }
 

@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
@@ -20,7 +21,7 @@ public partial class PortfolioReturnCard
 
     internal static string FormatReturn(decimal value) => $"{value * 100m:0.00}%";
 
-    internal string RangeText => $"{StartDateTime.ToString("d", CultureInfo.InvariantCulture)} – {EndDateTime.ToString("d", CultureInfo.InvariantCulture)}";
+    internal string RangeText => DateFormatter.FormatRange(StartDateTime, EndDateTime);
     internal int PeriodLength => Math.Max(0, (EndDateTime.Date - StartDateTime.Date).Days + 1);
     internal bool HasAvailableReturn => MoneyWeightedReturn?.IsAvailable == true || TimeWeightedReturn?.IsAvailable == true;
     internal decimal? ExternalCashMovement => Model?.ExternalCashMovement;
@@ -60,5 +61,5 @@ public partial class PortfolioReturnCard
         _ => "Could not load this return.",
     };
 
-    private string FormatAmount(decimal value) => $"{value.ToString("N2", CultureInfo.CurrentCulture)} {Currency.ShortName}";
+    private string FormatAmount(decimal value) => MoneyFormatter.Format(value, Currency.ShortName);
 }

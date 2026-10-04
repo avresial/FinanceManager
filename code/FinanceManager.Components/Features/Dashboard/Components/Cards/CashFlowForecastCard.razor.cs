@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -139,5 +140,5 @@ public partial class CashFlowForecastCard : ComponentBase
         }
     }
 
-    private string FormatMoney(decimal value) => $"{value:N2} {_model?.Currency}";
+    private string FormatMoney(decimal value) => MoneyFormatter.Format(value, _model?.Currency);
 }

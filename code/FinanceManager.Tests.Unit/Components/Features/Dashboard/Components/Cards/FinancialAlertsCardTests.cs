@@ -166,7 +166,7 @@ public sealed class FinancialAlertsCardTests
         Assert.Contains("1 match", header.TextContent);
 
         var detail = cut.Find("[data-testid='alert-detail-occurrences']");
-        Assert.Contains("2026-09-10", detail.TextContent);
+        Assert.Contains("10 Sep 2026", detail.TextContent);
         Assert.Contains("Account", detail.TextContent);
         Assert.Contains("#5", detail.TextContent);
         Assert.Contains("Transaction #42", detail.TextContent);
@@ -175,7 +175,7 @@ public sealed class FinancialAlertsCardTests
         var link = detail.QuerySelector("a[href='/AccountDetails/5?entryId=42']");
         Assert.NotNull(link);
         Assert.Equal("Apple Inc", link.TextContent.Trim());
-        Assert.Equal("Inspect Apple Inc · 2026-09-10", link.GetAttribute("aria-label"));
+        Assert.Equal("Inspect Apple Inc · 10 Sep 2026", link.GetAttribute("aria-label"));
 
         await cut.Find("button[aria-label='Back to alerts']").ClickAsync();
         Assert.NotNull(cut.Find("[data-testid='alert-summary-list']"));
@@ -271,7 +271,7 @@ public sealed class FinancialAlertsCardTests
 
         var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/3?entryId=17']");
         Assert.Equal("Online Service Monthly", link.TextContent.Trim());
-        Assert.Contains("2026-09-08", cut.Markup);
+        Assert.Contains("8 Sep 2026", cut.Markup);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public sealed class FinancialAlertsCardTests
 
         var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/4?entryId=88']");
         Assert.Equal("Transaction", link.TextContent.Trim());
-        Assert.Contains("2026-09-05", cut.Markup);
+        Assert.Contains("5 Sep 2026", cut.Markup);
     }
 
     [Fact]

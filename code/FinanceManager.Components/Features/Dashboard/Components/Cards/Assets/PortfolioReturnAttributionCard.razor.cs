@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
@@ -33,7 +34,7 @@ public partial class PortfolioReturnAttributionCard
         _ => "Prices or historical exchange rates are missing for this range.",
     };
 
-    internal string RangeText => $"{StartDateTime.ToString("d", CultureInfo.InvariantCulture)} – {EndDateTime.ToString("d", CultureInfo.InvariantCulture)}";
+    internal string RangeText => DateFormatter.FormatRange(StartDateTime, EndDateTime);
 
     private IReadOnlyList<AttributionStep> AttributionSteps
     {
@@ -172,8 +173,9 @@ public partial class PortfolioReturnAttributionCard
 
     private static string FormatColumnValue(AttributionColumn column)
     {
-        var sign = !column.IsTotal && column.Value > 0m ? "+" : string.Empty;
-        return $"{sign}{column.Value.ToString("N2", CultureInfo.CurrentCulture)}";
+        return column.IsTotal
+            ? MoneyFormatter.FormatNumber(column.Value)
+            : MoneyFormatter.FormatSigned(column.Value);
     }
 
     private static string FormatAxisValue(decimal value) => Math.Abs(value) >= 1000m
@@ -185,8 +187,7 @@ public partial class PortfolioReturnAttributionCard
         if (value is not decimal amount)
             return "—";
 
-        var sign = amount > 0m ? "+" : string.Empty;
-        return $"{sign}{amount.ToString("N2", CultureInfo.CurrentCulture)} {Currency.ShortName}";
+        return MoneyFormatter.FormatSigned(amount, Currency.ShortName);
     }
 
     private sealed record AttributionStep(string Label, decimal Value, decimal Start, decimal End);
