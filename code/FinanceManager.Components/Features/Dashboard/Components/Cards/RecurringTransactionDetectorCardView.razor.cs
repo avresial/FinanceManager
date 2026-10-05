@@ -1,3 +1,4 @@
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -24,4 +25,9 @@ public partial class RecurringTransactionDetectorCardView
         var max = Data.Max(x => x.Value);
         return max == 0 ? 0 : (double)(value / max * 100);
     }
+
+    // Income carries an explicit "+", spend stays unsigned: the card already colours the direction.
+    private string FormatFlow(bool isIncome, decimal value) => isIncome
+        ? MoneyFormatter.FormatSigned(Math.Abs(value), Currency)
+        : MoneyFormatter.Format(Math.Abs(value), Currency);
 }

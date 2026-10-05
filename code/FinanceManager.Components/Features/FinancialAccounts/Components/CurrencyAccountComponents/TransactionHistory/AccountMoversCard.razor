@@ -79,11 +79,11 @@
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
                         <MudText Typo="Typo.body2" Class="text-truncate">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate">
-                            @entry.PostingDate.ToString("dd MMM") · @GetCategory(entry)
+                            @DateFormatter.FormatDayMonth(entry.PostingDate) · @GetCategory(entry)
                         </MudText>
                     </MudStack>
                     <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent" Style="white-space: nowrap; flex-shrink: 0;">
-                        @(entry.ValueChange >= 0 ? "+" : "")@entry.ValueChange.ToString("N2") @Currency
+                        @MoneyFormatter.FormatSigned(entry.ValueChange, Currency)
                     </MudText>
                 </MudStack>
             }

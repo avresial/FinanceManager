@@ -46,7 +46,7 @@
             <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-2">
                 <MudText Typo="Typo.h6">Projected cash balance</MudText>
                 <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">
-                    As of @_forecast.AsOfDate.ToString("d MMM yyyy") · @_forecast.Currency
+                    As of @DateFormatter.Format(_forecast.AsOfDate) · @_forecast.Currency
                 </MudText>
             </div>
             <div class="cash-flow-forecast-chart">
@@ -85,7 +85,7 @@
                 @foreach (var month in _activityMonths)
                 {
                     <div class="d-flex justify-space-between align-baseline gap-3 mt-3 pb-1 cash-flow-month-heading">
-                        <MudText Typo="Typo.subtitle2" HtmlTag="h3">@month.Month.ToString("MMMM yyyy")</MudText>
+                        <MudText Typo="Typo.subtitle2" HtmlTag="h3">@month.Month.ToString("MMMM yyyy", DateFormatter.Culture)</MudText>
                         <MudText Typo="Typo.caption" Color="@AmountSign.ColorFor(month.Net)" Class="fm-tabular">
                             Net @FormatAmount(month.Net)
                         </MudText>
@@ -96,7 +96,7 @@
                             <div class="cash-flow-row-name">
                                 <MudText Typo="Typo.body2" Class="text-truncate">@row.Transaction.Description</MudText>
                                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">
-                                    @row.Transaction.Date.ToString("d MMM") · @row.Transaction.Cadence
+                                    @DateFormatter.FormatDayMonth(row.Transaction.Date) · @row.Transaction.Cadence
                                 </MudText>
                             </div>
                             <div class="cash-flow-row-amounts">
@@ -106,7 +106,7 @@
                                 @if (row.RunningBalance is decimal runningBalance)
                                 {
                                     <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default" Class="fm-tabular cash-flow-amount">
-                                        Balance @($"{runningBalance:N2} {_currency}")
+                                        Balance @MoneyFormatter.Format(runningBalance, _currency)
                                     </MudText>
                                 }
                             </div>

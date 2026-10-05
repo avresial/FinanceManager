@@ -1,3 +1,4 @@
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -21,5 +22,5 @@ public static class AccountHistoryState
         $"No transaction records for selected time range: {FormatDate(startDate)} - {FormatDate(endDate)}.";
 
     private static string FormatDate(DateTime date) =>
-        date.Date.ToString("MMMM d, yyyy", CultureInfo.CurrentCulture);
+        DateFormatter.Format(date);
 }

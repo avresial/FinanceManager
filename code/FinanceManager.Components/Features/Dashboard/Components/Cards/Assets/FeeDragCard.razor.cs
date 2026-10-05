@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -203,7 +204,7 @@ public partial class FeeDragCard : IDisposable
 
     internal static string FormatPercentage(decimal value) => $"{value * 100m:0.0}%";
 
-    private string FormatAmount(decimal value) => value.ToString("N2", CultureInfo.CurrentCulture);
+    private string FormatAmount(decimal value) => MoneyFormatter.FormatNumber(value);
 
     private string FormatCurrency(decimal value) => $"{FormatAmount(value)} {_currency.ShortName}";
 

@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -97,7 +98,6 @@ public partial class TransactionLogCard : IDisposable
 
     private static string FormatAmount(decimal value)
     {
-        var formatted = value.ToString("N2", CultureInfo.InvariantCulture);
-        return value > 0 ? $"+{formatted}" : formatted;
+        return MoneyFormatter.FormatSigned(value);
     }
 }

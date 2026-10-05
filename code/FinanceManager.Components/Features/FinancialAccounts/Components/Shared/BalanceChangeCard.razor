@@ -10,14 +10,14 @@
         </div>
         <MudText Typo="Typo.h3" Class="fm-tabular"
                  Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">
-            @(BalanceChange >= 0 ? "+" : "")@BalanceChange.ToString("N2") @Currency
+            @MoneyFormatter.FormatSigned(BalanceChange, Currency)
         </MudText>
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mt-2">
             <MudIcon Size="Size.Small"
                      Icon="@(BalanceChange >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)"
                      Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)" />
             <MudText Typo="Typo.caption" Color="Color.Default">
-                @(Description ?? $"From {FromDate:dd MMM yyyy} to {ToDate:dd MMM yyyy}")
+                @(Description ?? $"From {DateFormatter.Format(FromDate)} to {DateFormatter.Format(ToDate)}")
             </MudText>
         </MudStack>
     </MudCardContent>
@@ -34,5 +34,5 @@
     [Parameter] public DateTime ToDate { get; set; }
 
     private string InfoText =>
-        $"How much the balance changed between {FromDate:dd MMM yyyy} and {ToDate:dd MMM yyyy}.";
+        $"How much the balance changed between {DateFormatter.Format(FromDate)} and {DateFormatter.Format(ToDate)}.";
 }

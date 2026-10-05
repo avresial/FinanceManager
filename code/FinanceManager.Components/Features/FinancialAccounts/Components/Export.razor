@@ -15,13 +15,13 @@
                 @if (HasAvailableDateRange)
                 {
                     <MudText Typo="Typo.body2">
-                        Available range: @_availableStartDate!.Value.ToString("dd-MM-yyyy") -
-                        @_availableEndDate!.Value.ToString("dd-MM-yyyy")
+                        Available range: @DateFormatter.Format(_availableStartDate!.Value) -
+                        @DateFormatter.Format(_availableEndDate!.Value)
                     </MudText>
 
-                    <MudDatePicker Label="Start date" @bind-Date="_startDate" DateFormat="dd/MM/yyyy" MinDate="_availableStartDate"
+                    <MudDatePicker Label="Start date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
-                    <MudDatePicker Label="End date" @bind-Date="_endDate" DateFormat="dd/MM/yyyy" MinDate="_availableStartDate"
+                    <MudDatePicker Label="End date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
                 }
                 else if (string.IsNullOrEmpty(ErrorMessage))

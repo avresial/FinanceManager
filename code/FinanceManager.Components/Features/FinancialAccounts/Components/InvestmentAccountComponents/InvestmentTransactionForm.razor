@@ -37,13 +37,13 @@
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
             </MudSelect>
             <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-            <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : _formUnitPrice.ToString("N2"))" ReadOnly="true" Disabled="true" />
+            <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : MoneyFormatter.FormatNumber(_formUnitPrice))" ReadOnly="true" Disabled="true" />
             @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
             }
             <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateFormat="dd/MM/yyyy" DateChanged="OnTradeDateChangedAsync" />
+            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
             <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
             <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">

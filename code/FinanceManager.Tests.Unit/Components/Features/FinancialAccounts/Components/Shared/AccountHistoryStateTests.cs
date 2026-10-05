@@ -79,7 +79,7 @@ public class AccountHistoryStateTests
                 new DateTime(2026, 6, 1),
                 new DateTime(2026, 6, 9, 15, 30, 0));
 
-            Assert.Equal("No transaction records for selected time range: June 1, 2026 - June 9, 2026.", message);
+            Assert.Equal("No transaction records for selected time range: 1 Jun 2026 - 9 Jun 2026.", message);
         }
         finally
         {

@@ -14,7 +14,7 @@
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
             <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@Transaction.Ticker</MudText>
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@Transaction.Quantity.ToString("N4") @@ @Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@Transaction.Quantity.ToString("N4") @@ @MoneyFormatter.Format(Transaction.UnitPrice, Transaction.Currency)</MudText>
                 @if (Transaction.UnitPrice <= 0m)
                 {
                     <MudTooltip Text="Price cannot be obtained">
@@ -33,7 +33,7 @@
             <MudText Typo="Typo.overline" Color="Color.Default">Cash impact</MudText>
             <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
                      Color="@AmountSign.ColorFor(CashImpact)">
-                @AmountSign.PrefixFor(CashImpact)@CashImpact.ToString("N2") @Transaction.Currency
+                @MoneyFormatter.FormatSigned(CashImpact, Transaction.Currency)
             </MudText>
         </MudStack>
 
@@ -45,7 +45,7 @@
                 {
                     <MudText Typo="Typo.body2" Class="fm-tabular" Style="white-space: nowrap;"
                              Color="@AmountSign.ColorFor(Valuation!.GainLoss)">
-                        @AmountSign.PrefixFor(Valuation.GainLoss)@Valuation.GainLoss.ToString("N2") @Valuation.Currency
+                        @MoneyFormatter.FormatSigned(Valuation.GainLoss, Valuation.Currency)
                     </MudText>
                     <MudText Typo="Typo.caption" Class="fm-tabular" Color="Color.Default">
                         @AmountSign.PrefixFor(Valuation.GainLossPercent)@Valuation.GainLossPercent.ToString("N2")%
@@ -66,7 +66,7 @@
         <MudGrid Spacing="2">
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Trade date</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.TradeDate.ToString("dd-MM-yyyy")</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.Format(Transaction.TradeDate)</MudText>
             </MudItem>
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Type</MudText>
@@ -87,7 +87,7 @@
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Unit price</MudText>
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@Transaction.UnitPrice.ToString("N2") @Transaction.Currency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Transaction.UnitPrice, Transaction.Currency)</MudText>
                     @if (Transaction.UnitPrice <= 0m)
                     {
                         <MudTooltip Text="Price cannot be obtained">
@@ -98,17 +98,17 @@
             </MudItem>
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Gross value</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@GrossValue.ToString("N2") @Transaction.Currency</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(GrossValue, Transaction.Currency)</MudText>
             </MudItem>
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Fee</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@((Transaction.Fee ?? 0m).ToString("N2")) @Transaction.Currency</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Transaction.Fee ?? 0m, Transaction.Currency)</MudText>
             </MudItem>
             <MudItem xs="6" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Cash impact</MudText>
                 <MudText Typo="Typo.body2" Class="fm-tabular"
                          Color="@(CashImpact >= 0 ? Color.Success : Color.Error)">
-                    @(CashImpact >= 0 ? "+" : "")@CashImpact.ToString("N2") @Transaction.Currency
+                    @MoneyFormatter.FormatSigned(CashImpact, Transaction.Currency)
                 </MudText>
             </MudItem>
             <MudItem xs="6" sm="6">
@@ -122,22 +122,22 @@
                 </MudItem>
                 <MudItem xs="6" sm="6">
                     <MudText Typo="Typo.overline" Color="Color.Default">Unit price at purchase</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseUnitPrice.ToString("N2") @Valuation.Currency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Valuation!.PurchaseUnitPrice, Valuation.Currency)</MudText>
                 </MudItem>
                 <MudItem xs="6" sm="6">
                     <MudText Typo="Typo.overline" Color="Color.Default">Unit price now</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">
-                        @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentPrice:N2} {Valuation.Currency}" : "—")
+                        @(Valuation!.HasCurrentPrice ? MoneyFormatter.Format(Valuation.CurrentPrice, Valuation.Currency) : "—")
                     </MudText>
                 </MudItem>
                 <MudItem xs="6" sm="6">
                     <MudText Typo="Typo.overline" Color="Color.Default">Value at purchase</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@Valuation!.PurchaseValue.ToString("N2") @Valuation.Currency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Valuation!.PurchaseValue, Valuation.Currency)</MudText>
                 </MudItem>
                 <MudItem xs="6" sm="6">
                     <MudText Typo="Typo.overline" Color="Color.Default">Value now</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">
-                        @(Valuation!.HasCurrentPrice ? $"{Valuation.CurrentValuation:N2} {Valuation.Currency}" : "—")
+                        @(Valuation!.HasCurrentPrice ? MoneyFormatter.Format(Valuation.CurrentValuation, Valuation.Currency) : "—")
                     </MudText>
                 </MudItem>
                 <MudItem xs="12">
@@ -146,7 +146,7 @@
                     {
                         <MudText Typo="Typo.body2" Class="fm-tabular"
                                  Color="@(Valuation.GainLoss >= 0 ? Color.Success : Color.Error)">
-                            @(Valuation.GainLoss >= 0 ? "+" : "")@Valuation.GainLoss.ToString("N2") @Valuation.Currency
+                            @MoneyFormatter.FormatSigned(Valuation.GainLoss, Valuation.Currency)
                             (@(Valuation.GainLoss >= 0 ? "+" : "")@Valuation.GainLossPercent.ToString("N2")%)
                         </MudText>
                     }
