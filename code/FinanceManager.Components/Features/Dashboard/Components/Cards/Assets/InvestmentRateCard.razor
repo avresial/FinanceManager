@@ -1,7 +1,7 @@
 @using ApexCharts
 
 <MudCard Outlined Class="rounded-lg d-flex flex-column investment-rate-card" Style="@($"height:{Height};overflow:hidden;")">
-    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
+    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4" Style="min-height:0;">
         <div class="mb-2">
             <div>
                 <CardInfoTooltip Text="What share of your salary you invest each month, and where the year is heading."
@@ -51,22 +51,27 @@
                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Monthly rate · last 12 months</MudText>
                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
             </div>
+            @* The chart is laid out in an absolutely positioned inner box so ApexCharts' 100% height
+               resolves to the space left after the header and footer, instead of its 150px fallback
+               pushing the salary/invested footer out of the card. *@
             <div class="investment-rate-card__chart">
                 @if (_chartOptions is not null)
                 {
-                    <ApexChart TItem="MonthBar"
-                               Options="@_chartOptions"
-                               OnDataPointSelection="OnBarSelected"
-                               @key="(_chartVersion, _selectedRateIndex)"
-                               Height="@("100%")">
-                        <ApexPointSeries TItem="MonthBar"
-                                         Items="@_series"
-                                         Name="Rate"
-                                         SeriesType="SeriesType.Bar"
-                                         XValue="@(p => (object)p.Label)"
-                                         YValue="@(p => (decimal?)p.Percentage)"
-                                         PointColor="@(p => p.IsSelected ? _highlightColor : _mutedBarColor)" />
-                    </ApexChart>
+                    <div class="investment-rate-card__chart-inner">
+                        <ApexChart TItem="MonthBar"
+                                   Options="@_chartOptions"
+                                   OnDataPointSelection="OnBarSelected"
+                                   @key="(_chartVersion, _selectedRateIndex)"
+                                   Height="@("100%")">
+                            <ApexPointSeries TItem="MonthBar"
+                                             Items="@_series"
+                                             Name="Rate"
+                                             SeriesType="SeriesType.Bar"
+                                             XValue="@(p => (object)p.Label)"
+                                             YValue="@(p => (decimal?)p.Percentage)"
+                                             PointColor="@(p => p.IsSelected ? _highlightColor : _mutedBarColor)" />
+                        </ApexChart>
+                    </div>
                 }
             </div>
 

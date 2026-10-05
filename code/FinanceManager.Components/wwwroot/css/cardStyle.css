@@ -67,6 +67,14 @@
     overflow-y: auto;
 }
 
+/* Single-category cards skip the pie (a 100% slice says nothing), leaving the
+   legend alone; keep it a readable width instead of stretching one row's name
+   and amount to opposite edges of a wide card. */
+.fm-legend:only-child {
+    max-width: 360px;
+    margin: 0 auto;
+}
+
 .fm-legend-row {
     display: flex;
     flex-wrap: wrap; /* the amount drops under the name on narrow cards instead of truncating it */

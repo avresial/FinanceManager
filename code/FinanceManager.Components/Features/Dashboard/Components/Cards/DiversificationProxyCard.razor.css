@@ -362,8 +362,10 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* ---- Responsive: row layout once the card itself is wide enough ---- */
-@container (min-width: 360px) {
+/* ---- Responsive: row layout once the card itself is wide enough ----
+   300px keeps phone-width cards (~314px inside the padding) in the row layout;
+   stacking the gauge there pushed the insight below the fixed-height card. */
+@container (min-width: 300px) {
     .diversification-card__body {
         flex-direction: row;
         align-items: center;
@@ -379,5 +381,20 @@
         flex: 1;
         border-left: 1px solid var(--mud-palette-divider);
         padding-left: 22px;
+    }
+}
+
+@container (min-width: 300px) and (max-width: 359.98px) {
+    .diversification-card__body {
+        gap: 14px;
+    }
+
+    .diversification-card__gauge {
+        flex-basis: 120px;
+        width: 120px;
+    }
+
+    .diversification-card__break {
+        padding-left: 14px;
     }
 }

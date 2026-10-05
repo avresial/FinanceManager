@@ -47,6 +47,9 @@ rules agents must follow when updating this file.
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
 ### Fixed
+- Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
+- Keep the Investment rate footer inside its card, stop Return attribution labels breaking mid-word, keep the Asset diversification hint visible on phones, and centre the legend on single-category distribution cards. #884
+- Put the Money by label period on its own line instead of wrapping it beside the title. #884
 - Draw balance and value charts as steps instead of smoothed curves that implied values between data points, show a single-category distribution as a summary instead of a one-slice pie, and label account movers as inflows and outflows. #874
 - Show the last cash flow forecast immediately when returning to the dashboard, and align its More action. #817
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812

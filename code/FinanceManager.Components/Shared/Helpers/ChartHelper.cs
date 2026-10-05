@@ -78,6 +78,14 @@ public static class ChartHelper
         "return (Math.abs(k)<10 && k%1!==0 ? k.toFixed(1) : Math.round(k))+'k'; }";
 
     /// <summary>
+    /// Compact currency tick labels that always carry one decimal: 21.4k / 21.6k / 21.8k. Used when
+    /// ticks are hundreds apart, where <see cref="CompactCurrencyTickFormatter"/> rounds values of
+    /// 10k and more to whole thousands and adjacent ticks collapse into the same label.
+    /// </summary>
+    public const string CompactCurrencyTickFormatterOneDecimal =
+        "function(v){ if(!Number.isFinite(v)) return ''; if(v===0) return '0'; return (v/1000).toFixed(1)+'k'; }";
+
+    /// <summary>
     /// Picks the y-axis tick formatter that suits a padded value range spread over
     /// <paramref name="tickCount"/> ticks. Compact "k" ticks only read well when the gap
     /// between ticks is itself hundreds-scale; on, say, a 300 PLN bond account every tick
@@ -87,7 +95,8 @@ public static class ChartHelper
     public static string GetYAxisTickFormatter(double minimum, double maximum, int tickCount)
     {
         var step = tickCount <= 0 ? 0 : (maximum - minimum) / tickCount;
-        if (step >= 100) return CompactCurrencyTickFormatter;
+        if (step >= 1000) return CompactCurrencyTickFormatter;
+        if (step >= 100) return CompactCurrencyTickFormatterOneDecimal;
 
         var decimals = step >= 10 ? 0 : step >= 1 ? 1 : 2;
         return "function(v){ return v.toLocaleString('en-US',{minimumFractionDigits:" + decimals +
@@ -113,5 +122,30 @@ public static class ChartHelper
         var range = maximum - minimum;
         var padding = range == 0 ? Math.Max(Math.Abs(minimum) * 0.05, 1) : range * 0.05;
         return (minimum - padding, maximum + padding);
+    }
+
+    /// <summary>
+    /// Y scale for charts whose x-axis labels overlay the bottom of the plot: the padded range is
+    /// snapped to round 1/2/5 tick steps, then one extra empty band is added below the data so the
+    /// overlaid date labels never sit on top of the series. The bottom tick of that band is the
+    /// gutter, not data, so its label is expected to be hidden.
+    /// </summary>
+    public static (double Min, double Max, int TickAmount) GetYScaleWithLabelGutter(double minimum, double maximum, int targetBands = 4)
+    {
+        var (low, high) = AddYRangePadding(minimum, maximum);
+        var step = GetNiceStep((high - low) / targetBands);
+        var niceLow = Math.Floor(low / step) * step;
+        var niceHigh = Math.Ceiling(high / step) * step;
+        var bands = (int)Math.Round((niceHigh - niceLow) / step);
+
+        return (niceLow - step, niceHigh, bands + 1);
+    }
+
+    private static double GetNiceStep(double rawStep)
+    {
+        var magnitude = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));
+        var fraction = rawStep / magnitude;
+        var nice = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
+        return nice * magnitude;
     }
 }
