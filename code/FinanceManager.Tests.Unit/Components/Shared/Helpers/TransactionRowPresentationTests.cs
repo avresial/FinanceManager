@@ -32,6 +32,7 @@ public class TransactionRowPresentationTests
     [Theory]
     [InlineData("Salary", 100.0)]
     [InlineData("GROCERIES", -20.0)]
+    [InlineData("Coffee", -4.0)]
     public void IconFor_MapsKnownLabelsCaseInsensitively(string label, double amount)
     {
         var icon = TransactionRowPresentation.IconFor(label, (decimal)amount);
@@ -43,7 +44,6 @@ public class TransactionRowPresentationTests
     [Theory]
     [InlineData(null, 10.0)]
     [InlineData("Something unusual", 10.0)]
-    [InlineData("Coffee", 10.0)]
     [InlineData("Current account", 10.0)]
     public void IconFor_FallsBackToDirectionOfMoneyFlow(string? label, double amount)
     {

@@ -16,7 +16,15 @@ public static class SubscriptionListFilter
             .ThenBy(x => x.NextExpectedChargeDate)
             .ToList();
 
-    /// <summary>Cadences that occur in the list, in enum order, so a chip is never offered that would show nothing.</summary>
-    public static IReadOnlyList<RecurringCadence> AvailableCadences(IEnumerable<RecurringTransactionResult> subscriptions) =>
-        subscriptions.Select(x => x.Cadence).Distinct().Order().ToList();
+    /// <summary>
+    /// Cadences of the subscriptions that pass the inactive filter, in enum order, so a chip is never offered
+    /// that would show nothing.
+    /// </summary>
+    public static IReadOnlyList<RecurringCadence> AvailableCadences(IEnumerable<RecurringTransactionResult> subscriptions, bool showInactive) =>
+        subscriptions
+            .Where(x => showInactive || (!x.IsMuted && !x.IsCancelled))
+            .Select(x => x.Cadence)
+            .Distinct()
+            .Order()
+            .ToList();
 }

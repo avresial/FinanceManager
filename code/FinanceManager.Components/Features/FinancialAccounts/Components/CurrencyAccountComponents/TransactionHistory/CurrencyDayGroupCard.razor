@@ -24,11 +24,15 @@
             <MudText Typo="Typo.overline" Color="Color.Default" Style="@(IsMobile ? "" : "min-width: 110px; text-align: right;")">Balance</MudText>
         </div>
         <MudStack Spacing="0">
+            @{
+                // Evaluated once per render: the check scans every entry of the day.
+                var siblingsShareSameTime = TransactionRowPresentation.AllShareSameTime(Entries.Select(e => e.PostingDate.ToLocalTime()));
+            }
             @foreach (var entry in Entries)
             {
                 <TransactionRow @key="entry.EntryId" Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile"
                                 InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)"
-                                SiblingsShareSameTime="@_siblingsShareSameTime" />
+                                SiblingsShareSameTime="@siblingsShareSameTime" />
                 <MudDivider />
             }
         </MudStack>
@@ -42,9 +46,6 @@
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public int? HighlightedEntryId { get; set; }
-
-    private bool _siblingsShareSameTime =>
-        TransactionRowPresentation.AllShareSameTime(Entries.Select(e => e.PostingDate.ToLocalTime()));
 
     private decimal DailyNet => Entries.Sum(e => e.ValueChange);
 }

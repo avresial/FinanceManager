@@ -38,6 +38,15 @@ public class SubscriptionListFilterTests
     {
         List<RecurringTransactionResult> items = [Item("a", RecurringCadence.Annual, 1), Item("b", RecurringCadence.Monthly, 2), Item("c", RecurringCadence.Monthly, 3)];
 
-        Assert.Equal([RecurringCadence.Monthly, RecurringCadence.Annual], SubscriptionListFilter.AvailableCadences(items));
+        Assert.Equal([RecurringCadence.Monthly, RecurringCadence.Annual], SubscriptionListFilter.AvailableCadences(items, showInactive: false));
+    }
+
+    [Fact]
+    public void AvailableCadences_SkipsCadencesWithOnlyHiddenSubscriptions()
+    {
+        List<RecurringTransactionResult> items = [Item("a", RecurringCadence.Monthly, 1), Item("b", RecurringCadence.Annual, 2, cancelled: true)];
+
+        Assert.Equal([RecurringCadence.Monthly], SubscriptionListFilter.AvailableCadences(items, showInactive: false));
+        Assert.Equal([RecurringCadence.Monthly, RecurringCadence.Annual], SubscriptionListFilter.AvailableCadences(items, showInactive: true));
     }
 }

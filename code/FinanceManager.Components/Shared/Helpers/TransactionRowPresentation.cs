@@ -11,7 +11,7 @@ public static class TransactionRowPresentation
     private static readonly (string[] Keywords, string Icon)[] _labelIcons =
     [
         (["salary", "wage", "payroll", "paycheck", "income"], Icons.Material.Filled.Payments),
-        (["grocer", "food", "supermarket", "restaurant", "cafe", "dining"], Icons.Material.Filled.ShoppingCart),
+        (["grocer", "food", "supermarket", "restaurant", "cafe", "coffee", "dining"], Icons.Material.Filled.ShoppingCart),
         (["rent", "mortgage", "housing", "home"], Icons.Material.Filled.Home),
         (["invest", "stock", "bond", "etf", "broker", "saving"], Icons.Material.Filled.TrendingUp),
         (["transport", "fuel", "car", "taxi", "travel", "train"], Icons.Material.Filled.DirectionsCar),
