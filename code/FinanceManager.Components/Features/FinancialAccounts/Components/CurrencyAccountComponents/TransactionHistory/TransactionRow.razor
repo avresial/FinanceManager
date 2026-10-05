@@ -36,15 +36,30 @@
             }
         </MudStack>
 
-        <MudText Typo="Typo.body1" Class="fm-tabular"
-                 Color="@AmountSign.ColorFor(Entry.ValueChange)"
-                 Style="flex-shrink: 0; white-space: nowrap;">
-            @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
-        </MudText>
+        @if (IsMobile)
+        {
+            @* Side by side, amount and balance left the title a few characters on a phone; stack them. *@
+            <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
+                <MudText Typo="Typo.body1" Class="fm-tabular"
+                         Color="@AmountSign.ColorFor(Entry.ValueChange)"
+                         Style="white-space: nowrap;">
+                    @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
+                </MudText>
+                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="fm-tabular"
+                     Color="@AmountSign.ColorFor(Entry.ValueChange)"
+                     Style="flex-shrink: 0; white-space: nowrap;">
+                @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
+            </MudText>
 
-        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="@(IsMobile ? "flex-shrink: 0;" : "min-width: 110px; flex-shrink: 0;")">
-            <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
-        </MudStack>
+            <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
+                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
+            </MudStack>
+        }
     </MudStack>
 </div>
 

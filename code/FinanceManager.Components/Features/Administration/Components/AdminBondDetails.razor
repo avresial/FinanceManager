@@ -24,7 +24,7 @@
 
     @if (_pagedElements.Any())
     {
-        <MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Md"
+        <MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_elementsPerPage" Dense Breakpoint="Breakpoint.Sm"
                   LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
             <HeaderContent>
                 <MudTh>Id</MudTh>

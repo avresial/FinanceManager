@@ -82,6 +82,24 @@
         if (segments.Length > 1)
         {
             var section = segments[1];
+
+            // Edit pages have no index route of their own (/Admin/EditLabel would be a dead link), so
+            // their crumbs lead back to the list they were opened from, followed by a plain "Edit".
+            (string List, string Href)? editParent = section switch
+            {
+                "EditLabel" => ("Labels", "Admin/Labels"),
+                "EditUser" => ("Users", "Admin/Users"),
+                "EditAsset" => ("Assets", "Admin/Assets"),
+                _ => null
+            };
+            if (editParent is (string listLabel, string listHref))
+            {
+                items.Add(new BreadcrumbItem(listLabel, href: listHref));
+                items.Add(new BreadcrumbItem("Edit", href: null, disabled: true));
+                _breadcrumbs = items;
+                return;
+            }
+
             var label = section switch
             {
                 "Users" => "Users",
@@ -90,12 +108,10 @@
                 "Bonds" => "Bonds",
                 "Assets" => "Assets",
                 "Prices" => "Prices",
-                "EditAsset" => "Edit asset",
                 "AddAsset" => "Add asset",
                 "Dashboard" => "Dashboard",
                 "AddBondDetails" => "Add bond",
                 "AddLabel" => "Add label",
-                "AddUser" => "Add user",
                 "AiProviders" => "AI Providers",
                 "ServiceKeys" => "Service Keys",
                 "Logs" => "Logs",

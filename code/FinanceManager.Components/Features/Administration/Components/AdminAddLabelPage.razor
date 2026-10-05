@@ -17,24 +17,20 @@
 
 <MudGrid Spacing="6">
     <MudItem xs="12">
-        <MudText Typo="Typo.h3">
-            @_labelData.Name.ToUpper()
-        </MudText>
+        <MudText Typo="Typo.h4">Add label</MudText>
     </MudItem>
 
-
     <MudItem xs="12">
-        <MudText Typo="Typo.h6">Change name</MudText>
         <MudGrid>
-            <MudItem xs="8">
+            <MudItem xs="12" md="8">
                 <MudForm @ref="_nameForm" @bind-IsValid="@_success" Spacing="3">
 
-                    <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="_labelData.Name"
+                    <MudTextField T="string" Label="Name" HelperText="Shown to users when they label transactions" @bind-value="_labelData.Name"
                                   InputType="InputType.Text" Validation="@(new Func<string, IEnumerable<string>>(ValidateName))" Required
                                   RequiredError="Name is required!" />
 
 
-                    <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="UpdateNameAsync" Disabled="@(!_success)">Add</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success)">Add</MudButton>
                 </MudForm>
             </MudItem>
         </MudGrid>
@@ -68,7 +64,7 @@
     private readonly List<string> _info = [];
 
     private MudForm? _nameForm;
-    private FinancialLabel _labelData = new FinancialLabel() { Name = "Name me" };
+    private FinancialLabel _labelData = new FinancialLabel() { Name = string.Empty };
 
     private bool _success;
 

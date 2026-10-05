@@ -12,7 +12,7 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
                         SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
                         ChartData="@ChartData" IsMobile="@_isMobile" />
 
-    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+    <MudContainer MaxWidth="MaxWidth.Large">
         <MudGrid Spacing="3">
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@Account.AccountId" SearchText="@_searchText"

@@ -4,6 +4,10 @@
 
 <PageTitle>User settings</PageTitle>
 
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Settings</MudText>
+</SectionContent>
+
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
     @if (_userData is not null)
     {
@@ -188,12 +192,12 @@
                     <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mb-3">
                         Paid tiers are granted with one-time gift codes. Redeemed upgrades remain active for the lifetime of your account.
                     </MudText>
-                    <MudStack Row AlignItems="AlignItems.Start" Spacing="2" Class="flex-wrap">
-                        <MudTextField T="string" @bind-Value="_giftCode" Label="Gift code" Variant="Variant.Outlined"
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
+                        <MudTextField T="string" @bind-Value="_giftCode" Label="Gift code" Variant="Variant.Outlined" Margin="Margin.Dense"
                                       Immediate="true" MaxLength="64" Disabled="_isRedeemingGiftCode" Class="flex-grow-1" />
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RedeemGiftCode"
                                    Disabled="@(_isRedeemingGiftCode || string.IsNullOrWhiteSpace(_giftCode))"
-                                   StartIcon="@Icons.Material.Filled.CardGiftcard" Class="mt-2">
+                                   StartIcon="@Icons.Material.Filled.CardGiftcard">
                             @(_isRedeemingGiftCode ? "Redeeming…" : "Redeem")
                         </MudButton>
                     </MudStack>
@@ -215,7 +219,6 @@
                                       Margin="Margin.Dense"
                                       Label="@($"Type '{_requiredDeleteConfirmation}' to confirm")"
                                       Error="@(!string.IsNullOrEmpty(_deleteConfirmation) && _deleteConfirmation != _requiredDeleteConfirmation)"
-                                      HelperText="@($"Type '{_requiredDeleteConfirmation}' to confirm")"
                                       Class="flex-grow-1" />
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Error"

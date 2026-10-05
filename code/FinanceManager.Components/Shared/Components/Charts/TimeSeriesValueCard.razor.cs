@@ -167,17 +167,21 @@ public partial class TimeSeriesValueCard
     }
 
     // Keep small changes visible by padding the displayed data range instead
-    // of forcing every series through zero.
+    // of forcing every series through zero. The x-axis labels overlay the bottom
+    // of the plot, so the scale reserves an empty band beneath the data for them.
     private void ApplyYScale()
     {
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
-        var bounds = ChartHelper.AddYRangePadding((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
-        axis.Min = bounds.Min;
-        axis.Max = bounds.Max;
-        axis.TickAmount = 5;
+        var scale = ChartHelper.GetYScaleWithLabelGutter((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
+        axis.Min = scale.Min;
+        axis.Max = scale.Max;
+        axis.TickAmount = scale.TickAmount;
         axis.ForceNiceScale = false;
+
+        if (axis.Labels is YAxisLabels labels)
+            labels.Formatter = ChartHelper.GetYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount);
     }
 
     private void OnPointEnter(HoverData<TimeSeriesModel> hoverData)
@@ -299,11 +303,13 @@ public partial class TimeSeriesValueCard
                     AxisTicks = new AxisTicks { Show = false },
                     Labels = new YAxisLabels
                     {
-                        // Floating labels overlay the plot; OffsetX nudges them right
-                        // off the left chart edge so they sit just inside the card's
-                        // left border (~7px gap), bottom-aligned-style like the x-axis
-                        // labels. Each unit of OffsetX is ~1px here, so 24 ≈ 7px in.
-                        OffsetX = 24,
+                        // Floating labels overlay the plot. Left-aligned so they grow
+                        // rightwards into the plot: right-aligned labels kept their right
+                        // edge fixed and longer ticks ("-21.4k") lost their minus sign
+                        // past the card's left border. OffsetX tunes the inset from the
+                        // left border.
+                        Align = Align.Left,
+                        OffsetX = 4,
                         Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
                         Formatter = ChartHelper.CompactCurrencyTickFormatter,

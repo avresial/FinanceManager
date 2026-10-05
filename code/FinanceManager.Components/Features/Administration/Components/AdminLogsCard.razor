@@ -45,15 +45,18 @@
                     {
                         <MudListItem T="AdminLogEntryView">
                             <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="w-100">
-                                <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled">
+                                @* Fixed chip width keeps every message aligned whatever the level name's length. *@
+                                <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled"
+                                         Style="min-width:76px; justify-content:center; flex-shrink:0;">
                                     @entry.Level.ToString()
                                 </MudChip>
                                 <MudStack Spacing="0" Class="flex-grow-1" Style="min-width:0">
                                     <MudText Typo="Typo.body2" Style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                                         @entry.Message
                                     </MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @entry.Category · @DateFormatter.FormatDateTime(entry.TimestampUtc.ToLocalTime())
+                                    @* Time first: long logger categories are truncated, and the time must stay visible. *@
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                        @DateFormatter.FormatDateTime(entry.TimestampUtc.ToLocalTime()) · @entry.Category
                                     </MudText>
                                 </MudStack>
                             </MudStack>

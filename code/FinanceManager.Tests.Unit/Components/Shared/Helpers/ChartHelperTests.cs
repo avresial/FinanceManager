@@ -114,12 +114,43 @@ public class ChartHelperTests
     }
 
     [Fact]
-    public void GetYAxisTickFormatter_UsesCompactTicksForThousandsScaleRanges()
+    public void GetYScaleWithLabelGutter_SnapsToRoundStepsAndReservesOneBandBelowTheData()
     {
-        // A cash account swinging 28k -> 31k: ticks are ~600 apart, so "28k / 29k" reads fine.
-        var formatter = ChartHelper.GetYAxisTickFormatter(28_000, 31_000, 5);
+        // Net cash flow swinging -1,300 -> 5,000: padded to -1,615 -> 5,315, snapped to 2k steps.
+        var scale = ChartHelper.GetYScaleWithLabelGutter(-1_300, 5_000);
+
+        Assert.Equal(-4_000, scale.Min);
+        Assert.Equal(6_000, scale.Max);
+        Assert.Equal(5, scale.TickAmount);
+    }
+
+    [Fact]
+    public void GetYScaleWithLabelGutter_KeepsTheLowestDataPointAboveTheGutterBand()
+    {
+        var scale = ChartHelper.GetYScaleWithLabelGutter(13_500, 19_800);
+        var step = (scale.Max - scale.Min) / scale.TickAmount;
+
+        Assert.True(scale.Min + step <= 13_500);
+        Assert.True(scale.Max >= 19_800);
+        Assert.Equal(0, step % 1_000);
+    }
+
+    [Fact]
+    public void GetYAxisTickFormatter_UsesWholeCompactTicksWhenTicksAreThousandsApart()
+    {
+        var formatter = ChartHelper.GetYAxisTickFormatter(0, 50_000, 5);
 
         Assert.Equal(ChartHelper.CompactCurrencyTickFormatter, formatter);
+    }
+
+    [Fact]
+    public void GetYAxisTickFormatter_KeepsOneDecimalWhenTicksAreHundredsApart()
+    {
+        // A cash account swinging 28k -> 31k: ticks are ~600 apart, so whole-k labels would
+        // repeat ("28k / 29k / 29k"); one decimal keeps them distinct.
+        var formatter = ChartHelper.GetYAxisTickFormatter(28_000, 31_000, 5);
+
+        Assert.Equal(ChartHelper.CompactCurrencyTickFormatterOneDecimal, formatter);
     }
 
     [Fact]
@@ -142,7 +173,7 @@ public class ChartHelperTests
     {
         var formatter = ChartHelper.GetYAxisTickFormatter(min, max, 5);
 
-        if (formatter == ChartHelper.CompactCurrencyTickFormatter) return;
+        if (formatter is ChartHelper.CompactCurrencyTickFormatter or ChartHelper.CompactCurrencyTickFormatterOneDecimal) return;
 
         Assert.Contains($"maximumFractionDigits:{expectedDecimals}", formatter);
     }

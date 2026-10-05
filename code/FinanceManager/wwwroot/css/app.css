@@ -37,6 +37,12 @@ a, .btn-link {
 }
 */
 
+/* FocusOnNavigate (App.razor) focuses each page's first h1 for screen readers; the heading is
+   not interactive, so don't draw a focus ring around it (it showed as a blue box on the landing page). */
+h1:focus {
+    outline: none;
+}
+
 a:hover {
     color: inherit; /* takes color from parent element */
 }
@@ -150,5 +156,14 @@ code {
 
     100% {
         opacity: 1;
+    }
+}
+
+/* Import stepper on phones: three titled steps don't fit, and the scrolling nav hid
+   "Review" off-screen. Keep the numbered dots for every step but label only the active one. */
+@media (max-width: 599.98px) {
+    .fm-import-stepper .mud-step:not(.active) .mud-step-label-content,
+    .fm-import-stepper .mud-step-label-content-secondary-text {
+        display: none;
     }
 }

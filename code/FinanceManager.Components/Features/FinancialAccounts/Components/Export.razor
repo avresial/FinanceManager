@@ -1,6 +1,10 @@
 @page "/Export/{AccountId:int}"
 <PageTitle>Export</PageTitle>
 
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">Export</MudText>
+</SectionContent>
+
 <ComponentStateView IsLoading="@_isLoading" ErrorMessage="@ErrorMessage">
     <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
         <MudPaper Class="pa-4">
@@ -15,8 +19,7 @@
                 @if (HasAvailableDateRange)
                 {
                     <MudText Typo="Typo.body2">
-                        Available range: @DateFormatter.Format(_availableStartDate!.Value) -
-                        @DateFormatter.Format(_availableEndDate!.Value)
+                        Available range: @DateFormatter.FormatRange(_availableStartDate!.Value, _availableEndDate!.Value)
                     </MudText>
 
                     <MudDatePicker Label="Start date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"

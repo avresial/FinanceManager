@@ -44,7 +44,11 @@
 .changed-value { font-weight: 700; }
 .delete-confirmation { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .creation-workspace { border: 1px solid var(--mud-palette-divider); border-radius: 8px; padding: 1rem; }
+/* The editor's MudGrid columns follow viewport breakpoints, not the column width, and the page
+   container caps the width, so beside the preview the editor squeezed the Match select to "C"
+   and pushed "Ignore case" out of its box. Keep the preview under the editor instead. */
 .creation-workspace .rule-workspace { margin-top: 0; }
+.creation-workspace .rule-workspace, .rule-workspace--editing { grid-template-columns: minmax(0, 1fr); }
 
 @media (max-width: 959px) {
     .rule-workspace { grid-template-columns: minmax(0, 1fr); }

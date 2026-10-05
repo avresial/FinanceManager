@@ -74,7 +74,7 @@
                                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="@(() => BeginEdit(rule))" aria-label="@($"Edit {rule.Name}")">Edit fields</MudButton>
                                 }
                             </div>
-                            <div class="rule-workspace">
+                            <div class="@(_editingId == rule.Id ? "rule-workspace rule-workspace--editing" : "rule-workspace")">
                                 <div class="rule-definition">
                                     @if (_editingId == rule.Id)
                                     {

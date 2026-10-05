@@ -78,6 +78,29 @@
             </MudStack>
         </MudStack>
     }
+    else
+    {
+        @* The name sits in the app bar on mobile, but the balance still belongs on the page. *@
+        <div class="fm-hero-mobile-balance pt-2">
+            <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">Balance</MudText>
+            @if (IsBalanceLoading)
+            {
+                <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="160px" Height="44px" />
+            }
+            else
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="1">
+                    <MudText Typo="Typo.h4" Class="fm-tabular">@MoneyFormatter.FormatNumber(Balance)</MudText>
+                    <MudText Typo="Typo.h6" Color="MudBlazor.Color.Default">@Currency</MudText>
+                </MudStack>
+                <MudText Typo="Typo.body2" Class="fm-tabular"
+                         Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
+                    @MoneyFormatter.FormatSigned(BalanceChange, Currency)@(BalanceChangePercent.HasValue ? $" · {(BalanceChange >= 0 ? "+" : "")}{BalanceChangePercent.Value:0.0}%" : null)
+                    <span style="color: var(--mud-palette-text-secondary);">@ChangeLabel.ToLowerInvariant()@(ShowChangeRange ? $" · {SelectedRange}" : null)</span>
+                </MudText>
+            }
+        </div>
+    }
 
     <div class="mx-n6 mt-2 fm-hero-chart" style="min-height: 200px; position: relative;">
         @if (IsChartLoading)
