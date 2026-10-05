@@ -3,7 +3,13 @@
 @using FinanceManager.Components.Shared.Helpers
 
 <PageTitle>Assets</PageTitle>
-<MudContainer Class="py-2">
+<MudContainer Class="py-6">
+    <PageHeader Title="Assets" Subtitle="Value, allocation and returns of everything you own.">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+    </PageHeader>
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" />
@@ -31,15 +37,12 @@
             <InvestmentRateCard Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
-        <MudItem xs="12" lg="4">
+        <MudItem xs="12" md="6">
             <DiversificationProxyCard Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
 
-        <MudItem xs="12" lg="4">
+        <MudItem xs="12" md="6">
             <FeeDragCard Height="@($"{2 * _unitHeight}px")" AsOfDate="@EndDate" />
         </MudItem>
     </MudGrid>
 </MudContainer>
-
-<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

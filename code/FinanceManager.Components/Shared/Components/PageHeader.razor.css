@@ -1,0 +1,28 @@
+/* One header structure for every authenticated page: title and subtitle on the left,
+   actions on the right, wrapping under the title on narrow viewports. */
+.fm-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.fm-page-header-text {
+    min-width: 0;
+    flex: 1 1 320px;
+}
+
+.fm-page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+}
+
+/* The heading takes programmatic focus after navigation; the ring is noise on a non-interactive title. */
+.fm-page-header-text ::deep h1:focus {
+    outline: none;
+}

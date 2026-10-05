@@ -1,10 +1,6 @@
-/* Keep the collapsed picker compact and inside the viewport, including safe areas. */
+/* The picker lives in the page header's actions slot and takes part in normal layout. */
 .fm-dashboard-datepicker-container {
-    position: fixed;
-    right: 30px;
-    bottom: calc(3vh + env(safe-area-inset-bottom, 0px));
-    z-index: var(--mud-zindex-fab, 1050);
-    max-width: calc(100vw - 32px);
+    max-width: 100%;
 }
 
 .fm-dashboard-datepicker-pill {
@@ -41,22 +37,9 @@
     display: none;
 }
 
-/* Reserve space at the bottom of the page so content can scroll clear of the fixed date-range
-   pill on mobile. Zero height on wider viewports so desktop/tablet layouts are unaffected.
-   The mobile breakpoint (959.98px) matches the app's own xs/sm "mobile" definition used by
-   MainLayout, and the height clears the pill's ~48px plus its 3vh bottom offset and the device
-   safe-area inset. */
-.fm-dashboard-datepicker-spacer {
+.fm-dashboard-custom-range-picker {
+    position: absolute;
+    width: 0;
     height: 0;
-}
-
-@media (max-width: 959.98px) {
-    .fm-dashboard-datepicker-container {
-        right: max(16px, env(safe-area-inset-right, 0px));
-        bottom: calc(2vh + env(safe-area-inset-bottom, 0px));
-    }
-
-    .fm-dashboard-datepicker-spacer {
-        height: calc(2vh + 56px + env(safe-area-inset-bottom, 0px));
-    }
+    overflow: hidden;
 }

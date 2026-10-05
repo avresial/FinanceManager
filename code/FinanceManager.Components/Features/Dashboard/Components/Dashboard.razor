@@ -5,7 +5,13 @@
 @using FinanceManager.Components.Features.Dashboard.Models
 @using FinanceManager.Components.Shared.Helpers
 
-<MudContainer Class="py-2">
+<MudContainer Class="py-6">
+    <PageHeader Title="Dashboard" Subtitle="Your net worth, cash flow and insights for the selected period.">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+    </PageHeader>
     <SectionContent SectionName="page-actions">
         <MudMenu Label="Customize" StartIcon="@Icons.Material.Filled.Tune" Variant="Variant.Text"
                  Color="Color.Default" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -103,8 +109,8 @@
 
             @if (IsCardVisible(DashboardCards.Liabilities))
             {
-                <MudItem xs="12" md="6" lg="4">
-                    <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 3}px")" StartDateTime="@DisplayStartDate"
+                <MudItem xs="12" md="6">
+                    <LiabilitiesDistributionOverviewCard Height="@($"{_unitHeight * 2}px")" StartDateTime="@DisplayStartDate"
                                                          EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
                 </MudItem>
             }
@@ -156,7 +162,7 @@
 
             @if (IsCardVisible(DashboardCards.TransactionLog))
             {
-                <MudItem xs="12" md="6" lg="4">
+                <MudItem xs="12">
                     <TransactionLogCard Height="@($"{_unitHeight * 3}px")" />
                 </MudItem>
             }
@@ -164,6 +170,3 @@
         </MudGrid>
     }
 </MudContainer>
-
-<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

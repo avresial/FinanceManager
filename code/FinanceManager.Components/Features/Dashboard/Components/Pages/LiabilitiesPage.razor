@@ -4,18 +4,20 @@
 
 <PageTitle>Liabilities</PageTitle>
 
-<MudContainer Class="mt-2">
+<MudContainer Class="py-6">
+    <PageHeader Title="Liabilities" Subtitle="What you owe and how it changes over time.">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+    </PageHeader>
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
         </MudItem>
         
-        <MudItem xs="12" lg="4">
+        <MudItem xs="12">
             <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{2 * _unitHeight}px")" />
         </MudItem>
     </MudGrid>
 </MudContainer>
-
-
-<DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                     InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />

@@ -6,27 +6,20 @@
 
 <PageTitle>Cash flow forecast</PageTitle>
 
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6">Cash flow forecast</MudText>
-</SectionContent>
-
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    <div class="d-flex flex-wrap justify-space-between align-center gap-3 mb-5">
-        <div>
-            <MudText Typo="Typo.h4" HtmlTag="h1">Cash flow forecast</MudText>
-            <MudText Typo="Typo.body1" Color="MudBlazor.Color.Secondary">
-                A deterministic projection from your current cash balances and recurring activity.
-            </MudText>
-        </div>
-        <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
-                        SelectionMode="SelectionMode.SingleSelection" Color="MudBlazor.Color.Primary"
-                        Outlined="true" CheckMark="true" aria-label="Forecast horizon">
-            @foreach (var horizon in Horizons)
-            {
-                <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
-            }
-        </MudToggleGroup>
-    </div>
+    <PageHeader Title="Cash flow forecast"
+                Subtitle="A deterministic projection from your current cash balances and recurring activity.">
+        <Actions>
+            <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
+                            SelectionMode="SelectionMode.SingleSelection" Color="MudBlazor.Color.Primary"
+                            Outlined="true" CheckMark="true" aria-label="Forecast horizon">
+                @foreach (var horizon in Horizons)
+                {
+                    <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
+                }
+            </MudToggleGroup>
+        </Actions>
+    </PageHeader>
 
     @if (_hasError)
     {

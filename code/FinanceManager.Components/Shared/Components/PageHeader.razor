@@ -1,0 +1,23 @@
+<SectionContent SectionName="page-title">
+    <MudText Typo="Typo.h6">@Title</MudText>
+</SectionContent>
+
+<div class="fm-page-header">
+    <div class="fm-page-header-text">
+        <MudText Typo="Typo.h4" HtmlTag="h1">@Title</MudText>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <MudText Typo="Typo.body1" Color="Color.Secondary">@Subtitle</MudText>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="fm-page-header-actions">@Actions</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}
