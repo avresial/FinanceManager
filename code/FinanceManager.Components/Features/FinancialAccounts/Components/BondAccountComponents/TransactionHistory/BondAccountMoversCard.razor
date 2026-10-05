@@ -27,7 +27,7 @@
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
                     <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Success" />
-                    <MudText Typo="Typo.caption" Color="Color.Default">Top 5 income</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Top 5 inflows</MudText>
                 </MudStack>
             }
             @RenderList(TopEntries, Color.Success)
@@ -39,7 +39,7 @@
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2 mt-4">
                     <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.ArrowDownward" Color="Color.Error" />
-                    <MudText Typo="Typo.caption" Color="Color.Default">Bottom 5 expenses</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">Bottom 5 outflows</MudText>
                 </MudStack>
             }
             @RenderList(BottomEntries, Color.Error)
@@ -79,7 +79,7 @@
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
                         <MudText Typo="Typo.body2">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default">
-                            @entry.PostingDate.ToString("dd MMM") · @GetCategory(entry)
+                            @DateFormatter.FormatDayMonth(entry.PostingDate) · @GetCategory(entry)
                         </MudText>
                     </MudStack>
                     <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent">

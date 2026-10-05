@@ -3,6 +3,7 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -385,15 +386,12 @@ public partial class InvestmentRateCard : IDisposable
 
     private static string FormatRateNumber(decimal value) => $"{value * 100m:0.00}";
     private static string FormatAveragePercentage(decimal? value) => value is decimal average ? $"{average * 100m:0.0}%" : "—";
-    private string FormatAmount(decimal value) => $"{value:N2} {_currency.ShortName}";
+    private string FormatAmount(decimal value) => MoneyFormatter.Format(value, _currency.ShortName);
     private string FormatChange(decimal value)
-    {
-        var sign = value > 0 ? "+" : value < 0 ? "-" : string.Empty;
-        return $"{sign}{Math.Abs(value):N2} {_currency.ShortName}";
-    }
+        => MoneyFormatter.FormatSigned(value, _currency.ShortName);
     private string FormatProjection() => _endOfYearProjection is null
         ? "—"
-        : $"{_endOfYearProjection.Value:N0} {_currency.ShortName}";
+        : MoneyFormatter.Format(_endOfYearProjection.Value, _currency.ShortName);
 
     internal record MonthBar(string Label, decimal? Percentage, bool IsSelected, string Key);
 }

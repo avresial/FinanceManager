@@ -44,7 +44,7 @@
         <MudGrid Spacing="2">
             <MudItem xs="6">
                 <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body2">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</MudText>
+                <MudText Typo="Typo.body2">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
             </MudItem>
             <MudItem xs="6">
                 <MudText Typo="Typo.caption" Color="Color.Default">Units</MudText>
@@ -64,7 +64,7 @@
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
-                    <MudText Typo="Typo.body2">@BondDetails.UnitValue.ToString("0.00") @BondDetails.Currency.ShortName</MudText>
+                    <MudText Typo="Typo.body2">@MoneyFormatter.Format(BondDetails.UnitValue, BondDetails.Currency.ShortName)</MudText>
                 </MudItem>
             }
             @if (_showValuation)
@@ -74,25 +74,25 @@
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Unit price at transaction</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_unitPriceAtPosting.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_unitPriceAtPosting, _valuationCurrency)</MudText>
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Unit price now</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_unitPriceNow.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_unitPriceNow, _valuationCurrency)</MudText>
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Value at transaction</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_valueAtPosting.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_valueAtPosting, _valuationCurrency)</MudText>
                 </MudItem>
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Value now</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@_valueNow.ToString("N2") @_valuationCurrency</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_valueNow, _valuationCurrency)</MudText>
                 </MudItem>
                 <MudItem xs="12">
                     <MudText Typo="Typo.caption" Color="Color.Default">Gain / loss</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular"
                              Color="@(_gainLoss >= 0 ? Color.Success : Color.Error)">
-                        @(_gainLoss >= 0 ? "+" : "")@_gainLoss.ToString("N2") @_valuationCurrency
+                        @MoneyFormatter.FormatSigned(_gainLoss, _valuationCurrency)
                         (@(_gainLoss >= 0 ? "+" : "")@_gainLossPercent.ToString("N2")%)
                     </MudText>
                 </MudItem>

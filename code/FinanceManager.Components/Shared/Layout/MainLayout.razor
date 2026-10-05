@@ -84,8 +84,7 @@
         var user = await UserService.GetUser(loggedUser.UserId);
         if (user is not null)
             _pricingLevel = user.PricingLevel;
-        var firstName = user?.FirstName;
-        var displayName = string.IsNullOrWhiteSpace(firstName) ? loggedUser.UserName : firstName;
+        var displayName = user is null ? loggedUser.UserName : UserDisplayName.From(user);
         _greeting = string.IsNullOrWhiteSpace(displayName) ? null : $"Hello, {displayName}";
     }
 

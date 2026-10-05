@@ -22,6 +22,9 @@ public partial class LiabilitiesDistributionOverviewCardView
 
     private List<NameValueResult> ActiveData => _view == _viewByAccount ? AccountData : TypeData;
 
+    // A single category would render as a one-slice pie that carries no information, so the card shows only its summary row.
+    private bool IsSingleCategory => ActiveData.Select(x => x.Name).Distinct().Count() == 1;
+
     // Derive the total from the active dataset so per-view percentages and the header stay self-consistent.
     private decimal TotalLiabilities => ActiveData.Count == 0 ? 0 : Math.Round(ActiveData.Sum(x => x.Value), 2);
 
@@ -46,7 +49,7 @@ public partial class LiabilitiesDistributionOverviewCardView
             },
         };
 
-        if (_chart is not null)
+        if (_chart is not null && !IsSingleCategory)
             await _chart.UpdateSeriesAsync(true);
     }
 
@@ -54,7 +57,7 @@ public partial class LiabilitiesDistributionOverviewCardView
     {
         _view = view;
         StateHasChanged();
-        if (_chart is not null)
+        if (_chart is not null && !IsSingleCategory)
             await _chart.UpdateSeriesAsync(true);
     }
 }

@@ -1,4 +1,5 @@
-<div class="pa-2 mud-list-item-clickable"
+@using FinanceManager.Components.Shared.Helpers
+<div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
      style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
@@ -9,50 +10,55 @@
         @if (!IsMobile)
         {
             <MudAvatar Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Style="flex-shrink: 0;">
-                @GetAvatarLabel()
+                <MudIcon Icon="@GetAvatarIcon()" Size="Size.Small" />
             </MudAvatar>
         }
 
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
             <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@GetTitle()</MudText>
-            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                @if (Entry.Labels is not null && Entry.Labels.Any())
-                {
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                             Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
-                    <MudText Typo="Typo.caption" Color="Color.Default">·</MudText>
-                }
-                @if (!IsMobile)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Default">@Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
-                }
-            </MudStack>
+            @if (HasMeta)
+            {
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                    @if (Entry.Labels is not null && Entry.Labels.Any())
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                 Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
+                    }
+                    @if (ShowTimeLabel)
+                    {
+                        @if (Entry.Labels is not null && Entry.Labels.Any())
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Default">·</MudText>
+                        }
+                        <MudText Typo="Typo.caption" Color="Color.Default">@Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
+                    }
+                </MudStack>
+            }
         </MudStack>
 
         <MudText Typo="Typo.body1" Class="fm-tabular"
-                 Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)"
-                 Style="flex-shrink: 0;">
-            @(Entry.ValueChange >= 0 ? "+" : "")@Entry.ValueChange.ToString("N2") @Currency
+                 Color="@AmountSign.ColorFor(Entry.ValueChange)"
+                 Style="flex-shrink: 0; white-space: nowrap;">
+            @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
         </MudText>
 
-        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
-            <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
-            <MudText Typo="Typo.caption" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="@(IsMobile ? "flex-shrink: 0;" : "min-width: 110px; flex-shrink: 0;")">
+            <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
         </MudStack>
     </MudStack>
 </div>
 
 <MudCollapse Expanded="_expanded">
-    <div class="px-4 pb-3" style="padding-left: 60px;" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+    <div class="px-4 pb-3" style="@(IsMobile ? "" : "padding-left: 60px;")" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
         <MudDivider Class="mb-3" Style="border-style: dashed;" />
         <MudGrid Spacing="3">
             <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy · HH:mm")</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
             </MudItem>
             @if (!string.IsNullOrWhiteSpace(Entry.Description))
             {

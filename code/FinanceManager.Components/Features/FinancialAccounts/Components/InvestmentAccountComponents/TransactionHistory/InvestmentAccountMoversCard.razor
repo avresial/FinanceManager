@@ -79,13 +79,13 @@
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@entryRank.ToString("00")</MudText>
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-                        <MudText Typo="Typo.body2">@GetTitle(entry)</MudText>
+                        <MudText Typo="Typo.body2" Class="text-truncate">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default">
-                            @entry.TradeDate.ToString("dd MMM") · @(entry.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy")
+                            @DateFormatter.FormatDayMonth(entry.TradeDate) · @(entry.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy")
                         </MudText>
                     </MudStack>
-                    <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent">
-                        @(impact >= 0 ? "+" : "")@impact.ToString("N2") @entry.Currency
+                    <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent" Style="white-space: nowrap; flex-shrink: 0;">
+                        @MoneyFormatter.FormatSigned(impact, entry.Currency)
                     </MudText>
                 </MudStack>
             }

@@ -1,3 +1,4 @@
+@using FinanceManager.Components.Shared.Helpers
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
@@ -5,25 +6,33 @@
         <CardHeaderContent>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
-                    <MudText Typo="Typo.subtitle2">@Day.ToString("dd MMM")</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Default">@Day.ToString("dddd")</MudText>
+                    <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(Day)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@DateFormatter.FormatWeekday(Day)</MudText>
                 </MudStack>
                 <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-actions">
                     <MudText Typo="Typo.caption" Color="Color.Default">@Entries.Count() @(Entries.Count() == 1 ? "entry" : "entries")</MudText>
                     <MudText Typo="Typo.caption" Class="fm-tabular"
-                             Color="@(DailyNet >= 0 ? Color.Success : Color.Error)">
-                        @(DailyNet >= 0 ? "+" : "")@DailyNet.ToString("N2") @Currency
+                             Color="@AmountSign.ColorFor(DailyNet)">
+                        @MoneyFormatter.FormatSigned(DailyNet, Currency)
                     </MudText>
                 </MudStack>
             </MudStack>
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent Class="pa-0">
+        <div class="@(IsMobile ? "px-4" : "px-2") d-flex justify-end">
+            <MudText Typo="Typo.overline" Color="Color.Default" Style="@(IsMobile ? "" : "min-width: 110px; text-align: right;")">Balance</MudText>
+        </div>
         <MudStack Spacing="0">
+            @{
+                // Evaluated once per render: the check scans every entry of the day.
+                var siblingsShareSameTime = TransactionRowPresentation.AllShareSameTime(Entries.Select(e => e.PostingDate.ToLocalTime()));
+            }
             @foreach (var entry in Entries)
             {
                 <TransactionRow @key="entry.EntryId" Account="Account" Entry="entry" Currency="@Currency" IsMobile="@IsMobile"
-                                InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)" />
+                                InitiallyExpanded="@(HighlightedEntryId == entry.EntryId)"
+                                SiblingsShareSameTime="@siblingsShareSameTime" />
                 <MudDivider />
             }
         </MudStack>

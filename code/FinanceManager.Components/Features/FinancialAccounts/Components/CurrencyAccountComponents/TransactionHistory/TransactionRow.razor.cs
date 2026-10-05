@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -19,6 +20,9 @@ public partial class TransactionRow
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool InitiallyExpanded { get; set; }
+
+    /// <summary>True when the surrounding rows all carry the identical time, so showing it on each row says nothing.</summary>
+    [Parameter] public bool SiblingsShareSameTime { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -52,13 +56,13 @@ public partial class TransactionRow
         return "Transaction";
     }
 
-    private string GetAvatarLabel()
-    {
-        var firstLabel = Entry.Labels?.FirstOrDefault()?.Name;
-        if (!string.IsNullOrWhiteSpace(firstLabel))
-            return firstLabel.Trim()[..1].ToUpperInvariant();
-        return "?";
-    }
+    private string GetAvatarIcon() =>
+        TransactionRowPresentation.IconFor(Entry.Labels?.FirstOrDefault()?.Name, Entry.ValueChange);
+
+    private bool ShowTimeLabel =>
+        !IsMobile && TransactionRowPresentation.ShouldShowTime(Entry.PostingDate.ToLocalTime(), SiblingsShareSameTime);
+
+    private bool HasMeta => (Entry.Labels is not null && Entry.Labels.Any()) || ShowTimeLabel;
 
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "...";

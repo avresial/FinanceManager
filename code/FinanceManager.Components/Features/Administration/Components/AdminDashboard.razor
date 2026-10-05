@@ -90,7 +90,7 @@
                         <b>
                             @if (_totalTrackedMoney.HasValue)
                             {
-                                @(_totalTrackedMoney.Value.ToString("N2"))<span> PLN</span>
+                                @MoneyFormatter.Format(_totalTrackedMoney.Value, "PLN")
                             }
                             else
                             {
@@ -156,7 +156,7 @@
                                          Items="_dailyActiveUsers"
                                          Name="Users count"
                                          SeriesType="SeriesType.Bar"
-                                         XValue="@(e => e.Date.ToString("dd MMM"))"
+                                         XValue="@(e => DateFormatter.FormatDayMonth(e.Date))"
                                          YValue="@(e => (decimal)e.Value)" />
                     </ApexChart>
                 }
@@ -186,7 +186,7 @@
                                          Items="_newUsers"
                                          Name="Users count"
                                          SeriesType="SeriesType.Bar"
-                                         XValue="@(e => e.Date.ToString("dd MMM"))"
+                                         XValue="@(e => DateFormatter.FormatDayMonth(e.Date))"
                                          YValue="@(e => (decimal)e.Value)" />
                     </ApexChart>
                 }

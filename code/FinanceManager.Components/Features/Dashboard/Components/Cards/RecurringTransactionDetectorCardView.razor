@@ -30,7 +30,7 @@
                 }
                 else if (Data.Count > 0)
                 {
-                    <MudText Typo=Typo.subtitle1 Class="text-muted">@TotalMonthlySpend.ToString("0.00") @Currency/mo</MudText>
+                    <MudText Typo=Typo.subtitle1 Class="text-muted">@MoneyFormatter.Format(TotalMonthlySpend, Currency)/mo</MudText>
                 }
             }
             else if (DetailEntries.Count > 0)
@@ -65,7 +65,7 @@
                                 </div>
                                 <MudText Typo="Typo.body2" Color="@(item.IsIncome ? Color.Success : Color.Warning)" Class="font-weight-600"
                                          Style="min-width: 120px; text-align: right;">
-                                    @($"{(item.IsIncome ? "+" : string.Empty)}{item.Value:0.00} {Currency}/mo")
+                                    @($"{FormatFlow(item.IsIncome, item.Value)}/mo")
                                 </MudText>
                             </div>
                         </MudListItem>
@@ -96,7 +96,7 @@
                         <MudTh Style="text-align:right">Amount</MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Date">@context.PostingDate.ToString("MM-dd")</MudTd>
+                        <MudTd DataLabel="Date">@DateFormatter.FormatDayMonth(context.PostingDate)</MudTd>
                         <MudTd DataLabel="Description">
                             @{
                                 var desc = string.IsNullOrEmpty(context.ContractorDetails) ? context.Description : context.ContractorDetails;
@@ -109,7 +109,7 @@
                         </MudTd>
                         <MudTd DataLabel="Amount" Style="text-align:right">
                             <MudText Color="@(SelectedItem.IsIncome ? Color.Success : Color.Error)">
-                                @($"{(SelectedItem.IsIncome ? "+" : string.Empty)}{Math.Abs(context.ValueChange):0.00} {Currency}")
+                                @FormatFlow(SelectedItem.IsIncome, context.ValueChange)
                             </MudText>
                         </MudTd>
                     </RowTemplate>

@@ -10,7 +10,7 @@
 else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
-                        Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                        ChangeDescription="Account balance change over the selected range, including deposits" Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
                         SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
                         ChartData="@ChartData" CapitalData="@CapitalData" IsMobile="@_isMobile" />
 
@@ -57,7 +57,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
                 <MudItem lg="4">
                     <MudStack Spacing="4">
                         <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                                   Currency="@_currency.ShortName" IsLoading="@_isChartLoading" />
+                                                   Currency="@_currency.ShortName" IsLoading="@_isChartLoading"
+                                                   Description="Current valuation minus capital invested, excluding deposits" />
 
                         <BondAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
                                                BondDetails="@_bondDetails" />
@@ -79,7 +80,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
                 <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                           Currency="@_currency.ShortName" IsLoading="@_isChartLoading" />
+                                           Currency="@_currency.ShortName" IsLoading="@_isChartLoading"
+                                                   Description="Current valuation minus capital invested, excluding deposits" />
 
                 <BondAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])"
                                        BondDetails="@_bondDetails" />

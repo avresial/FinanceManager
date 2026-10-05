@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -39,8 +40,8 @@ public partial class NetCashFlowOverviewCard
     {
         get
         {
-            var start = StartDateTime.ToLocalTime().ToString("MMM yyyy", CultureInfo.InvariantCulture);
-            var end = EndDateTime.ToLocalTime().ToString("MMM yyyy", CultureInfo.InvariantCulture);
+            var start = DateFormatter.FormatMonthYear(StartDateTime.ToLocalTime());
+            var end = DateFormatter.FormatMonthYear(EndDateTime.ToLocalTime());
             // Glyphs as code points so the source stays pure-ASCII (U+00B7 middle dot,
             // U+2013 en dash), matching the convention in TimeSeriesValueCard.
             var dot = (char)0x00B7;

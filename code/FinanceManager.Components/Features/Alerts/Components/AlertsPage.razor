@@ -59,7 +59,7 @@
             <MudItem xs="12" sm="6" md="3">
                 <MudNumericField T="decimal" @bind-Value="_form.Threshold" Label="Threshold"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
-                                 AdornmentText="value" />
+                                 AdornmentText="@_currencyCode" />
             </MudItem>
             <MudItem xs="12" md="3">
                 <MudSelect T="AlertEvaluationPeriod" @bind-Value="_form.EvaluationPeriod" Label="Evaluation period"
@@ -73,8 +73,15 @@
             @if (_form.AlertType == AlertType.AccountBalance)
             {
                 <MudItem xs="12" md="6">
-                    <MudTextField T="string" @bind-Value="_form.AccountIdText" Label="Account id (optional)"
-                                  HelperText="Leave empty to check every currency account." Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudSelect T="int?" @bind-Value="_form.AccountId" Label="Account"
+                               HelperText="Choose All accounts to check every currency account."
+                               Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="alert-account-select">
+                        <MudSelectItem T="int?" Value="@((int?)null)">All accounts</MudSelectItem>
+                        @foreach (var account in _accounts)
+                        {
+                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@AccountLabel(account)</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
             }
             @if (_form.AlertType == AlertType.CategorySpending)
@@ -145,7 +152,7 @@
                         }
                         else
                         {
-                            <MudText Typo="Typo.body2">@outcome.CurrentValue.ToString("N2")</MudText>
+                            <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(outcome.CurrentValue)</MudText>
                             @if (outcome.IsTriggered)
                             {
                                 <MudText Typo="Typo.body2" Color="Color.Warning">@outcome.Message</MudText>
@@ -158,7 +165,7 @@
                     }
                     else if (context.LastTriggeredValue is decimal value)
                     {
-                        <MudText Typo="Typo.body2">@value.ToString("N2")</MudText>
+                        <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(value)</MudText>
                     }
                     else
                     {

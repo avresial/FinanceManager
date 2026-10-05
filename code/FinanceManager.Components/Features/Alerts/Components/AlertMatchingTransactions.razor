@@ -39,7 +39,7 @@
     {
         return string.IsNullOrWhiteSpace(transaction.ContractorDetails)
             && string.IsNullOrWhiteSpace(transaction.Description)
-            ? $"on {transaction.PostingDate:yyyy-MM-dd}"
-            : $"· {transaction.PostingDate:yyyy-MM-dd}";
+            ? $"on {DateFormatter.Format(transaction.PostingDate)}"
+            : $"· {DateFormatter.Format(transaction.PostingDate)}";
     }
 }

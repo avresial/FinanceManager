@@ -13,6 +13,8 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using MudBlazor;
+using MudBlazor.Extensions;
 using MudBlazor.Services;
 using System.Collections.Concurrent;
 using System.Net;
@@ -359,6 +361,9 @@ public class CashFlowForecastPageTests
             Assert.DoesNotContain("mud-skeleton", cut.Markup);
         });
         Assert.True(handler.SixtyDayRequestCancelled.Task.IsCompletedSuccessfully);
+        var header = cut.FindComponent<FinanceManager.Components.Shared.Components.PageHeader>();
+        Assert.Equal("Cash flow forecast", header.Instance.Title);
+        Assert.Equal(30, header.FindComponent<MudToggleGroup<int>>().Instance.GetState(group => group.Value));
     }
 
     private static AngleSharp.Dom.IElement FindHorizon(IRenderedComponent<CashFlowForecastPage> cut, int horizonDays) =>

@@ -23,6 +23,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private string _currency = "PLN";
     private bool _isLoading = true;
     private bool _hasError;
+    private IReadOnlyList<ForecastActivityMonth> _activityMonths = [];
 
     [Inject] public required CashFlowForecastHttpClient CashFlowForecastHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -151,6 +152,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private Task ShowData(CashFlowForecastPageModel model, string key)
     {
         _forecast = model.Forecast;
+        _activityMonths = ForecastActivityGrouper.Group(
+            model.Forecast.ExpectedTransactions,
+            ForecastActivityGrouper.StartingBalance(model.Forecast));
         _currency = model.Currency;
         _paintedKey = key;
         _isLoading = false;
@@ -167,7 +171,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         request?.Dispose();
     }
 
-    private string FormatAmount(decimal amount) => $"{(amount >= 0 ? "+" : string.Empty)}{amount:N2} {_currency}";
+    private string FormatAmount(decimal amount) => MoneyFormatter.FormatSigned(amount, _currency);
 
     private static ApexChartOptions<TimeSeriesModel> BuildChartOptions() => new()
     {
@@ -179,7 +183,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             FontFamily = "Roboto, sans-serif"
         },
         Colors = ["#ffab00", "#42a5f5"],
-        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
+        Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         Legend = new Legend
         {

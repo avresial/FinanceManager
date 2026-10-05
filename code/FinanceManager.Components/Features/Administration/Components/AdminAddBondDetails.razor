@@ -25,10 +25,10 @@
         </MudItem>
 
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" DateFormat="dd/MM/yyyy" />
+            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="End emission date" @bind-Date="_endDate" DateFormat="dd/MM/yyyy" />
+            <MudDatePicker Label="End emission date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
         </MudItem>
 
         <MudItem xs="12" sm="6">
@@ -82,7 +82,7 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Operator">@context.DateOperator</MudTd>
-                            <MudTd DataLabel="Date">@DateOnly.Parse(context.DateValue).ToString("dd-MM-yyyy")</MudTd>
+                            <MudTd DataLabel="Date">@DateFormatter.Format(DateOnly.Parse(context.DateValue))</MudTd>
                             <MudTd DataLabel="Rate">@context.Rate</MudTd>
                             <MudTd DataLabel="Action">
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
@@ -107,7 +107,7 @@
             </MudItem>
 
             <MudItem xs="12" sm="3">
-                <MudDatePicker Label="Date" @bind-Date="_methodDate" DateFormat="dd/MM/yyyy" />
+                <MudDatePicker Label="Date" @bind-Date="_methodDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
             </MudItem>
             <MudItem xs="12" sm="3">
                 <MudNumericField T="decimal?" Label="Rate" @bind-Value="_methodRate" Variant="Variant.Text" />

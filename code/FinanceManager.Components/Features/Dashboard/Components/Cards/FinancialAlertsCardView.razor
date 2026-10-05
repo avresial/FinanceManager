@@ -37,7 +37,7 @@
             {
                 <MudText Typo="Typo.subtitle1" Class="text-muted"><StringSpinner CharactersCount="4" /></MudText>
             }
-            else
+            else if (ConfiguredCount > 0)
             {
                 <MudText Typo="Typo.subtitle1" Class="text-muted">
                     @Triggered.Count triggered of @ConfiguredCount configured
@@ -65,6 +65,16 @@
             {
                 <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
                     <MudText Typo="Typo.body2" Color="Color.Error">Unable to load alerts.</MudText>
+                </div>
+            }
+            else if (ConfiguredCount == 0)
+            {
+                <div class="d-flex flex-column flex-grow-1 justify-center align-center text-center gap-2 pa-4" data-testid="alerts-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Color="Color.Secondary" />
+                    <MudText Typo="Typo.subtitle1">No alerts yet</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Get notified when a balance or spending condition is met.</MudText>
+                    <MudButton Href="Alerts" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add" data-testid="alerts-create-button">Create alert</MudButton>
                 </div>
             }
             else if (Triggered.Count == 0)
@@ -124,7 +134,7 @@
                         <div class="d-flex align-start justify-space-between gap-2">
                             <div>
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Date</MudText>
-                                <MudText Typo="Typo.body2">@transaction.PostingDate.ToString("yyyy-MM-dd")</MudText>
+                                <MudText Typo="Typo.body2">@DateFormatter.Format(transaction.PostingDate)</MudText>
                             </div>
                             <div class="text-right">
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Account</MudText>
@@ -145,7 +155,7 @@
                             </div>
                             <div class="text-right flex-shrink-0">
                                 <MudText Typo="Typo.caption" Class="mud-text-secondary">Value</MudText>
-                                <MudText Typo="Typo.body2">@transaction.Amount.ToString("N2")</MudText>
+                                <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(transaction.Amount)</MudText>
                             </div>
                         </div>
                     </div>

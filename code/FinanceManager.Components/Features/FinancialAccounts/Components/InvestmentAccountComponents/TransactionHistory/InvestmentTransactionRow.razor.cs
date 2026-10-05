@@ -36,8 +36,6 @@ public partial class InvestmentTransactionRow
     // purchase outlay. Sells and not-yet-priced buys have no gain/loss figure, so they fall back to the
     // trade's cash impact, which is the only amount available for them.
     private bool ShowGainLoss => Transaction.Type == InvestmentTransactionType.Buy && Valuation is { HasCurrentPrice: true };
-    private decimal PrimaryAmount => ShowGainLoss ? Valuation!.GainLoss : CashImpact;
-    private string PrimaryCurrency => ShowGainLoss ? Valuation!.Currency : Transaction.Currency;
 
     private void ToggleExpanded() => _expanded = !_expanded;
 

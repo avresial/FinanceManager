@@ -197,12 +197,7 @@ public partial class TimeSeriesValueCard
         StateHasChanged();
     }
 
-    // "12 480.00 PLN" - two decimals, non-breaking-space (U+00A0) thousands separator, currency suffix.
-    private string FormatMoney(decimal value)
-    {
-        var nbsp = ((char)0x00A0).ToString();
-        return value.ToString("N2", CultureInfo.InvariantCulture).Replace(",", nbsp) + nbsp + CurrencyShortName;
-    }
+    private string FormatMoney(decimal value) => MoneyFormatter.Format(value, CurrencyShortName);
 
     private void BuildOptions()
     {
@@ -220,7 +215,7 @@ public partial class TimeSeriesValueCard
                 Animations = new Animations { Enabled = true, Speed = 400 },
             },
             Colors = [Accent],
-            Stroke = new Stroke { Curve = Curve.Smooth, Width = 2.5, LineCap = LineCap.Round },
+            Stroke = new Stroke { Curve = Curve.Stepline, Width = 2.5, LineCap = LineCap.Round },
             DataLabels = new DataLabels { Enabled = false },
             Legend = new Legend { Show = false },
             Fill = new Fill
@@ -329,8 +324,8 @@ public partial class TimeSeriesValueCard
                 X = new TooltipX { Format = "MMMM yyyy" },
                 Y = new TooltipY
                 {
-                    Formatter = "function(v){ return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})" +
-                                ".replace(/,/g,'\\u00A0')+'\\u00A0" + CurrencyShortName + "'; }",
+                    // Same shape as the header readout (MoneyFormatter): "12,480.00 PLN".
+                    Formatter = ChartHelper.GetCurrencyFormatter(CurrencyShortName),
                 },
                 Marker = new TooltipMarker { Show = true },
             },

@@ -133,7 +133,7 @@
     @* Hidden picker opened programmatically from the date-range menu; Dialog variant avoids
        the broken nested-popover behaviour of embedding the picker inside a MudMenu. *@
     <div class="fm-custom-range-picker">
-        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange" DateFormat="dd/MM/yyyy"
+        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
                             DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
     </div>
 </div>

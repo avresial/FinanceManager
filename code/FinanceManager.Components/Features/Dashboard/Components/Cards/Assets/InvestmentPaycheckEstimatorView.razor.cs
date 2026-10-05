@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 
@@ -43,12 +44,9 @@ public partial class InvestmentPaycheckEstimatorView
 
     internal void OnPresetSelected(decimal rate) => _annualWithdrawalRate = rate;
 
-    private string FormatCurrency(decimal value) => $"{value:0.00} {Currency.ShortName}";
+    private string FormatCurrency(decimal value) => MoneyFormatter.Format(value, Currency.ShortName);
 
-    private string FormatMonthly(decimal value) => value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-
-    private static string FormatNumber(decimal value, int decimals)
-        => value.ToString($"N{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+    private string FormatMonthly(decimal value) => MoneyFormatter.FormatNumber(value);
 
     private static string FormatRate(decimal value) => $"{value * 100m:0.0}%";
 

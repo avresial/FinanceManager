@@ -13,6 +13,10 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Make the forecast, transaction, subscription and investment lists easier to scan: a visible selected state, coloured signed amounts, month headings and a running balance on the cash flow forecast; one Balance column header, no repeated or placeholder times and category icons on transaction rows; a per-card actions menu and cadence filter on subscriptions; separate Cash impact and Gain / loss columns on investment trades; and clearer captions on the bond header and appreciation card. #877
+- Show money and dates the same way everywhere: amounts as `27,771.00 PLN` with the currency, and dates as `4 Oct 2026` or `4 Sep – 4 Oct 2026` instead of mixed numeric day/month formats. #875
+- Pick the account for balance alerts from a list with an "All accounts" option, show the preferred currency on the alert threshold, and show a "No alerts yet" empty state with a Create alert action on the Dashboard instead of a "healthy" message. #878
+- Give Settings explicit Save preferences and Update password buttons with confirmation, highlight the section in view in the Settings navigation, name the unlabeled Settings buttons, and show the same display name in the sidebar and on the profile. #878
 - Give Dashboard, Assets, Liabilities, Add account, Subscriptions, Cash flow forecast, Alerts and Automation one shared page header, move the date-range picker from a floating pill into that header, size dashboard cards so rows fill without empty cells, and stop the landing page title from overflowing on phones. #876
 - Show total tracked money in PLN on the admin dashboard, paint its last value immediately while refreshing, and retain it if refresh fails. #840
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
@@ -43,6 +47,7 @@ rules agents must follow when updating this file.
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
 ### Fixed
+- Draw balance and value charts as steps instead of smoothed curves that implied values between data points, show a single-category distribution as a summary instead of a one-slice pie, and label account movers as inflows and outflows. #874
 - Show the last cash flow forecast immediately when returning to the dashboard, and align its More action. #817
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
 - Keep distinct recurring payments to the same merchant separate by requiring their amounts to stay within 5% before detecting cadence. #799

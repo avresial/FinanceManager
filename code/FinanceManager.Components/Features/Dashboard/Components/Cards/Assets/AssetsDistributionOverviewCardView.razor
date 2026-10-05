@@ -18,7 +18,7 @@
             }
             else if (TotalAssets != 0)
             {
-                <MudText Class="fm-card-total">@TotalAssets.ToString("0.00") @CurrencyShortName</MudText>
+                <MudText Class="fm-card-total">@MoneyFormatter.Format(TotalAssets, CurrencyShortName)</MudText>
             }
         </div>
         <div class="fm-card-info-actions">
@@ -44,18 +44,21 @@
         else if (ActiveData.Any())
         {
             <div class="fm-pie-body">
-                <div class="fm-chart-wrap">
-                    <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
-                        <ApexPointSeries TItem="NameValueResult"
-                                         Items="ActiveData"
-                                         Name="Assets"
-                                         SeriesType="SeriesType.Pie"
-                                         XValue="e => e.Name"
-                                         YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
-                                         OrderByDescending="@(e => e.Y)" />
-                    </ApexChart>
-                </div>
-                <div class="fm-legend">
+                @if (!IsSingleCategory)
+                {
+                    <div class="fm-chart-wrap">
+                        <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
+                            <ApexPointSeries TItem="NameValueResult"
+                                             Items="ActiveData"
+                                             Name="Assets"
+                                             SeriesType="SeriesType.Pie"
+                                             XValue="e => e.Name"
+                                             YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
+                                             OrderByDescending="@(e => e.Y)" />
+                        </ApexChart>
+                    </div>
+                }
+                <div class="fm-legend" data-testid="distribution-legend">
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
@@ -68,7 +71,7 @@
                                 <span class="fm-legend-dot" style="background: @color"></span>
                                 <span class="fm-legend-name">@item.Name</span>
                                 <span class="fm-legend-vals">
-                                    <span class="fm-legend-amt">@item.Value.ToString("0.00")</span>
+                                    <span class="fm-legend-amt">@MoneyFormatter.Format(item.Value, CurrencyShortName)</span>
                                     <span class="fm-legend-pct">@pct.ToString("0.0")%</span>
                                 </span>
                             </div>

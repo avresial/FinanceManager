@@ -10,14 +10,15 @@ using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using Microsoft.JSInterop;
 using MudBlazor;
 using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Identity.Components;
 
-public partial class UserSettingsPage : ComponentBase
+public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
 {
+    private const string _scrollContainerSelector = "html";
+    private const string _sectionClass = "settings-section";
     private const string _requiredDeleteConfirmation = "delete my account";
 
     private readonly List<string> _errors = [];
@@ -29,18 +30,18 @@ public partial class UserSettingsPage : ComponentBase
     private RecordCapacity? _recordCapacity;
 
     private bool _isLoadingPage;
-    private bool _isDirty;
-    private bool _passwordValid;
+    private IScrollSpy _scrollSpy = null!;
+    private bool _isSavingPreferences;
+    private bool _isSavingPassword;
+    private bool _scrollSpyStarted;
 
     private string _displayName = string.Empty;
     private string _email = string.Empty;
-    private string _initialDisplayName = string.Empty;
 
     private string? _currentPassword;
     private string? _newPassword;
     private string? _confirmPassword;
-    private MudForm? _passwordForm;
-    private MudTextField<string>? _passwordField;
+    private int _passwordFormVersion;
 
     private string _giftCode = string.Empty;
     private bool _isRedeemingGiftCode;
@@ -59,11 +60,13 @@ public partial class UserSettingsPage : ComponentBase
     [Inject] public required UserSettingsService UserSettingsService { get; set; }
     [Inject] public required GiftCodeHttpClient GiftCodeHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
-    [Inject] public required IJSRuntime JSRuntime { get; set; }
+    [Inject] public required IScrollSpyFactory ScrollSpyFactory { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required ILogger<UserSettingsPage> Logger { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        _scrollSpy = ScrollSpyFactory.Create();
         _isLoadingPage = true;
         _loggedUser = await LoginService.GetLoggedUser();
         if (_loggedUser is null)
@@ -79,9 +82,8 @@ public partial class UserSettingsPage : ComponentBase
             return;
         }
 
-        _displayName = _userData.Login;
+        _displayName = UserDisplayName.From(_userData);
         _email = _userData.Login;
-        _initialDisplayName = _displayName;
 
         try
         {
@@ -110,67 +112,92 @@ public partial class UserSettingsPage : ComponentBase
         _isLoadingPage = false;
     }
 
-    private void MarkDirty() => _isDirty = HasChanges();
+    private bool CanChangePassword =>
+        !string.IsNullOrEmpty(_currentPassword)
+        && !string.IsNullOrEmpty(_newPassword)
+        && string.Equals(_newPassword, _confirmPassword, StringComparison.Ordinal)
+        && !PasswordStrength(_newPassword).Any();
 
-    private bool HasChanges()
-    {
-        if (_displayName != _initialDisplayName) return true;
-        if (_selectedCurrencyId != _initialCurrencyId) return true;
-        if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId) return true;
-        if (!string.IsNullOrEmpty(_currentPassword)) return true;
-        if (!string.IsNullOrEmpty(_newPassword)) return true;
-        if (!string.IsNullOrEmpty(_confirmPassword)) return true;
-        return false;
-    }
+    private bool HasPreferenceChanges =>
+        _selectedCurrencyId != _initialCurrencyId
+        || _selectedBenchmark?.ListingId != _initialBenchmark?.ListingId;
 
     private async Task OnSectionSelectedAfter()
     {
         if (string.IsNullOrEmpty(_selectedSection)) return;
-        await JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('{_selectedSection}')?.scrollIntoView({{ behavior: 'smooth', block: 'start' }})");
+        await _scrollSpy.ScrollToSection(_selectedSection);
     }
 
-    private async Task SaveAll()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_loggedUser is null) return;
+        if (_userData is null || _scrollSpyStarted) return;
+
+        _scrollSpyStarted = true;
+        _scrollSpy.ScrollSectionSectionCentered += OnSectionCentered;
+        await _scrollSpy.StartSpying(_scrollContainerSelector, _sectionClass);
+    }
+
+    private void OnSectionCentered(object? sender, ScrollSectionCenteredEventArgs args)
+    {
+        if (args.Id == _selectedSection) return;
+        _selectedSection = args.Id;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _scrollSpy.ScrollSectionSectionCentered -= OnSectionCentered;
+        await _scrollSpy.DisposeAsync();
+    }
+
+    private async Task SavePreferencesAsync()
+    {
+        if (_loggedUser is null || _isSavingPreferences) return;
+
+        _errors.Clear();
+        _isSavingPreferences = true;
+        try
+        {
+            if (_selectedCurrencyId != _initialCurrencyId)
+                await UpdatePreferredCurrency();
+            if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId)
+                await UpdatePreferredBenchmark();
+        }
+        finally
+        {
+            _isSavingPreferences = false;
+        }
+
+        if (_errors.Count == 0)
+            Snackbar.Add("Preferences saved.", Severity.Success);
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        if (_loggedUser is null || _isSavingPassword || !CanChangePassword) return;
 
         _errors.Clear();
         _warnings.Clear();
-        _info.Clear();
-
-        var hasPasswordChange = !string.IsNullOrEmpty(_newPassword) || !string.IsNullOrEmpty(_confirmPassword) || !string.IsNullOrEmpty(_currentPassword);
-        if (hasPasswordChange)
+        _isSavingPassword = true;
+        try
         {
-            await ChangePasswordAsync();
-        }
+            var changed = await UserService.UpdatePassword(_loggedUser.UserId, _newPassword!, _currentPassword);
+            if (!changed)
+            {
+                _errors.Insert(0, "Failed to change password. Check that your current password is correct.");
+                return;
+            }
 
-        if (_selectedCurrencyId != _initialCurrencyId)
+            _currentPassword = null;
+            _newPassword = null;
+            _confirmPassword = null;
+            _passwordFormVersion++;
+            Snackbar.Add("Password changed.", Severity.Success);
+        }
+        finally
         {
-            await UpdatePreferredCurrency();
+            _isSavingPassword = false;
         }
-
-        if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId)
-        {
-            await UpdatePreferredBenchmark();
-        }
-
-        _initialDisplayName = _displayName;
-        _isDirty = HasChanges();
-    }
-
-    private void DiscardChanges()
-    {
-        _displayName = _initialDisplayName;
-        _selectedCurrencyId = _initialCurrencyId;
-        _selectedBenchmark = _initialBenchmark;
-        _currentPassword = null;
-        _newPassword = null;
-        _confirmPassword = null;
-        if (_passwordField is not null)
-            _ = _passwordField.ResetAsync();
-        _errors.Clear();
-        _warnings.Clear();
-        _info.Clear();
-        _isDirty = false;
     }
 
     private string PasswordMatch(string arg)
@@ -323,7 +350,6 @@ public partial class UserSettingsPage : ComponentBase
     private void OnBenchmarkChanged(InstrumentSearchResultDto? benchmark)
     {
         _selectedBenchmark = benchmark;
-        MarkDirty();
     }
 
     private async Task<IEnumerable<InstrumentSearchResultDto>> SearchBenchmarksAsync(
@@ -349,42 +375,6 @@ public partial class UserSettingsPage : ComponentBase
         _errors.Clear();
         await LoginService.Logout();
         NavigationManager.NavigateTo("/");
-    }
-
-    private async Task ChangePasswordAsync()
-    {
-        if (_loggedUser is null) return;
-        if (_passwordForm is null) return;
-        if (_passwordField is null) return;
-        if (string.IsNullOrEmpty(_confirmPassword)) return;
-
-        await _passwordForm.Validate();
-        if (!_passwordForm.IsValid) return;
-
-        if (!string.Equals(_newPassword, _confirmPassword, StringComparison.Ordinal))
-        {
-            _warnings.Insert(0, "New passwords do not match.");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(_currentPassword))
-        {
-            _warnings.Insert(0, "Current password is required.");
-            return;
-        }
-
-        var result = await UserService.UpdatePassword(_loggedUser.UserId, _confirmPassword, _currentPassword);
-        if (!result)
-        {
-            _errors.Insert(0, "Failed to change password. Check that your current password is correct.");
-            return;
-        }
-
-        _info.Insert(0, "Password changed successfully.");
-        _currentPassword = null;
-        _newPassword = null;
-        _confirmPassword = null;
-        await _passwordField.ResetAsync();
     }
 
     private Color GetStorageIndicatorColor()
