@@ -33,18 +33,21 @@
         else if (Data.Any())
         {
             <div class="ed-body">
-                <div class="ed-chart-wrap">
-                    <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
-                        <ApexPointSeries TItem="NameValueResult"
-                                         Items="Data"
-                                         Name="Expenses"
-                                         SeriesType="SeriesType.Pie"
-                                         XValue="e => e.Name"
-                                         YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
-                                         OrderByDescending="@(e => e.Y)" />
-                    </ApexChart>
-                </div>
-                <div class="ed-legend">
+                @if (!IsSingleCategory)
+                {
+                    <div class="ed-chart-wrap">
+                        <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
+                            <ApexPointSeries TItem="NameValueResult"
+                                             Items="Data"
+                                             Name="Expenses"
+                                             SeriesType="SeriesType.Pie"
+                                             XValue="e => e.Name"
+                                             YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
+                                             OrderByDescending="@(e => e.Y)" />
+                        </ApexChart>
+                    </div>
+                }
+                <div class="ed-legend" data-testid="distribution-legend">
                     @{
                         var sorted = Data.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();

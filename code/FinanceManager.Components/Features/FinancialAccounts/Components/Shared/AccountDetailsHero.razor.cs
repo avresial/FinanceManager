@@ -142,7 +142,7 @@ public partial class AccountDetailsHero
             Animations = new Animations { Enabled = true, Speed = 400 },
         },
         Colors = ["#ffab00", "#42a5f5", "#66bb6a"],
-        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
+        Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // Top-aligned so the legend does not compete with the x-axis label row below the plot.
         Legend = new Legend

@@ -37,7 +37,7 @@
             {
                 <MudText Typo="Typo.subtitle1" Class="text-muted"><StringSpinner CharactersCount="4" /></MudText>
             }
-            else
+            else if (ConfiguredCount > 0)
             {
                 <MudText Typo="Typo.subtitle1" Class="text-muted">
                     @Triggered.Count triggered of @ConfiguredCount configured
@@ -65,6 +65,16 @@
             {
                 <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap pa-4">
                     <MudText Typo="Typo.body2" Color="Color.Error">Unable to load alerts.</MudText>
+                </div>
+            }
+            else if (ConfiguredCount == 0)
+            {
+                <div class="d-flex flex-column flex-grow-1 justify-center align-center text-center gap-2 pa-4" data-testid="alerts-empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Color="Color.Secondary" />
+                    <MudText Typo="Typo.subtitle1">No alerts yet</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Get notified when a balance or spending condition is met.</MudText>
+                    <MudButton Href="Alerts" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Add" data-testid="alerts-create-button">Create alert</MudButton>
                 </div>
             }
             else if (Triggered.Count == 0)

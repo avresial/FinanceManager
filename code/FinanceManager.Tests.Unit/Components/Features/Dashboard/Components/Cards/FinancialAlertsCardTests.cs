@@ -468,7 +468,7 @@ public sealed class FinancialAlertsCardTests
         var cut = context.Render<FinancialAlertsCard>();
         cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
         handler.Complete(0, [], []);
-        cut.WaitForAssertion(() => Assert.Contains("All configured alerts are healthy.", cut.Markup), _timeout);
+        cut.WaitForAssertion(() => Assert.Contains("No alerts yet", cut.Markup), _timeout);
         await Drain(cut);
         Assert.DoesNotContain("Unable to load alerts.", cut.Markup);
         _snapshots.Verify(x => x.SetAsync(_key, It.Is<FinancialAlertsSnapshot>(s =>
@@ -523,7 +523,7 @@ public sealed class FinancialAlertsCardTests
         Assert.DoesNotContain("Stored alert", cut.Markup);
         Assert.DoesNotContain("triggered of", cut.Markup);
         handler.Complete(0, [], []);
-        cut.WaitForAssertion(() => Assert.Contains("All configured alerts are healthy.", cut.Markup), _timeout);
+        cut.WaitForAssertion(() => Assert.Contains("No alerts yet", cut.Markup), _timeout);
         await Drain(cut);
     }
 

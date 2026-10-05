@@ -179,7 +179,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             FontFamily = "Roboto, sans-serif"
         },
         Colors = ["#ffab00", "#42a5f5"],
-        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2, LineCap = LineCap.Round },
+        Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         Legend = new Legend
         {

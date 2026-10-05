@@ -1,11 +1,13 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Alerts.Models;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,8 @@ public partial class AlertsPage : ComponentBase
     private bool _isRefreshing;
     private bool _isSaving;
     private int? _userId;
+    private List<AvailableAccount> _accounts = [];
+    private string _currencyCode = string.Empty;
     private readonly RefreshVersionGate _refreshGate = new();
 
     [Inject] public required FinancialAlertsHttpClient HttpClient { get; set; }
@@ -33,8 +37,35 @@ public partial class AlertsPage : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ISnapshotService SnapshotService { get; set; }
+    [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
 
-    protected override Task OnInitializedAsync() => RefreshAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _currencyCode = SettingsService.GetCurrency().ShortName;
+        var refresh = RefreshAsync();
+        await Task.WhenAll(refresh, LoadFormOptionsAsync());
+    }
+
+    private async Task LoadFormOptionsAsync()
+    {
+        try
+        {
+            _accounts = [.. (await CurrencyAccountHttpClient.GetAvailableAccountsAsync()).OrderBy(account => account.AccountName)];
+            _currencyCode = (await SettingsService.GetCurrencyAsync()).ShortName;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load account options for the alert form");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string AccountLabel(AvailableAccount account) =>
+        _accounts.Count(candidate => candidate.AccountName.Equals(account.AccountName, StringComparison.OrdinalIgnoreCase)) > 1
+            ? $"{account.AccountName} (#{account.AccountId})"
+            : account.AccountName;
 
     private async Task RefreshAsync()
     {
@@ -178,17 +209,7 @@ public partial class AlertsPage : ComponentBase
             return;
         }
 
-        int? accountId = null;
-        if (_form.AlertType == AlertType.AccountBalance && !string.IsNullOrWhiteSpace(_form.AccountIdText))
-        {
-            if (!int.TryParse(_form.AccountIdText, out var parsedAccountId) || parsedAccountId <= 0)
-            {
-                _errors.Add("Account id must be a positive number.");
-                return;
-            }
-
-            accountId = parsedAccountId;
-        }
+        var accountId = _form.AlertType == AlertType.AccountBalance ? _form.AccountId : null;
 
         var labelName = _form.AlertType == AlertType.CategorySpending ? NullIfWhiteSpace(_form.LabelName) : null;
         var merchantName = _form.AlertType == AlertType.MerchantSpending ? NullIfWhiteSpace(_form.MerchantName) : null;
@@ -306,7 +327,7 @@ public partial class AlertsPage : ComponentBase
             ComparisonOperator = alert.ComparisonOperator,
             Threshold = alert.Threshold,
             EvaluationPeriod = alert.EvaluationPeriod,
-            AccountIdText = alert.AccountId?.ToString() ?? string.Empty,
+            AccountId = alert.AccountId,
             LabelName = alert.LabelName ?? string.Empty,
             MerchantName = alert.MerchantName ?? string.Empty,
         };
@@ -381,7 +402,7 @@ public partial class AlertsPage : ComponentBase
         public AlertComparisonOperator ComparisonOperator { get; set; } = AlertComparisonOperator.GreaterThan;
         public decimal Threshold { get; set; }
         public AlertEvaluationPeriod EvaluationPeriod { get; set; } = AlertEvaluationPeriod.CurrentMonth;
-        public string AccountIdText { get; set; } = string.Empty;
+        public int? AccountId { get; set; }
         public string LabelName { get; set; } = string.Empty;
         public string MerchantName { get; set; } = string.Empty;
     }
