@@ -324,8 +324,8 @@ public partial class TimeSeriesValueCard
                 X = new TooltipX { Format = "MMMM yyyy" },
                 Y = new TooltipY
                 {
-                    Formatter = "function(v){ return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})" +
-                                ".replace(/,/g,'\\u00A0')+'\\u00A0" + CurrencyShortName + "'; }",
+                    // Same shape as the header readout (MoneyFormatter): "12,480.00 PLN".
+                    Formatter = ChartHelper.GetCurrencyFormatter(CurrencyShortName),
                 },
                 Marker = new TooltipMarker { Show = true },
             },

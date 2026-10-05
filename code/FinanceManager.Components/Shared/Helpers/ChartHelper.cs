@@ -94,12 +94,14 @@ public static class ChartHelper
                ",maximumFractionDigits:" + decimals + "}); }";
     }
 
-    public static string GetCurrencyFormatter(string currency)
-    {
-        return @"function(value, opts) {
-                    if (value === undefined) {return '';}
-                    return Number(value).toLocaleString() + " + $" ' {currency}' " + ";}";
-    }
+    /// <summary>
+    /// ApexCharts tooltip formatter that renders money exactly like <see cref="MoneyFormatter.Format"/>:
+    /// comma thousands grouping, two decimals and a regular space before the currency (<c>12,480.00 PLN</c>).
+    /// The locale is fixed to en-US so the tooltip never depends on the browser locale.
+    /// </summary>
+    public static string GetCurrencyFormatter(string currency) =>
+        "function(value){ if (value === undefined || value === null) { return ''; } " +
+        "return Number(value).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' " + currency + "'; }";
 
     /// <summary>
     /// Pads a series' displayed value range by 5% on both ends so small changes stay visible
