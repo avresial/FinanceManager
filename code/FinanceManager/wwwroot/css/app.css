@@ -152,3 +152,12 @@ code {
         opacity: 1;
     }
 }
+
+/* Import stepper on phones: three titled steps don't fit, and the scrolling nav hid
+   "Review" off-screen. Keep the numbered dots for every step but label only the active one. */
+@media (max-width: 599.98px) {
+    .fm-import-stepper .mud-step:not(.active) .mud-step-label-content,
+    .fm-import-stepper .mud-step-label-content-secondary-text {
+        display: none;
+    }
+}

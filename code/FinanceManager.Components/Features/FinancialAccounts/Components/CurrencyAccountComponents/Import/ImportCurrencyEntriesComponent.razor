@@ -5,19 +5,12 @@
 @using System.Globalization
 @inherits ImportEntriesComponentBase<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccount, ImportCurrencyEntriesComponent>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="pa-2">
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
 
-    <MudStack Spacing="1" Class="mb-6">
-        <MudText Typo="Typo.h5">
-            Import to <MudText Inline="true" Typo="Typo.h5" Color="Color.Primary"><b>@AccountName</b></MudText>
-        </MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">
-            Upload a CSV export, map your columns, and resolve any conflicts with existing entries.
-        </MudText>
-    </MudStack>
+    <PageHeader Title="@($"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
 
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
-        <MudStepper @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
+        <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
 
                 <MudStep Title="Select file" SecondaryText="CSV upload" @bind-Completed="_step1Complete">

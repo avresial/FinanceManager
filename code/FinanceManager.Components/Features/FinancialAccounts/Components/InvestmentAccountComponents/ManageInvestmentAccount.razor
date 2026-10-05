@@ -5,8 +5,7 @@
         <MudContainer MaxWidth="MaxWidth.Medium">
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
-                    <MudText Typo="Typo.h4">Update</MudText>
-                    <MudText Typo="Typo.subtitle1">@_investmentAccount.Name</MudText>
+                    <PageHeader Title="Manage account" Subtitle="@_investmentAccount.Name" />
                 </MudItem>
                 @if (_errors.Any())
                 {
