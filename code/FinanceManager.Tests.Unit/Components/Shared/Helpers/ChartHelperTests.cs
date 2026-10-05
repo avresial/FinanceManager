@@ -170,4 +170,14 @@ public class ChartHelperTests
         // Guarding zero must not lose the null/undefined/NaN guard, or those render "NaNk".
         Assert.Contains("Number.isFinite(v)", ChartHelper.CompactCurrencyTickFormatter);
     }
+
+    [Fact]
+    public void GetCurrencyFormatter_MatchesMoneyFormatterShape()
+    {
+        var formatter = ChartHelper.GetCurrencyFormatter("PLN");
+
+        Assert.Contains("toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})", formatter);
+        Assert.Contains("+ ' PLN'", formatter);
+        Assert.DoesNotContain("u00A0", formatter);
+    }
 }

@@ -64,7 +64,7 @@ else if (_dayGroups.Any())
             <MudStack Spacing="2">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mud-width-full">
                     <MudText Typo="Typo.overline" Class="mud-text-secondary">
-                        Conflict @(idx + 1) · @day.Date.ToString("dd-MM-yyyy")
+                        Conflict @(idx + 1) · @DateFormatter.Format(day.Date)
                     </MudText>
                     <MudSpacer />
                     @if (resolved)
@@ -106,11 +106,11 @@ else if (_dayGroups.Any())
                                             @foreach (var e in importedEntries)
                                             {
                                                 <tr>
-                                                    <td>@e.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                    <td>@DateFormatter.Format(e.PostingDate)</td>
                                                     <td>
                                                         <MudText Inline="true" Typo="Typo.body2"
                                                                  Color="@(e.ValueChange < 0 ? Color.Error : Color.Success)">
-                                                            @(e.ValueChange > 0 ? "+" : "")@e.ValueChange.ToString("0.00")
+                                                            @MoneyFormatter.FormatSigned(e.ValueChange)
                                                         </MudText>
                                                     </td>
                                                     <td>@GetBondName(e.BondDetailsId)</td>
@@ -154,11 +154,11 @@ else if (_dayGroups.Any())
                                             @foreach (var e in existingEntries)
                                             {
                                                 <tr>
-                                                    <td>@e.PostingDate.ToString("dd-MM-yyyy")</td>
+                                                    <td>@DateFormatter.Format(e.PostingDate)</td>
                                                     <td>
                                                         <MudText Inline="true" Typo="Typo.body2"
                                                                  Color="@(e.ValueChange < 0 ? Color.Error : Color.Success)">
-                                                            @(e.ValueChange > 0 ? "+" : "")@e.ValueChange.ToString("0.00")
+                                                            @MoneyFormatter.FormatSigned(e.ValueChange)
                                                         </MudText>
                                                     </td>
                                                     <td>@GetBondName(e.BondDetailsId)</td>

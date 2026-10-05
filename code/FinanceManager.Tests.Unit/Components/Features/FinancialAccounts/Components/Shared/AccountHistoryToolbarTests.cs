@@ -74,7 +74,7 @@ public class AccountHistoryToolbarTests
             selectedRange: AccountHistoryToolbar.CustomRangeKey,
             customDateRange: new DateRange(_customStart, _customEnd));
 
-        Assert.Equal("Date range: 05/01/2026 to 15/06/2026", toolbar.RangeButtonAccessibleText);
+        Assert.Equal("Date range: 5 Jan 2026 to 15 Jun 2026", toolbar.RangeButtonAccessibleText);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class AccountHistoryToolbarTests
             selectedRange: AccountHistoryToolbar.CustomRangeKey,
             customDateRange: new DateRange(_customStart, _customEnd));
 
-        Assert.Equal("05/01 – 15/06", toolbar.RangeButtonText);
+        Assert.Equal("5 Jan – 15 Jun 2026", toolbar.RangeButtonText);
     }
 
     [Fact]

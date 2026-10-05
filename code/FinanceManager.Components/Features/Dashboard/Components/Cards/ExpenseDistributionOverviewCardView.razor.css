@@ -41,6 +41,7 @@
 
 .ed-legend-row {
     display: flex;
+    flex-wrap: wrap; /* the amount drops under the name on narrow cards instead of truncating it */
     align-items: center;
     gap: 8px;
     padding: 5px 0;
@@ -61,7 +62,7 @@
 
 .ed-legend-name {
     flex: 1 1 auto;
-    min-width: 0;
+    min-width: 5em;
     font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -70,6 +71,7 @@
 
 .ed-legend-vals {
     flex: 0 0 auto;
+    margin-left: auto;
     display: flex;
     flex-direction: column;
     align-items: flex-end;

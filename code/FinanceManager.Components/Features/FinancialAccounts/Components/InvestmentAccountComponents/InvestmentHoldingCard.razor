@@ -42,11 +42,11 @@
                             </div>
                             <div class="fm-holding-field">
                                 <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Current price</MudText>
-                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.LatestPrice.ToString("N2") @holding.Currency</MudText>
+                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@MoneyFormatter.Format(holding.LatestPrice, holding.Currency)</MudText>
                             </div>
                             <div class="fm-holding-field">
                                 <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Current value</MudText>
-                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.Value.ToString("N2") @holding.Currency</MudText>
+                                <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@MoneyFormatter.Format(holding.Value, holding.Currency)</MudText>
                             </div>
                         </div>
                     </article>

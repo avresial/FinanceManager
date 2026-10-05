@@ -76,7 +76,7 @@ public partial class AccountHistoryToolbar : ComponentBase
             // A dated label is ~45px wider than the phone row can spare once the type filter,
             // category, search and add controls have taken their share, so mobile keeps the
             // short form — the picked days are still shown in the picker and the change card.
-            return IsMobile ? "Custom" : $"{start:dd/MM} – {end:dd/MM}";
+            return IsMobile ? "Custom" : DateFormatter.FormatRange(start, end);
         }
     }
 
@@ -93,7 +93,7 @@ public partial class AccountHistoryToolbar : ComponentBase
             if (!IsCustomRange) return $"Date range: {SelectedRange}";
 
             return CustomDateRange is { Start: DateTime start, End: DateTime end }
-                ? $"Date range: {start:dd/MM/yyyy} to {end:dd/MM/yyyy}"
+                ? $"Date range: {DateFormatter.Format(start)} to {DateFormatter.Format(end)}"
                 : "Date range: custom range";
         }
     }

@@ -5,8 +5,8 @@
         <CardHeaderContent>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
-                    <MudText Typo="Typo.subtitle2">@Day.ToString("dd MMM")</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Default">@Day.ToString("dddd")</MudText>
+                    <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(Day)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">@DateFormatter.FormatWeekday(Day)</MudText>
                 </MudStack>
                 <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-actions">
                     <MudText Typo="Typo.caption" Color="Color.Default">@Entries.Count() @(Entries.Count() == 1 ? "entry" : "entries")</MudText>

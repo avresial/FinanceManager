@@ -32,12 +32,12 @@
         <MudText Typo="Typo.body1" Class="fm-tabular"
                  Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)"
                  Style="flex-shrink: 0;">
-            @(Entry.ValueChange >= 0 ? "+" : "")@Entry.ValueChange.ToString("N2") @Currency
+            @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
         </MudText>
 
         <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
             <MudText Typo="Typo.overline" Color="Color.Default">Balance</MudText>
-            <MudText Typo="Typo.caption" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
+            <MudText Typo="Typo.caption" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
         </MudStack>
     </MudStack>
 </div>
@@ -48,11 +48,11 @@
         <MudGrid Spacing="3">
             <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.PostingDate.ToLocalTime().ToString("dd-MM-yyyy · HH:mm")</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@Entry.Value.ToString("N2") @Currency</MudText>
+                <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
             </MudItem>
             @if (!string.IsNullOrWhiteSpace(Entry.Description))
             {

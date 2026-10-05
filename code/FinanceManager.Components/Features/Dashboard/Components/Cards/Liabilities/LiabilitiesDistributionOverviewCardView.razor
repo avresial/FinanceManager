@@ -18,7 +18,7 @@
             }
             else if (TotalLiabilities != 0)
             {
-                <MudText Class="fm-card-total">@TotalLiabilities.ToString("0.00") @CurrencyShortName</MudText>
+                <MudText Class="fm-card-total">@MoneyFormatter.Format(TotalLiabilities, CurrencyShortName)</MudText>
             }
         </div>
         <div class="fm-card-info-actions">
@@ -68,7 +68,7 @@
                                 <span class="fm-legend-dot" style="background: @color"></span>
                                 <span class="fm-legend-name">@item.Name</span>
                                 <span class="fm-legend-vals">
-                                    <span class="fm-legend-amt">@item.Value.ToString("0.00")</span>
+                                    <span class="fm-legend-amt">@MoneyFormatter.Format(item.Value, CurrencyShortName)</span>
                                     <span class="fm-legend-pct">@pct.ToString("0.0")%</span>
                                 </span>
                             </div>

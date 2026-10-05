@@ -31,6 +31,6 @@ public sealed class AlertPresentationTests
             ContractorDetails: "Example Store");
 
         Assert.Equal("/AccountDetails/12?entryId=34", AlertPresentation.TransactionHref(transaction));
-        Assert.Equal("Example Store · 2026-09-02", AlertPresentation.TransactionLabel(transaction));
+        Assert.Equal("Example Store · 2 Sep 2026", AlertPresentation.TransactionLabel(transaction));
     }
 }

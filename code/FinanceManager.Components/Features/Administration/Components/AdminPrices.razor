@@ -29,7 +29,7 @@
                         <MudSelectItem T="long?" Value="listing.Id">@listing.Label</MudSelectItem>
                     }
                 </MudSelect>
-                <MudDatePicker Label="Price date" @bind-Date="_date" DateFormat="dd/MM/yyyy" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
+                <MudDatePicker Label="Price date" @bind-Date="_date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
                 <MudNumericField T="decimal?" Label="Price" @bind-Value="_price" Immediate="true" Min="0.00000001m"
                                  Required RequiredError="Enter a price" Adornment="Adornment.End" AdornmentText="@SelectedCurrency" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_isSaving" OnClick="Save">

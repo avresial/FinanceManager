@@ -24,7 +24,7 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.body1" Class="fm-tabular">@CapitalValue.ToString("N2") @Currency</MudText>
+                    <MudText Typo="Typo.body1" Class="fm-tabular">@MoneyFormatter.Format(CapitalValue, Currency)</MudText>
                 }
             </MudStack>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -35,7 +35,7 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.body1" Class="fm-tabular">@CurrentValue.ToString("N2") @Currency</MudText>
+                    <MudText Typo="Typo.body1" Class="fm-tabular">@MoneyFormatter.Format(CurrentValue, Currency)</MudText>
                 }
             </MudStack>
         </MudStack>
@@ -53,7 +53,7 @@
                          Icon="@(gain >= 0 ? Icons.Material.Filled.TrendingUp : Icons.Material.Filled.TrendingDown)"
                          Color="@gainColor" />
                 <MudText Typo="Typo.h5" Class="fm-tabular" Color="@gainColor">
-                    @(gain >= 0 ? "+" : "")@gain.ToString("N2") @Currency
+                    @MoneyFormatter.FormatSigned(gain, Currency)
                 </MudText>
                 @if (gainPercent.HasValue)
                 {

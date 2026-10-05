@@ -45,7 +45,7 @@
             <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-2">
                 <MudText Typo="Typo.h6">Projected cash balance</MudText>
                 <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">
-                    As of @_forecast.AsOfDate.ToString("d MMM yyyy") · @_forecast.Currency
+                    As of @DateFormatter.Format(_forecast.AsOfDate) · @_forecast.Currency
                 </MudText>
             </div>
             <div class="cash-flow-forecast-chart">
@@ -89,7 +89,7 @@
                                 <div class="text-truncate">
                                     <MudText Typo="Typo.body2" Class="text-truncate">@transaction.Description</MudText>
                                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">
-                                        @transaction.Date.ToString("d MMM yyyy") · @transaction.Cadence
+                                        @DateFormatter.Format(transaction.Date) · @transaction.Cadence
                                     </MudText>
                                 </div>
                                 <MudText Typo="Typo.body2" Class="@(transaction.Amount >= 0 ? "cash-flow-inflow" : "cash-flow-outflow")">

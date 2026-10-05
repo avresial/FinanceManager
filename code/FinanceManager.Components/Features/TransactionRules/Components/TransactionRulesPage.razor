@@ -454,8 +454,8 @@
                     {
                         <div class="transaction-result">
                             <div class="d-flex flex-wrap justify-space-between gap-2 mb-2">
-                                <MudText Typo="Typo.subtitle2">@result.AccountName · @result.Date.ToString("d")</MudText>
-                                <MudText Typo="Typo.subtitle2">@result.Amount.ToString("N2") · @result.Before.Direction</MudText>
+                                <MudText Typo="Typo.subtitle2">@result.AccountName · @DateFormatter.Format(result.Date)</MudText>
+                                <MudText Typo="Typo.subtitle2">@MoneyFormatter.FormatNumber(result.Amount) · @result.Before.Direction</MudText>
                             </div>
                             @BeforeAfter(result.Before, result.After)
                             <MudText Typo="Typo.caption">@(result.HasChanges ? "Matched · changes shown above." : "Rule matches but produces no effective change.")</MudText>

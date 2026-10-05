@@ -1,4 +1,5 @@
 using FinanceManager.Application.Alerts.Models;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.Alerts.Enums;
 
 namespace FinanceManager.Components.Features.Alerts.Components;
@@ -19,7 +20,7 @@ public static class AlertPresentation
     }
 
     public static string ComparisonDetail(AlertEvaluationOutcome outcome) =>
-        $"{outcome.CurrentValue:N2} {ComparisonSymbol(outcome.ComparisonOperator)} {outcome.Threshold:N2}";
+        $"{MoneyFormatter.FormatNumber(outcome.CurrentValue)} {ComparisonSymbol(outcome.ComparisonOperator)} {MoneyFormatter.FormatNumber(outcome.Threshold)}";
 
     public static string ComparisonSymbol(AlertComparisonOperator comparison) => comparison switch
     {
@@ -48,8 +49,8 @@ public static class AlertPresentation
         return string.Equals(title, "Transaction", StringComparison.Ordinal)
             && string.IsNullOrWhiteSpace(transaction.ContractorDetails)
             && string.IsNullOrWhiteSpace(transaction.Description)
-            ? $"Transaction on {transaction.PostingDate:yyyy-MM-dd}"
-            : $"{title} · {transaction.PostingDate:yyyy-MM-dd}";
+            ? $"Transaction on {DateFormatter.Format(transaction.PostingDate)}"
+            : $"{title} · {DateFormatter.Format(transaction.PostingDate)}";
     }
 
     public static string TransactionAriaLabel(AlertTransactionReference transaction) =>

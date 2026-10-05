@@ -18,7 +18,7 @@ else
             <MudPaper Outlined Class="pa-4 h-100">
                 <MudText Typo="Typo.overline">Fixed monthly cost</MudText>
                 <MudText Typo="Typo.h4" Color="Color.Warning">
-                    @($"{Model.MonthlyCost:N2} {Currency}")
+                    @MoneyFormatter.Format(Model.MonthlyCost, Currency)
                 </MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     across @Model.ActiveCount active subscriptions
@@ -28,7 +28,7 @@ else
         <MudItem xs="12" sm="4">
             <MudPaper Outlined Class="pa-4 h-100">
                 <MudText Typo="Typo.overline">Annual equivalent</MudText>
-                <MudText Typo="Typo.h4">@($"{Model.AnnualCost:N2} {Currency}")</MudText>
+                <MudText Typo="Typo.h4">@MoneyFormatter.Format(Model.AnnualCost, Currency)</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">based on detected cadence</MudText>
             </MudPaper>
         </MudItem>
