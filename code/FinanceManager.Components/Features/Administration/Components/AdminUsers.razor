@@ -16,9 +16,8 @@
     <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name"
                   Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
                   Class="flex-grow-1" />
-    <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add user" Href="Admin/AddUser" Color="Color.Primary" />
 </MudStack>
-<MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Md"
+<MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Sm"
           LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
     <HeaderContent>
         <MudTh>User id</MudTh>

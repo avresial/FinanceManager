@@ -50,10 +50,16 @@ public partial class AdminDashboard : ComponentBase
         Xaxis = new XAxis
         {
             Type = XAxisType.Category,
+            // A month of daily bars labelled every day crammed ~30 rotated dates into an unreadable
+            // band; label about a week apart, flat, and drop any that would still overlap.
+            TickAmount = 6,
+            TickPlacement = TickPlacement.On,
             AxisBorder = new AxisBorder { Show = false },
             AxisTicks = new AxisTicks { Show = false },
             Labels = new XAxisLabels
             {
+                Rotate = 0,
+                HideOverlappingLabels = true,
                 Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
             },
         },
@@ -65,6 +71,8 @@ public partial class AdminDashboard : ComponentBase
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new YAxisLabels
                 {
+                    // User counts are whole numbers; skip the fractional ticks (0.2, 0.4…) a small max produces.
+                    Formatter = "function(v){ return Number.isInteger(v) ? v : ''; }",
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                 },
             },

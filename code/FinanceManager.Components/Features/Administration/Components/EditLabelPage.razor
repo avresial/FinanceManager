@@ -9,9 +9,7 @@
 { 
     <MudGrid Spacing="6">
         <MudItem xs="12">
-            <MudText Typo="Typo.h3">
-                @_labelData.Name.ToUpper()
-            </MudText>
+            <MudText Typo="Typo.h4">@_labelData.Name</MudText>
         </MudItem>
 
 
@@ -26,7 +24,7 @@
                                       RequiredError="Name is required!" />
 
 
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="UpdateNameAsync" Disabled="@(!_success)">Update name</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success)">Update name</MudButton>
                     </MudForm>
                 </MudItem>
             </MudGrid>

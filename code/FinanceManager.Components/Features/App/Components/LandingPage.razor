@@ -23,9 +23,11 @@
 
             <MudItem xs="12" md="4" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1 m-4">
-                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
-                        <MudText Typo="Typo.h1" Style="font-size:clamp(2.5rem, 14vw, 6rem); overflow-wrap:anywhere;">Finance</MudText>
-                        <MudText Typo="Typo.h1" Style="font-size:clamp(2.5rem, 14vw, 6rem); overflow-wrap:anywhere;">Manager</MudText>
+                    @* Sized to the column (cqi), not the viewport: on desktop the column is a third of the page and
+                       a 14vw title overflowed it, so "Manager" broke mid-word. *@
+                    <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent; container-type:inline-size;">
+                        <MudText Typo="Typo.h1" Style="font-size:clamp(2.5rem, 22cqi, 6rem); overflow-wrap:anywhere;">Finance</MudText>
+                        <MudText Typo="Typo.h1" Style="font-size:clamp(2.5rem, 22cqi, 6rem); overflow-wrap:anywhere;">Manager</MudText>
                     </MudPaper>
                 </div>
             </MudItem>

@@ -56,6 +56,8 @@ rules agents must follow when updating this file.
 - Show the account balance and its change on phones, give account pages the same side margins as the rest of the app, stack each transaction's amount over its running balance on phones so names are readable, remove the stray dot in the account chart corner, and stop the Balance change amount and Top movers title wrapping in the side column. #884
 - Give Manage account, Import, Export and Settings the shared page header and app bar title, keep all import steps visible on phones, show the export range in the standard date format, line up the gift code field with its Redeem button, and drop the repeated delete-account hint. #884
 - Send the unfinished Investments placeholder page to Assets instead of showing blank white cards. #884
+- Keep the landing page title on whole words and drop the blue focus box around page headings. #884
+- Show admin Users, Labels, Bonds and Assets as tables on laptop screens instead of stacked cards, drop the placeholder trend symbols and dead Add user button, space admin chart dates so they are readable, line up recent log entries, give Add label an empty name field and a proper heading, stop shouting names on the edit pages, and point edit-page breadcrumbs back to their list. #884
 - Draw balance and value charts as steps instead of smoothed curves that implied values between data points, show a single-category distribution as a summary instead of a one-slice pie, and label account movers as inflows and outflows. #874
 - Show the last cash flow forecast immediately when returning to the dashboard, and align its More action. #817
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812

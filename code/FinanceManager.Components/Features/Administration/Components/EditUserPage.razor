@@ -15,9 +15,7 @@
 
     <MudGrid Spacing="6">
         <MudItem xs="12">
-            <MudText Typo="Typo.h3">
-                @_userData.Login.ToUpper()
-            </MudText>
+            <MudText Typo="Typo.h4">@_userData.Login</MudText>
         </MudItem>
         <MudItem xs="12">
             <MudText Typo="Typo.h6">Change Password</MudText>
@@ -28,11 +26,11 @@
                     InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
                     Required RequiredError="Password is required!" />
 
-                <MudTextField T="string" @bind-Value="_confirmPassword" Immediate Required Label="Password"
+                <MudTextField T="string" @bind-Value="_confirmPassword" Immediate Required Label="Repeat password"
                     HelperText="Repeat the password" InputType="InputType.Password"
                     Validation="@(new Func<string, string?>(PasswordMatch))" />
 
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4" OnClick="ChangePasswordAsync"
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="ChangePasswordAsync"
                     Disabled="@(!_success)">Update Password</MudButton>
             </MudForm>
 
