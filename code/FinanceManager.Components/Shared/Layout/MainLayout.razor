@@ -78,10 +78,12 @@
         _currentUserId = loggedUser.UserId;
 
         // Warm the preferred-currency cache before pages render, so components that read the
-        // display currency synchronously already see the user's preference.
-        await SettingsService.GetCurrencyAsync();
-
+        // display currency synchronously already see the user's preference. Started alongside the
+        // user lookup so both share a single User/Get request. #890
+        var currencyWarmup = SettingsService.GetCurrencyAsync();
         var user = await UserService.GetUser(loggedUser.UserId);
+        await currencyWarmup;
+
         if (user is not null)
             _pricingLevel = user.PricingLevel;
         var displayName = user is null ? loggedUser.UserName : UserDisplayName.From(user);

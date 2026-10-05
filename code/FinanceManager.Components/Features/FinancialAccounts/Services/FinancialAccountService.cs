@@ -23,8 +23,12 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     // on the service's own account mutations, on the app-wide AccountsChanged signal (covers accounts
     // added straight through the HttpClients, e.g. AddAccount.razor.cs), and on login-state changes so
     // it never leaks across users (logout does not reload the app, so this scoped instance is reused).
-    private Dictionary<int, Type>? _availableAccountsCache;
+    // The in-flight (or completed) fetch is cached rather than only its result, so callers that ask at the
+    // same time - Home and the nav menu both do on startup - share one set of requests. #890
+    private Task<IReadOnlyList<TypedAvailableAccount>>? _availableAccountsTask;
     private bool _invalidationHooksInstalled;
+
+    private sealed record TypedAvailableAccount(int AccountId, string AccountName, Type AccountType);
 
 
     public async Task<bool> AccountExists(int id)
@@ -167,27 +171,41 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     }
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
+        // Always hand back a fresh copy: the cached list is shared across all callers, so returning a shared
+        // map would let any caller that mutates the result silently corrupt every other caller's view.
+        var accounts = await GetCachedAvailableAccounts();
+        return accounts.ToDictionary(account => account.AccountId, account => account.AccountType);
+    }
+
+    public async Task<Dictionary<int, string>> GetAvailableAccountNames()
+    {
+        var accounts = await GetCachedAvailableAccounts();
+        return accounts.ToDictionary(account => account.AccountId, account => account.AccountName);
+    }
+
+    private async Task<IReadOnlyList<TypedAvailableAccount>> GetCachedAvailableAccounts()
+    {
         EnsureInvalidationHooksInstalled();
 
-        // Always hand back a fresh copy: the cached instance is shared across all callers, so returning it
-        // directly would let any caller that mutates the result silently corrupt every other caller's view.
-        if (_availableAccountsCache is not null)
-            return new Dictionary<int, Type>(_availableAccountsCache);
+        if (_availableAccountsTask is not null)
+            return await _availableAccountsTask;
 
-        var result = await FetchAvailableAccounts();
+        var fetch = FetchAvailableAccounts();
+        _availableAccountsTask = fetch;
+        var result = await fetch;
 
-        // An empty map most likely means the endpoints failed (per-type errors are swallowed below) or
+        // An empty list most likely means the endpoints failed (per-type errors are swallowed below) or
         // the user genuinely has no accounts yet; don't pin it so a transient failure - or the guest
-        // mock-seeding flow in Home.razor - self-heals on the next lookup.
-        if (result.Count > 0)
-            _availableAccountsCache = new Dictionary<int, Type>(result);
+        // mock-seeding flow in Home.razor - self-heals on the next lookup. The reference check keeps a
+        // fetch started after an invalidation from being dropped by this older one.
+        if (result.Count == 0 && ReferenceEquals(_availableAccountsTask, fetch))
+            _availableAccountsTask = null;
 
         return result;
     }
 
-    private async Task<Dictionary<int, Type>> FetchAvailableAccounts()
+    private async Task<IReadOnlyList<TypedAvailableAccount>> FetchAvailableAccounts()
     {
-        Dictionary<int, Type> result = [];
         var currencyAccountsTask = GetAvailableAccountsAsync(
             () => currencyAccountHttpClient.GetAvailableAccountsAsync(),
             "currency");
@@ -200,16 +218,12 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         await Task.WhenAll(currencyAccountsTask, investmentAccountsTask, bondAccountsTask);
 
-        foreach (var account in await currencyAccountsTask)
-            result.Add(account.AccountId, typeof(CurrencyAccount));
-
-        foreach (var account in await investmentAccountsTask)
-            result.Add(account.AccountId, typeof(InvestmentAccount));
-
-        foreach (var account in await bondAccountsTask)
-            result.Add(account.AccountId, typeof(BondAccount));
-
-        return result;
+        return
+        [
+            .. (await currencyAccountsTask).Select(account => new TypedAvailableAccount(account.AccountId, account.AccountName, typeof(CurrencyAccount))),
+            .. (await investmentAccountsTask).Select(account => new TypedAvailableAccount(account.AccountId, account.AccountName, typeof(InvestmentAccount))),
+            .. (await bondAccountsTask).Select(account => new TypedAvailableAccount(account.AccountId, account.AccountName, typeof(BondAccount))),
+        ];
     }
 
     // Subscribed lazily (rather than in a constructor body) so the primary constructor can be kept.
@@ -223,7 +237,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         loginService.LogginStateChanged += _ => InvalidateAvailableAccountsCache();
     }
 
-    private void InvalidateAvailableAccountsCache() => _availableAccountsCache = null;
+    private void InvalidateAvailableAccountsCache() => _availableAccountsTask = null;
 
     private async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync(
         Func<Task<IEnumerable<AvailableAccount>>> getAccounts,
@@ -311,18 +325,19 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         else throw new InvalidOperationException($"Account {accountId}, entryId {entryId} not found.");
     }
-    public Task UpdateAccount<T>(T account) where T : BasicAccountInformation
+    public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
     {
         if (account is CurrencyAccount currencyAccount)
-            return currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId));
+            await currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId));
+        else if (account is InvestmentAccount)
+            await investmentAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Stock));
+        else if (account is BondAccount)
+            await bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Bond));
+        else
+            throw new NotSupportedException($"Account {account.GetType()} type not supported for getting start date.");
 
-        if (account is InvestmentAccount)
-            return investmentAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Stock));
-
-        if (account is BondAccount)
-            return bondAccountHttpClient.UpdateAccountAsync(new(account.AccountId, account.Name, Domain.FinancialAccounts.Shared.Entities.AccountLabel.Bond));
-
-        throw new NotSupportedException($"Account {account.GetType()} type not supported for getting start date.");
+        // The cached list carries account names (the nav menu reads them), so a rename must refetch it.
+        InvalidateAvailableAccountsCache();
     }
     public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
     {
