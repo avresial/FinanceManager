@@ -48,6 +48,10 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
         // root, which is sufficient for host-level integration tests and avoids external database dependencies.
         builder.UseSetting("UseInMemoryDatabase", "true");
 
+        // Static web assets are only resolved from build output in Development; the "test" environment
+        // needs them enabled explicitly so MapStaticAssets can serve the Blazor client like a published app.
+        builder.UseStaticWebAssets();
+
         if (_hostSettings is not null)
         {
             foreach (var setting in _hostSettings)

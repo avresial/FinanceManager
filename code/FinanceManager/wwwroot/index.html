@@ -7,22 +7,24 @@
     <title>FinanceManager</title>
     <base href="/" />
 
-    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/app.css" />
-    <link rel="stylesheet" href="lib/bootstrap-icons/bootstrap-icons.min.css">
+    <!-- Stylesheets load without blocking first paint (media="print" swaps to "all" once fetched), so the inline
+         boot screen below shows immediately; they finish long before the WASM runtime renders the app. -->
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="css/app.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="lib/bootstrap-icons/bootstrap-icons.min.css" media="print" onload="this.media='all'" />
 
     <link rel="icon" type="image/png" href="favicon.ico" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link href="FinanceManager.WebUi.styles.css" rel="stylesheet" />
+    <link rel="stylesheet" href="FinanceManager.WebUi.styles.css" media="print" onload="this.media='all'" />
 
-    <link href="lib/roboto/roboto.css" rel="stylesheet" />
-    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/card-info-affordance.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/cardStyle.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/time-series-card.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/money-by-label-card.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/transaction-log-card.css" rel="stylesheet" />
-    <link href="_content/FinanceManager.Components/css/account-details-hero.css" rel="stylesheet" />
+    <link rel="stylesheet" href="lib/roboto/roboto.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/card-info-affordance.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/cardStyle.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/time-series-card.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/money-by-label-card.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/transaction-log-card.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="_content/FinanceManager.Components/css/account-details-hero.css" media="print" onload="this.media='all'" />
 
     <!-- Start Single Page Apps for GitHub Pages -->
     <script type="text/javascript">
@@ -89,6 +91,11 @@
         html.preload #app,
         body.preload #app {
             min-height: 100vh;
+        }
+
+        /* Hidden until Blazor reports an error; inlined because app.css loads asynchronously. */
+        #blazor-error-ui {
+            display: none;
         }
 
         /* --- WASM boot screen (static HTML/CSS only; replaced when Blazor starts) --- */
@@ -290,8 +297,6 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
-    <script src="_content/Microsoft.AspNetCore.Components.WebAssembly.Authentication/AuthenticationService.js"></script>
-
     <script src="_framework/blazor.webassembly.js"></script>
 
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
