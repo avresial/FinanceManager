@@ -1,5 +1,7 @@
 # FinanceManager Copilot Instructions
 
+For canonical technical documentation, read the [arc42 architecture documentation](../docs/architecture/README.md) and its maintenance rules.
+
 Use these instructions for all repository-scoped Copilot work.
 
 ## Repository location and scope

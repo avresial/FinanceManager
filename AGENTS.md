@@ -1,5 +1,7 @@
 # AGENTS.md
 
+For canonical technical documentation, read the [arc42 architecture documentation](docs/architecture/README.md) and its maintenance rules.
+
 Instructions for AI agents working on FinanceManager.
 
 **Read CLAUDE.md first** - CLAUDE.md contains the information usualy found in agents md.

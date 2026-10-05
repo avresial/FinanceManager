@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 /// content changed. Owns the snapshot key shape so every caller scopes it identically.
 /// </summary>
 /// <remarks>
-/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/codebase/UI-SNAPSHOTS.md.
+/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/architecture/concepts/ui-snapshots.md.
 /// Investment accounts keep their own store rather than reusing <see cref="AccountDetailsSnapshotStore"/>
 /// because their rows are rendered from two responses, trades and server-priced valuations, not one.
 /// </remarks>

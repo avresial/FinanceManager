@@ -1,9 +1,13 @@
 # Production Database Backup and Rollback Runbook
 
+[Architecture index](../README.md) · [Owning arc42 section](../07-deployment-view.md)
+
+Commands in this guide run from the repository root unless an explicit `cd` is shown.
+
 This runbook documents the manual database safety procedure for FinanceManager production releases.
 
 Scope:
-- Production database is hosted on Supabase PostgreSQL.
+- This runbook targets a Supabase PostgreSQL production database. Confirm the actual host/project and provider before use; repository configuration alone does not verify live hosting.
 - This document covers manual backup, restore, and EF Core migration rollback.
 - This document does not introduce any automatic backup step in CI/CD.
 
@@ -129,7 +133,11 @@ Use this path when:
 
 Do not use this as the primary recovery path after data corruption or destructive data backfills. In those cases, restore from backup instead.
 
-### Step 1: Identify the target migration
+### Step 1: Identify the target migration and compatible application artifact
+
+Stop/drain all application instances and prevent the failed release from restarting or being redeployed while recovery is in progress. `DatabaseInitializer` automatically applies pending migrations on startup, so leaving the failed artifact running can immediately reapply the migration being reverted. Take the required backup and select a previously validated application artifact compatible with the rollback target.
+
+Use a recovery checkout/artifact that contains the bad migration and its reviewed `Down()` method for the EF rollback command; the application artifact started afterward must exclude that bad migration. These are distinct requirements.
 
 Find the migration immediately before the bad one:
 
@@ -165,10 +173,13 @@ Important:
 ### Step 3: Verify rollback
 
 1. Query `__EFMigrationsHistory` again and confirm the bad migration is gone.
-2. Start the application against production and verify login, dashboard load, and core account flows.
-3. Review application logs for migration or startup failures.
+2. Deploy/start only the compatible pre-migration application artifact selected in Step 1. Keep the failed/latest artifact stopped; its startup migration initializer would reapply the reverted migration.
+3. Query `__EFMigrationsHistory` again after startup to confirm the bad migration remains absent, then verify login, dashboard load, and core account flows.
+4. Review application logs for migration or startup failures before restoring traffic.
 
 ## 6. Restore From Backup
+
+Stop/drain application writers and prevent automatic restarts before restoring. Select an application artifact compatible with the backup schema and data; after restoration, start that artifact and verify migration history before restoring traffic. Starting an artifact containing later migrations can change the restored schema immediately.
 
 Use this path when:
 - Data was corrupted.

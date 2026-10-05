@@ -1,10 +1,12 @@
 # Projects and dependencies analysis
 
+> Historical .NET 9 to .NET 10 upgrade assessment. FinanceManager currently targets .NET 10; these generated findings describe the pre-upgrade baseline. Companion [CSV](assessment.csv) and [JSON](assessment.json) are preserved unchanged. See [constraints](../../02-architecture-constraints.md) for the current platform.
+
 This document provides a comprehensive overview of the projects and their dependencies in the context of upgrading to .NETCoreApp,Version=v10.0.
 
 ## Table of Contents
 
-- [Executive Summary](#executive-Summary)
+- [Executive Summary](#executive-summary)
   - [Highlevel Metrics](#highlevel-metrics)
   - [Projects Compatibility](#projects-compatibility)
   - [Package Compatibility](#package-compatibility)
@@ -728,4 +730,3 @@ flowchart TB
 | 🔵 Behavioral change | 0 | Low - Behavioral changes that may require testing at runtime |
 | ✅ Compatible | 122 |  |
 | ***Total APIs Analyzed*** | ***122*** |  |
-

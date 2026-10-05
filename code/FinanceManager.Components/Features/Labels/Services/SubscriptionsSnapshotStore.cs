@@ -12,7 +12,7 @@ namespace FinanceManager.Components.Features.Labels.Services;
 /// Owns the key shapes so both surfaces scope them identically.
 /// </summary>
 /// <remarks>
-/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/codebase/UI-SNAPSHOTS.md.
+/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/architecture/concepts/ui-snapshots.md.
 /// The page feeds both surfaces from the single subscriptions request it already made; the store
 /// never fetches, so no extra or aggregate request is introduced by splitting the snapshots.
 /// </remarks>

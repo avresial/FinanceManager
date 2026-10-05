@@ -100,7 +100,7 @@ public partial class Dashboard : ComponentBase
 
     // Stale-while-revalidate: paint the stored snapshot, always re-fetch, and only repaint and
     // re-persist when the fresh overview differs. SnapshotRefreshCoordinator owns that workflow —
-    // see docs/codebase/UI-SNAPSHOTS.md.
+    // see docs/architecture/concepts/ui-snapshots.md.
     private async Task LoadOverview()
     {
         // Claimed here rather than inside the coordinator so the same version also guards the

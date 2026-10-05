@@ -23,7 +23,7 @@ namespace FinanceManager.Components.Features.Labels.Components;
 /// equality — so a change that only moves the list (a renamed pattern, a new charge date) does not
 /// repaint or rewrite the tiles, and vice versa. Both are fed from the single subscriptions request
 /// the page already made, so splitting the snapshots costs no extra HTTP call. See
-/// docs/codebase/UI-SNAPSHOTS.md.
+/// docs/architecture/concepts/ui-snapshots.md.
 /// </remarks>
 public partial class SubscriptionsPage : ComponentBase
 {

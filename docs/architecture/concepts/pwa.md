@@ -1,5 +1,9 @@
 # Progressive Web App (PWA) Caching and Offline Behavior
 
+[Architecture index](../README.md) · [Owning arc42 section](../08-crosscutting-concepts.md)
+
+Commands in this guide run from the repository root unless an explicit `cd` is shown.
+
 This document describes FinanceManager's Progressive Web App (PWA) caching strategy, offline scope, and update lifecycle.
 
 ---
@@ -65,7 +69,7 @@ When the browser initiates a navigation request (`event.request.mode === 'naviga
 
 To maintain data integrity, security, and live real-time communication, specific routes **must never** be served from offline static caches:
 
-- **REST API Routes (`/api/`)**: Requests containing `/api/` bypass index.html fallback and go directly to the network. This guarantees authentication tokens, transaction mutations, and budget queries are always fresh.
+- **REST API Routes (`/api/`)**: Requests containing `/api/` bypass index.html fallback and go directly to the network. This keeps API responses out of the service-worker asset cache. API-level and browser data caches have their own freshness rules; this bypass alone does not guarantee fresh financial data.
 - **SignalR Hub Connections (`/hubs/`)**: Real-time channels (e.g. currency import progress hubs) bypass service worker interception to preserve WebSockets/HTTP long-polling handshakes.
 
 ---
@@ -91,12 +95,12 @@ The registration uses `updateViaCache: 'none'` and explicitly checks for an upda
 ## 7. Verification & Automated Test Coverage
 
 Static source contracts for PWA behavior are continuously validated via focused unit tests in:
-`code/FinanceManager.Tests.Unit/Pwa/PwaSourceContractTests.cs`
+[PwaSourceContractTests.cs](../../../code/FinanceManager.Tests.Unit/Pwa/PwaSourceContractTests.cs)
 
 Run the test suite using:
 ```bash
 cd code
-dotnet test ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj -- --filter-class "*PwaSourceContractTests"
+dotnet test --project ./FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj -- --filter-class "*PwaSourceContractTests"
 ```
 
 For a production verification, publish the API host, load it in a fresh browser profile, and confirm:

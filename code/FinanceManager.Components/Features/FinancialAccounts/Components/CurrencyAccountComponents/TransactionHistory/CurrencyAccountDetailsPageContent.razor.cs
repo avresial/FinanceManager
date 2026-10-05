@@ -487,7 +487,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     // Stale-while-revalidate: paint the last-rendered entries instantly, always re-fetch, and only
     // repaint and re-persist when the entries actually changed. Chart data has its own
-    // per-range snapshot, queued by UpdateInfo. See docs/codebase/UI-SNAPSHOTS.md.
+    // per-range snapshot, queued by UpdateInfo. See docs/architecture/concepts/ui-snapshots.md.
     private async Task LoadInitialEntries()
     {
         if (_user is null) return;

@@ -1,5 +1,7 @@
 # Backend Cleanup Audit
 
+> Historical evidence migrated for arc42 on 2026-10-05. Findings, line numbers, statuses and measurements below describe the original audit baseline, not a fresh assessment. Use the current [risks](../11-risks-and-technical-debt.md) and [quality requirements](../10-quality-requirements.md) for present architectural interpretation.
+
 Audit of the backend layers (`FinanceManager.Api`, `FinanceManager.Application`,
 `FinanceManager.Domain`, `FinanceManager.Infrastructure`). Migrations and generated
 files are excluded.

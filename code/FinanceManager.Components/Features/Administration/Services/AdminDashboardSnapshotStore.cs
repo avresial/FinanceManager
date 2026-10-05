@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Features.Administration.Services;
 /// <summary>
 /// Runs the stale-while-revalidate workflow for the admin dashboard surfaces. Owns the snapshot key
 /// shapes so each card scopes them identically, leaving the ordering, equality and race protection to
-/// the coordinator — see docs/codebase/UI-SNAPSHOTS.md.
+/// the coordinator — see docs/architecture/concepts/ui-snapshots.md.
 /// </summary>
 public sealed class AdminDashboardSnapshotStore(ISnapshotRefreshCoordinator coordinator)
 {

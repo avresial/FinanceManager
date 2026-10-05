@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-FinanceManager is an online budgeting tool built with Blazor WebAssembly + ASP.NET Core. The Blazor WASM client is hosted and served by the API project as static files. All source lives under `code/`; the repo root also contains published static site artefacts — do not edit those.
+FinanceManager is an online budgeting tool built with Blazor WebAssembly + ASP.NET Core. The Blazor WASM client is hosted and served by the API project as static files. All application source lives under `code/`. The [arc42 architecture documentation](./docs/architecture/README.md) is the canonical technical documentation; do not edit generated build output.
 
 The solution file is `code/FinanceManager.slnx`. Target framework is `.NET 10`.
 
@@ -173,39 +173,13 @@ dotnet ef database update -s code/FinanceManager.Api/FinanceManager.Api.csproj
 
 ## Architecture
 
-The system is a **layered modular monolith** deployed as a single ASP.NET Core host:
+The canonical architecture documentation is the multi-file [arc42 set](./docs/architecture/README.md). Read [building blocks](./docs/architecture/05-building-block-view.md) and [crosscutting concepts](./docs/architecture/08-crosscutting-concepts.md) before changing architectural contracts; follow its [maintenance rules](./docs/architecture/maintenance.md) in the same change.
 
-```
-Razor component → typed HttpClient → API controller → application/domain service → repository or external provider
-```
+The system is a layered modular monolith with a Blazor WASM browser client and one ASP.NET Core host. Domain must never reference ASP.NET or EF Core. Browser components reach the host through typed HTTP clients and must never access the database. Actual project dependencies and historical namespace exceptions are documented in section 5.
 
-| Project | Responsibility |
-|---------|---------------|
-| `FinanceManager` | Blazor WASM bootstrap; registers root component and browser-level services |
-| `FinanceManager.Components` | All Razor pages/components, typed HTTP clients, browser-local caches/state — no DB access |
-| `FinanceManager.Api` | HTTP routes, JWT auth, CORS, SignalR hub, background services — no domain calculations |
-| `FinanceManager.Application` | Use-case orchestration, pricing/insight services, AI/stock provider coordination |
-| `FinanceManager.Domain` | Entities, repository interfaces, service contracts, value objects — no infrastructure deps |
-| `FinanceManager.Infrastructure` | EF Core `AppDbContext`, repository implementations, external API adapters (Alpha Vantage, currency, AI) |
-| `AppHost` | Aspire local orchestration (PostgreSQL + API) |
-| `ServiceDefaults` | OpenTelemetry, resilience, health defaults shared across services |
+Cards and transaction lists paint last-rendered snapshots and always attempt a refresh via `ISnapshotRefreshCoordinator`; the separate `LocalStorageStateCacheService` can skip a request during its validity window. Read the [UI snapshot guide](./docs/architecture/concepts/ui-snapshots.md) before adding either.
 
-**Key constraint**: `FinanceManager.Domain` must never reference ASP.NET or EF Core. `FinanceManager.Components` must never access the database directly.
-
-### Cross-Cutting Patterns
-
-- **DI registration**: each layer exposes a `ServiceCollectionExtension.cs` with an `Add*` extension method. Wire new services there.
-- **Typed HTTP clients** (`code/FinanceManager.Components/HttpClients/`) wrap all API route details; Razor components never call `HttpClient` directly.
-- **Provider fallback chain**: AI calls go through a configured fallback (OpenRouter → GitHub Models → Ollama). Stock price reads check repository/cache before hitting Alpha Vantage.
-- **UI snapshots vs. data caching**: cards and transaction lists paint their last-rendered state from local storage and *always* re-fetch, via `ISnapshotRefreshCoordinator`. `LocalStorageStateCacheService` is the separate time-based cache that *skips* the request. See [`docs/codebase/UI-SNAPSHOTS.md`](./docs/codebase/UI-SNAPSHOTS.md) before adding either.
-- **Background services + channels**: async jobs (insights, label setting, import) run as hosted services registered in `Program.cs`, communicating via SignalR (`/hubs/currency-import`).
-- **Razor code-behind**: complex components split into `.razor` + `.razor.cs` pairs.
-
-### Database
-
-The app supports both **SQL Server** and **PostgreSQL**; the provider is selected at startup in `FinanceManager.Infrastructure/ServiceCollectionExtension.cs`. `AppHost` provisions PostgreSQL locally via Aspire. Development config (`appsettings.Development.json`) may still point at SQL Server — be aware of this drift.
-
-Integration tests use the EF Core **InMemory** provider. They also remove `DatabaseInitializer` and `LabelSetterStartupService` from DI to avoid startup interference.
+The database provider is selected in infrastructure registration; PostgreSQL is provisioned locally by Aspire and SQL Server is also supported. See [deployment](./docs/architecture/07-deployment-view.md) for configuration precedence and [testing](./docs/architecture/quality/testing.md) for provider/isolation limitations. AI fallback order is configured through provider/model/fallback records rather than a fixed chain.
 
 ## C# Conventions
 

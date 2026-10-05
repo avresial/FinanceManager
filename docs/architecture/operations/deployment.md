@@ -1,6 +1,10 @@
 # Deployment
 
-The CI workflow (`.github/workflows/ci.yml`) auto-deploys to two Azure Web Apps:
+[Architecture index](../README.md) · [Owning arc42 section](../07-deployment-view.md)
+
+Commands in this guide run from the repository root unless an explicit `cd` is shown.
+
+The CI workflow ([ci.yml](../../../.github/workflows/ci.yml)) auto-deploys to two Azure Web Apps:
 
 | Branch    | Azure Web App           | GitHub Environment | Publish-profile secret              |
 |-----------|-------------------------|--------------------|-------------------------------------|

@@ -1,5 +1,7 @@
 # Accessibility audit: keyboard navigation and semantics
 
+> Historical evidence migrated for arc42 on 2026-10-05. Findings, line numbers, statuses and measurements below describe the original audit baseline, not a fresh assessment. Use the current [risks](../11-risks-and-technical-debt.md) and [quality requirements](../10-quality-requirements.md) for present architectural interpretation.
+
 Audit date: 13 August 2026
 
 Baseline: WCAG 2.2 Level A and AA

@@ -13,7 +13,7 @@ namespace FinanceManager.Components.Features.Dashboard.Services;
 /// shapes so each card scopes them identically. Each card keeps its own existing API call.
 /// </summary>
 /// <remarks>
-/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/codebase/UI-SNAPSHOTS.md.
+/// The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/architecture/concepts/ui-snapshots.md.
 /// Every card here fetches from a client that throws on a failed request, which is what lets the
 /// coordinator tell "the request failed, keep showing the snapshot" apart from "the user genuinely
 /// has nothing", the latter clearing the card and overwriting storage.
