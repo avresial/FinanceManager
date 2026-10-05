@@ -3,14 +3,18 @@ using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.Components;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Alerts.Models;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using MudBlazor;
 using MudBlazor.Services;
 using System.Net;
 using System.Net.Http.Json;
@@ -39,6 +43,36 @@ public sealed class AlertsPageTests
         cut.WaitForAssertion(() => Assert.Contains("Unable to refresh alerts", cut.Markup));
         Assert.Contains("Cached alert", cut.Markup);
         Assert.Equal("Cached alert", snapshots.Snapshot!.Alerts[0].Title);
+    }
+
+    [Fact]
+    public async Task Form_OffersAllAccountsAndUserAccounts_InsteadOfFreeTextId()
+    {
+        var handler = new AlertsHandler();
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Account id", cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains("All accounts", cut.Markup));
+        cut.FindAll(".mud-select").First(select => select.TextContent.Contains("All accounts")).QuerySelector(".mud-input-control")!.MouseDown();
+
+        cut.WaitForAssertion(() =>
+        {
+            var items = popovers.FindAll(".mud-list-item").Select(item => item.TextContent.Trim()).ToList();
+            Assert.Contains("Everyday", items);
+            Assert.Contains("Savings", items);
+        });
+    }
+
+    [Fact]
+    public async Task Form_ThresholdAdornmentShowsCurrency_NotLiteralValue()
+    {
+        await using var context = CreateContext(new AlertsHandler(), new SnapshotStore());
+        var cut = context.Render<AlertsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim() == DefaultCurrency.PLN.ShortName));
+        Assert.DoesNotContain(">value<", cut.Markup);
     }
 
     [Fact]
@@ -178,7 +212,24 @@ public sealed class AlertsPageTests
         {
             BaseAddress = new Uri("http://localhost/")
         }));
+        context.Services.AddSingleton(new CurrencyAccountHttpClient(new HttpClient(new AccountsHandler())
+        {
+            BaseAddress = new Uri("http://localhost/")
+        }));
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
+        settings.Setup(service => service.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.PLN);
+        context.Services.AddSingleton(settings.Object);
         return context;
+    }
+
+    private sealed class AccountsHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new List<AvailableAccount> { new(11, "Everyday"), new(12, "Savings") })
+            });
     }
 
     private sealed class SnapshotStore : ISnapshotService

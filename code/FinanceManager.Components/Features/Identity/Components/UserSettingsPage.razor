@@ -31,7 +31,7 @@
 
                 <MudDivider Class="my-6" />
 
-                <section id="profile">
+                <section class="settings-section" id="profile">
                     <MudText Typo="Typo.h6">Profile</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                         Your public identity within Finance Manager.
@@ -39,9 +39,9 @@
 
                     <div class="d-flex flex-column flex-md-row align-md-center gap-3 mb-4">
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full" Style="min-width:0;">
-                            <MudAvatar Color="Color.Primary" Size="Size.Large">@_userData.Login.ToUpper()[0]</MudAvatar>
+                            <MudAvatar Color="Color.Primary" Size="Size.Large">@char.ToUpperInvariant(_displayName[0])</MudAvatar>
                             <MudStack Spacing="0" Style="min-width:0;">
-                                <MudText Typo="Typo.subtitle1" Style="word-break:break-word;">@_userData.Login</MudText>
+                                <MudText Typo="Typo.subtitle1" Style="word-break:break-word;">@_displayName</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Style="word-break:break-word;">@_userData.Login</MudText>
                             </MudStack>
                         </MudStack>
@@ -58,7 +58,8 @@
                                           Variant="Variant.Outlined"
                                           Margin="Margin.Dense"
                                           Value="@_displayName"
-                                          ValueChanged="@(v => { _displayName = v; MarkDirty(); })" />
+                                          ReadOnly="true"
+                                          HelperText="Taken from your account." />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudTextField T="string"
@@ -73,7 +74,7 @@
 
                 <MudDivider Class="my-6" />
 
-                <section id="preferences">
+                <section class="settings-section" id="preferences">
                     <MudText Typo="Typo.h6">Preferences</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                         All balances and asset values are recalculated to your preferred currency.
@@ -86,7 +87,7 @@
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"
                                        Value="@_selectedCurrencyId"
-                                       ValueChanged="@(v => { _selectedCurrencyId = v; MarkDirty(); })">
+                                       ValueChanged="@(v => _selectedCurrencyId = v)">
                                 @foreach (var currency in _currencies)
                                 {
                                     <MudSelectItem T="int" Value="@currency.Id">@($"{currency.ShortName} ({currency.Symbol})")</MudSelectItem>
@@ -103,6 +104,7 @@
                                              HelperText="Leave empty to compare against Polish inflation."
                                              Placeholder="Polish inflation"
                                              Clearable="true"
+                                             AdornmentAriaLabel="Show benchmark suggestions"
                                              MinCharacters="1"
                                              DebounceInterval="300"
                                              ResetValueOnEmptyText="true"
@@ -111,22 +113,27 @@
                                              Margin="Margin.Dense" />
                         </MudItem>
                     </MudGrid>
+                    <div class="d-flex justify-end mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check"
+                                   Disabled="@(!HasPreferenceChanges || _isSavingPreferences)" OnClick="SavePreferencesAsync"
+                                   data-testid="save-preferences">Save preferences</MudButton>
+                    </div>
                 </section>
 
                 <MudDivider Class="my-6" />
 
-                <section id="password">
+                <section class="settings-section" id="password">
                     <MudText Typo="Typo.h6">Password</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                         Use at least 12 characters with a mix of letters, numbers, and symbols.
                     </MudText>
 
-                    <MudForm @ref="_passwordForm" @bind-IsValid="@_passwordValid">
+                    <div @key="_passwordFormVersion">
                         <MudGrid>
                             <MudItem xs="12">
                                 <MudTextField T="string"
                                               @bind-Value="_currentPassword"
-                                              @bind-Value:after="MarkDirty"
+                                              Immediate="true"
                                               Label="Current password"
                                               Variant="Variant.Outlined"
                                               Margin="Margin.Dense"
@@ -134,9 +141,8 @@
                             </MudItem>
                             <MudItem xs="12" md="6">
                                 <MudTextField T="string"
-                                              @ref="_passwordField"
                                               @bind-Value="_newPassword"
-                                              @bind-Value:after="MarkDirty"
+                                              Immediate="true"
                                               Label="New password"
                                               Variant="Variant.Outlined"
                                               Margin="Margin.Dense"
@@ -146,7 +152,7 @@
                             <MudItem xs="12" md="6">
                                 <MudTextField T="string"
                                               @bind-Value="_confirmPassword"
-                                              @bind-Value:after="MarkDirty"
+                                              Immediate="true"
                                               Label="Repeat new password"
                                               Variant="Variant.Outlined"
                                               Margin="Margin.Dense"
@@ -154,12 +160,17 @@
                                               Validation="@(new Func<string, string?>(PasswordMatch))" />
                             </MudItem>
                         </MudGrid>
-                    </MudForm>
+                        <div class="d-flex justify-end mt-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Check"
+                                       Disabled="@(!CanChangePassword || _isSavingPassword)" OnClick="SavePasswordAsync"
+                                       data-testid="save-password">Update password</MudButton>
+                        </div>
+                    </div>
                 </section>
 
                 <MudDivider Class="my-6" />
 
-                <section id="subscription">
+                <section class="settings-section" id="subscription">
                     <MudText Typo="Typo.h6">Subscription</MudText>
                     <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
                         You're on the lifetime @_userData.PricingLevel plan.
@@ -190,7 +201,7 @@
 
                 <MudDivider Class="my-6" />
 
-                <section id="danger">
+                <section class="settings-section" id="danger">
                     <MudText Typo="Typo.h6" Color="Color.Error">Danger zone</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                         Permanently delete this account and all associated financial data. This cannot be undone.
@@ -234,23 +245,6 @@
                 }
             </MudItem>
         </MudGrid>
-
-        @if (_isDirty)
-        {
-            <MudPaper Elevation="8" Square="true"
-                      Class="d-flex flex-wrap align-center gap-2 py-2 px-3 px-sm-6"
-                      Style="position:sticky; bottom:0; left:0; right:0; z-index:5;
-                             background:var(--mud-palette-surface);
-                             border-top:1px solid var(--mud-palette-divider);">
-                <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Primary" Size="Size.Small" Class="d-none d-sm-flex" />
-                <MudText Typo="Typo.body2">You have unsaved changes.</MudText>
-                <MudSpacer />
-                <MudButton OnClick="DiscardChanges">Discard</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Check"
-                           OnClick="SaveAll">Save changes</MudButton>
-            </MudPaper>
-        }
     }
     else if (_isLoadingPage)
     {

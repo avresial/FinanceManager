@@ -14,6 +14,8 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Make the forecast, transaction, subscription and investment lists easier to scan: a visible selected state, coloured signed amounts, month headings and a running balance on the cash flow forecast; one Balance column header, no repeated or placeholder times and category icons on transaction rows; a per-card actions menu and cadence filter on subscriptions; separate Cash impact and Gain / loss columns on investment trades; and clearer captions on the bond header and appreciation card. #877
+- Pick the account for balance alerts from a list with an "All accounts" option, show the preferred currency on the alert threshold, and show a "No alerts yet" empty state with a Create alert action on the Dashboard instead of a "healthy" message. #878
+- Give Settings explicit Save preferences and Update password buttons with confirmation, highlight the section in view in the Settings navigation, name the unlabeled Settings buttons, and show the same display name in the sidebar and on the profile. #878
 - Show total tracked money in PLN on the admin dashboard, paint its last value immediately while refreshing, and retain it if refresh fails. #840
 - Show the last admin daily active users chart immediately while refreshing on every visit, and retain it when refresh fails. #842
 - Show the last Financial Alerts summary on the Dashboard immediately while refreshing it on every visit, and keep it visible if refresh fails. #837
