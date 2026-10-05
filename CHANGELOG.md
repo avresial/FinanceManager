@@ -43,6 +43,7 @@ rules agents must follow when updating this file.
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
 
 ### Fixed
+- Draw balance and value charts as steps instead of smoothed curves that implied values between data points, show a single-category distribution as a summary instead of a one-slice pie, and label account movers as inflows and outflows. #874
 - Show the last cash flow forecast immediately when returning to the dashboard, and align its More action. #817
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812
 - Keep distinct recurring payments to the same merchant separate by requiring their amounts to stay within 5% before detecting cadence. #799

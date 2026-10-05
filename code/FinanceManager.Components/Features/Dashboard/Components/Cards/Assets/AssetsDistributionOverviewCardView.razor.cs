@@ -23,6 +23,9 @@ public partial class AssetsDistributionOverviewCardView
 
     private List<NameValueResult> ActiveData => _view == _viewByWallet ? WalletData : TypeData;
 
+    // A single category would render as a one-slice pie that carries no information, so the card shows only its summary row.
+    private bool IsSingleCategory => ActiveData.Select(x => x.Name).Distinct().Count() == 1;
+
     private decimal TotalAssets => TypeData.Count == 0 ? 0 : Math.Round(TypeData.Sum(x => x.Value), 2);
 
     private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
@@ -46,7 +49,7 @@ public partial class AssetsDistributionOverviewCardView
             },
         };
 
-        if (_chart is not null)
+        if (_chart is not null && !IsSingleCategory)
             await _chart.UpdateSeriesAsync(true);
     }
 
@@ -54,7 +57,7 @@ public partial class AssetsDistributionOverviewCardView
     {
         _view = view;
         StateHasChanged();
-        if (_chart is not null)
+        if (_chart is not null && !IsSingleCategory)
             await _chart.UpdateSeriesAsync(true);
     }
 }
