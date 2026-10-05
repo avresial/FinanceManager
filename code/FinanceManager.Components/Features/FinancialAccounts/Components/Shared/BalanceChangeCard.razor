@@ -8,7 +8,8 @@
                 </MudText>
             </CardInfoTooltip>
         </div>
-        <MudText Typo="Typo.h3" Class="fm-tabular"
+        @* h4 rather than h3: in the narrow side column an h3 amount pushed the currency onto its own line. *@
+        <MudText Typo="Typo.h4" Class="fm-tabular"
                  Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">
             @MoneyFormatter.FormatSigned(BalanceChange, Currency)
         </MudText>

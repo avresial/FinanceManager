@@ -53,6 +53,7 @@ rules agents must follow when updating this file.
 - Remove the stray dot drawn in the corner of the cash flow forecast chart. #884
 - Stop the Alerts form flagging the alert name as required right after an alert is created, and keep each alert's details together on phones instead of splitting them into columns. #884
 - Give the Automation rule editor the full width so the Match field and Ignore case option no longer get cut off beside the preview. #884
+- Show the account balance and its change on phones, give account pages the same side margins as the rest of the app, stack each transaction's amount over its running balance on phones so names are readable, remove the stray dot in the account chart corner, and stop the Balance change amount and Top movers title wrapping in the side column. #884
 - Draw balance and value charts as steps instead of smoothed curves that implied values between data points, show a single-category distribution as a summary instead of a one-slice pie, and label account movers as inflows and outflows. #874
 - Show the last cash flow forecast immediately when returning to the dashboard, and align its More action. #817
 - Retry timed-out PostgreSQL connections once to help account and dashboard reads recover from brief database interruptions. #812

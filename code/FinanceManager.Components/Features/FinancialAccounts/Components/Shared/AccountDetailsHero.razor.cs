@@ -146,6 +146,9 @@ public partial class AccountDetailsHero
         Colors = ["#ffab00", "#42a5f5", "#66bb6a"],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
+        // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
+        // with zero-size markers; a sub-pixel stroke (non-zero so it serializes) hides it.
+        Markers = new Markers { Size = 0.1, StrokeWidth = 0.1, Hover = new MarkersHover { Size = 5 } },
         // Top-aligned so the legend does not compete with the x-axis label row below the plot.
         Legend = new Legend
         {

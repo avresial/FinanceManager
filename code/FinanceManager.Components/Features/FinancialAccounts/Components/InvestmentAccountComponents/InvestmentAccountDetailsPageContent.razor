@@ -9,7 +9,7 @@
 }
 else if (_transactions.Count == 0)
 {
-    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+    <MudContainer MaxWidth="MaxWidth.Large">
         <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
             <MudText Typo="Typo.h6" Class="mb-1">@_accountName</MudText>
             <MudAlert Severity="Severity.Info" Class="my-3">No transactions yet.</MudAlert>
@@ -27,7 +27,7 @@ else
                         ChartData="@ChartData" BenchmarkData="@BenchmarkData" CapitalData="@CapitalData" BenchmarkName="@_benchmarkName"
                         IsMobile="@_isMobile" />
 
-    <MudContainer MaxWidth="MaxWidth.Large" Class="px-0">
+    <MudContainer MaxWidth="MaxWidth.Large">
         <MudGrid Spacing="3">
             <MudItem xs="12" lg="8">
                 <AccountHistoryToolbar AccountId="@AccountId" SearchText="@_searchText"
