@@ -69,6 +69,10 @@
                                 </MudText>
                             }
                         </MudStack>
+                        @if (!string.IsNullOrWhiteSpace(ChangeDescription))
+                        {
+                            <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">@ChangeDescription</MudText>
+                        }
                     }
                 </MudStack>
             </MudStack>

@@ -1,3 +1,4 @@
+@using FinanceManager.Components.Shared.Helpers
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
 
 <div class="pa-2 mud-list-item-clickable"
@@ -29,16 +30,33 @@
         </MudStack>
 
         <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
-            <MudText Typo="Typo.body1" Class="fm-tabular"
-                     Color="@(PrimaryAmount >= 0 ? Color.Success : Color.Error)">
-                @MoneyFormatter.FormatSigned(PrimaryAmount, PrimaryCurrency)
-            </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Default">
-                @(ShowGainLoss
-                    ? $"Gain / loss · {(Valuation!.GainLoss >= 0 ? "+" : "")}{Valuation.GainLossPercent.ToString("N2")}%"
-                    : "Cash impact")
+            <MudText Typo="Typo.overline" Color="Color.Default">Cash impact</MudText>
+            <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
+                     Color="@AmountSign.ColorFor(CashImpact)">
+                @MoneyFormatter.FormatSigned(CashImpact, Transaction.Currency)
             </MudText>
         </MudStack>
+
+        @if (!IsMobile)
+        {
+            <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0; min-width: 130px;">
+                <MudText Typo="Typo.overline" Color="Color.Default">Gain / loss</MudText>
+                @if (ShowGainLoss)
+                {
+                    <MudText Typo="Typo.body2" Class="fm-tabular" Style="white-space: nowrap;"
+                             Color="@AmountSign.ColorFor(Valuation!.GainLoss)">
+                        @MoneyFormatter.FormatSigned(Valuation.GainLoss, Valuation.Currency)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="fm-tabular" Color="Color.Default">
+                        @AmountSign.PrefixFor(Valuation.GainLossPercent)@Valuation.GainLossPercent.ToString("N2")%
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Default">—</MudText>
+                }
+            </MudStack>
+        }
     </MudStack>
 </div>
 

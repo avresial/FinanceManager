@@ -164,7 +164,8 @@ public class PortfolioReturnAttributionCardTests
         handler.Fail(0);
         cut.WaitForAssertion(() => Assert.Contains("Could not load return attribution", cut.Markup));
         cut.FindAll("button").Single(button => button.TextContent.Contains("Retry", StringComparison.Ordinal)).Click();
-        Assert.Equal(2, handler.ReturnAttributionRequestCount);
+        // The retry fetch is dispatched asynchronously after the click.
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.ReturnAttributionRequestCount));
         handler.Complete(1, Available(250m));
         cut.WaitForAssertion(() => Assert.Contains(Amount(250m), cut.Markup));
     }

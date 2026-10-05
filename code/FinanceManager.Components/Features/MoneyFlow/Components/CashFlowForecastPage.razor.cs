@@ -23,6 +23,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private string _currency = "PLN";
     private bool _isLoading = true;
     private bool _hasError;
+    private IReadOnlyList<ForecastActivityMonth> _activityMonths = [];
 
     [Inject] public required CashFlowForecastHttpClient CashFlowForecastHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -151,6 +152,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private Task ShowData(CashFlowForecastPageModel model, string key)
     {
         _forecast = model.Forecast;
+        _activityMonths = ForecastActivityGrouper.Group(
+            model.Forecast.ExpectedTransactions,
+            ForecastActivityGrouper.StartingBalance(model.Forecast));
         _currency = model.Currency;
         _paintedKey = key;
         _isLoading = false;
