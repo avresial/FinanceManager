@@ -33,7 +33,9 @@
             }
         </div>
 
-        <MudGrid Spacing="2" Class="mx-0 w-100">
+        @* Keyed on the form version so a reset after saving mounts fresh inputs instead of
+           flagging the now-empty required name as an error. *@
+        <MudGrid Spacing="2" Class="mx-0 w-100" @key="_formVersion">
             <MudItem xs="12" md="6">
                 <MudTextField T="string" @bind-Value="_form.Title" Label="Alert name" Required="true"
                               Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
@@ -130,13 +132,19 @@
                 <MudTh Style="text-align:right">Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
+                @* Each multi-line cell is wrapped in one block so the stacked mobile layout keeps its
+                   lines together beside the label instead of spreading them into columns. *@
                 <MudTd DataLabel="Alert">
-                    <MudText Typo="Typo.body1" Class="font-weight-600">@context.Title</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel(context.EvaluationPeriod)</MudText>
+                    <div class="alerts-cell">
+                        <MudText Typo="Typo.body1" Class="font-weight-600">@context.Title</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel(context.EvaluationPeriod)</MudText>
+                    </div>
                 </MudTd>
                 <MudTd DataLabel="Condition">
-                    <MudText Typo="Typo.body2">@TypeLabel(context.AlertType)</MudText>
-                    <MudText Typo="Typo.caption">@GetConditionLabel(context)</MudText>
+                    <div class="alerts-cell">
+                        <MudText Typo="Typo.body2">@TypeLabel(context.AlertType)</MudText>
+                        <MudText Typo="Typo.caption">@GetConditionLabel(context)</MudText>
+                    </div>
                 </MudTd>
                 <MudTd DataLabel="Status">
                     <MudChip T="string" Size="Size.Small" Color="@StatusColor(context)" Variant="Variant.Outlined">
@@ -144,33 +152,36 @@
                     </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Observed">
-                    @if (_outcomes.TryGetValue(context.Id, out var outcome))
-                    {
-                        @if (outcome.Status == AlertTriggerStatus.Error)
+                    <div class="alerts-cell">
+                        @if (_outcomes.TryGetValue(context.Id, out var outcome))
                         {
-                            <MudText Typo="Typo.body2" Color="Color.Error">Unable to evaluate</MudText>
+                            @if (outcome.Status == AlertTriggerStatus.Error)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">Unable to evaluate</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(outcome.CurrentValue)</MudText>
+                                @if (outcome.IsTriggered)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Warning">@outcome.Message</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @AlertPresentation.ComparisonDetail(outcome)
+                                    </MudText>
+                                    <AlertMatchingTransactions Outcome="outcome" />
+                                }
+                            }
+                        }
+                        else if (context.LastTriggeredValue is decimal value)
+                        {
+                            <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(value)</MudText>
                         }
                         else
                         {
-                            <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(outcome.CurrentValue)</MudText>
-                            @if (outcome.IsTriggered)
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Warning">@outcome.Message</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @AlertPresentation.ComparisonDetail(outcome)
-                                </MudText>
-                                <AlertMatchingTransactions Outcome="outcome" />
-                            }
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Not evaluated</MudText>
                         }
-                    }
-                    else if (context.LastTriggeredValue is decimal value)
-                    {
-                        <MudText Typo="Typo.body2">@MoneyFormatter.FormatNumber(value)</MudText>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Not evaluated</MudText>
-                    }
+                
+                    </div>
                 </MudTd>
                 <MudTd DataLabel="Actions" Style="text-align:right; white-space:nowrap">
                     <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleEnabledAsync(context, value))"

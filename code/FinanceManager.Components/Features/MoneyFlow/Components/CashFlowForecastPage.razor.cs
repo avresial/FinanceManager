@@ -185,6 +185,10 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         Colors = ["#ffab00", "#42a5f5"],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
+        // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
+        // with zero-size markers. A sub-pixel stroke (non-zero so it serializes) hides it while
+        // the hover marker still appears.
+        Markers = new Markers { Size = 0.1, StrokeWidth = 0.1, Hover = new MarkersHover { Size = 5 } },
         Legend = new Legend
         {
             Show = true,

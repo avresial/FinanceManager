@@ -22,6 +22,7 @@ public partial class AlertsPage : ComponentBase
     private readonly Dictionary<Guid, AlertEvaluationOutcome> _outcomes = [];
     private List<FinancialAlertDto> _alerts = [];
     private AlertFormModel _form = new();
+    private int _formVersion;
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isRefreshing;
@@ -337,6 +338,7 @@ public partial class AlertsPage : ComponentBase
     {
         _editingId = null;
         _form = new AlertFormModel();
+        _formVersion++;
         _errors.Clear();
     }
 
