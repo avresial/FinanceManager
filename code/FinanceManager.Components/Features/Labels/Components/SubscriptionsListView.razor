@@ -20,12 +20,14 @@ else
         <div class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filter by billing cadence">
             <MudChip T="string" Text="All" Color="Color.Primary"
                      Variant="@(_cadenceFilter is null ? Variant.Filled : Variant.Outlined)"
+                     aria-pressed="@(_cadenceFilter is null ? "true" : "false")"
                      OnClick="() => OnCadenceFilterChanged(null)" />
             @foreach (var cadence in AvailableCadences)
             {
                 var selected = _cadenceFilter == cadence;
                 <MudChip T="string" Text="@CadenceLabel(cadence)" Color="Color.Primary"
                          Variant="@(selected ? Variant.Filled : Variant.Outlined)"
+                         aria-pressed="@(selected ? "true" : "false")"
                          OnClick="() => OnCadenceFilterChanged(cadence)" />
             }
         </div>
@@ -46,7 +48,8 @@ else
         <MudGrid Spacing="2">
             @foreach (var item in VisibleSubscriptions)
             {
-                <MudItem xs="12" md="6" xl="4">
+                @* Keyed so a card's menu stays bound to its own subscription when the list re-orders. *@
+                <MudItem @key="item.PatternId" xs="12" md="6" xl="4">
                     <MudPaper Outlined Class="pa-4 h-100">
                         <div class="d-flex justify-space-between align-start gap-2">
                             <div Style="min-width:0; overflow:hidden;">
