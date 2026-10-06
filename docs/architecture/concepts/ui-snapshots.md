@@ -1,5 +1,9 @@
 # UI Snapshots (stale-while-revalidate) vs. time-based data caching
 
+[Architecture index](../README.md) · [Owning arc42 section](../08-crosscutting-concepts.md)
+
+Commands in this guide run from the repository root unless an explicit `cd` is shown.
+
 The client has two mechanisms that both persist data in browser local storage. They look similar
 and are not interchangeable. Pick by asking one question: **may the API request be skipped?**
 
@@ -9,7 +13,7 @@ and are not interchangeable. Pick by asking one question: **may the API request 
 | API request | **Always** runs | **Skipped** while the cached entry is still valid |
 | What is stored | The last *rendered* state of a UI surface | The last *fetched* data, with its validity window |
 | Why | The surface paints instantly instead of flashing a spinner | Fewer requests for data that does not change often |
-| Freshness | Guaranteed on every visit — reconciled against the response | Bounded by the entry's expiry rules |
+| Freshness | Refresh attempted on every visit — reconciled on a usable response; failed refresh retains stale content | Bounded by the entry's expiry rules |
 | Use for | Dashboard cards, transaction lists, charts | Nav menu state, assets-page cards, investment rate/estimate lookups |
 
 A UI snapshot is never a source of truth. It is what the user looks at during the few hundred
@@ -142,12 +146,12 @@ screen a moment later. Splitting the request must not split the snapshot either.
 
 | Surface | Entry point |
 |---|---|
-| Dashboard overview | `code\FinanceManager.Components\Features\Dashboard\Components\Dashboard.razor.cs` |
-| Account transaction lists (currency, bond) | `code\FinanceManager.Components\Features\FinancialAccounts\Services\AccountDetailsSnapshotStore.cs` |
-| Investment account trade list | `code\FinanceManager.Components\Features\FinancialAccounts\Services\InvestmentAccountDetailsSnapshotStore.cs` |
-| Liabilities cards | `code\FinanceManager.Components\Features\Dashboard\Services\LiabilitiesSnapshotStore.cs` |
-| Dashboard insights / recurring / transaction-log cards | `code\FinanceManager.Components\Features\Dashboard\Services\DashboardCardsSnapshotStore.cs` |
-| Subscriptions page summary tiles and list | `code\FinanceManager.Components\Features\Labels\Services\SubscriptionsSnapshotStore.cs` |
+| Dashboard overview | [Dashboard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Dashboard.razor.cs) |
+| Account transaction lists (currency, bond) | [AccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/AccountDetailsSnapshotStore.cs) |
+| Investment account trade list | [InvestmentAccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentAccountDetailsSnapshotStore.cs) |
+| Liabilities cards | [LiabilitiesSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/LiabilitiesSnapshotStore.cs) |
+| Dashboard insights / recurring / transaction-log cards | [DashboardCardsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardsSnapshotStore.cs) |
+| Subscriptions page summary tiles and list | [SubscriptionsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Labels/Services/SubscriptionsSnapshotStore.cs) |
 
 `AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow

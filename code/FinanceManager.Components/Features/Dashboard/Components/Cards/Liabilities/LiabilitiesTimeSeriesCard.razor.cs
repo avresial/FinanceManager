@@ -37,7 +37,7 @@ public partial class LiabilitiesTimeSeriesCard
 
     // Stale-while-revalidate: paint the stored chart, always re-fetch, and only repaint and
     // re-persist when the fresh series differs. LiabilitiesSnapshotStore / SnapshotRefreshCoordinator
-    // own that workflow — see docs/codebase/UI-SNAPSHOTS.md.
+    // own that workflow — see docs/architecture/concepts/ui-snapshots.md.
     private async Task Reload()
     {
         // Claimed here rather than inside the coordinator so the same version also guards the

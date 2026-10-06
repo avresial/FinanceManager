@@ -99,18 +99,7 @@ Three account types are fully supported, each with dedicated views:
 | Local orchestration | .NET Aspire |
 | Testing | xUnit, Moq, WebApplicationFactory, Coverlet |
 
-The solution follows a **layered modular monolith** architecture:
-
-```
-Blazor component → typed HttpClient → API controller → application service → domain service → repository
-```
-
-Key design decisions worth noting for reviewers:
-- **Domain layer has zero infrastructure dependencies** — no EF Core or ASP.NET references inside `FinanceManager.Domain`
-- **Typed HTTP clients** encapsulate all API route details; components never call `HttpClient` directly
-- **Provider fallback chain** for AI and stock prices keeps the app functional when any single external service is unavailable
-- **Background services + channels** handle async jobs (insight generation, label assignment, CSV import) without blocking the request pipeline
-- **SignalR** pushes real-time progress updates to the browser during long-running imports
+The solution follows a **layered modular monolith** architecture. Read the [arc42 architecture documentation](docs/architecture/README.md) for system context, project boundaries, runtime flows, deployment, decisions, quality requirements, risks and terminology. Detailed operational guides and historical audits are indexed there.
 
 ---
 
@@ -142,7 +131,7 @@ dotnet run --project code/FinanceManager.Api
 
 Then open the application URL printed by `dotnet run` (the HTTPS launch profile uses `https://localhost:5001`).
 
-For production backup, restore, and rollback steps on Supabase, see [RUNBOOK.md](RUNBOOK.md).
+For production backup, restore, and rollback steps on Supabase, see [database recovery runbook](docs/architecture/operations/database-recovery.md).
 
 ### Run tests
 Run from inside the `code/` directory so the test runner can locate `global.json`, and use `--project` as required by the Microsoft Testing Platform.

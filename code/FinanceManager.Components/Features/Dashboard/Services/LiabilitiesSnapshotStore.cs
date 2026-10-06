@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Features.Dashboard.Services;
 /// the snapshot key shapes so each card scopes them identically. Each card keeps its own existing
 /// API call — no aggregate liabilities request is introduced.
 /// </summary>
-/// <remarks>The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/codebase/UI-SNAPSHOTS.md.</remarks>
+/// <remarks>The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/architecture/concepts/ui-snapshots.md.</remarks>
 public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordinator)
 {
     /// <summary>Stale-while-revalidate for the liabilities time-series chart, scoped to user + preferred currency.</summary>

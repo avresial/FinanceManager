@@ -9,7 +9,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 /// stored entries, always re-fetches, and re-persists only when the rendered entries changed.
 /// Owns the snapshot key shape so every account-details page scopes it identically.
 /// </summary>
-/// <remarks>The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/codebase/UI-SNAPSHOTS.md.</remarks>
+/// <remarks>The workflow itself lives in <see cref="ISnapshotRefreshCoordinator"/> — see docs/architecture/concepts/ui-snapshots.md.</remarks>
 public sealed class AccountDetailsSnapshotStore(ISnapshotRefreshCoordinator coordinator)
 {
     /// <param name="userId">Owner of the account; scopes the snapshot key.</param>

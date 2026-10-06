@@ -136,7 +136,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     // Stale-while-revalidate: paint the last-rendered trades and their valuations instantly, always
     // re-fetch, and only repaint and re-persist when the rendered content changed. Chart data,
     // holdings and the appreciation figures have their own per-range snapshot, queued by UpdateInfo.
-    // See docs/codebase/UI-SNAPSHOTS.md.
+    // See docs/architecture/concepts/ui-snapshots.md.
     private async Task LoadAsync(bool initialLoad = false, bool refreshChart = true)
     {
         _user ??= await LoginService.GetLoggedUser();

@@ -62,7 +62,7 @@ public partial class LiabilitiesDistributionOverviewCard
     }
 
     // Stale-while-revalidate self-load: paint the stored breakdown, always re-fetch, and only repaint
-    // and re-persist when the fresh breakdown differs. See docs/codebase/UI-SNAPSHOTS.md.
+    // and re-persist when the fresh breakdown differs. See docs/architecture/concepts/ui-snapshots.md.
     private async Task LoadSelf()
     {
         var requestVersion = _gate.Claim();

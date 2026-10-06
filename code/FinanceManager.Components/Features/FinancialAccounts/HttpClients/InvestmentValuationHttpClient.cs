@@ -9,7 +9,7 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
     /// <summary>
     /// Per-transaction valuations, in server order. An empty list means nothing on the account could
     /// be priced: a failed request throws instead, so the snapshot-backed details page can tell the
-    /// two apart and keep the valuations it already painted. See docs/codebase/UI-SNAPSHOTS.md.
+    /// two apart and keep the valuations it already painted. See docs/architecture/concepts/ui-snapshots.md.
     /// </summary>
     public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(
         int accountId,

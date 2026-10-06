@@ -12,7 +12,7 @@ namespace FinanceManager.Components.Shared.Services;
 /// <remarks>
 /// This is not the UI snapshot mechanism. Use <see cref="ISnapshotRefreshCoordinator"/> when the
 /// goal is to paint the last-rendered state immediately and still always re-request fresh data —
-/// see docs/codebase/UI-SNAPSHOTS.md for the comparison.
+/// see docs/architecture/concepts/ui-snapshots.md for the comparison.
 /// </remarks>
 public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCacheKey>(
     ILocalStorageService localStorageService,

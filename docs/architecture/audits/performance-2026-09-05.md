@@ -1,5 +1,7 @@
 # FinanceManager optimization audit
 
+> Historical evidence migrated for arc42 on 2026-10-05. Findings, line numbers, statuses and measurements below describe the original audit baseline, not a fresh assessment. Use the current [risks](../11-risks-and-technical-debt.md) and [quality requirements](../10-quality-requirements.md) for present architectural interpretation.
+
 Date: 2026-09-05\
 Baseline: local `develop`, commit `8185628e7e020ccb8f6972339ff78064758c31ea`\
 Scope: source-level audit of database access, valuation, dashboard composition, imports, browser rendering/caching, and selected background processes.
@@ -35,7 +37,7 @@ Benefits overlap: O1 and O8 both affect dashboard bond work; O4 and O10 both aff
 
 ## O1 — Bond charts rebuild historical accrual for each output day
 
-**Evidence:** [BondAccountEntry.cs:25](../../code/FinanceManager.Domain/FinancialAccounts/Bond/Entities/BondAccountEntry.cs#L25); [BondAccount.cs:148](../../code/FinanceManager.Domain/FinancialAccounts/Bond/Entities/BondAccount.cs#L148); [BondEntryExtension.cs:15](../../code/FinanceManager.Domain/FinancialAccounts/Bond/Extensions/BondEntryExtension.cs#L15); [NetWorthService.cs:50](../../code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs#L50).
+**Evidence:** [BondAccountEntry.cs:25](../../../code/FinanceManager.Domain/FinancialAccounts/Bond/Entities/BondAccountEntry.cs#L25); [BondAccount.cs:148](../../../code/FinanceManager.Domain/FinancialAccounts/Bond/Entities/BondAccount.cs#L148); [BondEntryExtension.cs:15](../../../code/FinanceManager.Domain/FinancialAccounts/Bond/Extensions/BondEntryExtension.cs#L15); [NetWorthService.cs:50](../../../code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs#L50).
 
 `BondAccountEntry.GetPriceAt(date, details)` calls `GetPrice`, which allocates a daily dictionary and loops from the entry's posting date to the requested date, then returns just one value. `BondAccount.GetDailyPrice` calls this inside its day/instrument loop. `NetWorthService.GetNetWorth(start, end)` also invokes the point calculation inside a daily loop.
 
@@ -49,7 +51,7 @@ For one unchanged entry spanning D days, requesting every daily value can replay
 
 ## O2 — Imports persist one row at a time and repeatedly scan date ranges
 
-**Evidence:** [CurrencyAccountImportService.cs:55](../../code/FinanceManager.Application/FinancialAccounts/Currencies/Import/CurrencyAccountImportService.cs#L55); [BondAccountImportService.cs:58](../../code/FinanceManager.Application/FinancialAccounts/Bond/Import/BondAccountImportService.cs#L58); [CurrencyEntryRepository.cs:16](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Currencies/Repositories/CurrencyEntryRepository.cs#L16); [CachedAccountEntryRepository.cs:240](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Shared/Repositories/CachedAccountEntryRepository.cs#L240).
+**Evidence:** [CurrencyAccountImportService.cs:55](../../../code/FinanceManager.Application/FinancialAccounts/Currencies/Import/CurrencyAccountImportService.cs#L55); [BondAccountImportService.cs:58](../../../code/FinanceManager.Application/FinancialAccounts/Bond/Import/BondAccountImportService.cs#L58); [CurrencyEntryRepository.cs:16](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Currencies/Repositories/CurrencyEntryRepository.cs#L16); [CachedAccountEntryRepository.cs:240](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Shared/Repositories/CachedAccountEntryRepository.cs#L240).
 
 Currency and bond imports walk every calendar day between the earliest and latest input dates. Each iteration filters the complete import and existing-entry collections. Accepted rows then use the single-entry `Add(..., recalculate: false)` path. Currency persistence calls `SaveChangesAsync` per row; its cache decorator also invalidates account/user caches after each successful add. Deferring balance recalculation until the end already helps, but does not batch these saves.
 
@@ -61,7 +63,7 @@ Currency and bond imports walk every calendar day between the earliest and lates
 
 ## O3 — The dashboard's recent log still fans out across currency/bond accounts
 
-**Evidence:** [TransactionLogService.cs:34](../../code/FinanceManager.Application/Dashboard/TransactionLogService.cs#L34); [InvestmentTransactionRepository.cs:24](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24).
+**Evidence:** [TransactionLogService.cs:34](../../../code/FinanceManager.Application/Dashboard/TransactionLogService.cs#L34); [InvestmentTransactionRepository.cs:24](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24).
 
 `TransactionLogService.GetLastTransactions` loads up to `count` currency entries per account and repeats this for bond accounts, then sorts and takes `count` globally. Bond descriptions add one details lookup per distinct uncached bond ID. Investment transactions already use `GetMostRecentByAccounts` and a database-side `Take(count)`.
 
@@ -73,7 +75,7 @@ Currency and bond imports walk every calendar day between the earliest and lates
 
 ## O4 — FX range writes do not populate the cache used by point reads
 
-**Evidence:** [CachedCurrencyExchangeService.cs:30](../../code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CachedCurrencyExchangeService.cs#L30); [CurrencyExchangeService.cs:17](../../code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CurrencyExchangeService.cs#L17).
+**Evidence:** [CachedCurrencyExchangeService.cs:30](https://github.com/avresial/FinanceManager/blob/8185628e7e020ccb8f6972339ff78064758c31ea/code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CachedCurrencyExchangeService.cs#L30); [CurrencyExchangeService.cs:17](../../../code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CurrencyExchangeService.cs#L17).
 
 `CachedCurrencyExchangeService.GetExchangeRateResultAsync` reads `EXCHANGE_RATE_RESULT_...` with a `CurrencyExchangeRateResult` value. Its range overload writes `EXCHANGE_RATE_...` with a decimal. A source search found no production reader of that latter key. The range overload also always invokes the inner range service.
 
@@ -85,7 +87,7 @@ Currency and bond imports walk every calendar day between the earliest and lates
 
 ## O5 — Opening one investment account requests portfolio-wide appreciation
 
-**Evidence:** [InvestmentAccountDetailsPageContent.razor.cs:387](../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor.cs#L387); [AssetsServiceInvestment.cs:98](../../code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs#L98).
+**Evidence:** [InvestmentAccountDetailsPageContent.razor.cs:387](../../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor.cs#L387); [AssetsServiceInvestment.cs:98](../../../code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs#L98).
 
 The account chart calls `GetUnrealizedGainLossPerAccount(userId, currency, dateEnd)` and then selects the current account from the response. The investment implementation enumerates all investment accounts, queries transactions separately per account, and computes their instrument results.
 
@@ -97,7 +99,7 @@ The account chart calls `GetUnrealizedGainLossPerAccount(userId, currency, dateE
 
 ## O6 — Investment calculations load more history and entity data than they need
 
-**Evidence:** [InvestmentTransactionRepository.cs:24](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24); [InvestmentTransactionRepository.cs:93](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L93); [InvestmentValuationService.cs:132](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs#L132).
+**Evidence:** [InvestmentTransactionRepository.cs:24](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24); [InvestmentTransactionRepository.cs:93](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L93); [InvestmentValuationService.cs:132](../../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs#L132).
 
 `GetByAccounts` loads all transactions for the account IDs, including listing entities and ordering the entire result. Valuation/capital/benchmark callers then filter by end date in memory. `GetHoldingsAsOf` filters and projects in SQL, but transfers every matching transaction and groups it in memory.
 
@@ -109,7 +111,7 @@ The account chart calls `GetUnrealizedGainLossPerAccount(userId, currency, dateE
 
 ## O7 — Historical valuation prices instruments that were already closed
 
-**Evidence:** [InvestmentValuationService.cs:132](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs#L132); [InvestmentPriceProvider.cs:85](../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs#L85).
+**Evidence:** [InvestmentValuationService.cs:132](../../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs#L132); [InvestmentPriceProvider.cs:85](../../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs#L85).
 
 `GetAccountValueSeriesAsync` prices every distinct listing with any transaction on or before the end date. It does not first exclude listings with zero opening holdings and no in-window position changes. `BuildAccountSeries` subsequently skips zero holdings, after quote history, seed, and FX work may already have occurred. The point-valuation batch already drops zero positions; the series path does not apply an equivalent relevance gate.
 
@@ -121,7 +123,7 @@ The account chart calls `GetUnrealizedGainLossPerAccount(userId, currency, dateE
 
 ## O8 — Dashboard composition rereads bond definitions and recalculates shared values
 
-**Evidence:** [DashboardQueryService.cs:27](../../code/FinanceManager.Application/Dashboard/DashboardQueryService.cs#L27); [BondDetailsRepository.cs:29](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Bond/Repositories/BondDetailsRepository.cs#L29); [AssetsServiceBond.cs:68](../../code/FinanceManager.Application/FinancialAccounts/Bond/Assets/AssetsServiceBond.cs#L68); [NetWorthService.cs:50](../../code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs#L50).
+**Evidence:** [DashboardQueryService.cs:27](../../../code/FinanceManager.Application/Dashboard/DashboardQueryService.cs#L27); [BondDetailsRepository.cs:29](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Bond/Repositories/BondDetailsRepository.cs#L29); [AssetsServiceBond.cs:68](../../../code/FinanceManager.Application/FinancialAccounts/Bond/Assets/AssetsServiceBond.cs#L68); [NetWorthService.cs:50](../../../code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs#L50).
 
 Net-worth, bond balance, and bond asset paths each load the full bond catalog with calculation methods. Bond end-assets per account and per type independently calculate substantially the same endpoint values. EF tracking does not make a repeated LINQ query disappear. The dashboard has a five-minute outer cache and `AccountRepository` has request-local account caching, so this finding concerns the remaining catalog/calculation duplication on cache misses.
 
@@ -133,7 +135,7 @@ Net-worth, bond balance, and bond asset paths each load the full bond catalog wi
 
 ## O9 — Investment history downloads and renders the full account list
 
-**Evidence:** [InvestmentAccountDetailsPageContent.razor:42](../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor#L42); [InvestmentAccountDetailsPageContent.razor.cs:500](../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor.cs#L500); [InvestmentTransactionRepository.cs:24](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24).
+**Evidence:** [InvestmentAccountDetailsPageContent.razor:42](../../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor#L42); [InvestmentAccountDetailsPageContent.razor.cs:500](../../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/InvestmentAccountDetailsPageContent.razor.cs#L500); [InvestmentTransactionRepository.cs:24](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/InvestmentTransactionRepository.cs#L24).
 
 The account page fetches all transactions. The Razor render filters, sorts, groups, and emits every matching day card. Server transaction enrichment also reads the whole account. A date filter reduces visible records after downloading them; it does not bound the payload. Broad/all-history ranges can render many components, while refreshes repeat list transformations.
 
@@ -141,11 +143,11 @@ The account page fetches all transactions. The Razor render filters, sorts, grou
 
 **Expected result:** lower payload, WASM heap use, enrichment work, and rendered component count for large accounts. Virtualization alone will not reduce server work or download size.
 
-**Validate:** mobile and desktop at 100/1k/10k trades; measure response bytes, live component count, filter latency, and allocations. Exercise page boundaries inside a day, edits/deletes, global search, empty pages, and snapshot restoration. Preserve the [snapshot contract](../codebase/UI-SNAPSHOTS.md): restored UI must still refresh from the server.
+**Validate:** mobile and desktop at 100/1k/10k trades; measure response bytes, live component count, filter latency, and allocations. Exercise page boundaries inside a day, edits/deletes, global search, empty pages, and snapshot restoration. Preserve the [snapshot contract](../concepts/ui-snapshots.md): restored UI must still refresh from the server.
 
 ## O10 — Missing FX dates repeat serialized database work
 
-**Evidence:** [CurrencyExchangeService.cs:17](../../code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CurrencyExchangeService.cs#L17); [ExchangeRateRepository.cs:13](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Currencies/Repositories/ExchangeRateRepository.cs#L13).
+**Evidence:** [CurrencyExchangeService.cs:17](../../../code/FinanceManager.Application/FinancialAccounts/Currencies/ExchangeRates/CurrencyExchangeService.cs#L17); [ExchangeRateRepository.cs:13](../../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Currencies/Repositories/ExchangeRateRepository.cs#L13).
 
 The range resolver first reads direct and inverse stored rates. For missing dates it launches batches of up to 50 point resolutions, capped at 60 dates per call. Each point resolution checks direct/inverse storage again and persists individual successes. `ExchangeRateRepository` explicitly serializes context access with a semaphore, so the fan-out helps provider HTTP work but does not make those database operations parallel.
 
@@ -157,9 +159,9 @@ The range resolver first reads direct and inverse stored rates. For missing date
 
 ## Secondary candidates requiring measurements
 
-- **Investment recent-read index:** [InvestmentTransactionConfiguration.cs:32](../../code/FinanceManager.Infrastructure/Persistence/Configurations/InvestmentTransactionConfiguration.cs#L32) defines `AccountId` alone, while recent reads order by `(TradeDate, Id)`. Evaluate `(AccountId, TradeDate, Id)` against actual plans and write overhead. It may help single-account reads; a multi-account global top-N can still require sorting. Currency/bond ordering indexes and price-quote time indexes already exist, so do not add duplicate indexes mechanically.
-- **Repeated chart input work:** [InvestmentChartRequestLoader.cs:23](../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentChartRequestLoader.cs#L23) launches five independent requests. Value and benchmark services can separately reload transactions and the same price/FX ranges. The price provider prevents duplicate provider fetches with a listing lock, but it does not cache the entire converted series. Consider a narrow shared chart read model or carefully invalidated series cache only after measuring overlap; preserve independent transaction first paint.
-- **Snapshot comparison allocations:** [JsonContentComparer.cs:20](../../code/FinanceManager.Components/Shared/Services/JsonContentComparer.cs#L20) serializes both models to compare them. For large chart snapshots, a typed comparer may avoid large transient strings. Measure first; the coordinator already skips unchanged writes and rendering.
+- **Investment recent-read index:** [InvestmentTransactionConfiguration.cs:32](../../../code/FinanceManager.Infrastructure/Persistence/Configurations/InvestmentTransactionConfiguration.cs#L32) defines `AccountId` alone, while recent reads order by `(TradeDate, Id)`. Evaluate `(AccountId, TradeDate, Id)` against actual plans and write overhead. It may help single-account reads; a multi-account global top-N can still require sorting. Currency/bond ordering indexes and price-quote time indexes already exist, so do not add duplicate indexes mechanically.
+- **Repeated chart input work:** [InvestmentChartRequestLoader.cs:23](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentChartRequestLoader.cs#L23) launches five independent requests. Value and benchmark services can separately reload transactions and the same price/FX ranges. The price provider prevents duplicate provider fetches with a listing lock, but it does not cache the entire converted series. Consider a narrow shared chart read model or carefully invalidated series cache only after measuring overlap; preserve independent transaction first paint.
+- **Snapshot comparison allocations:** [JsonContentComparer.cs:20](../../../code/FinanceManager.Components/Shared/Services/JsonContentComparer.cs#L20) serializes both models to compare them. For large chart snapshots, a typed comparer may avoid large transient strings. Measure first; the coordinator already skips unchanged writes and rendering.
 - **Price fetch lock retention:** `InvestmentPriceProvider` retains a static semaphore per encountered listing. Monitor distinct key growth before changing lock lifecycle; naïve removal can allow two locks for the same listing and break deduplication.
 
 ## Architecture recommendation
