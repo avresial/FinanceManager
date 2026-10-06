@@ -23,7 +23,22 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         }
         return false;
     }
-    public async Task<User?> GetUser(int id)
+    // Concurrent requests for the same user share one call (the layout and the settings service both ask on
+    // startup). Completed results are not cached, so later callers always see fresh data. #890
+    private readonly Dictionary<int, Task<User?>> _pendingGetUser = [];
+
+    public Task<User?> GetUser(int id)
+    {
+        if (_pendingGetUser.TryGetValue(id, out var pending)) return pending;
+
+        var request = FetchUser(id);
+        if (!request.IsCompleted)
+            _pendingGetUser[id] = request;
+
+        return request;
+    }
+
+    private async Task<User?> FetchUser(int id)
     {
         try
         {
@@ -34,6 +49,10 @@ public class UserService(UserHttpClient httpClient, ILogger<UserService> logger)
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error getting user {id}", id);
+        }
+        finally
+        {
+            _pendingGetUser.Remove(id);
         }
         return null;
     }

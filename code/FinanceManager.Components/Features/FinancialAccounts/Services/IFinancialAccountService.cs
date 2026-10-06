@@ -5,6 +5,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 public interface IFinancialAccountService
 {
     public Task<Dictionary<int, Type>> GetAvailableAccounts();
+    public Task<Dictionary<int, string>> GetAvailableAccountNames();
     public Task<int?> GetLastAccountId();
     public Task<DateTime?> GetStartDate(int accountId);
     public Task<DateTime?> GetEndDate(int accountId);

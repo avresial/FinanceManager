@@ -2,10 +2,6 @@ using Blazored.LocalStorage;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Models;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -32,12 +28,18 @@ public class NavMenuStateCacheService(
     protected override async Task<NavMenuCacheSnapshot> BuildStateAsync(UserSession user)
     {
         var userId = user.UserId;
-        var availableAccountsTask = financialAccountService.GetAvailableAccounts();
+        // The account list endpoints already carry the names, so no per-account request is needed. #890
+        var accountNamesTask = financialAccountService.GetAvailableAccountNames();
         var displayAssetsTask = GetAssetsFlagAsync(userId);
         var displayLiabilitiesTask = GetLiabilitiesFlagAsync(userId);
 
-        var availableAccounts = await availableAccountsTask;
-        var accounts = await BuildAccountsAsync(userId, availableAccounts);
+        var accounts = (await accountNamesTask)
+            .Select(account => new NavMenuAccountCacheItem
+            {
+                AccountId = account.Key,
+                Name = account.Value,
+            })
+            .ToList();
 
         return new NavMenuCacheSnapshot
         {
@@ -48,47 +50,6 @@ public class NavMenuStateCacheService(
             DisplayAssetsLink = await displayAssetsTask,
             DisplayLiabilitiesLink = await displayLiabilitiesTask
         };
-    }
-
-    private async Task<List<NavMenuAccountCacheItem>> BuildAccountsAsync(int userId, Dictionary<int, Type> availableAccounts)
-    {
-        var now = DateTime.UtcNow;
-        var accountTasks = availableAccounts.Select(account => BuildAccountAsync(userId, account.Key, account.Value, now));
-        var accountItems = await Task.WhenAll(accountTasks);
-
-        return accountItems
-            .Where(account => account is not null)
-            .Select(account => account!)
-            .ToList();
-    }
-
-    private async Task<NavMenuAccountCacheItem?> BuildAccountAsync(int userId, int accountId, Type accountType, DateTime now)
-    {
-        string name;
-
-        if (accountType == typeof(CurrencyAccount))
-            name = await GetAccountNameAsync<CurrencyAccount>(userId, accountId, now);
-        else if (accountType == typeof(InvestmentAccount))
-            name = await GetAccountNameAsync<InvestmentAccount>(userId, accountId, now);
-        else if (accountType == typeof(BondAccount))
-            name = await GetAccountNameAsync<BondAccount>(userId, accountId, now);
-        else
-        {
-            logger.LogError("Account type {AccountType} can not be handled for an account.", accountType.Name);
-            return null;
-        }
-
-        return new NavMenuAccountCacheItem
-        {
-            AccountId = accountId,
-            Name = name,
-        };
-    }
-
-    private async Task<string> GetAccountNameAsync<T>(int userId, int accountId, DateTime now) where T : BasicAccountInformation
-    {
-        var account = await financialAccountService.GetAccount<T>(userId, accountId, now, now);
-        return account?.Name ?? string.Empty;
     }
 
     private async Task<bool> GetAssetsFlagAsync(int userId)

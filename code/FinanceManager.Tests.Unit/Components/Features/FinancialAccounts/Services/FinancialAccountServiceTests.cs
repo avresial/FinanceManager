@@ -115,6 +115,52 @@ public class FinancialAccountServiceTests
         Assert.Equal(2, handler.GetCount(_currencyPath));
     }
 
+    [Fact]
+    public async Task GetAvailableAccounts_ConcurrentCalls_ShareOneFetch()
+    {
+        var gate = new TaskCompletionSource();
+        var handler = new CountingHandler(gate: gate.Task);
+        var (service, _, _) = CreateService(handler);
+
+        var first = service.GetAvailableAccounts();
+        var second = service.GetAvailableAccounts();
+        var names = service.GetAvailableAccountNames();
+        gate.SetResult();
+        await Task.WhenAll(first, second, names);
+
+        Assert.Equal(1, handler.GetCount(_currencyPath));
+        Assert.Equal(1, handler.GetCount(_stockPath));
+        Assert.Equal(1, handler.GetCount(_bondPath));
+        Assert.Equal(3, (await second).Count);
+    }
+
+    [Fact]
+    public async Task GetAvailableAccountNames_ReturnsNamesFromAccountLists()
+    {
+        var handler = new CountingHandler();
+        var (service, _, _) = CreateService(handler);
+
+        var names = await service.GetAvailableAccountNames();
+
+        Assert.Equal(_currencyPath, names[1]);
+        Assert.Equal(_stockPath, names[2]);
+        Assert.Equal(_bondPath, names[3]);
+    }
+
+    [Fact]
+    public async Task GetAvailableAccountNames_AfterUpdateAccount_Refetches()
+    {
+        var handler = new CountingHandler();
+        var (service, _, _) = CreateService(handler);
+
+        await service.GetAvailableAccountNames();
+        await service.UpdateAccount(new CurrencyAccount(1, 1, "Renamed"));
+        await service.GetAvailableAccountNames();
+
+        // A rename changes the cached names, so the list must be fetched again.
+        Assert.Equal(2, handler.GetCount(_currencyPath));
+    }
+
     private static (FinancialAccountService service, AccountDataSynchronizationService sync, Mock<ILoginService> loginService)
         CreateService(CountingHandler handler)
     {
@@ -136,13 +182,13 @@ public class FinancialAccountServiceTests
         return (service, sync, loginService);
     }
 
-    private sealed class CountingHandler(bool returnEmpty = false) : HttpMessageHandler
+    private sealed class CountingHandler(bool returnEmpty = false, Task? gate = null) : HttpMessageHandler
     {
         private readonly Dictionary<string, int> _getCounts = new(StringComparer.OrdinalIgnoreCase);
 
         public int GetCount(string path) => _getCounts.TryGetValue(path, out var count) ? count : 0;
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.AbsolutePath;
 
@@ -150,22 +196,26 @@ public class FinancialAccountServiceTests
             {
                 _getCounts[path] = GetCount(path) + 1;
 
+                // Holding responses back lets a test issue several calls while the first is still in flight.
+                if (gate is not null)
+                    await gate;
+
                 object payload = returnEmpty
                     ? Array.Empty<object>()
                     : new[] { new { AccountId = AccountIdFor(path), AccountName = path } };
 
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = JsonContent.Create(payload),
-                });
+                };
             }
 
             // Add returns the new account id (a number); delete and update return a bool.
             object mutationResult = request.Method == HttpMethod.Post ? 99 : true;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(mutationResult),
-            });
+            };
         }
 
         private static int AccountIdFor(string path) => path switch

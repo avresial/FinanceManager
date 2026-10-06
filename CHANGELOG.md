@@ -46,6 +46,7 @@ rules agents must follow when updating this file.
 - Show the last Alerts and watchlists results immediately while checking for updates. #818
 - Combine money-weighted and time-weighted returns into one responsive Portfolio return card with cash-flow context. #814
 - Show portfolio return attribution as a compact, labeled vertical waterfall chart. #813
+- Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884

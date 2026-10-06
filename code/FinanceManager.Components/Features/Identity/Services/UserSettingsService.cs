@@ -18,15 +18,28 @@ public class UserSettingsService(
     ILogger<UserSettingsService> logger) : ISettingsService
 {
     private Currency? _cachedCurrency;
+    private Task<Currency>? _currencyResolution;
     private bool _benchmarkLoaded;
     private InstrumentSearchResultDto? _cachedBenchmark;
 
     public Currency GetCurrency() => _cachedCurrency ?? DefaultCurrency.PLN;
 
-    public async Task<Currency> GetCurrencyAsync()
+    public Task<Currency> GetCurrencyAsync()
     {
-        if (_cachedCurrency is not null) return _cachedCurrency;
+        if (_cachedCurrency is not null) return Task.FromResult(_cachedCurrency);
 
+        // Share one in-flight resolution: the layout and the first page ask at the same time on startup. #890
+        if (_currencyResolution is not null) return _currencyResolution;
+
+        var resolution = ResolveCurrencyAsync();
+        if (!resolution.IsCompleted)
+            _currencyResolution = resolution;
+
+        return resolution;
+    }
+
+    private async Task<Currency> ResolveCurrencyAsync()
+    {
         try
         {
             var loggedUser = await loginService.GetLoggedUser();
@@ -37,14 +50,17 @@ public class UserSettingsService(
 
             var currencies = await currencyHttpClient.GetAll();
             _cachedCurrency = currencies.FirstOrDefault(x => x.Id == user.PreferredCurrencyId) ?? DefaultCurrency.PLN;
+            return _cachedCurrency;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to resolve the user's preferred currency; falling back to {Currency}", DefaultCurrency.PLN.ShortName);
             return DefaultCurrency.PLN;
         }
-
-        return _cachedCurrency;
+        finally
+        {
+            _currencyResolution = null;
+        }
     }
 
     /// <summary>Refreshes the cached currency after the user changed the preference in settings.</summary>
