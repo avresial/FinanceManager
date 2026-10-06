@@ -202,9 +202,9 @@ public class PwaSourceContractTests
 
         Assert.Contains("updateViaCache: 'none'", indexHtmlContent);
         Assert.Contains("registration.update()", indexHtmlContent);
-        Assert.Contains("service-worker.js", apiProgramContent);
-        Assert.Contains("service-worker-assets.js", apiProgramContent);
-        Assert.Contains("manifest.webmanifest", apiProgramContent);
+        // MapStaticAssets serves non-fingerprinted files (service-worker*.js, manifest.webmanifest) with
+        // Cache-Control: no-cache; the SPA fallback sets it explicitly. Headers are asserted in StaticAssetCachingTests.
+        Assert.Contains("MapStaticAssets()", apiProgramContent);
         Assert.Contains("Response.Headers.CacheControl = \"no-cache\"", apiProgramContent);
     }
 

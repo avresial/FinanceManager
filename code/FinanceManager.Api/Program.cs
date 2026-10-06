@@ -108,18 +108,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles(new StaticFileOptions
-{
-    OnPrepareResponse = context =>
-    {
-        if (context.File.Name is "service-worker.js" or "service-worker-assets.js" or "manifest.webmanifest")
-        {
-            context.Context.Response.Headers.CacheControl = "no-cache";
-        }
-    }
-});
-
 app.UseCors("ApiCorsPolicy");
 app.UseAuthentication();
 
@@ -136,12 +124,22 @@ app.UseAuthorization();
 // to match the app's other operational surfaces (admin logs, AI providers).
 app.MapDefaultEndpoints("Admin");
 
+// Serves the Blazor client from the build-time manifest: precompressed br/gzip variants, ETags, and
+// long-lived immutable caching for fingerprinted files (so the CDN can cache _framework), while
+// non-fingerprinted files (index.html, service-worker*.js, manifest.webmanifest) stay no-cache.
+// A cold load issues ~130 asset requests, so they must not count against the global rate limit.
+app.MapStaticAssets().DisableRateLimiting();
+
 app.MapControllers();
 app.MapMcpFeature(app.Configuration);
 app.MapHub<CurrencyImportHub>("/hubs/currency-import");
 app.MapHub<LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapHub<AdminLogsHub>("/hubs/admin-logs");
-app.MapFallbackToFile("index.html");
+// index.html names the current fingerprinted assets, so it must be revalidated on every visit.
+app.MapFallbackToFile("index.html", new StaticFileOptions
+{
+    OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache"
+});
 
 if (McpClientRevocationCommand.IsRequested(args))
 {

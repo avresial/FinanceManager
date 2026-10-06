@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Load the app faster: the loading screen appears immediately instead of waiting for stylesheets, styles and scripts are sent compressed, app files can be cached by the browser and CDN until the next release, and an unused 285 KB sign-in script is no longer downloaded. #886
 - Make the forecast, transaction, subscription and investment lists easier to scan: a visible selected state, coloured signed amounts, month headings and a running balance on the cash flow forecast; one Balance column header, no repeated or placeholder times and category icons on transaction rows; a per-card actions menu and cadence filter on subscriptions; separate Cash impact and Gain / loss columns on investment trades; and clearer captions on the bond header and appreciation card. #877
 - Show money and dates the same way everywhere: amounts as `27,771.00 PLN` with the currency, and dates as `4 Oct 2026` or `4 Sep – 4 Oct 2026` instead of mixed numeric day/month formats. #875
 - Pick the account for balance alerts from a list with an "All accounts" option, show the preferred currency on the alert threshold, and show a "No alerts yet" empty state with a Create alert action on the Dashboard instead of a "healthy" message. #878
