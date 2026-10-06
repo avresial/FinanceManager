@@ -20,6 +20,8 @@ The intended boundaries are constraints for new work, not a claim that every exi
 
 The following versions were verified in the central package file during this migration. They document the baseline, not a promise to remain pinned to these versions. The [central package file](../../code/Directory.Packages.props) is authoritative after subsequent updates.
 
+The October 2026 dependency refresh uses stable NuGet releases. `Microsoft.OpenApi` remains on the latest 2.x release because `Microsoft.AspNetCore.OpenApi` 10.x requires a version below 3.0.0. The [AppHost project](../../code/AppHost/AppHost.csproj) aligns its Aspire SDK and hosting packages and retains NuGet-provided orchestration/dashboard binaries without requiring the optional Aspire CLI bundle.
+
 | Dependency | Baseline | Role |
 |---|---|---|
 | ASP.NET Core WebAssembly, WebAssembly.Server, JwtBearer | 10.0.10 | Browser runtime, static hosting, bearer authentication |

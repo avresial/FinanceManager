@@ -128,7 +128,7 @@ public class AlphaVantageClientTests
     private static List<LogLevel> GetLogLevels(Mock<ILogger> logger) =>
         logger.Invocations
             .Where(invocation => invocation.Method.Name == nameof(ILogger.Log))
-            .Select(invocation => (LogLevel)invocation.Arguments[0])
+            .Select(invocation => Assert.IsType<LogLevel>(invocation.Arguments[0]))
             .ToList();
 
     private const string _emptySeries = """{ "Time Series (Daily)": {} }""";
