@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-	<Sdk Name="Aspire.AppHost.Sdk" Version="13.2.4" />
+	<Sdk Name="Aspire.AppHost.Sdk" Version="13.6.0" />
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<!-- Keep NuGet-provided orchestration/dashboard binaries without requiring the Aspire CLI bundle. -->
+		<AspireUseCliBundle>false</AspireUseCliBundle>
+		<NoWarn>$(NoWarn);ASPIRE010</NoWarn>
 		<UserSecretsId>199907c2-55ba-4ca5-b1b7-663b4d4e59c2</UserSecretsId>
 	</PropertyGroup>
 
