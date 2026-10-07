@@ -15,7 +15,34 @@ namespace FinanceManager.Components.Features.Dashboard.Components;
 
 public partial class Dashboard : ComponentBase
 {
-    private const int _unitHeight = 130;
+    // Every card shares one height so any cards can share a row; tall enough for the list
+    // cards to show several entries before they scroll.
+    private const string _cardHeight = "390px";
+
+    private const int _third = 4;
+    private const int _half = 6;
+    private const int _full = 12;
+
+    // Display order and large-screen widths (preferred, max) of every card. Time-series charts
+    // read well wide; distribution, list and summary cards are capped at half width so they are
+    // never stretched. See DashboardCardLayout for how the visible cards fill rows.
+    private static readonly DashboardCardSlot[] _cards =
+    [
+        new(DashboardCards.NetWorth, new(_full, _full)),
+        new(DashboardCards.NetCashFlow, new(_half, _full)),
+        new(DashboardCards.CashFlowForecast, new(_third, _half)),
+        new(DashboardCards.ClosingBalance, new(_half, _full)),
+        new(DashboardCards.Labels, new(_third, _half)),
+        new(DashboardCards.Assets, new(_third, _half)),
+        new(DashboardCards.Liabilities, new(_third, _half)),
+        new(DashboardCards.Expenses, new(_third, _half)),
+        new(DashboardCards.Insights, new(_third, _half)),
+        new(DashboardCards.FinancialAlerts, new(_third, _half)),
+        new(DashboardCards.RecurringTransactions, new(_third, _half)),
+        new(DashboardCards.TransactionLog, new(_full, _full)),
+    ];
+
+    private MudBlazor.MudMenu? _customizeMenu;
 
     private DashboardOverviewDto? _overview;
     private bool _isLoading = true;
@@ -80,6 +107,24 @@ public partial class Dashboard : ComponentBase
 
     private bool IsAutoHiddenWhenEmpty(string cardId) =>
         _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, _overview);
+
+    // Lays out the visible cards for both grid breakpoints. Below the large breakpoint the
+    // grid has room for two cards per row, so third-width cards start at half width there.
+    private List<CardPlacement> ArrangeCards()
+    {
+        var visible = _cards.Where(card => IsCardVisible(card.Id)).ToList();
+        var large = DashboardCardLayout.Arrange([.. visible.Select(card => card.LargeSpan)]);
+        var medium = DashboardCardLayout.Arrange([.. visible.Select(card =>
+            new DashboardCardSpan(Math.Max(card.LargeSpan.Preferred, _half), Math.Max(card.LargeSpan.Max, _half)))]);
+
+        return [.. visible.Select((card, i) => new CardPlacement(card.Id, medium[i], large[i]))];
+    }
+
+    private async Task OpenCustomizeMenu()
+    {
+        if (_customizeMenu is not null)
+            await _customizeMenu.OpenMenuAsync(EventArgs.Empty);
+    }
 
     private bool AnyCardVisible => DashboardCards.All.Any(card => IsCardVisible(card.Id));
 
@@ -174,4 +219,8 @@ public partial class Dashboard : ComponentBase
     // The key is currency-scoped so a snapshot saved before a preferred-currency change is never
     // painted with the new currency's labels.
     private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
+
+    private sealed record DashboardCardSlot(string Id, DashboardCardSpan LargeSpan);
+
+    private sealed record CardPlacement(string CardId, DashboardCardPlacement Medium, DashboardCardPlacement Large);
 }

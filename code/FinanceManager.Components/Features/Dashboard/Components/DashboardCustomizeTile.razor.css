@@ -1,0 +1,16 @@
+.dashboard-customize-tile {
+    width: 100%;
+    border: 1px dashed var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 150ms, color 150ms;
+}
+
+.dashboard-customize-tile:hover,
+.dashboard-customize-tile:focus-visible {
+    border-color: var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
+}

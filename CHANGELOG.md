@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Lay out Dashboard cards without gaps or uneven rows: every card now has the same height and cards differ only in width, wide charts and narrow cards share rows, cards widen only as far as suits their content, any space that still cannot be filled shows a Customize dashboard tile, and Liabilities distribution sits with the other distribution cards. #893
 - Load the app faster: the loading screen appears immediately instead of waiting for stylesheets, styles and scripts are sent compressed, app files can be cached by the browser and CDN until the next release, and an unused 285 KB sign-in script is no longer downloaded. #886
 - Make the forecast, transaction, subscription and investment lists easier to scan: a visible selected state, coloured signed amounts, month headings and a running balance on the cash flow forecast; one Balance column header, no repeated or placeholder times and category icons on transaction rows; a per-card actions menu and cadence filter on subscriptions; separate Cash impact and Gain / loss columns on investment trades; and clearer captions on the bond header and appreciation card. #877
 - Show money and dates the same way everywhere: amounts as `27,771.00 PLN` with the currency, and dates as `4 Oct 2026` or `4 Sep – 4 Oct 2026` instead of mixed numeric day/month formats. #875
