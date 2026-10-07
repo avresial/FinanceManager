@@ -1,88 +1,104 @@
 namespace FinanceManager.Components.Features.Dashboard.Models;
 
 /// <summary>
-/// Packs a run of same-height dashboard cards into 12-column rows, keeping their order.
-/// Cards are spread evenly across the fewest rows that fit them at their preferred width
-/// (so 4 third-width cards become 2 + 2, not 3 + 1). Each row then widens its cards uniformly,
-/// but only as far as every card's <see cref="DashboardCardSpan.Max"/> allows; whatever width is
-/// still left becomes a filler tile instead of a stretched card or an empty gap.
-/// <see cref="FillingOrder"/> can first move one card so that a card allowed to widen ends up
-/// in the short row, avoiding the filler where the cards' widths make that possible.
+/// Packs equal-height dashboard cards into 12-column rows, keeping their order. Every way of
+/// breaking the card sequence into rows is considered, and the one chosen leaves the least
+/// unfilled space, then widens cards the least (so cards stay as close to their preferred width
+/// as possible); among equal layouts, earlier rows are the fuller ones. Within a row, spare columns go to the cards with the most room to grow, never
+/// past their <see cref="DashboardCardSpan.Max"/>; whatever is still left becomes a filler tile
+/// instead of a stretched card or an empty gap.
 /// </summary>
 public static class DashboardCardLayout
 {
     private const int _gridColumns = 12;
 
-    // Uniform card widths a row may use, widest first; each divides the grid evenly.
-    private static readonly int[] _rowSpans = [12, 6, 4, 3, 2, 1];
-
     public static IReadOnlyList<DashboardCardPlacement> Arrange(IReadOnlyList<DashboardCardSpan> cards)
     {
-        if (cards.Count == 0)
-            return [];
-
         foreach (var card in cards)
         {
             if (card.Preferred < 1 || card.Preferred > card.Max || card.Max > _gridColumns)
                 throw new ArgumentException($"Invalid card span {card}.", nameof(cards));
         }
 
-        var perRow = _gridColumns / cards.Max(card => card.Preferred);
-        var rowCount = (cards.Count + perRow - 1) / perRow;
-        var cardsPerRow = cards.Count / rowCount;
-        var rowsWithExtraCard = cards.Count % rowCount;
+        // best[i] is the cheapest layout of cards[i..]; rowEnd[i] is where its first row ends.
+        var count = cards.Count;
+        var best = new RowCost[count + 1];
+        var rowEnd = new int[count + 1];
+        best[count] = new RowCost(0, 0);
 
-        var placements = new List<DashboardCardPlacement>(cards.Count);
-        var start = 0;
-        for (var row = 0; row < rowCount; row++)
+        for (var start = count - 1; start >= 0; start--)
         {
-            var rowCards = cards.Skip(start).Take(cardsPerRow + (row < rowsWithExtraCard ? 1 : 0)).ToList();
-            var span = RowSpan(rowCards);
-            var filler = _gridColumns - span * rowCards.Count;
+            best[start] = RowCost.Worst;
+            var preferredWidth = 0;
+            for (var end = start + 1; end <= count; end++)
+            {
+                preferredWidth += cards[end - 1].Preferred;
+                if (preferredWidth > _gridColumns)
+                    break;
 
-            for (var i = 0; i < rowCards.Count; i++)
-                placements.Add(new DashboardCardPlacement(span, i == rowCards.Count - 1 ? filler : 0));
+                // On a tie the longer first row wins, so complete rows come before short ones.
+                var cost = WidenRow(cards, start, end).Cost + best[end];
+                if (!(best[start] < cost))
+                {
+                    best[start] = cost;
+                    rowEnd[start] = end;
+                }
+            }
+        }
 
-            start += rowCards.Count;
+        var placements = new List<DashboardCardPlacement>(count);
+        for (var start = 0; start < count; start = rowEnd[start])
+        {
+            var row = WidenRow(cards, start, rowEnd[start]);
+            for (var i = 0; i < row.Spans.Length; i++)
+                placements.Add(new DashboardCardPlacement(row.Spans[i], i == row.Spans.Length - 1 ? row.Cost.Filler : 0));
         }
 
         return placements;
     }
 
-    /// <summary>
-    /// The order to lay <paramref name="cards"/> out in: unchanged when it already leaves no
-    /// filler, otherwise the arrangement with one card moved to the end that leaves the least
-    /// filler. Cards nearer the end are tried first so the order changes as little as possible.
-    /// </summary>
-    public static IReadOnlyList<int> FillingOrder(IReadOnlyList<DashboardCardSpan> cards)
+    // Starts every card in cards[start..end) at its preferred width and hands out the spare
+    // columns one at a time to the card with the most room left to grow (earliest on ties).
+    private static (int[] Spans, RowCost Cost) WidenRow(IReadOnlyList<DashboardCardSpan> cards, int start, int end)
     {
-        var original = Enumerable.Range(0, cards.Count).ToList();
-        var best = original;
-        var bestFiller = FillerFor(cards, original);
+        var spans = new int[end - start];
+        for (var i = 0; i < spans.Length; i++)
+            spans[i] = cards[start + i].Preferred;
 
-        for (var moved = cards.Count - 2; moved >= 0 && bestFiller > 0; moved--)
+        var free = _gridColumns - spans.Sum();
+        var widening = 0;
+        while (free > 0)
         {
-            var candidate = original.Where(i => i != moved).Append(moved).ToList();
-            var filler = FillerFor(cards, candidate);
-            if (filler < bestFiller)
+            var grow = -1;
+            for (var i = 0; i < spans.Length; i++)
             {
-                best = candidate;
-                bestFiller = filler;
+                var room = cards[start + i].Max - spans[i];
+                if (room > 0 && (grow < 0 || room > cards[start + grow].Max - spans[grow]))
+                    grow = i;
             }
+
+            if (grow < 0)
+                break;
+
+            spans[grow]++;
+            free--;
+            widening++;
         }
 
-        return best;
+        return (spans, new RowCost(free, widening));
     }
 
-    private static int FillerFor(IReadOnlyList<DashboardCardSpan> cards, IReadOnlyList<int> order) =>
-        Arrange([.. order.Select(i => cards[i])]).Sum(placement => placement.FillerSpanAfter);
-
-    // The widest uniform width that fits the row, is no narrower than any card prefers
-    // and no wider than any card allows.
-    private static int RowSpan(IReadOnlyList<DashboardCardSpan> rowCards)
+    // Unfilled columns weigh more than any amount of widening, so a gap-free layout always wins.
+    private readonly record struct RowCost(int Filler, int Widening)
     {
-        var minimum = rowCards.Max(card => card.Preferred);
-        var maximum = Math.Min(rowCards.Min(card => card.Max), _gridColumns / rowCards.Count);
-        return _rowSpans.FirstOrDefault(span => span >= minimum && span <= maximum, minimum);
+        public static RowCost Worst { get; } = new(int.MaxValue / 2, int.MaxValue / 2);
+
+        public static RowCost operator +(RowCost left, RowCost right) =>
+            new(left.Filler + right.Filler, left.Widening + right.Widening);
+
+        public static bool operator <(RowCost left, RowCost right) =>
+            left.Filler < right.Filler || (left.Filler == right.Filler && left.Widening < right.Widening);
+
+        public static bool operator >(RowCost left, RowCost right) => right < left;
     }
 }
