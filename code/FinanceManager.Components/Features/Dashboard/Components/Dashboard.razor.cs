@@ -16,6 +16,34 @@ namespace FinanceManager.Components.Features.Dashboard.Components;
 public partial class Dashboard : ComponentBase
 {
     private const int _unitHeight = 130;
+    private static readonly string _halfCardHeight = $"{_unitHeight * 2}px";
+    private static readonly string _thirdCardHeight = $"{_unitHeight * 3}px";
+
+    private const int _third = 4;
+    private const int _half = 6;
+    private const int _full = 12;
+
+    // Display order and large-screen widths of the cards in each height tier. Time-series cards
+    // read well wide; distribution and list cards are capped so they are never stretched past
+    // half width. See DashboardCardLayout for how a tier's visible cards fill rows.
+    private static readonly TierCard[] _halfWidthCards =
+    [
+        new(DashboardCards.NetCashFlow, new(_half, _full)),
+        new(DashboardCards.CashFlowForecast, new(_half, _full)),
+        new(DashboardCards.ClosingBalance, new(_half, _full)),
+    ];
+    private static readonly TierCard[] _thirdWidthCards =
+    [
+        new(DashboardCards.Labels, new(_third, _half)),
+        new(DashboardCards.Assets, new(_third, _half)),
+        new(DashboardCards.Liabilities, new(_third, _half)),
+        new(DashboardCards.Expenses, new(_third, _half)),
+        new(DashboardCards.Insights, new(_third, _half)),
+        new(DashboardCards.FinancialAlerts, new(_third, _half)),
+        new(DashboardCards.RecurringTransactions, new(_third, _half)),
+    ];
+
+    private MudBlazor.MudMenu? _customizeMenu;
 
     private DashboardOverviewDto? _overview;
     private bool _isLoading = true;
@@ -80,6 +108,29 @@ public partial class Dashboard : ComponentBase
 
     private bool IsAutoHiddenWhenEmpty(string cardId) =>
         _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, _overview);
+
+    // Lays out a tier's visible cards for both grid breakpoints. Below the large breakpoint
+    // the grid has room for two cards per row, so third-width cards start at half width there.
+    // When hidden cards would leave a gap, a card that may widen is moved into the short row;
+    // the order is chosen for the large layout and the medium layout follows it, since the
+    // markup has a single card order.
+    private List<TierSlot> ArrangeTier(IEnumerable<TierCard> tier)
+    {
+        var shown = tier.Where(card => IsCardVisible(card.Id)).ToList();
+        var order = DashboardCardLayout.FillingOrder([.. shown.Select(card => card.LargeSpan)]);
+        var visible = order.Select(i => shown[i]).ToList();
+        var large = DashboardCardLayout.Arrange([.. visible.Select(card => card.LargeSpan)]);
+        var medium = DashboardCardLayout.Arrange([.. visible.Select(card =>
+            new DashboardCardSpan(Math.Max(card.LargeSpan.Preferred, _half), Math.Max(card.LargeSpan.Max, _half)))]);
+
+        return [.. visible.Select((card, i) => new TierSlot(card.Id, medium[i], large[i]))];
+    }
+
+    private async Task OpenCustomizeMenu()
+    {
+        if (_customizeMenu is not null)
+            await _customizeMenu.OpenMenuAsync(EventArgs.Empty);
+    }
 
     private bool AnyCardVisible => DashboardCards.All.Any(card => IsCardVisible(card.Id));
 
@@ -174,4 +225,8 @@ public partial class Dashboard : ComponentBase
     // The key is currency-scoped so a snapshot saved before a preferred-currency change is never
     // painted with the new currency's labels.
     private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
+
+    private sealed record TierCard(string Id, DashboardCardSpan LargeSpan);
+
+    private sealed record TierSlot(string CardId, DashboardCardPlacement Medium, DashboardCardPlacement Large);
 }

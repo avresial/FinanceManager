@@ -1,0 +1,14 @@
+@* Placeholder for the part of a dashboard row the visible cards cannot fill: it keeps the
+   gap intentional and offers a way to choose more cards. A plain button rather than MudPaper
+   so the scoped styles below apply to the root element. *@
+<button type="button" class="dashboard-customize-tile d-flex flex-column align-center justify-center pa-4"
+        style="@($"height:{Height}")" @onclick="OnClick">
+    <MudIcon Icon="@Icons.Material.Filled.Tune" />
+    <MudText Typo="Typo.body2" Class="mt-2">Customize dashboard</MudText>
+    <MudText Typo="Typo.caption">Choose which cards to show</MudText>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public required string Height { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}

@@ -1,0 +1,22 @@
+@* Fills the rest of a row whose cards may not stretch across it. The medium and large grid
+   layouts can leave different gaps, so each filler shows on its own breakpoint only and
+   nothing renders below the medium breakpoint, where every card is full width. *@
+@if (MediumSpan > 0)
+{
+    <MudItem xs="12" md="@MediumSpan" Class="d-none d-md-flex d-lg-none">
+        <DashboardCustomizeTile Height="@Height" OnClick="OnClick" />
+    </MudItem>
+}
+@if (LargeSpan > 0)
+{
+    <MudItem xs="12" lg="@LargeSpan" Class="d-none d-lg-flex">
+        <DashboardCustomizeTile Height="@Height" OnClick="OnClick" />
+    </MudItem>
+}
+
+@code {
+    [Parameter] public int MediumSpan { get; set; }
+    [Parameter] public int LargeSpan { get; set; }
+    [Parameter, EditorRequired] public required string Height { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}
