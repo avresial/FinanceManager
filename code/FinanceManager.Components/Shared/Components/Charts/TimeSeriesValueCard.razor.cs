@@ -174,7 +174,8 @@ public partial class TimeSeriesValueCard
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
-        var scale = ChartHelper.GetYScaleWithLabelGutter((double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value));
+        var scale = ChartHelper.GetYScaleWithLabelGutter(
+            (double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value), ChartHelper.GetYTargetBands(Height));
         axis.Min = scale.Min;
         axis.Max = scale.Max;
         axis.TickAmount = scale.TickAmount;
@@ -298,6 +299,9 @@ public partial class TimeSeriesValueCard
                     // Floating = true: labels overlay the plot area instead of
                     // occupying a reserved column to the left. This eliminates the
                     // dead space on the left edge so the chart fills the card fully.
+                    // The labels are drawn above the series with a card-surface halo
+                    // (wwwroot/js/chart-axis-labels.js + css/time-series-card.css) so
+                    // the line passes behind them.
                     Floating = true,
                     AxisBorder = new AxisBorder { Show = false },
                     AxisTicks = new AxisTicks { Show = false },
