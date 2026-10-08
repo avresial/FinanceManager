@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Reserve the amber accent colour for actions, selected state and key figures: descriptions, subtitles, footnotes, period labels and empty-state hints across the Dashboard, Assets, Alerts, Subscriptions, Cash flow forecast, Settings, Transaction rules and Admin pages now use muted text, and the colour rule is documented. #897
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
 - Show each page title once in the app bar and move Dashboard, Assets and Liabilities date controls beside it, with compact actions on phones. #896
 - Lay out Dashboard cards without gaps or uneven rows: every card now has the same height and cards differ only in width, wide charts and narrow cards share rows, cards widen only as far as suits their content, any space that still cannot be filled shows a Customize dashboard tile, and Liabilities distribution sits with the other distribution cards. #893

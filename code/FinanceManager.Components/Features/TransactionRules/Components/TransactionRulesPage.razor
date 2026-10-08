@@ -31,9 +31,9 @@
     else if (_rules.Count == 0 && _error is null && !_isCreating)
     {
         <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" Color="Color.Secondary" />
+            <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" />
             <MudText Typo="Typo.h6" Class="mt-2">No automation rules yet</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Create your first rule to keep new and imported transactions tidy.</MudText>
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">Create your first rule to keep new and imported transactions tidy.</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="BeginCreate" Class="mt-3">Create your first rule</MudButton>
         </MudPaper>
     }
@@ -152,7 +152,7 @@
     {
         <MudPaper Outlined Class="pa-4 mt-5">
             <MudText Typo="Typo.h6">Test the full sequence</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
                 Test the current saved rule set against a transaction without changing your data.
             </MudText>
             <MudGrid Spacing="2" Class="mx-0 w-100">
@@ -207,7 +207,7 @@
         </MudPaper>
         <MudPaper Outlined Class="pa-4 mt-5">
             <MudText Typo="Typo.h6">Apply to existing currency transactions</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
                 Retroactive application changes matching transactions in your accounts. Confirm before running it.
             </MudText>
             <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />

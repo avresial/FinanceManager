@@ -19,14 +19,14 @@
                     </dl>
                 </TooltipContent>
             </CardInfoTooltip>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Estimated cost of ETF expense ratios</MudText>
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">Estimated cost of ETF expense ratios</MudText>
         </div>
 
         @if (_isLoading)
         {
             <div class="fee-drag-card__state" data-testid="fee-drag-loading">
                 <MudText Typo="Typo.h3" Class="text-muted"><StringSpinner CharactersCount="5" /></MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Calculating fee impact...</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">Calculating fee impact...</MudText>
             </div>
         }
         else if (_hasError)
@@ -40,9 +40,9 @@
         else if (_analysis is null || _analysis.TotalHoldingsCount == 0)
         {
             <div class="fee-drag-card__state" data-testid="fee-drag-empty">
-                <MudIcon Icon="@Icons.Material.Filled.Savings" Color="Color.Secondary" Size="Size.Large" />
+                <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.Savings" Size="Size.Large" />
                 <MudText Typo="Typo.body1">No ETF holdings found</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Add an ETF holding to visualize its expense-ratio impact.</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">Add an ETF holding to visualize its expense-ratio impact.</MudText>
             </div>
         }
         else
@@ -81,9 +81,9 @@
                 @foreach (var projection in ComputedProjections)
                 {
                     <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@projection.Years years</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
                         <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">estimated drag</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
                     </div>
                 }
             </div>

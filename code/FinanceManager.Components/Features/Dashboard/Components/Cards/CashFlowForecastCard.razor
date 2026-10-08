@@ -38,7 +38,7 @@
         else if (_model is not null)
         {
             <MudStack Spacing="2">
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">
                     Current balance: <strong>@FormatMoney(_model.CurrentBalance)</strong>
                 </MudText>
                 <MudGrid Spacing="1">
@@ -46,7 +46,7 @@
                     {
                         <MudItem xs="4">
                             <MudPaper Outlined Class="pa-2 text-center h-100">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@horizon days</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption">@horizon days</MudText>
                                 <MudText Typo="Typo.body2" Class="font-weight-600">@FormatMoney(ValueAt(horizon))</MudText>
                             </MudPaper>
                         </MudItem>
@@ -60,7 +60,7 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">
                         @ExpectedSummary
                     </MudText>
                 }

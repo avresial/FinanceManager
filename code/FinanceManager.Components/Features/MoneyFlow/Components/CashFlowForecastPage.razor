@@ -38,7 +38,7 @@
         <MudPaper Outlined Class="pa-4 mb-4">
             <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-2">
                 <MudText Typo="Typo.h6">Projected cash balance</MudText>
-                <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">
                     As of @DateFormatter.Format(_forecast.AsOfDate) · @_forecast.Currency
                 </MudText>
             </div>
@@ -60,7 +60,7 @@
                     }
                 </ApexChart>
             </div>
-            <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">
+            <MudText Class="mud-text-secondary" Typo="Typo.caption">
                 Historical balance is shaded; the forecast line begins at today's balance.
             </MudText>
         </MudPaper>
