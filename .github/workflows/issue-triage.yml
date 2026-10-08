@@ -13,8 +13,8 @@ on:
 permissions: {}
 
 jobs:
-  local-codex:
-    name: Triage issue with local Qwen Codex
+  local-opencode:
+    name: Triage issue with local Qwen OpenCode
     if: github.actor == github.repository_owner
     runs-on: [self-hosted, macOS, ARM64, codex-lmstudio]
     timeout-minutes: 45
@@ -26,8 +26,7 @@ jobs:
       issues: write
       pull-requests: read
     env:
-      CODEX_HOME: /Users/a2485/.codex
-      PATH: /Applications/ChatGPT.app/Contents/Resources/codex-cli/bin:/opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PATH: /opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
@@ -35,36 +34,32 @@ jobs:
     steps:
       # Do not check out the repository or pass issue content to the local
       # process. The triage skill reads the live issue through GitHub APIs.
-      - name: Verify the Qwen Codex profile and issue-management skill
+      - name: Verify OpenCode configuration and issue-management skill
         shell: bash
         run: |
           set -euo pipefail
-          command -v codex || { echo "::error::codex CLI not found on PATH. ChatGPT.app may have moved it; update PATH in this workflow."; exit 1; }
-          codex --version
-          test -f "$CODEX_HOME/qwen.config.toml" || { echo "::error::Missing $CODEX_HOME/qwen.config.toml"; exit 1; }
+          command -v opencode || { echo "::error::OpenCode CLI not found on PATH."; exit 1; }
+          opencode --version
+          opencode models lmstudio | grep -Fx "lmstudio/qwen3.8-27b"
           test -f /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md || { echo "::error::Missing codebase-manage-issues skill"; exit 1; }
 
-      # The qwen profile routes through the local LiteLLM proxy, which needs
-      # Docker Desktop (litellm-postgres container) to be running.
-      - name: Verify the local LiteLLM proxy is reachable
+      # Select LM Studio explicitly so a global default cannot route triage
+      # to a cloud provider.
+      - name: Verify local LM Studio is reachable
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS -m 10 -o /dev/null http://127.0.0.1:4000/health/liveliness \
-            || { echo "::error::LiteLLM proxy on 127.0.0.1:4000 is not responding. Start Docker Desktop (litellm-postgres) and check ~/.config/litellm/litellm.stderr.log."; exit 1; }
+          curl -fsS -m 10 -o /dev/null http://127.0.0.1:1234/v1/models \
+            || { echo "::error::LM Studio on 127.0.0.1:1234 is not responding. Start its server and load Qwen."; exit 1; }
 
-      - name: Triage the opened issue with Qwen Codex
+      - name: Triage the opened issue with Qwen OpenCode
         shell: bash
         run: |
           set -euo pipefail
-          codex -a never \
-            --profile qwen \
-            exec \
-            --ephemeral \
-            --sandbox danger-full-access \
-            --skip-git-repo-check \
-            --cd "$RUNNER_TEMP" \
-            --output-last-message "$RUNNER_TEMP/codex-last-message.txt" \
-            "Use the installed \$codebase-manage-issues skill to triage only issue #${ISSUE_NUMBER} in ${REPOSITORY}. Do not search for or install skills. Read this issue's complete conversation, labels, timeline, and directly linked dependencies or pull requests through GitHub APIs. Read repository label definitions only when needed for classification. Do not scan unrelated issues, branches, or pull requests, inspect source code or local repository files, implement code, create branches or pull requests, or modify the local working directory. Change labels only with 'gh issue edit ${ISSUE_NUMBER} --add-label ... --remove-label ...', not raw 'gh api' label calls. Apply only supported lifecycle and type or area labels, preserve human labels and ownership, avoid duplicate comments, and report the resulting state." \
-            < /dev/null
-          test -s "$RUNNER_TEMP/codex-last-message.txt"
+          opencode run \
+            --model lmstudio/qwen3.8-27b \
+            --auto \
+            --dir "$RUNNER_TEMP" \
+            "Read /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md and use that installed skill to triage only issue #${ISSUE_NUMBER} in ${REPOSITORY}. Do not search for or install skills. Read this issue's complete conversation, labels, timeline, and directly linked dependencies or pull requests through GitHub APIs. Read repository label definitions only when needed for classification. Do not scan unrelated issues, branches, or pull requests, inspect source code or local repository files, implement code, create branches or pull requests, or modify the local working directory. Change labels only with 'gh issue edit ${ISSUE_NUMBER} --add-label ... --remove-label ...', not raw 'gh api' label calls. Apply only supported lifecycle and type or area labels, preserve human labels and ownership, avoid duplicate comments, and report the resulting state." \
+            < /dev/null | tee "$RUNNER_TEMP/opencode-output.txt"
+          test -s "$RUNNER_TEMP/opencode-output.txt"
