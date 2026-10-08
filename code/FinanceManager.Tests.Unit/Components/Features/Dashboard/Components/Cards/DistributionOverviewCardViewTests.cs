@@ -17,13 +17,13 @@ public class DistributionOverviewCardViewTests
     private static readonly List<NameValueResult> _two = [new("Mortgage", 75m), new("Loan", 25m)];
 
     [Fact]
-    public async Task Liabilities_SingleCategory_ShowsSummaryWithoutChart()
+    public async Task Liabilities_SingleCategory_ShowsFigureWithoutChart()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
 
         AssertSummary(cut);
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
@@ -34,18 +34,18 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
-        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+        Assert.Empty(cut.FindAll("[class*=legend--single]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
 
     [Fact]
-    public async Task Assets_SingleCategory_ShowsSummaryWithoutChart()
+    public async Task Assets_SingleCategory_ShowsFigureWithoutChart()
     {
         await using var context = CreateContext();
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
 
         AssertSummary(cut);
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
@@ -56,7 +56,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
-        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+        Assert.Empty(cut.FindAll("[class*=legend--single]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
 
@@ -73,7 +73,7 @@ public class DistributionOverviewCardViewTests
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Wallet")).Click();
 
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
         Assert.Matches("100[.,]00", cut.Find(".fm-card-total").TextContent);
         Assert.Single(cut.FindAll(".fm-legend-row"));
         Assert.Contains("Main wallet", cut.Find(".fm-legend-name").TextContent);
@@ -88,12 +88,12 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task Expense_SingleCategory_ShowsSummaryWithoutChart()
+    public async Task Expense_SingleCategory_ShowsFigureWithoutChart()
     {
         await using var context = CreateContext();
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single));
 
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
         Assert.Single(cut.FindAll(".ed-legend-row"));
         Assert.Contains("Mortgage", cut.Find(".ed-legend-name").TextContent);
         Assert.Matches("100[.,]00", cut.Find(".ed-legend-amt").TextContent);
@@ -108,7 +108,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
-        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+        Assert.Empty(cut.FindAll("[class*=legend--single]"));
         Assert.Equal(2, cut.FindAll(".ed-legend-row").Count);
     }
 
@@ -126,36 +126,34 @@ public class DistributionOverviewCardViewTests
         foreach (var cut in new IRenderedComponent<IComponent>[] { liabilities, assets, expenses })
         {
             Assert.Contains("No data", cut.Markup);
-            Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
             Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
         }
     }
 
     [Fact]
-    public async Task Liabilities_AccountToggle_SwitchesBetweenRingAndChart()
+    public async Task Liabilities_AccountToggle_SwitchesBetweenFigureAndChart()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
             .Add(x => x.TypeData, _single).Add(x => x.AccountData, _two));
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
-        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+        Assert.Empty(cut.FindAll("[class*=legend--single]"));
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
-        AssertSingleCategoryRing(cut);
+        AssertSingleCategoryFigure(cut);
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
-    private static void AssertSingleCategoryRing(IRenderedComponent<IComponent> cut)
+    private static void AssertSingleCategoryFigure(IRenderedComponent<IComponent> cut)
     {
-        var summary = cut.Find("[data-testid=single-category-distribution]");
-        Assert.Matches("100[.,]00", summary.TextContent);
-        Assert.Contains("100%", summary.TextContent);
-        Assert.Contains("PLN", summary.TextContent);
-        Assert.DoesNotContain("CurrencyShortName", summary.TextContent);
-        Assert.Contains("100% of", summary.GetAttribute("aria-label"));
+        var legend = cut.Find("[data-testid=distribution-legend]");
+        Assert.Contains("legend--single", legend.ClassName);
+        Assert.Matches("100[.,]00", legend.TextContent);
+        Assert.Contains("100.0%", legend.TextContent.Replace(",", "."));
+        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
     private static void AssertSummary(IRenderedComponent<IComponent> cut)

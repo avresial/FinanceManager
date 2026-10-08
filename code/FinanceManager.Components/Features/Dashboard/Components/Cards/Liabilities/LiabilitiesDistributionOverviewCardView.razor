@@ -40,12 +40,7 @@
         else if (ActiveData.Any() && TotalLiabilities > 0)
         {
             <div class="fm-pie-body">
-                @if (IsSingleCategory)
-                {
-                    <SingleCategoryDistributionSummary Total="TotalLiabilities" CurrencyShortName="@CurrencyShortName"
-                                                       Color="@ColorsProvider.GetColors()[0]" DistributionName="liabilities" />
-                }
-                else
+                @if (!IsSingleCategory)
                 {
                     <div class="fm-chart-wrap">
                         <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
@@ -59,7 +54,7 @@
                         </ApexChart>
                     </div>
                 }
-                <div class="fm-legend" data-testid="distribution-legend">
+                <div class="fm-legend@(IsSingleCategory ? " fm-legend--single" : "")" data-testid="distribution-legend">
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();

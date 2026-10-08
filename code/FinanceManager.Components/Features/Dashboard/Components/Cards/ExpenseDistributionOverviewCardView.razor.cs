@@ -15,7 +15,7 @@ public partial class ExpenseDistributionOverviewCardView
     [Parameter] public string CurrencyShortName { get; set; } = "PLN";
     [Parameter] public List<NameValueResult> Data { get; set; } = [];
 
-    // Keep a single-category summary in the same chart slot as a multi-category pie.
+    // A single category would render as a one-slice pie that carries no information, so the card shows only its summary row.
     private bool IsSingleCategory => Data.Select(x => x.Name).Distinct().Count() == 1;
 
     private decimal TotalExpenses => Data.Count == 0 ? 0 : Math.Round(Data.Sum(x => x.Value), 2);

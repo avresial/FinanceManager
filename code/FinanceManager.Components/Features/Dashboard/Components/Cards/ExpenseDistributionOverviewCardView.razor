@@ -33,12 +33,7 @@
         else if (Data.Any() && TotalExpenses > 0)
         {
             <div class="ed-body">
-                @if (IsSingleCategory)
-                {
-                    <SingleCategoryDistributionSummary Total="TotalExpenses" CurrencyShortName="@CurrencyShortName"
-                                                       Color="@ColorsProvider.GetColors()[0]" DistributionName="expenses" />
-                }
-                else
+                @if (!IsSingleCategory)
                 {
                     <div class="ed-chart-wrap">
                         <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
@@ -52,7 +47,7 @@
                         </ApexChart>
                     </div>
                 }
-                <div class="ed-legend" data-testid="distribution-legend">
+                <div class="ed-legend@(IsSingleCategory ? " ed-legend--single" : "")" data-testid="distribution-legend">
                     @{
                         var sorted = Data.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
