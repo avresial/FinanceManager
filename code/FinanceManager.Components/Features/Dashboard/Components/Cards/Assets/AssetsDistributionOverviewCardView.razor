@@ -22,11 +22,7 @@
             }
         </div>
         <div class="fm-card-info-actions">
-            <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
-                            Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
-                <MudToggleItem Value="@_viewByType" Text="Type" />
-                <MudToggleItem Value="@_viewByWallet" Text="Wallet" />
-            </MudToggleGroup>
+            <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
         </div>
     </MudPaper>
 

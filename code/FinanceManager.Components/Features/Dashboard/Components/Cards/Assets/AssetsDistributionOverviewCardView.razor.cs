@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Shared.Components;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Charting;
@@ -8,8 +9,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
 public partial class AssetsDistributionOverviewCardView
 {
-    private const string _viewByType = "type";
-    private const string _viewByWallet = "wallet";
+    private const string _viewByType = DistributionViewToggle.TypeView;
+    private const string _viewByAccount = DistributionViewToggle.AccountView;
 
     private string _view = _viewByType;
     private ApexChart<NameValueResult>? _chart;
@@ -21,7 +22,7 @@ public partial class AssetsDistributionOverviewCardView
     [Parameter] public List<NameValueResult> TypeData { get; set; } = [];
     [Parameter] public List<NameValueResult> WalletData { get; set; } = [];
 
-    private List<NameValueResult> ActiveData => _view == _viewByWallet ? WalletData : TypeData;
+    private List<NameValueResult> ActiveData => _view == _viewByAccount ? WalletData : TypeData;
 
     // A single category would render as a one-slice pie that carries no information, so the card shows only its summary row.
     private bool IsSingleCategory => ActiveData.Select(x => x.Name).Distinct().Count() == 1;

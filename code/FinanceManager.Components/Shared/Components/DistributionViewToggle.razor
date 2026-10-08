@@ -1,0 +1,26 @@
+<div class="fm-view-toggle">
+    <MudToggleGroup T="string" Value="@Value" ValueChanged="OnValueChangedAsync"
+                    Dense="true" Size="Size.Small" Color="Color.Default"
+                    Class="fm-view-toggle-group" aria-label="Distribution view">
+        <MudToggleItem Value="@TypeView" Text="Type" />
+        <MudToggleItem Value="@AccountView" Text="Account" />
+    </MudToggleGroup>
+</div>
+
+@code {
+    public const string TypeView = "type";
+    public const string AccountView = "account";
+
+    [Parameter] public string Value { get; set; } = TypeView;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private async Task OnValueChangedAsync(string view)
+    {
+        // MudToggleGroup reports null when the selected item is clicked again; keep the current view instead.
+        if (string.IsNullOrEmpty(view))
+            return;
+
+        Value = view;
+        await ValueChanged.InvokeAsync(view);
+    }
+}
