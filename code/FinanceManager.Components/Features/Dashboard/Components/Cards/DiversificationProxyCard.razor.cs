@@ -25,6 +25,11 @@ public partial class DiversificationProxyCard
     // Gauge geometry (semicircle, top half). Matches the design handoff.
     private const double _cx = 100, _cy = 96, _r = 78;
 
+    // Mirrors DiversificationService: up to 50 points for asset classes (of 6) plus up to 50 for unique holdings (30+).
+    internal const string ScoreExplanation =
+        "0 means nothing to spread across; 100 means all 6 asset classes and 30+ distinct holdings. " +
+        "Hold a new asset class or more distinct holdings to raise it.";
+
     private static readonly (string Key, string Label)[] _bands =
     [
         ("limited", "Limited"),
