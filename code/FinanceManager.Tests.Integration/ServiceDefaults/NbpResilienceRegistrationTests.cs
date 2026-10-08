@@ -6,6 +6,7 @@ using FinanceManager.Infrastructure;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Moq;
 using ServiceDefaults;
@@ -44,6 +45,12 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        // These tests verify retry registration and counts, not wall-clock backoff.
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
@@ -83,6 +90,11 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
@@ -115,6 +127,11 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");

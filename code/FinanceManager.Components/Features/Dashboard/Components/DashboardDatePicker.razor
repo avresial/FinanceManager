@@ -2,20 +2,22 @@
 
 <div class="fm-dashboard-datepicker-container">
     <MudPaper Outlined="true" Elevation="0" Class="rounded-pill fm-dashboard-datepicker-pill">
-        <MudMenu Label="@CurrentDisplayLabel"
-                 AriaLabel="@($"Date range: {CurrentDisplayLabel}")"
-                 StartIcon="@Icons.Material.Filled.CalendarMonth"
-                 EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                 Variant="Variant.Text"
-                 Color="Color.Default"
-                 Open="_isMenuOpen"
+        <MudMenu Open="_isMenuOpen"
                  OpenChanged="OnMenuOpenChanged"
                  Dense="true"
-                 AnchorOrigin="Origin.TopRight"
-                 TransformOrigin="Origin.BottomRight"
+                 AnchorOrigin="Origin.BottomRight"
+                 TransformOrigin="Origin.TopRight"
                  Class="fm-dashboard-datepicker-menu"
                  PopoverClass="fm-dashboard-datepicker-popover"
                  aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
+            <ActivatorContent>
+                <MudButton StartIcon="@Icons.Material.Filled.CalendarMonth" EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                           OnClick="@(() => OnMenuOpenChanged(!_isMenuOpen))" aria-label="@($"Date range: {CurrentDisplayLabel}")"
+                           aria-haspopup="menu" aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
+                    <span class="fm-range-label">@CurrentDisplayLabel</span>
+                    <span class="fm-range-label-compact">@(_selected == DateRangeHelper.CustomRangeKey ? "Custom range" : CurrentDisplayLabel)</span>
+                </MudButton>
+            </ActivatorContent>
             <ChildContent>
                 @foreach (var (key, label) in _presets)
                 {
