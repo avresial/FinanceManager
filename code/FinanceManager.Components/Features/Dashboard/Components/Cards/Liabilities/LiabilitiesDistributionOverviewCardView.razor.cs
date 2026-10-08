@@ -22,7 +22,7 @@ public partial class LiabilitiesDistributionOverviewCardView
 
     private List<NameValueResult> ActiveData => _view == _viewByAccount ? AccountData : TypeData;
 
-    // A single category would render as a one-slice pie that carries no information, so the card shows only its summary row.
+    // Keep a single-category summary in the same chart slot as a multi-category pie.
     private bool IsSingleCategory => ActiveData.Select(x => x.Name).Distinct().Count() == 1;
 
     // Derive the total from the active dataset so per-view percentages and the header stay self-consistent.

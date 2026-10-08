@@ -23,6 +23,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
 
         AssertSummary(cut);
+        AssertSingleCategoryRing(cut);
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
@@ -33,6 +34,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
 
@@ -43,6 +45,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
 
         AssertSummary(cut);
+        AssertSingleCategoryRing(cut);
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
     }
 
@@ -53,6 +56,7 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
 
@@ -62,6 +66,7 @@ public class DistributionOverviewCardViewTests
         await using var context = CreateContext();
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single));
 
+        AssertSingleCategoryRing(cut);
         Assert.Single(cut.FindAll(".ed-legend-row"));
         Assert.Contains("Mortgage", cut.Find(".ed-legend-name").TextContent);
         Assert.Matches("100[.,]00", cut.Find(".ed-legend-amt").TextContent);
@@ -76,7 +81,54 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _two));
 
         Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
         Assert.Equal(2, cut.FindAll(".ed-legend-row").Count);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-100)]
+    public async Task NonpositiveTotals_ShowNoData(decimal value)
+    {
+        await using var context = CreateContext();
+        List<NameValueResult> data = [new("Mortgage", value)];
+        var liabilities = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, data));
+        var assets = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, data));
+        var expenses = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, data));
+
+        foreach (var cut in new IRenderedComponent<IComponent>[] { liabilities, assets, expenses })
+        {
+            Assert.Contains("No data", cut.Markup);
+            Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+            Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        }
+    }
+
+    [Fact]
+    public async Task Liabilities_AccountToggle_SwitchesBetweenRingAndChart()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, _single).Add(x => x.AccountData, _two));
+        AssertSingleCategoryRing(cut);
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
+        Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindAll("[data-testid=single-category-distribution]"));
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
+        AssertSingleCategoryRing(cut);
+        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+    }
+
+    private static void AssertSingleCategoryRing(IRenderedComponent<IComponent> cut)
+    {
+        var summary = cut.Find("[data-testid=single-category-distribution]");
+        Assert.Matches("100[.,]00", summary.TextContent);
+        Assert.Contains("100%", summary.TextContent);
+        Assert.Contains("PLN", summary.TextContent);
+        Assert.DoesNotContain("CurrencyShortName", summary.TextContent);
+        Assert.Contains("100% of", summary.GetAttribute("aria-label"));
     }
 
     private static void AssertSummary(IRenderedComponent<IComponent> cut)
