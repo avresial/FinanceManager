@@ -4,6 +4,7 @@ using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
@@ -42,6 +43,18 @@ public partial class Dashboard : ComponentBase
         new(DashboardCards.TransactionLog, new(_full, _full)),
     ];
 
+    // Cards that render figures for the selected date range; only these show the refresh indicator.
+    private static readonly HashSet<string> _rangeDependentCards =
+    [
+        DashboardCards.NetWorth,
+        DashboardCards.NetCashFlow,
+        DashboardCards.ClosingBalance,
+        DashboardCards.Labels,
+        DashboardCards.Assets,
+        DashboardCards.Liabilities,
+        DashboardCards.Expenses,
+    ];
+
     private MudBlazor.MudMenu? _customizeMenu;
 
     private DashboardOverviewDto? _overview;
@@ -59,6 +72,10 @@ public partial class Dashboard : ComponentBase
     // if it is still the latest in-flight request.
     private readonly RefreshVersionGate _overviewGate = new();
 
+    // True while the latest claimed request is running. Only the latest request clears it, so a
+    // superseded response can never hide the indicator of the newer one.
+    private bool _isRequestInFlight;
+
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
 
@@ -67,6 +84,14 @@ public partial class Dashboard : ComponentBase
     // (first paint / self-load fallback) they fall back to the live selection.
     private DateTime DisplayStartDate => _overview is null ? StartDate : _overviewStart;
     private DateTime DisplayEndDate => _overview is null ? EndDate : _overviewEnd;
+
+    // The user asked for a range other than the one the held overview shows and that data is still on
+    // its way. Compared by day: the default end is "now", which moves between visits without
+    // changing what the user sees.
+    private bool IsRefreshing => _overview is not null && _isRequestInFlight
+        && (StartDate.Date != _overviewStart.Date || EndDate.Date != _overviewEnd.Date);
+
+    private static bool IsRangeDependent(string cardId) => _rangeDependentCards.Contains(cardId);
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
@@ -155,7 +180,26 @@ public partial class Dashboard : ComponentBase
         var endDate = EndDate;
 
         _hasError = false;
+        _isRequestInFlight = true;
+        StateHasChanged();
 
+        try
+        {
+            await RefreshOverviewAsync(requestVersion, startDate, endDate);
+        }
+        finally
+        {
+            // A superseded run leaves the flag alone: the newer run owns it now.
+            if (_overviewGate.IsCurrent(requestVersion))
+            {
+                _isRequestInFlight = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task RefreshOverviewAsync(int requestVersion, DateTime startDate, DateTime endDate)
+    {
         var user = await LoginService.GetLoggedUser();
         if (user is null)
         {
@@ -193,13 +237,11 @@ public partial class Dashboard : ComponentBase
         if (!_overviewGate.IsCurrent(requestVersion))
             return;
 
-        // A failed fetch behind a painted snapshot keeps the snapshot on screen; only a surface
-        // with nothing to show falls back to the error state.
-        if (result.IsBlockingFailure)
-        {
-            _overview = null;
-            _hasError = true;
-        }
+        // A failed refresh never discards an overview that is already on screen (painted from the
+        // snapshot or held from an earlier load): the old data and its period labels stay, and the
+        // alert tells the user the requested range did not load and offers Retry. With nothing on
+        // screen the same flag is the blocking error state.
+        _hasError = result.Outcome == SnapshotRefreshOutcome.Failed;
 
         _isLoading = false;
         StateHasChanged();

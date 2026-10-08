@@ -80,6 +80,7 @@
             {
                 var cardId = slot.CardId;
                 <MudItem xs="12" md="@slot.Medium.Span" lg="@slot.Large.Span" @key="cardId">
+                    <RefreshingCardFrame IsRefreshing="@(IsRefreshing && IsRangeDependent(cardId))">
                     @switch (cardId)
                     {
                         case DashboardCards.NetWorth:
@@ -126,6 +127,7 @@
                             <TransactionLogCard Height="@_cardHeight" />
                             break;
                     }
+                    </RefreshingCardFrame>
                 </MudItem>
                 <DashboardRowFiller MediumSpan="@slot.Medium.FillerSpanAfter" LargeSpan="@slot.Large.FillerSpanAfter"
                                     Height="@_cardHeight" OnClick="OpenCustomizeMenu" />
