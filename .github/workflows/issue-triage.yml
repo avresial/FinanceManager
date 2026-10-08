@@ -27,7 +27,7 @@ jobs:
       pull-requests: read
     env:
       CODEX_HOME: /Users/a2485/.codex
-      PATH: /Applications/ChatGPT.app/Contents/Resources:/opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PATH: /Applications/ChatGPT.app/Contents/Resources/codex-cli/bin:/opt/homebrew/bin:/Users/a2485/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
@@ -39,9 +39,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          command -v codex
-          test -f "$CODEX_HOME/qwen.config.toml"
-          test -f /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md
+          command -v codex || { echo "::error::codex CLI not found on PATH. ChatGPT.app may have moved it; update PATH in this workflow."; exit 1; }
+          codex --version
+          test -f "$CODEX_HOME/qwen.config.toml" || { echo "::error::Missing $CODEX_HOME/qwen.config.toml"; exit 1; }
+          test -f /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md || { echo "::error::Missing codebase-manage-issues skill"; exit 1; }
+
+      # The qwen profile routes through the local LiteLLM proxy, which needs
+      # Docker Desktop (litellm-postgres container) to be running.
+      - name: Verify the local LiteLLM proxy is reachable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -m 10 -o /dev/null http://127.0.0.1:4000/health/liveliness \
+            || { echo "::error::LiteLLM proxy on 127.0.0.1:4000 is not responding. Start Docker Desktop (litellm-postgres) and check ~/.config/litellm/litellm.stderr.log."; exit 1; }
 
       - name: Triage the opened issue with Qwen Codex
         shell: bash
