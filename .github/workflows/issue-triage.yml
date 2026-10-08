@@ -61,5 +61,5 @@ jobs:
             --auto \
             --dir "$RUNNER_TEMP" \
             "Read /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md and use that installed skill to triage only issue #${ISSUE_NUMBER} in ${REPOSITORY}. Do not search for or install skills. Read this issue's complete conversation, labels, timeline, and directly linked dependencies or pull requests through GitHub APIs. Read repository label definitions only when needed for classification. Do not scan unrelated issues, branches, or pull requests, inspect source code or local repository files, implement code, create branches or pull requests, or modify the local working directory. Change labels only with 'gh issue edit ${ISSUE_NUMBER} --add-label ... --remove-label ...', not raw 'gh api' label calls. Apply only supported lifecycle and type or area labels, preserve human labels and ownership, avoid duplicate comments, and report the resulting state." \
-            < /dev/null | tee "$RUNNER_TEMP/opencode-output.txt"
+            < /dev/null 2>&1 | tee "$RUNNER_TEMP/opencode-output.txt"
           test -s "$RUNNER_TEMP/opencode-output.txt"
