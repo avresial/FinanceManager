@@ -57,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           opencode run \
+            --format json \
             --model lmstudio/qwen3.8-27b \
             --auto \
             --dir "$RUNNER_TEMP" \
