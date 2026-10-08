@@ -5,12 +5,11 @@
 <PageTitle>Liabilities</PageTitle>
 
 <MudContainer Class="py-6">
-    <PageHeader Title="Liabilities" Subtitle="What you owe and how it changes over time.">
-        <Actions>
-            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-        </Actions>
-    </PageHeader>
+    <PageHeader Title="Liabilities" />
+    <SectionContent SectionName="page-actions">
+        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+    </SectionContent>
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />

@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using Bunit;
+using Bunit.TestDoubles;
 using FinanceManager.Components.Features.Dashboard.Components;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
@@ -8,6 +9,7 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using Microsoft.AspNetCore.Components.Sections;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,7 +28,10 @@ public class OverviewPagesInitialRangeTests
     {
         using var context = CreateContext();
         var before = DateTime.UtcNow;
+        var actions = context.Render<SectionOutlet>(parameters => parameters.Add(section => section.SectionName, "page-actions"));
         var cut = context.Render<AssetsPage>();
+        Assert.NotNull(actions.FindComponent<Stub<DashboardDatePicker>>());
+        Assert.Empty(cut.FindAll(".fm-page-header"));
         var after = DateTime.UtcNow;
 
         AssertDefaultOverviewRange(before, after, () => cut.Instance.StartDate, () => cut.Instance.EndDate);
@@ -38,7 +43,10 @@ public class OverviewPagesInitialRangeTests
     {
         using var context = CreateContext();
         var before = DateTime.UtcNow;
+        var actions = context.Render<SectionOutlet>(parameters => parameters.Add(section => section.SectionName, "page-actions"));
         var cut = context.Render<LiabilitiesPage>();
+        Assert.NotNull(actions.FindComponent<Stub<DashboardDatePicker>>());
+        Assert.Empty(cut.FindAll(".fm-page-header"));
         var after = DateTime.UtcNow;
 
         AssertDefaultOverviewRange(before, after, () => cut.Instance.StartDate, () => cut.Instance.EndDate);
