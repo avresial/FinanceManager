@@ -425,7 +425,7 @@ public class InvestmentRateCardTests
         Authenticate(context);
         card.Instance.AsOfDate = _asOf;
         await card.InvokeAsync(() => card.Instance.LoadInvestmentRatesAsync());
-        card.WaitForAssertion(() => Assert.Equal(12, context.Services.GetRequiredService<InvestmentRateHandler>().Count));
+        Assert.Equal(12, context.Services.GetRequiredService<InvestmentRateHandler>().Count);
         return card;
     }
 
