@@ -1,0 +1,10 @@
+/* A mask fades the content itself, so it blends into whatever surface the card uses in
+   light and dark themes and never intercepts clicks. */
+.fm-scroll-fade.fm-scroll-fade--active {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+}
+
+.fm-scroll-fade-sentinel {
+    height: 1px;
+}
