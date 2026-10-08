@@ -6,14 +6,11 @@
 @using FinanceManager.Components.Shared.Helpers
 
 <MudContainer Class="py-6">
-    <PageHeader Title="Dashboard" Subtitle="Your net worth, cash flow and insights for the selected period.">
-        <Actions>
-            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-        </Actions>
-    </PageHeader>
+    <PageHeader Title="Dashboard" />
     <SectionContent SectionName="page-actions">
-        <MudMenu @ref="_customizeMenu" Label="Customize" StartIcon="@Icons.Material.Filled.Tune" Variant="Variant.Text"
+        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        <MudMenu @ref="_customizeMenu" Icon="@Icons.Material.Filled.Tune" AriaLabel="Customize dashboard" title="Customize dashboard" Variant="Variant.Text"
                  Color="Color.Default" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
             <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
             @foreach (var card in DashboardCards.All)

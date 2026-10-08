@@ -21,7 +21,7 @@
     </MudCardHeader>
     <MudDivider Class="flex-grow-0" />
 
-    <MudCardContent Class="flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">
+    <ScrollFadeArea Class="mud-card-content flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">
         @if (IsLoading)
         {
             <MudList T="string" Dense ReadOnly DisablePadding Class="pt-2">
@@ -97,7 +97,7 @@
                 </MudText>
             </div>
         }
-    </MudCardContent>
+    </ScrollFadeArea>
 </MudCard>
 
 @code {

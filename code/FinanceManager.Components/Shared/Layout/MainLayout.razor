@@ -11,9 +11,9 @@
         <MudLayout>
             <MudAppBar Dense Elevation="0">
                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Edge="Edge.Start" OnClick="@DrawerToggle" aria-label="Toggle navigation menu" />
-                <SectionOutlet SectionName="page-title" />
+                <div class="fm-appbar-title"><SectionOutlet SectionName="page-title" /></div>
                 <MudSpacer />
-                <SectionOutlet SectionName="page-actions" />
+                <div class="fm-appbar-actions"><SectionOutlet SectionName="page-actions" /></div>
             </MudAppBar>
 
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">

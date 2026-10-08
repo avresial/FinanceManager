@@ -1,26 +1,26 @@
-/* The picker lives in the page header's actions slot and takes part in normal layout. */
+/* Bound long custom ranges so the app bar leaves room for the page title. */
 .fm-dashboard-datepicker-container {
     max-width: 100%;
 }
 
-.fm-dashboard-datepicker-pill {
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-pill {
     display: inline-flex;
     max-width: 100%;
     padding: 4px;
 }
 
-.fm-dashboard-datepicker-menu {
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-menu {
     max-width: 100%;
 }
 
-.fm-dashboard-datepicker-menu ::deep .mud-button-root {
+.fm-dashboard-datepicker-container ::deep .mud-button-root {
     max-width: 100%;
     border-radius: 9999px;
     font-weight: 600;
     text-transform: none;
 }
 
-.fm-dashboard-datepicker-menu ::deep .mud-button-label {
+.fm-dashboard-datepicker-container ::deep .mud-button-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -42,4 +42,32 @@
     width: 0;
     height: 0;
     overflow: hidden;
+}
+
+@media (max-width: 599.98px) {
+    .fm-dashboard-datepicker-container {
+        max-width: 148px;
+    }
+
+    .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-pill {
+        padding: 0;
+    }
+
+    .fm-dashboard-datepicker-container ::deep .mud-button-root {
+        padding: 4px 8px;
+    }
+}
+
+.fm-range-label-compact {
+    display: none;
+}
+
+@media (max-width: 599.98px) {
+    .fm-range-label {
+        display: none;
+    }
+
+    .fm-range-label-compact {
+        display: inline;
+    }
 }

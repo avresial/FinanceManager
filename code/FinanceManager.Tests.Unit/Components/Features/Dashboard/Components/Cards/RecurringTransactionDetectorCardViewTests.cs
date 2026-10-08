@@ -30,4 +30,32 @@ public class RecurringTransactionDetectorCardViewTests
             .Single(element => Regex.IsMatch(element.TextContent, @"\+5,000\.00 PLN/mo"));
         Assert.Contains("mud-success-text", incomeAmount.ClassList);
     }
+
+    [Fact]
+    public async Task ListView_LinksToSubscriptionsPage()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddMudServices();
+
+        var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
+            .Add(x => x.Data, [new RecurringTransactionResult("Rent", 1_000m)]));
+
+        var viewAll = cut.Find("a[href='/Subscriptions']");
+        Assert.Equal("View all", viewAll.TextContent.Trim());
+        Assert.Single(cut.FindAll("[data-testid=scroll-fade-area]"));
+    }
+
+    [Fact]
+    public async Task DetailView_HidesViewAllLink()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddMudServices();
+
+        var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
+            .Add(x => x.SelectedItem, new RecurringTransactionResult("Rent", 1_000m)));
+
+        Assert.Empty(cut.FindAll("a[href='/Subscriptions']"));
+    }
 }
