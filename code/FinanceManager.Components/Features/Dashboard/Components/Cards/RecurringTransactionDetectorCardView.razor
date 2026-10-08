@@ -38,9 +38,16 @@
                 <MudText Typo=Typo.caption Class="text-muted">@DetailEntries.First().PostingDate.Year</MudText>
             }
         </div>
+        @if (SelectedItem is null)
+        {
+            <MudButton Href="/Subscriptions" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                       Class="flex-shrink-0" aria-label="See all recurring transactions">
+                View all
+            </MudButton>
+        }
     </MudPaper>
 
-    <MudPaper Class="flex-grow-1 overflow-auto" Elevation="0">
+    <ScrollFadeArea Class="flex-grow-1 overflow-auto" Style="min-height:0;">
         @if (SelectedItem is null)
         {
             @if (IsLoading)
@@ -122,5 +129,5 @@
                 </div>
             }
         }
-    </MudPaper>
+    </ScrollFadeArea>
 </MudCard>

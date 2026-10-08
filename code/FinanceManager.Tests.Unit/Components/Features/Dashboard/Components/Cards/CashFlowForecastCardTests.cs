@@ -150,7 +150,7 @@ public sealed class CashFlowForecastCardTests
     [InlineData(8, 0, 90)]
     [InlineData(7, 1, 90)]
     [InlineData(7, 0, 60)]
-    public async Task MismatchedSnapshot_IsNotPainted_AndMoreRemainsAccessible(int userId, int currencyId, int horizonDays)
+    public async Task MismatchedSnapshot_IsNotPainted_AndViewAllRemainsAccessible(int userId, int currencyId, int horizonDays)
     {
         var snapshots = new Mock<ISnapshotService>();
         snapshots.Setup(service => service.GetAsync<CashFlowForecastCardSnapshot>(_key))
@@ -165,7 +165,7 @@ public sealed class CashFlowForecastCardTests
             Assert.Contains("mud-skeleton", cut.Markup);
             Assert.DoesNotContain(Money(100m), cut.Markup);
             var more = cut.Find("a[href='/CashFlowForecast']");
-            Assert.Equal("More", more.TextContent.Trim());
+            Assert.Equal("View all", more.TextContent.Trim());
             Assert.Equal("See detailed cash flow forecast", more.GetAttribute("aria-label"));
             Assert.DoesNotContain("mud-icon", more.InnerHtml);
         });
