@@ -60,6 +60,33 @@ public class DistributionOverviewCardViewTests
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(75)]
+    public async Task Assets_WalletToggle_UsesWalletTotal(decimal typeTotal)
+    {
+        await using var context = CreateContext();
+        List<NameValueResult> typeData = typeTotal == 0 ? [] : [new("Stock", typeTotal)];
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, typeData)
+            .Add(x => x.WalletData, [new("Main wallet", 100m)]));
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Wallet")).Click();
+
+        AssertSingleCategoryRing(cut);
+        Assert.Matches("100[.,]00", cut.Find(".fm-card-total").TextContent);
+        Assert.Single(cut.FindAll(".fm-legend-row"));
+        Assert.Contains("Main wallet", cut.Find(".fm-legend-name").TextContent);
+        Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
+        Assert.DoesNotContain("No data", cut.Markup);
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
+        if (typeTotal == 0)
+            Assert.Contains("No data", cut.Markup);
+        else
+            Assert.Matches("75[.,]00", cut.Find(".fm-card-total").TextContent);
+    }
+
     [Fact]
     public async Task Expense_SingleCategory_ShowsSummaryWithoutChart()
     {

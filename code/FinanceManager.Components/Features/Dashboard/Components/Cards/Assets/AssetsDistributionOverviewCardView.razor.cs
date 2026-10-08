@@ -26,7 +26,7 @@ public partial class AssetsDistributionOverviewCardView
     // Keep a single-category summary in the same chart slot as a multi-category pie.
     private bool IsSingleCategory => ActiveData.Select(x => x.Name).Distinct().Count() == 1;
 
-    private decimal TotalAssets => TypeData.Count == 0 ? 0 : Math.Round(TypeData.Sum(x => x.Value), 2);
+    private decimal TotalAssets => ActiveData.Count == 0 ? 0 : Math.Round(ActiveData.Sum(x => x.Value), 2);
 
     private readonly ApexChartOptions<NameValueResult> _chartOptions = new()
     {
