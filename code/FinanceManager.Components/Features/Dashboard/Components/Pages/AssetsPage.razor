@@ -4,12 +4,11 @@
 
 <PageTitle>Assets</PageTitle>
 <MudContainer Class="py-6">
-    <PageHeader Title="Assets" Subtitle="Value, allocation and returns of everything you own.">
-        <Actions>
-            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-        </Actions>
-    </PageHeader>
+    <PageHeader Title="Assets" />
+    <SectionContent SectionName="page-actions">
+        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+    </SectionContent>
     <MudGrid Spacing="2">
         <MudItem xs="12">
             <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" />
