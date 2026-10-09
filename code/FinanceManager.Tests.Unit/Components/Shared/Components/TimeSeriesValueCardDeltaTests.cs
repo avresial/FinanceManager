@@ -62,6 +62,24 @@ public class TimeSeriesValueCardDeltaTests
         Assert.Contains(_green, delta.GetAttribute("style"));
     }
 
+    [Fact]
+    public async Task Debt_FromZero_ShowsUpArrowOnDebtAmountInRed()
+    {
+        await using var context = CreateContext();
+        var cut = RenderCard(context, isDebt: true, 0m, -500m);
+        var delta = cut.Find(".fm-tsvc-delta");
+        Assert.Equal("Debt ▲ 500.00 PLN", delta.TextContent);
+        Assert.Contains(_red, delta.GetAttribute("style"));
+    }
+
+    [Fact]
+    public async Task NonDebt_FromZero_HidesUndefinedPercentageBadge()
+    {
+        await using var context = CreateContext();
+        var cut = RenderCard(context, isDebt: false, 0m, 500m);
+        Assert.Empty(cut.FindAll(".fm-tsvc-delta"));
+    }
+
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();

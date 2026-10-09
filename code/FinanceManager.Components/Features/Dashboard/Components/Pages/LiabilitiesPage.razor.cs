@@ -1,3 +1,4 @@
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Shared.Helpers;
 using Microsoft.AspNetCore.Components;
 
@@ -5,7 +6,11 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
 public partial class LiabilitiesPage : ComponentBase
 {
-    private const int _unitHeight = 190;
+    private static readonly DashboardGridCard[] _cards =
+    [
+        new("liabilities-history", "Liabilities value over time", new(12, 12)),
+        new("liabilities-distribution", "Liabilities distribution", new(4, 6)),
+    ];
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
 

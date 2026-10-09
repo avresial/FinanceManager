@@ -205,8 +205,8 @@ public class CurrencyAccountSeederTests
             for (var i = 0; i < amounts.Count; i++)
                 for (var j = i + 1; j < amounts.Count; j++)
                     Assert.True(
-                        Math.Abs(amounts[i] - amounts[j]) > Math.Max(amounts[i], amounts[j]) * 0.1m,
-                        $"{merchant.Key}: amounts {amounts[i]} and {amounts[j]} are within the recurring detector's tolerance.");
+                        Math.Abs(amounts[i] - amounts[j]) > Math.Max(amounts[i], amounts[j]) * 0.12m,
+                        $"{merchant.Key}: amounts {amounts[i]} and {amounts[j]} do not exceed the seeder's 12% amount gap.");
         }
     }
 

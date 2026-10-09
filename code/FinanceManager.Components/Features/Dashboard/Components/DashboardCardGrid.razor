@@ -1,0 +1,85 @@
+@using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Features.Dashboard.Services
+
+<SectionContent SectionName="page-actions">
+    @Actions
+    <MudMenu @ref="_customizeMenu" Icon="@Icons.Material.Filled.Tune" AriaLabel="@($"Customize {Page}")"
+             title="@($"Customize {Page}")" Variant="Variant.Text" Color="Color.Default" Dense="true"
+             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+        <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
+        @foreach (var card in MenuCards ?? Cards.Select(card => new DashboardCardDescriptor(card.Id, card.Title)))
+        {
+            <MudMenuItem OnClick="@(() => ToggleCard(card.Id))" AutoClose="false" Style="padding: 2.65px;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudCheckBox Value="@(!CardVisibility.IsHidden(card.Id, Page))" T="bool" Dense="true"
+                                 ReadOnly="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2">@card.Title</MudText>
+                    @if (IsAutoHidden(card.Id))
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">(no data)</MudText>
+                    }
+                </MudStack>
+            </MudMenuItem>
+        }
+    </MudMenu>
+</SectionContent>
+
+@if (IsLoading)
+{
+    @LoadingContent
+}
+else
+{
+    @if (!Cards.Any(card => IsVisible(card.Id)))
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="false">
+            All cards are hidden. Use <b>Customize</b> to choose the cards you want to see.
+        </MudAlert>
+    }
+    <MudGrid Spacing="2">
+        @foreach (var slot in ArrangeCards())
+        {
+            <MudItem xs="12" md="@slot.Medium.Span" lg="@slot.Large.Span" @key="slot.Card.Id">
+                @CardContent(slot.Card.Id)
+            </MudItem>
+            <DashboardRowFiller MediumSpan="@slot.Medium.FillerSpanAfter" LargeSpan="@slot.Large.FillerSpanAfter"
+                                Height="@CardHeight" Page="@Page" OnClick="OpenCustomizeMenu" />
+        }
+    </MudGrid>
+}
+
+@code {
+    public const string CardHeight = "390px";
+    private MudMenu? _customizeMenu;
+    [Inject] public required DashboardCardVisibilityService CardVisibility { get; set; }
+    [Parameter, EditorRequired] public string Page { get; set; } = "dashboard";
+    [Parameter, EditorRequired] public IReadOnlyList<DashboardGridCard> Cards { get; set; } = [];
+    [Parameter, EditorRequired] public RenderFragment<string> CardContent { get; set; } = default!;
+    [Parameter] public IEnumerable<DashboardCardDescriptor>? MenuCards { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? LoadingContent { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public Func<string, bool>? AutoHidden { get; set; }
+
+    protected override Task OnParametersSetAsync() => CardVisibility.EnsureLoadedAsync(Page);
+    private bool IsAutoHidden(string id) => AutoHidden?.Invoke(id) == true;
+    private bool IsVisible(string id) => !CardVisibility.IsHidden(id, Page) && !IsAutoHidden(id);
+
+    private IEnumerable<(DashboardGridCard Card, DashboardCardPlacement Medium, DashboardCardPlacement Large)> ArrangeCards()
+    {
+        var visible = Cards.Where(card => IsVisible(card.Id)).ToList();
+        var large = DashboardCardLayout.Arrange([.. visible.Select(card => card.LargeSpan)]);
+        var medium = DashboardCardLayout.Arrange([.. visible.Select(card =>
+            new DashboardCardSpan(Math.Max(card.LargeSpan.Preferred, 6), Math.Max(card.LargeSpan.Max, 6)))]);
+        return visible.Select((card, i) => (card, medium[i], large[i]));
+    }
+
+    private async Task ToggleCard(string id) =>
+        await CardVisibility.SetHiddenAsync(id, !CardVisibility.IsHidden(id, Page), Page);
+
+    private async Task OpenCustomizeMenu()
+    {
+        if (_customizeMenu is not null)
+            await _customizeMenu.OpenMenuAsync(EventArgs.Empty);
+    }
+}

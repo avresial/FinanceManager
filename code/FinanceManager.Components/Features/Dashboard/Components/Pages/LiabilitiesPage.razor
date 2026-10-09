@@ -1,22 +1,28 @@
 @page "/Liabilities"
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities
 @using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries
 
 <PageTitle>Liabilities</PageTitle>
 
 <MudContainer Class="py-6">
     <PageHeader Title="Liabilities" />
-    <SectionContent SectionName="page-actions">
-        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-    </SectionContent>
-    <MudGrid Spacing="2">
-        <MudItem xs="12">
-            <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" />
-        </MudItem>
-        
-        <MudItem xs="12">
-            <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-    </MudGrid>
+    <DashboardCardGrid Page="liabilities" Cards="_cards">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+        <CardContent Context="cardId">
+            @switch (cardId)
+            {
+                case "liabilities-history":
+                    <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "liabilities-distribution":
+                    <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+            }
+        </CardContent>
+    </DashboardCardGrid>
 </MudContainer>

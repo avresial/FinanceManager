@@ -13,7 +13,8 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
-- Show the app version in the app bar on every page and screen size, explain the Asset diversification score (what 0 and 100 mean and how to raise it), and describe the Liabilities change as "Debt" with an arrow that follows the debt amount and a green or red colour for less or more debt. #904
+- Show the app version in the app bar on every page and screen size, explain the Asset diversification score (what 0 and 100 mean and how to raise it), and describe the Liabilities change (including debt starting from zero) as "Debt" with an arrow that follows the debt amount and a green or red colour for less or more debt. #904
+- Use consistent card heights and responsive layouts on Assets and Liabilities, with separate saved Customize preferences for each page. #899
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
 - Show each page title once in the app bar and move Dashboard, Assets and Liabilities date controls beside it, with compact actions on phones. #896
 - Lay out Dashboard cards without gaps or uneven rows: every card now has the same height and cards differ only in width, wide charts and narrow cards share rows, cards widen only as far as suits their content, any space that still cannot be filled shows a Customize dashboard tile, and Liabilities distribution sits with the other distribution cards. #893
