@@ -80,8 +80,12 @@ public class DistributionViewToggleTests
 
         cut.FindAll(".mud-toggle-item")[1].Click();
 
-        Assert.Single(cut.FindAll(".fm-legend-row"));
-        Assert.Contains("Cash 1", cut.Find(".fm-legend-name").TextContent);
+        // The toggle and the card update the view asynchronously, so wait for the re-render.
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll(".fm-legend-row"));
+            Assert.Contains("Cash 1", cut.Find(".fm-legend-name").TextContent);
+        });
     }
 
     [Fact]
@@ -97,8 +101,12 @@ public class DistributionViewToggleTests
 
         cut.FindAll(".mud-toggle-item")[1].Click();
 
-        Assert.Single(cut.FindAll(".fm-legend-row"));
-        Assert.Contains("Loan 1", cut.Find(".fm-legend-name").TextContent);
+        // The toggle and the card update the view asynchronously, so wait for the re-render.
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll(".fm-legend-row"));
+            Assert.Contains("Loan 1", cut.Find(".fm-legend-name").TextContent);
+        });
     }
 
     private static BunitContext CreateContext()
