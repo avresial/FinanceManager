@@ -7,7 +7,17 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
 public partial class AssetsPage : ComponentBase
 {
-    private const int _unitHeight = 190;
+    private static readonly DashboardGridCard[] _cards =
+    [
+        new("assets-history", "Assets value over time", new(12, 12)),
+        new("assets-distribution", "Assets distribution", new(4, 6)),
+        new("portfolio-return", "Portfolio return", new(6, 12)),
+        new("return-attribution", "Return attribution", new(4, 6)),
+        new("investment-paycheck", "Investment paycheck", new(4, 6)),
+        new("investment-rate", "Investment rate", new(4, 6)),
+        new("diversification", "Diversification", new(6, 6)),
+        new("fee-drag", "ETF fee drag", new(6, 6)),
+    ];
     private AssetsPageCardsRefreshContext? _returnsContext;
     private Task<PortfolioReturnSourceModel>? _returnsRequest;
     [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }

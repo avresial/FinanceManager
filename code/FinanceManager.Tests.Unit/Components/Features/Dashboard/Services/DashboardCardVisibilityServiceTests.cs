@@ -111,4 +111,48 @@ public class DashboardCardVisibilityServiceTests
 
         snapshotService.Verify(s => s.SetAsync(It.IsAny<string>(), It.IsAny<DashboardCardVisibilitySnapshot>()), Times.Never);
     }
+    [Fact]
+    public async Task PagePreferences_AreIndependentAndSurviveReload()
+    {
+        var stored = new Dictionary<string, DashboardCardVisibilitySnapshot>();
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(s => s.GetAsync<DashboardCardVisibilitySnapshot>(It.IsAny<string>()))
+            .ReturnsAsync((string key) => stored.GetValueOrDefault(key));
+        snapshots.Setup(s => s.SetAsync(It.IsAny<string>(), It.IsAny<DashboardCardVisibilitySnapshot>()))
+            .Callback<string, DashboardCardVisibilitySnapshot>((key, value) => stored[key] = value)
+            .Returns(Task.CompletedTask);
+        var login = LoggedInAs(7).Object;
+        var service = new DashboardCardVisibilityService(snapshots.Object, login,
+            NullLogger<DashboardCardVisibilityService>.Instance);
+
+        await service.SetHiddenAsync("distribution", true, "assets");
+        await service.SetHiddenAsync(DashboardCards.Liabilities, true);
+        await service.EnsureLoadedAsync("liabilities");
+        Assert.False(service.IsHidden("distribution", "liabilities"));
+        Assert.False(service.IsHidden("distribution"));
+        Assert.True(stored.ContainsKey("dashboard-card-visibility:assets:7"));
+        Assert.True(stored.ContainsKey(_expectedKey));
+
+        var reloaded = new DashboardCardVisibilityService(snapshots.Object, login,
+            NullLogger<DashboardCardVisibilityService>.Instance);
+        await reloaded.EnsureLoadedAsync("assets");
+        await reloaded.EnsureLoadedAsync();
+        await reloaded.SetHiddenAsync("distribution", false, "liabilities");
+        Assert.True(reloaded.IsHidden("distribution", "assets"));
+        Assert.True(reloaded.IsHidden(DashboardCards.Liabilities));
+        Assert.False(reloaded.IsHidden("distribution", "liabilities"));
+    }
+
+    [Theory]
+    [InlineData("assets")]
+    [InlineData("liabilities")]
+    public async Task PagePreferences_LoadOncePerPage(string page)
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        var service = new DashboardCardVisibilityService(snapshots.Object, LoggedInAs(7).Object,
+            NullLogger<DashboardCardVisibilityService>.Instance);
+        await service.EnsureLoadedAsync(page);
+        await service.EnsureLoadedAsync(page);
+        snapshots.Verify(s => s.GetAsync<DashboardCardVisibilitySnapshot>($"dashboard-card-visibility:{page}:7"), Times.Once);
+    }
 }

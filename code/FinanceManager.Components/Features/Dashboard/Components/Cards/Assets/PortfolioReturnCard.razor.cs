@@ -9,6 +9,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 
 public partial class PortfolioReturnCard
 {
+    [Parameter] public string? Height { get; set; }
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; }
     [Parameter] public PortfolioReturnCardModel? Model { get; set; }
