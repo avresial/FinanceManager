@@ -4,13 +4,13 @@
 @if (MediumSpan > 0)
 {
     <MudItem xs="12" md="@MediumSpan" Class="d-none d-md-flex d-lg-none">
-        <DashboardCustomizeTile Height="@Height" OnClick="OnClick" />
+        <DashboardCustomizeTile Height="@Height" Page="@Page" OnClick="OnClick" />
     </MudItem>
 }
 @if (LargeSpan > 0)
 {
     <MudItem xs="12" lg="@LargeSpan" Class="d-none d-lg-flex">
-        <DashboardCustomizeTile Height="@Height" OnClick="OnClick" />
+        <DashboardCustomizeTile Height="@Height" Page="@Page" OnClick="OnClick" />
     </MudItem>
 }
 
@@ -18,5 +18,6 @@
     [Parameter] public int MediumSpan { get; set; }
     [Parameter] public int LargeSpan { get; set; }
     [Parameter, EditorRequired] public required string Height { get; set; }
+    [Parameter] public string Page { get; set; } = "dashboard";
     [Parameter] public EventCallback OnClick { get; set; }
 }

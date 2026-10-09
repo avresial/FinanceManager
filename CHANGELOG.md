@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Quieten the Type / Account view toggle on the Assets and Liabilities distribution cards (small, outlined, only the selected item lightly tinted), call the per-account view "Account" on both cards instead of "Wallet" on Assets, and keep the card title on one line on desktop. #898
+- Use consistent card heights and responsive layouts on Assets and Liabilities, with separate saved Customize preferences for each page. #899
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
 - Show each page title once in the app bar and move Dashboard, Assets and Liabilities date controls beside it, with compact actions on phones. #896
 - Lay out Dashboard cards without gaps or uneven rows: every card now has the same height and cards differ only in width, wide charts and narrow cards share rows, cards widen only as far as suits their content, any space that still cannot be filled shows a Customize dashboard tile, and Liabilities distribution sits with the other distribution cards. #893

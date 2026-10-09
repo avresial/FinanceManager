@@ -9,11 +9,14 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Shared.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Sections;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using MudBlazor.Services;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Pages;
 
@@ -24,9 +27,9 @@ public class OverviewPagesInitialRangeTests
     // 31 days anchored to midnight — instead of the current calendar month, which is nearly
     // empty at the start of a month. #700
     [Fact]
-    public void AssetsPage_InitializesWithDefaultOverviewRange()
+    public async Task AssetsPage_InitializesWithDefaultOverviewRange()
     {
-        using var context = CreateContext();
+        await using var context = CreateContext();
         var before = DateTime.UtcNow;
         var actions = context.Render<SectionOutlet>(parameters => parameters.Add(section => section.SectionName, "page-actions"));
         var cut = context.Render<AssetsPage>();
@@ -39,9 +42,9 @@ public class OverviewPagesInitialRangeTests
     }
 
     [Fact]
-    public void LiabilitiesPage_InitializesWithDefaultOverviewRange()
+    public async Task LiabilitiesPage_InitializesWithDefaultOverviewRange()
     {
-        using var context = CreateContext();
+        await using var context = CreateContext();
         var before = DateTime.UtcNow;
         var actions = context.Render<SectionOutlet>(parameters => parameters.Add(section => section.SectionName, "page-actions"));
         var cut = context.Render<LiabilitiesPage>();
@@ -64,6 +67,10 @@ public class OverviewPagesInitialRangeTests
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddMudServices();
+        context.Services.AddSingleton(new DashboardCardVisibilityService(Mock.Of<ISnapshotService>(),
+            Mock.Of<ILoginService>(), NullLogger<DashboardCardVisibilityService>.Instance));
         context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(),
             new MemoryCache(new MemoryCacheOptions()), new AssetsHttpClient(new HttpClient()),
             NullLogger<AssetsPageCardsCacheService>.Instance));
