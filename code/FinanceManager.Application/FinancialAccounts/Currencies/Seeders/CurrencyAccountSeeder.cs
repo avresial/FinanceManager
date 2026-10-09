@@ -22,6 +22,9 @@ public class CurrencyAccountSeeder(
     private const decimal _monthlyUtilities = 100m;
     private const int _maxRandomTransactionsPerDay = 10;
     private const int _maxRandomTransactionAmount = 150;
+    private const int _maxAmountPickAttempts = 10;
+    // Wider than the detector's 5% amount tolerance (two amounts can sit 10% apart and still cluster).
+    private const double _distinctAmountGap = 0.12;
 
     private record FakeMerchant(string Description, string LabelName);
 
@@ -95,6 +98,7 @@ public class CurrencyAccountSeeder(
 
         var currentMonth = new DateTime(start.Year, start.Month, 1);
         decimal negativesThisMonth = 0m;
+        var randomAmountsByMerchant = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 
         for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
         {
@@ -133,7 +137,7 @@ public class CurrencyAccountSeeder(
                     negativesThisMonth += GuestInvestmentPlan.LoanMonthlyRepayment;
                     break;
                 default:
-                    negativesThisMonth = AddRandomNegatives(account, date, labelByName, negativesThisMonth);
+                    negativesThisMonth = AddRandomNegatives(account, date, labelByName, negativesThisMonth, randomAmountsByMerchant);
                     break;
             }
         }
@@ -142,7 +146,12 @@ public class CurrencyAccountSeeder(
         await accountRepository.AddAccount(account);
     }
 
-    private static decimal AddRandomNegatives(CurrencyAccount account, DateTime date, Dictionary<string, FinancialLabel> labelByName, decimal negativesThisMonth)
+    private static decimal AddRandomNegatives(
+        CurrencyAccount account,
+        DateTime date,
+        Dictionary<string, FinancialLabel> labelByName,
+        decimal negativesThisMonth,
+        Dictionary<string, List<int>> randomAmountsByMerchant)
     {
         var transactions = Random.Shared.Next(0, _maxRandomTransactionsPerDay + 1);
         for (var i = 0; i < transactions; i++)
@@ -153,15 +162,41 @@ public class CurrencyAccountSeeder(
 
             var max = (int)Math.Floor(Math.Min(_maxRandomTransactionAmount, remaining));
             if (max < 1) break;
-            var amount = Random.Shared.Next(1, max + 1);
-
             var merchant = _fakeMerchants[Random.Shared.Next(_fakeMerchants.Length)];
+            if (!randomAmountsByMerchant.TryGetValue(merchant.Description, out var usedAmounts))
+                randomAmountsByMerchant[merchant.Description] = usedAmounts = [];
+
+            if (!TryPickDistinctAmount(max, usedAmounts, out var amount)) continue;
+            usedAmounts.Add(amount);
+
             var labels = LabelsFor(labelByName, merchant.LabelName);
             account.AddEntry(new AddCurrencyEntryDto(date, -amount, merchant.Description, null, labels), false);
             negativesThisMonth += amount;
         }
         return negativesThisMonth;
     }
+
+    // Random spend is meant to be one-off. Two charges at the same merchant with near-equal amounts
+    // (within the recurring detector's tolerance) can coincidentally look like a quarterly or annual
+    // subscription and show up as duplicate "Tram pass"-style rows on the Subscriptions page (#904),
+    // so every merchant's random amounts are kept clearly apart from each other.
+    private static bool TryPickDistinctAmount(int max, List<int> usedAmounts, out int amount)
+    {
+        for (var attempt = 0; attempt < _maxAmountPickAttempts; attempt++)
+        {
+            var candidate = Random.Shared.Next(1, max + 1);
+            if (usedAmounts.Any(used => AreTooSimilar(used, candidate))) continue;
+
+            amount = candidate;
+            return true;
+        }
+
+        amount = 0;
+        return false;
+    }
+
+    private static bool AreTooSimilar(int a, int b) =>
+        Math.Abs(a - b) <= Math.Max(a, b) * _distinctAmountGap;
 
     private static List<FinancialLabel> LabelsFor(Dictionary<string, FinancialLabel> labelByName, string name) =>
         labelByName.TryGetValue(name, out var label) ? [label] : [];
