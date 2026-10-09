@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Show the app version in the app bar on every page and screen size, explain the Asset diversification score (what 0 and 100 mean and how to raise it), and describe the Liabilities change (including debt starting from zero) as "Debt" with an arrow that follows the debt amount and a green or red colour for less or more debt. #904
 - Use consistent card heights and responsive layouts on Assets and Liabilities, with separate saved Customize preferences for each page. #899
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
 - Show each page title once in the app bar and move Dashboard, Assets and Liabilities date controls beside it, with compact actions on phones. #896
@@ -53,6 +54,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
 - Keep the Investment rate footer inside its card, stop Return attribution labels breaking mid-word, keep the Asset diversification hint visible on phones, and centre the legend on single-category distribution cards. #884
 - Put the Money by label period on its own line instead of wrapping it beside the title. #884

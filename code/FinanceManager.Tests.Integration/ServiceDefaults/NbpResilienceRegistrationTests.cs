@@ -6,6 +6,7 @@ using FinanceManager.Infrastructure;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Moq;
 using ServiceDefaults;
@@ -45,6 +46,13 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
+        // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
+        builder.Services.ConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 
@@ -84,6 +92,13 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
+        // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
+        builder.Services.ConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 
@@ -116,6 +131,13 @@ public class NbpResilienceRegistrationTests
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
         builder.Services.AddInfrastructureApi();
+        // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
+        // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
+        builder.Services.ConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddSingleton(Mock.Of<IDateTimeProvider>());
         builder.Services.Configure<NbpOptions>(opt => opt.BaseUrl = "https://api.nbp.pl/api");
 

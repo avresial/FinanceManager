@@ -181,6 +181,36 @@ public class CurrencyAccountSeederTests
     }
 
     [Fact]
+    public async Task Seed_RandomNegativesAtSameMerchantNeverLookRecurring()
+    {
+        // Regression for #904: near-equal amounts at one merchant coincidentally formed quarterly
+        // patterns, so the demo Subscriptions page listed "Tram pass" (and others) twice.
+        var start = new DateTime(2024, 9, 1);
+        var end = new DateTime(2026, 10, 1);
+
+        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+
+        var fixedDescriptions = new[] { "Opening balance", "Loan disbursement", "Monthly salary", "Rent payment", "Utilities bill", "Loan repayment" };
+        var randomNegatives = GetCashEntries()
+            .Where(e => e.ValueChange < 0
+                && !fixedDescriptions.Contains(e.Description)
+                && !e.Description.StartsWith("Investment", StringComparison.Ordinal))
+            .GroupBy(e => e.Description)
+            .ToList();
+
+        Assert.NotEmpty(randomNegatives);
+        foreach (var merchant in randomNegatives)
+        {
+            var amounts = merchant.Select(e => -e.ValueChange).ToList();
+            for (var i = 0; i < amounts.Count; i++)
+                for (var j = i + 1; j < amounts.Count; j++)
+                    Assert.True(
+                        Math.Abs(amounts[i] - amounts[j]) > Math.Max(amounts[i], amounts[j]) * 0.12m,
+                        $"{merchant.Key}: amounts {amounts[i]} and {amounts[j]} do not exceed the seeder's 12% amount gap.");
+        }
+    }
+
+    [Fact]
     public async Task Seed_SeedsCashAndLoanAccounts()
     {
         var start = new DateTime(2026, 1, 15);

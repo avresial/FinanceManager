@@ -52,6 +52,14 @@ public partial class TimeSeriesValueCard
     /// </summary>
     [Parameter] public bool DeltaPositiveWhenFalling { get; set; }
 
+    /// <summary>
+    /// The series is a negative balance that represents debt (liabilities). The delta chip then
+    /// describes the debt in plain terms ("Debt [down arrow] 400.00 PLN"): the arrow follows the debt amount
+    /// (a balance moving toward zero is debt going down) and the colour follows good/bad (less debt
+    /// is green).
+    /// </summary>
+    [Parameter] public bool IsDebt { get; set; }
+
     /// <summary>Currency suffix for the readout / tooltip (e.g. "PLN").</summary>
     [Parameter] public string CurrencyShortName { get; set; } = "PLN";
 
@@ -106,8 +114,8 @@ public partial class TimeSeriesValueCard
 
     // Percent change is only meaningful when the range opens with a non-zero
     // baseline; from a zero baseline the change is undefined (division by zero),
-    // so the chip is hidden rather than showing a misleading "+0.0 %".
-    private bool HasDelta => Data.Count > 0 && Data[0].Value != 0;
+    // so percentage chips are hidden. Debt chips use an amount and can start from zero.
+    private bool HasDelta => Data.Count > 0 && (IsDebt || Data[0].Value != 0);
 
     // Percent change of the shown point versus the first point in range.
     private double DeltaPct =>
@@ -115,8 +123,11 @@ public partial class TimeSeriesValueCard
             ? 0
             : (double)((Shown.Value - Data[0].Value) / Math.Abs(Data[0].Value)) * 100;
 
-    private bool DeltaIsUp => DeltaPct >= 0;
-    private bool DeltaIsGood => DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
+    // Growth of the debt since the range start (positive = owing more). Debt is stored as a negative balance.
+    private decimal DebtChange => Data.Count == 0 ? 0m : -(Shown.Value - Data[0].Value);
+
+    private bool DeltaIsUp => IsDebt ? DebtChange > 0 : DeltaPct >= 0;
+    private bool DeltaIsGood => IsDebt ? DebtChange <= 0 : DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
     private string DeltaColor => DeltaIsGood ? "#66BB6A" : "#EF5350";
     private string DeltaBackground => DeltaIsGood ? "rgba(102,187,106,0.15)" : "rgba(239,83,80,0.15)";
 
@@ -124,6 +135,11 @@ public partial class TimeSeriesValueCard
     {
         get
         {
+            if (IsDebt)
+                return DebtChange == 0m
+                    ? "Debt unchanged"
+                    : $"Debt {(char)(DeltaIsUp ? 0x25B2 : 0x25BC)} {FormatMoney(Math.Abs(DebtChange))}";
+
             // Glyphs built from code points so the source stays pure-ASCII (encoding-safe):
             // U+25B2 up triangle / U+25BC down triangle / U+2212 minus sign.
             var glyph = ((char)(DeltaIsUp ? 0x25B2 : 0x25BC)).ToString();
