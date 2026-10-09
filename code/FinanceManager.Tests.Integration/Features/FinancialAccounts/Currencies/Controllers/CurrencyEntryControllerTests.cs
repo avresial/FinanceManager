@@ -9,6 +9,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
@@ -32,7 +33,9 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
             services.Remove(descriptor);
 
         _testDatabase = new TestDatabase();
-        services.AddSingleton(_testDatabase.Context);
+        // Requests and the label setter run concurrently. Share the database, not an EF context.
+        var databaseOptions = (DbContextOptions<AppDbContext>)_testDatabase.Context.GetService<IDbContextOptions>();
+        services.AddScoped(_ => new AppDbContext(databaseOptions));
 
         // Mock user plan verifier to allow any number of entries
         var planVerifierMock = new Mock<IUserPlanVerifier>();
@@ -171,7 +174,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         // verify entry was added by checking it exists in the database
         // The repository creates the entry with a new ID (not the one we specified)
         // so we need to find it by other properties
-        var dbEntry = await _testDatabase!.Context.CurrencyEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries.AsNoTracking()
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId &&
                                      e.PostingDate == addEntry.PostingDate &&
                                      e.Description == addEntry.Description,
@@ -209,7 +212,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         Assert.True(result);
 
         // verify entry was deleted from database
-        var dbEntry = await _testDatabase!.Context.CurrencyEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries.AsNoTracking()
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.Null(dbEntry);
     }
@@ -240,7 +243,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         Assert.True(result);
 
         // verify entry was updated in database
-        var dbEntry = await _testDatabase!.Context.CurrencyEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries.AsNoTracking()
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal("Updated description", dbEntry.Description);
@@ -276,7 +279,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         Assert.True(result);
 
         // verify entry was updated in database including ContractorDetails
-        var dbEntry = await _testDatabase!.Context.CurrencyEntries
+        var dbEntry = await _testDatabase!.Context.CurrencyEntries.AsNoTracking()
             .FirstOrDefaultAsync(e => e.AccountId == _testAccountId && e.EntryId == entryId, TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
         Assert.Equal("Updated description", dbEntry.Description);
