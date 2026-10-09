@@ -15,6 +15,7 @@ public partial class PortfolioReturnCardContainer
     private Currency _currency = DefaultCurrency.PLN;
     private bool _isLoading;
 
+    [Parameter] public string? Height { get; set; }
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
