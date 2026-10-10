@@ -31,6 +31,9 @@ public partial class AssetsDistributionOverviewCard : IDisposable
     // otherwise it hydrates its own snapshot and always refreshes.
     [Parameter] public DistributionCardModel? Model { get; set; }
 
+    // Reports whether a self-load for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ILogger<AssetsDistributionOverviewCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
@@ -55,6 +58,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
                 return;
             }
 
+            await RefreshingChanged.InvokeAsync(true);
             var user = await LoginService.GetLoggedUser();
             if (!_gate.IsCurrent(version)) return;
             if (user is null)
@@ -129,6 +133,11 @@ public partial class AssetsDistributionOverviewCard : IDisposable
             _hasError = true;
             _isLoading = false;
             Logger.LogError(ex, "Error resolving assets distribution context");
+        }
+        finally
+        {
+            // A superseded self-load leaves the flag alone: the newer one owns it now.
+            if (_gate.IsCurrent(version)) await RefreshingChanged.InvokeAsync(false);
         }
     }
 

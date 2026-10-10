@@ -14,15 +14,19 @@
                                  InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
         </Actions>
         <CardContent Context="cardId">
+            <RefreshingCardFrame IsRefreshing="@_refreshingCards.Contains(cardId)">
             @switch (cardId)
             {
                 case "liabilities-history":
-                    <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                               RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
                 case "liabilities-distribution":
-                    <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                         RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
             }
+            </RefreshingCardFrame>
         </CardContent>
     </DashboardCardGrid>
 </MudContainer>

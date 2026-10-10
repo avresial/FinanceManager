@@ -64,7 +64,7 @@ public class OverviewPagesInitialRangeTests
         Assert.Equal(DateTimeKind.Utc, startDate().Kind);
     }
 
-    private static BunitContext CreateContext()
+    internal static BunitContext CreateContext()
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
