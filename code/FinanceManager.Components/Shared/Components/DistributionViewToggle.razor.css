@@ -1,0 +1,35 @@
+/* Low-emphasis toggle: no filled primary surface, only the selected item gets a light tint. */
+.fm-view-toggle {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.fm-view-toggle ::deep .mud-toggle-group {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: transparent;
+    box-shadow: none;
+}
+
+.fm-view-toggle ::deep .mud-toggle-item {
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    min-height: 0;
+    padding: 2px 10px;
+    text-transform: none;
+}
+
+.fm-view-toggle ::deep .mud-toggle-item.mud-toggle-item-selected {
+    /* Amber text fails contrast on light surfaces, so the label stays in the normal text colour and the
+       accent only marks the selection (tint + underline). */
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    box-shadow: inset 0 -2px 0 var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+.fm-view-toggle ::deep .mud-toggle-item:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: -2px;
+}

@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Shared.Components;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Charting;
@@ -8,8 +9,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilit
 
 public partial class LiabilitiesDistributionOverviewCardView
 {
-    private const string _viewByType = "type";
-    private const string _viewByAccount = "account";
+    private const string _viewByType = DistributionViewToggle.TypeView;
+    private const string _viewByAccount = DistributionViewToggle.AccountView;
 
     private string _view = _viewByType;
     private ApexChart<NameValueResult>? _chart;
