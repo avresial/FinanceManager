@@ -26,6 +26,9 @@ public partial class PortfolioReturnCardContainer
 
     [Parameter] public Func<AssetsPageCardsRefreshContext, Task<PortfolioReturnSourceModel>>? FetchReturns { get; set; }
 
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     protected override Task OnParametersSetAsync() => Reload();
     private Task Retry() => Reload(forceRefresh: true);
 
@@ -36,6 +39,7 @@ public partial class PortfolioReturnCardContainer
         var end = EndDateTime;
         _model = null;
         _isLoading = true;
+        await RefreshingChanged.InvokeAsync(true);
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -86,7 +90,11 @@ public partial class PortfolioReturnCardContainer
         }
         finally
         {
-            if (_gate.IsCurrent(version)) _isLoading = false;
+            if (_gate.IsCurrent(version))
+            {
+                _isLoading = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
         }
     }
 

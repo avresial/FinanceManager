@@ -11,6 +11,8 @@ public partial class LiabilitiesPage : ComponentBase
         new("liabilities-history", "Liabilities value over time", new(12, 12)),
         new("liabilities-distribution", "Liabilities distribution", new(4, 6)),
     ];
+    // Cards whose reload for the selected range is in flight; their frames show the refresh indicator.
+    private readonly HashSet<string> _refreshingCards = [];
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
 
@@ -30,5 +32,13 @@ public partial class LiabilitiesPage : ComponentBase
         StartDate = changed.Start;
         EndDate = changed.End;
         StateHasChanged();
+    }
+
+    private Task SetCardRefreshing(string cardId, bool refreshing)
+    {
+        if (refreshing) _refreshingCards.Add(cardId);
+        else _refreshingCards.Remove(cardId);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

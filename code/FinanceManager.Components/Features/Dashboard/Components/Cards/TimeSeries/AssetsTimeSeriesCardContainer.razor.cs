@@ -19,6 +19,9 @@ public partial class AssetsTimeSeriesCardContainer
     [Parameter] public DateTime EndDateTime { get; set; }
     [Parameter] public string Height { get; set; } = "250px";
 
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -32,6 +35,7 @@ public partial class AssetsTimeSeriesCardContainer
         var version = _gate.Claim();
         var start = StartDateTime.Date;
         var end = EndDateTime;
+        await RefreshingChanged.InvokeAsync(true);
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -94,6 +98,11 @@ public partial class AssetsTimeSeriesCardContainer
             _hasError = true;
             _isLoading = false;
             Logger.LogError(exception, "Error resolving assets time series context");
+        }
+        finally
+        {
+            // A superseded reload leaves the flag alone: the newer reload owns it now.
+            if (_gate.IsCurrent(version)) await RefreshingChanged.InvokeAsync(false);
         }
     }
 

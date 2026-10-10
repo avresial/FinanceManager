@@ -13,19 +13,24 @@
                                  InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
         </Actions>
         <CardContent Context="cardId">
+            <RefreshingCardFrame IsRefreshing="@_refreshingCards.Contains(cardId)">
             @switch (cardId)
             {
                 case "assets-history":
-                    <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                   RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
                 case "assets-distribution":
-                    <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                    RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
                 case "portfolio-return":
-                    <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight" />
+                    <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight"
+                                                  RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
                 case "return-attribution":
-                    <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight" />
+                    <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight"
+                                                             RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
                     break;
                 case "investment-paycheck":
                     <InvestmentPaycheckEstimatorCard Height="@DashboardCardGrid.CardHeight" />
@@ -40,6 +45,7 @@
                     <FeeDragCard AsOfDate="@EndDate" Height="@DashboardCardGrid.CardHeight" />
                     break;
             }
+            </RefreshingCardFrame>
         </CardContent>
     </DashboardCardGrid>
 </MudContainer>

@@ -31,6 +31,9 @@ public partial class LiabilitiesDistributionOverviewCard
     // otherwise it self-loads from the API as in standalone usage.
     [Parameter] public DistributionCardModel? Model { get; set; }
 
+    // Reports whether a self-load for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ILogger<LiabilitiesDistributionOverviewCard> Logger { get; set; }
     [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -66,6 +69,20 @@ public partial class LiabilitiesDistributionOverviewCard
     private async Task LoadSelf()
     {
         var requestVersion = _gate.Claim();
+        await RefreshingChanged.InvokeAsync(true);
+        try
+        {
+            await LoadSelfAsync(requestVersion);
+        }
+        finally
+        {
+            // A superseded self-load leaves the flag alone: the newer one owns it now.
+            if (_gate.IsCurrent(requestVersion)) await RefreshingChanged.InvokeAsync(false);
+        }
+    }
+
+    private async Task LoadSelfAsync(int requestVersion)
+    {
         var startDate = StartDateTime;
         var endDate = EndDateTime;
 

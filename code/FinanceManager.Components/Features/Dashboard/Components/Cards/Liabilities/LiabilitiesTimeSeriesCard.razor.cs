@@ -27,6 +27,9 @@ public partial class LiabilitiesTimeSeriesCard
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "250px";
 
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ILogger<LiabilitiesTimeSeriesCard> Logger { get; set; }
     [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -43,6 +46,20 @@ public partial class LiabilitiesTimeSeriesCard
         // Claimed here rather than inside the coordinator so the same version also guards the
         // logged-out branch below, which commits state before the run starts.
         var requestVersion = _gate.Claim();
+        await RefreshingChanged.InvokeAsync(true);
+        try
+        {
+            await LoadAsync(requestVersion);
+        }
+        finally
+        {
+            // A superseded reload leaves the flag alone: the newer reload owns it now.
+            if (_gate.IsCurrent(requestVersion)) await RefreshingChanged.InvokeAsync(false);
+        }
+    }
+
+    private async Task LoadAsync(int requestVersion)
+    {
         var startDate = StartDateTime;
         var endDate = EndDateTime;
 

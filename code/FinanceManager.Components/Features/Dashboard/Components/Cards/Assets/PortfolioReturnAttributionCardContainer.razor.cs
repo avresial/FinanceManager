@@ -21,6 +21,10 @@ public partial class PortfolioReturnAttributionCardContainer
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "380px";
     [Parameter] public Func<AssetsPageCardsRefreshContext, Task<PortfolioReturnSourceModel>>? FetchReturns { get; set; }
+
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -39,6 +43,7 @@ public partial class PortfolioReturnAttributionCardContainer
             _model = null;
         _isLoading = _model is null;
         _hasError = false;
+        await RefreshingChanged.InvokeAsync(true);
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -101,7 +106,11 @@ public partial class PortfolioReturnAttributionCardContainer
         }
         finally
         {
-            if (_gate.IsCurrent(version)) _isLoading = false;
+            if (_gate.IsCurrent(version))
+            {
+                _isLoading = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
         }
     }
 
