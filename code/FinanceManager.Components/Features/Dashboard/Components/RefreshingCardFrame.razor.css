@@ -1,0 +1,23 @@
+.fm-refreshing-frame {
+    position: relative;
+}
+
+.fm-refreshing-frame ::deep .fm-refreshing-frame-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    border-top-left-radius: var(--mud-default-borderradius);
+    border-top-right-radius: var(--mud-default-borderradius);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.fm-refreshing-frame-content {
+    transition: opacity 150ms ease-in-out;
+}
+
+.fm-refreshing-frame-content-dimmed {
+    opacity: 0.6;
+}
