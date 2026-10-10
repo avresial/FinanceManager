@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Show a loading bar and dimmed content on the Dashboard cards that depend on the date range while a newly selected range loads, and keep the previous data with a Retry message when loading it fails. #895
+- Quieten the Type / Account view toggle on the Assets and Liabilities distribution cards (small, outlined, only the selected item lightly tinted), call the per-account view "Account" on both cards instead of "Wallet" on Assets, and keep the card title on one line on desktop. #898
 - Show the app version in the app bar on every page and screen size, explain the Asset diversification score (what 0 and 100 mean and how to raise it), and describe the Liabilities change (including debt starting from zero) as "Debt" with an arrow that follows the debt amount and a green or red colour for less or more debt. #904
 - Use consistent card heights and responsive layouts on Assets and Liabilities, with separate saved Customize preferences for each page. #899
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
