@@ -21,8 +21,11 @@
 }
 
 .fm-view-toggle ::deep .mud-toggle-item.mud-toggle-item-selected {
+    /* Amber text fails contrast on light surfaces, so the label stays in the normal text colour and the
+       accent only marks the selection (tint + underline). */
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
-    color: var(--mud-palette-primary);
+    box-shadow: inset 0 -2px 0 var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
     font-weight: 600;
 }
 
