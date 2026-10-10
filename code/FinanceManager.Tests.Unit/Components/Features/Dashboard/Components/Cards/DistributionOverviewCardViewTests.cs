@@ -63,7 +63,7 @@ public class DistributionOverviewCardViewTests
     [Theory]
     [InlineData(0)]
     [InlineData(75)]
-    public async Task Assets_WalletToggle_UsesWalletTotal(decimal typeTotal)
+    public async Task Assets_AccountToggle_UsesAccountTotal(decimal typeTotal)
     {
         await using var context = CreateContext();
         List<NameValueResult> typeData = typeTotal == 0 ? [] : [new("Stock", typeTotal)];
@@ -71,7 +71,7 @@ public class DistributionOverviewCardViewTests
             .Add(x => x.TypeData, typeData)
             .Add(x => x.WalletData, [new("Main wallet", 100m)]));
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Wallet")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
 
         AssertSingleCategoryFigure(cut);
         Assert.Matches("100[.,]00", cut.Find(".fm-card-total").TextContent);
