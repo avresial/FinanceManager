@@ -6,34 +6,32 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Features.Dashboard.Services;
 
 /// <summary>
-/// Holds the logged-in user's dashboard card show/hide preferences, backed by
+/// Holds the logged-in user's page card show/hide preferences, backed by
 /// <see cref="ISnapshotService"/> (browser local storage). Preferences are loaded once per
 /// circuit and written through on every change, so <see cref="IsHidden"/> can be queried
-/// synchronously while the dashboard renders.
+/// synchronously while the card grid renders.
 /// </summary>
 public class DashboardCardVisibilityService(
     ISnapshotService snapshotService,
     ILoginService loginService,
     ILogger<DashboardCardVisibilityService> logger)
 {
-    private readonly HashSet<string> _hiddenCardIds = [];
-    private string? _key;
-    private bool _loaded;
+    private readonly Dictionary<string, HashSet<string>> _hiddenByPage = [];
+    private readonly HashSet<string> _loadedPages = [];
 
-    /// <summary>Loads the persisted preferences once; safe to call repeatedly.</summary>
-    public async Task EnsureLoadedAsync()
+    /// <summary>Loads the persisted preferences once per page; safe to call repeatedly.</summary>
+    public async Task EnsureLoadedAsync(string page = "dashboard")
     {
-        if (_loaded)
+        if (_loadedPages.Contains(page))
             return;
 
         try
         {
-            var key = await GetKeyAsync();
+            var key = await GetKeyAsync(page);
             var snapshot = await snapshotService.GetAsync<DashboardCardVisibilitySnapshot>(key);
             if (snapshot is not null)
             {
-                _hiddenCardIds.Clear();
-                _hiddenCardIds.UnionWith(snapshot.HiddenCardIds);
+                GetHiddenCards(page).UnionWith(snapshot.HiddenCardIds);
             }
         }
         catch (Exception ex)
@@ -43,26 +41,27 @@ public class DashboardCardVisibilityService(
         }
         finally
         {
-            _loaded = true;
+            _loadedPages.Add(page);
         }
     }
 
     /// <summary>True when the user has explicitly hidden the card with <paramref name="cardId"/>.</summary>
-    public bool IsHidden(string cardId) => _hiddenCardIds.Contains(cardId);
+    public bool IsHidden(string cardId, string page = "dashboard") => GetHiddenCards(page).Contains(cardId);
 
     /// <summary>Records and persists whether the card with <paramref name="cardId"/> is hidden.</summary>
-    public async Task SetHiddenAsync(string cardId, bool hidden)
+    public async Task SetHiddenAsync(string cardId, bool hidden, string page = "dashboard")
     {
-        await EnsureLoadedAsync();
+        await EnsureLoadedAsync(page);
 
-        var changed = hidden ? _hiddenCardIds.Add(cardId) : _hiddenCardIds.Remove(cardId);
+        var hiddenCards = GetHiddenCards(page);
+        var changed = hidden ? hiddenCards.Add(cardId) : hiddenCards.Remove(cardId);
         if (!changed)
             return;
 
         try
         {
-            var key = await GetKeyAsync();
-            await snapshotService.SetAsync(key, new DashboardCardVisibilitySnapshot { HiddenCardIds = [.. _hiddenCardIds] });
+            var key = await GetKeyAsync(page);
+            await snapshotService.SetAsync(key, new DashboardCardVisibilitySnapshot { HiddenCardIds = [.. hiddenCards] });
         }
         catch (Exception ex)
         {
@@ -70,14 +69,19 @@ public class DashboardCardVisibilityService(
         }
     }
 
-    // Per-user key so each account keeps its own preferences within the same browser.
-    private async Task<string> GetKeyAsync()
+    private HashSet<string> GetHiddenCards(string page)
     {
-        if (_key is not null)
-            return _key;
+        if (!_hiddenByPage.TryGetValue(page, out var cards))
+            _hiddenByPage[page] = cards = [];
+        return cards;
+    }
 
+    // Keep the original Dashboard key so existing preferences survive this extraction.
+    private async Task<string> GetKeyAsync(string page)
+    {
         var user = await loginService.GetLoggedUser();
-        _key = $"dashboard-card-visibility:{user?.UserId ?? 0}";
-        return _key;
+        return page == "dashboard"
+            ? $"dashboard-card-visibility:{user?.UserId ?? 0}"
+            : $"dashboard-card-visibility:{page}:{user?.UserId ?? 0}";
     }
 }

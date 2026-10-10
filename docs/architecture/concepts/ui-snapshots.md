@@ -157,3 +157,17 @@ screen a moment later. Splitting the request must not split the snapshot either.
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow
 to the coordinator. Follow-up card and chart migrations should add a similar wrapper rather than
 re-implementing the orchestration.
+
+## Card visibility preferences
+
+[DashboardCardGrid](../../../code/FinanceManager.Components/Features/Dashboard/Components/DashboardCardGrid.razor)
+shares the existing arrangement algorithm, 390px card height, fillers, and Customize menu across
+Dashboard, Assets, and Liabilities. Page components supply card definitions and rendering; their data
+loading and refresh coordinators remain responsible for the card content. Empty-card rules are a
+page callback, independent of explicit hidden preferences.
+
+[DashboardCardVisibilityService](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardVisibilityService.cs)
+persists hidden ids separately for each page and user. Dashboard retains
+`dashboard-card-visibility:{userId}` for existing preferences; Assets and Liabilities use
+`dashboard-card-visibility:{page}:{userId}`. These are browser preferences rather than fetched data:
+there is no API refresh or date/currency scope.
