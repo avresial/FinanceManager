@@ -1,47 +1,45 @@
 @page "/Assets"
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets
 @using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries
 
 <PageTitle>Assets</PageTitle>
 <MudContainer Class="py-6">
     <PageHeader Title="Assets" />
-    <SectionContent SectionName="page-actions">
-        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-    </SectionContent>
-    <MudGrid Spacing="2">
-        <MudItem xs="12">
-            <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate"
-                                            Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="8">
-            <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns"
-                                            Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <InvestmentPaycheckEstimatorCard Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" lg="4">
-            <InvestmentRateCard Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <DiversificationProxyCard Height="@($"{2 * _unitHeight}px")" />
-        </MudItem>
-
-        <MudItem xs="12" md="6">
-            <FeeDragCard Height="@($"{2 * _unitHeight}px")" AsOfDate="@EndDate" />
-        </MudItem>
-    </MudGrid>
+    <DashboardCardGrid Page="assets" Cards="_cards">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+        <CardContent Context="cardId">
+            @switch (cardId)
+            {
+                case "assets-history":
+                    <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "assets-distribution":
+                    <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "portfolio-return":
+                    <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "return-attribution":
+                    <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "investment-paycheck":
+                    <InvestmentPaycheckEstimatorCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "investment-rate":
+                    <InvestmentRateCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "diversification":
+                    <DiversificationProxyCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case "fee-drag":
+                    <FeeDragCard AsOfDate="@EndDate" Height="@DashboardCardGrid.CardHeight" />
+                    break;
+            }
+        </CardContent>
+    </DashboardCardGrid>
 </MudContainer>

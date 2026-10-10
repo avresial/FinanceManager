@@ -34,7 +34,9 @@ public class PortfolioReturnAttributionCardTests
 
         var cut = context.Render<PortfolioReturnAttributionCardContainer>(parameters => parameters
             .Add(component => component.StartDateTime, start)
-            .Add(component => component.EndDateTime, end));
+            .Add(component => component.EndDateTime, end)
+            .Add(component => component.Height, "390px"));
+        Assert.Contains("height:390px", cut.Find("[data-testid=return-attribution-card]").GetAttribute("style"));
         handler.Complete(0, PortfolioReturnAttributionResult.Available(
             1554.81m, 0m, -51.18m, 0m, 1605.99m, start, end));
 

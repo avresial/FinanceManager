@@ -22,11 +22,7 @@
             }
         </div>
         <div class="fm-card-info-actions">
-            <MudToggleGroup T="string" Value="@_view" ValueChanged="OnViewChangedAsync"
-                            Outlined="true" Dense="true" Class="flex-shrink-0 mt-1">
-                <MudToggleItem Value="@_viewByType" Text="Type" />
-                <MudToggleItem Value="@_viewByAccount" Text="Account" />
-            </MudToggleGroup>
+            <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
         </div>
     </MudPaper>
 
@@ -37,7 +33,7 @@
                 <ChartSpinner MaxHeight=@Height />
             </div>
         }
-        else if (ActiveData.Any())
+        else if (ActiveData.Any() && TotalLiabilities > 0)
         {
             <div class="fm-pie-body">
                 @if (!IsSingleCategory)
@@ -54,7 +50,7 @@
                         </ApexChart>
                     </div>
                 }
-                <div class="fm-legend" data-testid="distribution-legend">
+                <div class="fm-legend@(IsSingleCategory ? " fm-legend--single" : "")" data-testid="distribution-legend">
                     @{
                         var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();

@@ -88,3 +88,43 @@
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
 }
+
+/* A single category has nothing to compare, so skip the pie and present its
+   amount and share as one centred figure instead of a lone legend row. */
+.ed-legend--single {
+    align-items: center;
+    justify-content: center;
+}
+
+.ed-legend--single .ed-legend-row {
+    width: 100%;
+    max-width: 360px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    text-align: center;
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+}
+
+.ed-legend--single .ed-legend-name {
+    flex: 0 0 auto;
+    max-width: 100%;
+    color: var(--mud-palette-text-secondary);
+}
+
+.ed-legend--single .ed-legend-vals {
+    margin-left: 0;
+    align-items: center;
+}
+
+.ed-legend--single .ed-legend-amt {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.ed-legend--single .ed-legend-pct {
+    font-size: 13px;
+}

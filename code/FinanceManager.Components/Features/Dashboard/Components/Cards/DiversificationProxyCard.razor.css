@@ -218,6 +218,14 @@
     opacity: 1;
 }
 
+/* ---- Score explanation (what 0 and 100 mean, how to raise it) ---- */
+.diversification-card__explain {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--mud-palette-text-secondary);
+}
+
 /* ---- Insight callout (gentle, never a red error) ---- */
 .diversification-card__insight {
     display: flex;

@@ -14,7 +14,11 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Keep the axis labels of the Net worth, Closing balance, Assets value, Liabilities value and Net cash flow charts readable: value labels now sit above the line with a card-coloured halo instead of being crossed by it, date labels are nudged inside the card instead of being cut off at the edges, and short cards show fewer value ticks. #901
+- Quieten the Type / Account view toggle on the Assets and Liabilities distribution cards (small, outlined, only the selected item lightly tinted), call the per-account view "Account" on both cards instead of "Wallet" on Assets, and keep the card title on one line on desktop. #898
+- Show the app version in the app bar on every page and screen size, explain the Asset diversification score (what 0 and 100 mean and how to raise it), and describe the Liabilities change (including debt starting from zero) as "Debt" with an arrow that follows the debt amount and a green or red colour for less or more debt. #904
+- Use consistent card heights and responsive layouts on Assets and Liabilities, with separate saved Customize preferences for each page. #899
 - Fade the bottom of the Money by label, Recurring transactions and Transaction log lists while more items are hidden below, add a View all link from Recurring transactions to Subscriptions, and rename the Cash flow forecast More button to View all. #903
+- Replace the one-slice chart on single-item Assets, Liabilities and Expense distributions with a centred amount and percentage, instead of an empty chart slot or a repeated ring. #900
 - Show each page title once in the app bar and move Dashboard, Assets and Liabilities date controls beside it, with compact actions on phones. #896
 - Lay out Dashboard cards without gaps or uneven rows: every card now has the same height and cards differ only in width, wide charts and narrow cards share rows, cards widen only as far as suits their content, any space that still cannot be filled shows a Customize dashboard tile, and Liabilities distribution sits with the other distribution cards. #893
 - Load the app faster: the loading screen appears immediately instead of waiting for stylesheets, styles and scripts are sent compressed, app files can be cached by the browser and CDN until the next release, and an unused 285 KB sign-in script is no longer downloaded. #886
@@ -53,6 +57,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
 - Keep the Investment rate footer inside its card, stop Return attribution labels breaking mid-word, keep the Asset diversification hint visible on phones, and centre the legend on single-category distribution cards. #884
 - Put the Money by label period on its own line instead of wrapping it beside the title. #884
