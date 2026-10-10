@@ -22,6 +22,7 @@ using Moq;
 using MudBlazor.Services;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using DashboardComponent = FinanceManager.Components.Features.Dashboard.Components.Dashboard;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components;
@@ -96,12 +97,16 @@ public class DashboardRefreshIndicatorTests
         cut.WaitForAssertion(() => Assert.Equal(3, handler.Count), _timeout);
 
         // The older request answers last-but-first: it must neither clear the indicator nor repaint.
+        // Waiting until the client has consumed the stale body proves the response was really delivered;
+        // the component then gets several turns to (wrongly) react, checking the invariant after each.
         var originalStart = DisplayedStart(cut);
-        handler.Complete(1, Overview(firstStart, firstEnd));
-        await cut.InvokeAsync(async () => await Task.Delay(50));
-
-        Assert.Equal(_rangeDependentCards.Length, cut.FindAll(".mud-progress-linear").Count);
-        Assert.Equal(originalStart, DisplayedStart(cut));
+        await handler.CompleteAndWaitUntilRead(1, Overview(firstStart, firstEnd));
+        for (var turn = 0; turn < 20; turn++)
+        {
+            await cut.InvokeAsync(Task.Yield);
+            Assert.Equal(_rangeDependentCards.Length, cut.FindAll(".mud-progress-linear").Count);
+            Assert.Equal(originalStart, DisplayedStart(cut));
+        }
 
         handler.Complete(2, Overview(latestStart, latestEnd));
 
@@ -124,7 +129,7 @@ public class DashboardRefreshIndicatorTests
         handler.Fail(1);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);
-        Assert.Contains("Unable to load dashboard data", cut.Find(".mud-alert").TextContent);
+        Assert.Contains("Couldn't load the selected period", cut.Find(".mud-alert").TextContent);
         Assert.Equal(originalStart, DisplayedStart(cut));
         Assert.NotEmpty(cut.FindComponents<Stub<NetWorthTimeSeriesCard>>());
 
@@ -245,6 +250,14 @@ public class DashboardRefreshIndicatorTests
         public void Complete(int index, DashboardOverviewDto overview) =>
             Response(index).SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(overview) });
 
+        // Completes the request with a body that signals once the client has read and disposed it.
+        public async Task CompleteAndWaitUntilRead(int index, DashboardOverviewDto overview)
+        {
+            var content = new SignalingJsonContent(JsonSerializer.SerializeToUtf8Bytes(overview, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            Response(index).SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+            await content.Read.WaitAsync(_timeout);
+        }
+
         public void Fail(int index) =>
             Response(index).SetResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
@@ -258,6 +271,41 @@ public class DashboardRefreshIndicatorTests
             var response = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             lock (_responses) _responses.Add(response);
             return response.Task;
+        }
+    }
+
+    private sealed class SignalingJsonContent : HttpContent
+    {
+        private readonly byte[] _body;
+        private readonly TaskCompletionSource _read = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public SignalingJsonContent(byte[] body)
+        {
+            _body = body;
+            Headers.ContentType = new("application/json");
+        }
+
+        public Task Read => _read.Task;
+
+        protected override Task<Stream> CreateContentReadStreamAsync() =>
+            Task.FromResult<Stream>(new SignalOnDisposeStream(_body, _read));
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>
+            stream.WriteAsync(_body, 0, _body.Length);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = _body.Length;
+            return true;
+        }
+
+        private sealed class SignalOnDisposeStream(byte[] body, TaskCompletionSource signal) : MemoryStream(body, writable: false)
+        {
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+                signal.TrySetResult();
+            }
         }
     }
 }

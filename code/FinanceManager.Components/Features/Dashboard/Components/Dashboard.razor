@@ -11,7 +11,9 @@
     {
         <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="false">
             <div class="d-flex align-center justify-space-between" style="width:100%">
-                <span>Unable to load dashboard data.</span>
+                <span>@(ShowsDifferentRange
+                    ? "Couldn't load the selected period. The cards still show the previous period."
+                    : "Unable to load dashboard data.")</span>
                 <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="LoadOverview">Retry</MudButton>
             </div>
         </MudAlert>

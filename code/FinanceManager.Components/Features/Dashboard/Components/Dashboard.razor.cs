@@ -82,7 +82,10 @@ public partial class Dashboard : ComponentBase
     // The user asked for a range other than the one the held overview shows and that data is still on
     // its way. Compared by day: the default end is "now", which moves between visits without
     // changing what the user sees.
-    private bool IsRefreshing => _overview is not null && _isRequestInFlight
+    private bool IsRefreshing => _isRequestInFlight && ShowsDifferentRange;
+
+    // The held overview covers another period than the one requested (loading it, or it failed to load).
+    private bool ShowsDifferentRange => _overview is not null
         && (StartDate.Date != _overviewStart.Date || EndDate.Date != _overviewEnd.Date);
 
     private static bool IsRangeDependent(string cardId) => _rangeDependentCards.Contains(cardId);
