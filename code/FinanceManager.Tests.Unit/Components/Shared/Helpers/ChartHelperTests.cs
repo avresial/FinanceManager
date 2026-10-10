@@ -211,4 +211,17 @@ public class ChartHelperTests
         Assert.Contains("+ ' PLN'", formatter);
         Assert.DoesNotContain("u00A0", formatter);
     }
+
+    [Theory]
+    [InlineData("250px", 3)]
+    [InlineData("300px", 3)]
+    [InlineData("380px", 4)]
+    [InlineData("600PX", 4)]
+    [InlineData("100%", 3)]
+    [InlineData("", 3)]
+    [InlineData(null, 3)]
+    public void GetYTargetBands_UsesFewerBandsOnShortCards(string? height, int expected)
+    {
+        Assert.Equal(expected, ChartHelper.GetYTargetBands(height));
+    }
 }

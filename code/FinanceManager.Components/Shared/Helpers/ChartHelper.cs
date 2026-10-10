@@ -125,6 +125,27 @@ public static class ChartHelper
     }
 
     /// <summary>
+    /// Number of value bands a time-series card's y-axis aims for. Short cards (up to 300px, which
+    /// includes the 250px default) get fewer bands so the tick labels, which float inside the plot,
+    /// do not crowd the series; taller cards keep the finer grid. A height that is not a plain
+    /// pixel value (e.g. a percentage) falls back to the short-card setting.
+    /// </summary>
+    public static int GetYTargetBands(string? cardHeight)
+    {
+        const int shortCardBands = 3;
+        const int tallCardBands = 4;
+        const double shortCardMaxPx = 300;
+
+        var text = cardHeight?.Trim();
+        if (text is not null && text.EndsWith("px", StringComparison.OrdinalIgnoreCase)
+            && double.TryParse(text[..^2], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var px))
+            return px <= shortCardMaxPx ? shortCardBands : tallCardBands;
+
+        return shortCardBands;
+    }
+
+    /// <summary>
     /// Y scale for charts whose x-axis labels overlay the bottom of the plot: the padded range is
     /// snapped to round 1/2/5 tick steps, then one extra empty band is added below the data so the
     /// overlaid date labels never sit on top of the series. The bottom tick of that band is the
