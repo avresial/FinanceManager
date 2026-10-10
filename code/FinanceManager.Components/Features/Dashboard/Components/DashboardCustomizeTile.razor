@@ -4,11 +4,12 @@
 <button type="button" class="dashboard-customize-tile d-flex flex-column align-center justify-center pa-4"
         style="@($"height:{Height}")" @onclick="OnClick">
     <MudIcon Icon="@Icons.Material.Filled.Tune" />
-    <MudText Typo="Typo.body2" Class="mt-2">Customize dashboard</MudText>
+    <MudText Typo="Typo.body2" Class="mt-2">Customize @Page</MudText>
     <MudText Typo="Typo.caption">Choose which cards to show</MudText>
 </button>
 
 @code {
     [Parameter, EditorRequired] public required string Height { get; set; }
+    [Parameter] public string Page { get; set; } = "dashboard";
     [Parameter] public EventCallback OnClick { get; set; }
 }

@@ -7,132 +7,92 @@
 
 <MudContainer Class="py-6">
     <PageHeader Title="Dashboard" />
-    <SectionContent SectionName="page-actions">
-        <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
-                             InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
-        <MudMenu @ref="_customizeMenu" Icon="@Icons.Material.Filled.Tune" AriaLabel="Customize dashboard" title="Customize dashboard" Variant="Variant.Text"
-                 Color="Color.Default" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
-            @foreach (var card in DashboardCards.All)
-            {
-                <MudMenuItem OnClick="@(() => ToggleCard(card.Id))" AutoClose="false" Style="padding: 2.65px;">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudCheckBox Value="@(!CardVisibility.IsHidden(card.Id))" T="bool" Dense="true" ReadOnly="true"
-                                     Color="Color.Primary" />
-                        <MudText Typo="Typo.body2">@card.Title</MudText>
-                        @if (IsAutoHiddenWhenEmpty(card.Id))
-                        {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">(no data)</MudText>
-                        }
-                    </MudStack>
-                </MudMenuItem>
-            }
-        </MudMenu>
-    </SectionContent>
-
-    @if (_overview is null && _isLoading)
+    @if (_hasError)
     {
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-            <MudItem xs="12" md="6" lg="4">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-            <MudItem xs="12" md="6" lg="4">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-            <MudItem xs="12" md="6" lg="4">
-                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@_cardHeight" />
-            </MudItem>
-        </MudGrid>
+        <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="false">
+            <div class="d-flex align-center justify-space-between" style="width:100%">
+                <span>Unable to load dashboard data.</span>
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="LoadOverview">Retry</MudButton>
+            </div>
+        </MudAlert>
     }
-    else
-    {
-        @if (_hasError)
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-2" ShowCloseIcon="false">
-                <div class="d-flex align-center justify-space-between" style="width:100%">
-                    <span>Unable to load dashboard data.</span>
-                    <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="LoadOverview">Retry</MudButton>
-                </div>
-            </MudAlert>
-        }
-
-        @if (!AnyCardVisible)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-2" ShowCloseIcon="false">
-                All cards are hidden. Use <b>Customize</b> to choose the cards you want to see.
-            </MudAlert>
-        }
-
-        <MudGrid Spacing="2">
-
-            @* Every card has the same height and the layout only varies widths, so any cards can
-               share a row; DashboardCardLayout decides the widths and any filler tiles. *@
-            @foreach (var slot in ArrangeCards())
-            {
-                var cardId = slot.CardId;
-                <MudItem xs="12" md="@slot.Medium.Span" lg="@slot.Large.Span" @key="cardId">
-                    <RefreshingCardFrame IsRefreshing="@(IsRefreshing && IsRangeDependent(cardId))">
-                    @switch (cardId)
-                    {
-                        case DashboardCards.NetWorth:
-                            <NetWorthTimeSeriesCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                    EndDateTime="@DisplayEndDate" Model="@NetWorthModel" />
-                            break;
-                        case DashboardCards.NetCashFlow:
-                            <NetCashFlowOverviewCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                     EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
-                            break;
-                        case DashboardCards.CashFlowForecast:
-                            <CashFlowForecastCard Height="@_cardHeight" />
-                            break;
-                        case DashboardCards.ClosingBalance:
-                            <ClosingBalanceOverviewCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                        EndDateTime="@DisplayEndDate" Model="@ClosingBalanceModel" />
-                            break;
-                        case DashboardCards.Labels:
-                            <FinancialLabelsListCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                     EndDateTime="@DisplayEndDate" Model="@LabelsModel" />
-                            break;
-                        case DashboardCards.Assets:
-                            <AssetsDistributionOverviewCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                            EndDateTime="@DisplayEndDate" Model="@AssetsModel" />
-                            break;
-                        case DashboardCards.Liabilities:
-                            <LiabilitiesDistributionOverviewCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                                 EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
-                            break;
-                        case DashboardCards.Expenses:
-                            <ExpenseDistributionOverviewCard Height="@_cardHeight" StartDateTime="@DisplayStartDate"
-                                                             EndDateTime="@DisplayEndDate" Model="@ExpenseModel" />
-                            break;
-                        case DashboardCards.Insights:
-                            <FinancialInsightsCarousel Height="@_cardHeight" Count="3" />
-                            break;
-                        case DashboardCards.FinancialAlerts:
-                            <FinancialAlertsCard Height="@_cardHeight" />
-                            break;
-                        case DashboardCards.RecurringTransactions:
-                            <RecurringTransactionDetectorCard Height="@_cardHeight" />
-                            break;
-                        case DashboardCards.TransactionLog:
-                            <TransactionLogCard Height="@_cardHeight" />
-                            break;
-                    }
-                    </RefreshingCardFrame>
+    <DashboardCardGrid Page="dashboard" Cards="_cards" MenuCards="DashboardCards.All"
+                       AutoHidden="IsAutoHiddenWhenEmpty" IsLoading="@(_overview is null && _isLoading)">
+        <Actions>
+            <DashboardDatePicker DateChanged=DateChanged StartingOption="@DateRangeHelper.CustomRangeKey"
+                                 InitialCustomStart="@StartDate" InitialCustomEnd="@EndDate" />
+        </Actions>
+        <LoadingContent>
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
                 </MudItem>
-                <DashboardRowFiller MediumSpan="@slot.Medium.FillerSpanAfter" LargeSpan="@slot.Large.FillerSpanAfter"
-                                    Height="@_cardHeight" OnClick="OpenCustomizeMenu" />
+                <MudItem xs="12" md="6">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
+                </MudItem>
+                <MudItem xs="12" md="6" lg="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
+                </MudItem>
+                <MudItem xs="12" md="6" lg="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
+                </MudItem>
+                <MudItem xs="12" md="6" lg="4">
+                    <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@DashboardCardGrid.CardHeight" />
+                </MudItem>
+            </MudGrid>
+        </LoadingContent>
+        <CardContent Context="cardId">
+            <RefreshingCardFrame IsRefreshing="@(IsRefreshing && IsRangeDependent(cardId))">
+            @switch (cardId)
+            {
+                case DashboardCards.NetWorth:
+                    <NetWorthTimeSeriesCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                            EndDateTime="@DisplayEndDate" Model="@NetWorthModel" />
+                    break;
+                case DashboardCards.NetCashFlow:
+                    <NetCashFlowOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                             EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
+                    break;
+                case DashboardCards.CashFlowForecast:
+                    <CashFlowForecastCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case DashboardCards.ClosingBalance:
+                    <ClosingBalanceOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                                EndDateTime="@DisplayEndDate" Model="@ClosingBalanceModel" />
+                    break;
+                case DashboardCards.Labels:
+                    <FinancialLabelsListCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                             EndDateTime="@DisplayEndDate" Model="@LabelsModel" />
+                    break;
+                case DashboardCards.Assets:
+                    <AssetsDistributionOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                                    EndDateTime="@DisplayEndDate" Model="@AssetsModel" />
+                    break;
+                case DashboardCards.Liabilities:
+                    <LiabilitiesDistributionOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                                         EndDateTime="@DisplayEndDate" Model="@LiabilitiesModel" />
+                    break;
+                case DashboardCards.Expenses:
+                    <ExpenseDistributionOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
+                                                     EndDateTime="@DisplayEndDate" Model="@ExpenseModel" />
+                    break;
+                case DashboardCards.Insights:
+                    <FinancialInsightsCarousel Height="@DashboardCardGrid.CardHeight" Count="3" />
+                    break;
+                case DashboardCards.FinancialAlerts:
+                    <FinancialAlertsCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case DashboardCards.RecurringTransactions:
+                    <RecurringTransactionDetectorCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
+                case DashboardCards.TransactionLog:
+                    <TransactionLogCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
             }
-
-        </MudGrid>
-    }
+            </RefreshingCardFrame>
+        </CardContent>
+    </DashboardCardGrid>
 </MudContainer>

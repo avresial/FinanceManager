@@ -8,6 +8,16 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 public class DiversificationProxyCardTests
 {
     [Fact]
+    public void ScoreExplanation_DescribesBothEndsOfTheScaleAndHowToImprove()
+    {
+        var text = DiversificationProxyCard.ScoreExplanation;
+
+        Assert.Contains("0 means", text, StringComparison.Ordinal);
+        Assert.Contains("100 means", text, StringComparison.Ordinal);
+        Assert.Contains("raise", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuildExplanations_ModerateBand_ReturnsEmpty()
     {
         var score = new DiversificationScore(50, 25, 25, "Moderate");

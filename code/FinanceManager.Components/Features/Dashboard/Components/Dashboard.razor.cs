@@ -16,10 +16,6 @@ namespace FinanceManager.Components.Features.Dashboard.Components;
 
 public partial class Dashboard : ComponentBase
 {
-    // Every card shares one height so any cards can share a row; tall enough for the list
-    // cards to show several entries before they scroll.
-    private const string _cardHeight = "390px";
-
     private const int _third = 4;
     private const int _half = 6;
     private const int _full = 12;
@@ -27,20 +23,20 @@ public partial class Dashboard : ComponentBase
     // Display order and large-screen widths (preferred, max) of every card. Time-series charts
     // read well wide; distribution, list and summary cards are capped at half width so they are
     // never stretched. See DashboardCardLayout for how the visible cards fill rows.
-    private static readonly DashboardCardSlot[] _cards =
+    private static readonly DashboardGridCard[] _cards =
     [
-        new(DashboardCards.NetWorth, new(_full, _full)),
-        new(DashboardCards.NetCashFlow, new(_half, _full)),
-        new(DashboardCards.CashFlowForecast, new(_third, _half)),
-        new(DashboardCards.ClosingBalance, new(_half, _full)),
-        new(DashboardCards.Labels, new(_third, _half)),
-        new(DashboardCards.Assets, new(_third, _half)),
-        new(DashboardCards.Liabilities, new(_third, _half)),
-        new(DashboardCards.Expenses, new(_third, _half)),
-        new(DashboardCards.Insights, new(_third, _half)),
-        new(DashboardCards.FinancialAlerts, new(_third, _half)),
-        new(DashboardCards.RecurringTransactions, new(_third, _half)),
-        new(DashboardCards.TransactionLog, new(_full, _full)),
+        new(DashboardCards.NetWorth, DashboardCards.All.Single(card => card.Id == DashboardCards.NetWorth).Title, new(_full, _full)),
+        new(DashboardCards.NetCashFlow, DashboardCards.All.Single(card => card.Id == DashboardCards.NetCashFlow).Title, new(_half, _full)),
+        new(DashboardCards.CashFlowForecast, DashboardCards.All.Single(card => card.Id == DashboardCards.CashFlowForecast).Title, new(_third, _half)),
+        new(DashboardCards.ClosingBalance, DashboardCards.All.Single(card => card.Id == DashboardCards.ClosingBalance).Title, new(_half, _full)),
+        new(DashboardCards.Labels, DashboardCards.All.Single(card => card.Id == DashboardCards.Labels).Title, new(_third, _half)),
+        new(DashboardCards.Assets, DashboardCards.All.Single(card => card.Id == DashboardCards.Assets).Title, new(_third, _half)),
+        new(DashboardCards.Liabilities, DashboardCards.All.Single(card => card.Id == DashboardCards.Liabilities).Title, new(_third, _half)),
+        new(DashboardCards.Expenses, DashboardCards.All.Single(card => card.Id == DashboardCards.Expenses).Title, new(_third, _half)),
+        new(DashboardCards.Insights, DashboardCards.All.Single(card => card.Id == DashboardCards.Insights).Title, new(_third, _half)),
+        new(DashboardCards.FinancialAlerts, DashboardCards.All.Single(card => card.Id == DashboardCards.FinancialAlerts).Title, new(_third, _half)),
+        new(DashboardCards.RecurringTransactions, DashboardCards.All.Single(card => card.Id == DashboardCards.RecurringTransactions).Title, new(_third, _half)),
+        new(DashboardCards.TransactionLog, DashboardCards.All.Single(card => card.Id == DashboardCards.TransactionLog).Title, new(_full, _full)),
     ];
 
     // Cards that render figures for the selected date range; only these show the refresh indicator.
@@ -54,8 +50,6 @@ public partial class Dashboard : ComponentBase
         DashboardCards.Liabilities,
         DashboardCards.Expenses,
     ];
-
-    private MudBlazor.MudMenu? _customizeMenu;
 
     private DashboardOverviewDto? _overview;
     private bool _isLoading = true;
@@ -98,7 +92,6 @@ public partial class Dashboard : ComponentBase
     [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required DashboardCardVisibilityService CardVisibility { get; set; }
 
     // Card-specific models mapped from the single overview response. They are null
     // until the first load resolves (and when the overview is unavailable), in which
@@ -120,44 +113,11 @@ public partial class Dashboard : ComponentBase
         StartDate = Start;
         EndDate = End;
 
-        await CardVisibility.EnsureLoadedAsync();
         await LoadOverview();
     }
 
-    // A card renders when the user has not hidden it and it is not auto-hidden as empty.
-    // Empty auto-hiding only applies once an overview is loaded; while self-loading the
-    // dashboard has no data to judge emptiness, so those cards keep rendering.
-    private bool IsCardVisible(string cardId) =>
-        !CardVisibility.IsHidden(cardId) && !IsAutoHiddenWhenEmpty(cardId);
-
     private bool IsAutoHiddenWhenEmpty(string cardId) =>
         _overview is not null && DashboardCardVisibilityRules.IsAutoHiddenWhenEmpty(cardId, _overview);
-
-    // Lays out the visible cards for both grid breakpoints. Below the large breakpoint the
-    // grid has room for two cards per row, so third-width cards start at half width there.
-    private List<CardPlacement> ArrangeCards()
-    {
-        var visible = _cards.Where(card => IsCardVisible(card.Id)).ToList();
-        var large = DashboardCardLayout.Arrange([.. visible.Select(card => card.LargeSpan)]);
-        var medium = DashboardCardLayout.Arrange([.. visible.Select(card =>
-            new DashboardCardSpan(Math.Max(card.LargeSpan.Preferred, _half), Math.Max(card.LargeSpan.Max, _half)))]);
-
-        return [.. visible.Select((card, i) => new CardPlacement(card.Id, medium[i], large[i]))];
-    }
-
-    private async Task OpenCustomizeMenu()
-    {
-        if (_customizeMenu is not null)
-            await _customizeMenu.OpenMenuAsync(EventArgs.Empty);
-    }
-
-    private bool AnyCardVisible => DashboardCards.All.Any(card => IsCardVisible(card.Id));
-
-    private async Task ToggleCard(string cardId)
-    {
-        await CardVisibility.SetHiddenAsync(cardId, !CardVisibility.IsHidden(cardId));
-        StateHasChanged();
-    }
 
     // DashboardDatePicker exposes a synchronous Action callback, so kick off the
     // reload without awaiting; LoadOverview owns its own state and error handling.
@@ -262,7 +222,4 @@ public partial class Dashboard : ComponentBase
     // painted with the new currency's labels.
     private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
 
-    private sealed record DashboardCardSlot(string Id, DashboardCardSpan LargeSpan);
-
-    private sealed record CardPlacement(string CardId, DashboardCardPlacement Medium, DashboardCardPlacement Large);
 }

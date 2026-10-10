@@ -14,6 +14,7 @@
                 <div class="fm-appbar-title"><SectionOutlet SectionName="page-title" /></div>
                 <MudSpacer />
                 <div class="fm-appbar-actions"><SectionOutlet SectionName="page-actions" /></div>
+                <AppVersionLabel />
             </MudAppBar>
 
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">

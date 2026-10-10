@@ -67,14 +67,6 @@
     overflow-y: auto;
 }
 
-/* Single-category cards skip the pie (a 100% slice says nothing), leaving the
-   legend alone; keep it a readable width instead of stretching one row's name
-   and amount to opposite edges of a wide card. */
-.fm-legend:only-child {
-    max-width: 360px;
-    margin: 0 auto;
-}
-
 .fm-legend-row {
     display: flex;
     flex-wrap: wrap; /* the amount drops under the name on narrow cards instead of truncating it */
@@ -123,4 +115,45 @@
     font-size: 11px;
     color: var(--mud-palette-text-secondary);
     font-variant-numeric: tabular-nums;
+}
+
+/* A single category has nothing to compare, so skip the pie and present its
+   amount and share as one centred figure instead of a lone legend row. */
+.fm-legend--single {
+    align-items: center;
+    justify-content: center;
+}
+
+.fm-legend--single .fm-legend-row {
+    width: 100%;
+    max-width: 360px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    text-align: center;
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+}
+
+.fm-legend--single .fm-legend-name {
+    flex: 0 0 auto;
+    max-width: 100%;
+    font-size: 13px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fm-legend--single .fm-legend-vals {
+    margin-left: 0;
+    align-items: center;
+}
+
+.fm-legend--single .fm-legend-amt {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.fm-legend--single .fm-legend-pct {
+    font-size: 13px;
 }
