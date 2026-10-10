@@ -45,6 +45,12 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        // These tests verify retry registration and counts, not wall-clock backoff.
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
         // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
@@ -91,6 +97,11 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
         // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
@@ -130,6 +141,11 @@ public class NbpResilienceRegistrationTests
 
         var builder = Host.CreateApplicationBuilder();
         builder.AddServiceDefaults();
+        builder.Services.PostConfigureAll<HttpStandardResilienceOptions>(options =>
+        {
+            options.Retry.Delay = TimeSpan.Zero;
+            options.Retry.UseJitter = false;
+        });
         builder.Services.AddInfrastructureApi();
         // These tests assert retry counts, not elapsed time. Avoid spending the typed client's
         // 15-second timeout on jittered retry delays when parallel CI work delays continuations.
