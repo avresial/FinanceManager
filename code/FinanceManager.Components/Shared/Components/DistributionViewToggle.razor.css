@@ -30,6 +30,6 @@
 }
 
 .fm-view-toggle ::deep .mud-toggle-item:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
+    outline: 2px solid var(--mud-palette-text-primary);
     outline-offset: -2px;
 }
