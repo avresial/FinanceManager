@@ -1,0 +1,18 @@
+@* Shared chrome for a card whose data depends on the selected date range. While the range is
+   being refreshed a thin indeterminate bar overlays the top edge and the content dims slightly.
+   The bar is absolutely positioned, so showing or hiding it never moves the card. *@
+<div class="fm-refreshing-frame" aria-busy="@(IsRefreshing ? "true" : "false")">
+    @if (IsRefreshing)
+    {
+        <MudProgressLinear Class="fm-refreshing-frame-bar" Indeterminate="true" Size="Size.Small"
+                           Color="Color.Primary" aria-label="Refreshing data" />
+    }
+    <div class="fm-refreshing-frame-content @(IsRefreshing ? "fm-refreshing-frame-content-dimmed" : null)">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsRefreshing { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
