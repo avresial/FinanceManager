@@ -25,11 +25,6 @@
         var svgRect = svg.getBoundingClientRect();
         if (svgRect.width === 0) return;
 
-        var userWidth = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width > 0
-            ? svg.viewBox.baseVal.width
-            : svgRect.width;
-        var scale = userWidth / svgRect.width;
-
         svg.querySelectorAll('.apexcharts-xaxis-texts-g text').forEach(function (label) {
             var rect = label.getBoundingClientRect();
             if (rect.width === 0) return;
@@ -41,9 +36,17 @@
                 shift = svgRect.right - EDGE_PADDING_PX - rect.right;
 
             if (shift !== 0) {
-                var x = parseFloat(label.getAttribute('x'));
-                if (Number.isFinite(x))
-                    label.setAttribute('x', String(x + shift * scale));
+                var matrix = label.parentNode.getScreenCTM();
+                if (!matrix) return;
+                var inverse = matrix.inverse();
+                var dx = shift * inverse.a;
+                var dy = shift * inverse.b;
+                if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+
+                // Prepend a translation in the parent's coordinates so the screen-space shift
+                // stays horizontal, even when ApexCharts has rotated the label.
+                var transform = label.getAttribute('transform') || '';
+                label.setAttribute('transform', 'translate(' + dx + ' ' + dy + ') ' + transform);
             }
         });
     }

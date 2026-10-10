@@ -4,7 +4,6 @@ using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
-using System.Reflection;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
 
@@ -49,8 +48,6 @@ public class TimeSeriesValueCardTests
     private static List<TimeSeriesModel> Points(params decimal[] values) =>
         [.. values.Select((value, i) => new TimeSeriesModel(_start.AddDays(i), value))];
 
-    // The options the card builds are private; read them back from the rendered instance so the
-    // axis configuration (the contract with ApexCharts) is asserted without a browser.
     private static async Task<ApexChartOptions<TimeSeriesModel>> RenderedOptionsAsync(List<TimeSeriesModel> points, string height)
     {
         await using var context = new BunitContext();
@@ -63,7 +60,6 @@ public class TimeSeriesValueCardTests
             .Add(x => x.Data, points)
             .Add(x => x.Height, height));
 
-        var field = typeof(TimeSeriesValueCard).GetField("_options", BindingFlags.Instance | BindingFlags.NonPublic);
-        return Assert.IsType<ApexChartOptions<TimeSeriesModel>>(field!.GetValue(cut.Instance));
+        return cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance.Options;
     }
 }
