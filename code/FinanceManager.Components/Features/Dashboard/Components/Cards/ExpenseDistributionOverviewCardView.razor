@@ -30,7 +30,7 @@
                 <ChartSpinner MaxHeight=@Height />
             </div>
         }
-        else if (Data.Any())
+        else if (Data.Any() && TotalExpenses > 0)
         {
             <div class="ed-body">
                 @if (!IsSingleCategory)
@@ -47,7 +47,7 @@
                         </ApexChart>
                     </div>
                 }
-                <div class="ed-legend" data-testid="distribution-legend">
+                <div class="ed-legend@(IsSingleCategory ? " ed-legend--single" : "")" data-testid="distribution-legend">
                     @{
                         var sorted = Data.OrderByDescending(x => x.Value).ToList();
                         var colors = ColorsProvider.GetColors();
