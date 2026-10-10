@@ -66,7 +66,7 @@
                         <section id="@DetailId(rule)" class="rule-detail" aria-label="@($"Details for {rule.Name}")">
                             <div class="rule-detail-header">
                                 <div>
-                                    <MudText Typo="Typo.overline" Color="Color.Primary">Rule @number · @(rule.IsEnabled ? "Enabled" : "Disabled")</MudText>
+                                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Rule @number · @(rule.IsEnabled ? "Enabled" : "Disabled")</MudText>
                                     <MudText Typo="Typo.h6">@rule.Name</MudText>
                                 </div>
                                 @if (_editingId != rule.Id)
