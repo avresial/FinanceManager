@@ -115,9 +115,9 @@
     else if (_alerts.Count == 0)
     {
         <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" Color="Color.Secondary" />
+            <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" />
             <MudText Typo="Typo.h6" Class="mt-2">No alerts yet</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Create a watchlist condition above to start monitoring your finances.</MudText>
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">Create a watchlist condition above to start monitoring your finances.</MudText>
         </MudPaper>
     }
     else
@@ -136,7 +136,7 @@
                 <MudTd DataLabel="Alert">
                     <div class="alerts-cell">
                         <MudText Typo="Typo.body1" Class="font-weight-600">@context.Title</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@PeriodLabel(context.EvaluationPeriod)</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.caption">@PeriodLabel(context.EvaluationPeriod)</MudText>
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Condition">
@@ -164,7 +164,7 @@
                                 @if (outcome.IsTriggered)
                                 {
                                     <MudText Typo="Typo.body2" Color="Color.Warning">@outcome.Message</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    <MudText Class="mud-text-secondary" Typo="Typo.caption">
                                         @AlertPresentation.ComparisonDetail(outcome)
                                     </MudText>
                                     <AlertMatchingTransactions Outcome="outcome" />
@@ -177,7 +177,7 @@
                         }
                         else
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Not evaluated</MudText>
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">Not evaluated</MudText>
                         }
                 
                     </div>

@@ -29,7 +29,7 @@
 
             <MudItem xs="12" md="9" Style="max-width:720px;">
                 <MudText Typo="Typo.h4">Account settings</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">
                     Manage your Finance Manager account, security, and subscription.
                 </MudText>
 
@@ -37,7 +37,7 @@
 
                 <section class="settings-section" id="profile">
                     <MudText Typo="Typo.h6">Profile</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
                         Your public identity within Finance Manager.
                     </MudText>
 
@@ -46,7 +46,7 @@
                             <MudAvatar Color="Color.Primary" Size="Size.Large">@char.ToUpperInvariant(_displayName[0])</MudAvatar>
                             <MudStack Spacing="0" Style="min-width:0;">
                                 <MudText Typo="Typo.subtitle1" Style="word-break:break-word;">@_displayName</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="word-break:break-word;">@_userData.Login</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.body2" Style="word-break:break-word;">@_userData.Login</MudText>
                             </MudStack>
                         </MudStack>
                         <MudStack Row="true" Spacing="2" Class="flex-wrap">
@@ -80,7 +80,7 @@
 
                 <section class="settings-section" id="preferences">
                     <MudText Typo="Typo.h6">Preferences</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
                         All balances and asset values are recalculated to your preferred currency.
                     </MudText>
 
@@ -128,7 +128,7 @@
 
                 <section class="settings-section" id="password">
                     <MudText Typo="Typo.h6">Password</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
                         Use at least 12 characters with a mix of letters, numbers, and symbols.
                     </MudText>
 
@@ -207,7 +207,7 @@
 
                 <section class="settings-section" id="danger">
                     <MudText Typo="Typo.h6" Color="Color.Error">Danger zone</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
                         Permanently delete this account and all associated financial data. This cannot be undone.
                     </MudText>
 

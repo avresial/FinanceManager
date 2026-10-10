@@ -20,7 +20,7 @@ else
                 <MudText Typo="Typo.h4" Color="Color.Warning">
                     @MoneyFormatter.Format(Model.MonthlyCost, Currency)
                 </MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">
                     across @Model.ActiveCount active subscriptions
                 </MudText>
             </MudPaper>
@@ -29,7 +29,7 @@ else
             <MudPaper Outlined Class="pa-4 h-100">
                 <MudText Typo="Typo.overline">Annual equivalent</MudText>
                 <MudText Typo="Typo.h4">@MoneyFormatter.Format(Model.AnnualCost, Currency)</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">based on detected cadence</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">based on detected cadence</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="12" sm="4">
@@ -38,7 +38,7 @@ else
                 <MudText Typo="Typo.h4" Color="@(Model.IncreaseCount > 0 ? Color.Warning : Color.Default)">
                     @Model.IncreaseCount
                 </MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">since the previous charge</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">since the previous charge</MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>

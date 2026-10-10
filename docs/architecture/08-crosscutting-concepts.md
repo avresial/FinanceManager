@@ -78,3 +78,13 @@ Configuration is composed from environment settings, secrets and options, with s
 Each layer wires its services through its composition extensions. Feature-oriented namespaces and folders group slices inside the established layers. Razor components use typed clients; Domain must stay independent of EF/ASP.NET, and browser projects must stay independent of Infrastructure. [Architecture tests](../../code/FinanceManager.Tests.Architecture/LayerDependencyTests.cs) enforce these constraints against compiled assemblies.
 
 Follow [coding conventions](concepts/coding-conventions.md), [testing guidance](quality/testing.md), [CLAUDE.md](../../CLAUDE.md) and the [documentation maintenance guide](maintenance.md) when evolving the system. Add a prospective ADR for significant boundary/consistency/deployment decisions; these reconstructed ADRs must not be mistaken for original design approvals.
+
+### Color usage
+
+The UI palette is defined in [`App.razor`](../../code/FinanceManager/App.razor); `Secondary` stays amber, close to `Primary`, so amber must signal "important or clickable".
+
+- **Accent (amber, `Primary`/`Secondary`):** actions (buttons, links), the selected/active state, and at most one key figure per card.
+- **Muted text:** descriptions, subtitles, footnotes, period labels, empty-state hints and their decorative icons use the `mud-text-secondary` class (`var(--mud-palette-text-secondary)`), not `Color.Secondary`.
+- **Semantic colors (`Success`, `Error`, `Warning`):** gains, losses and alerts only.
+
+Both themes must keep muted text readable; production renders dark, local sandboxes render light.
