@@ -90,15 +90,21 @@
     }
 }
 
-/* Subtle halo on the overlaid axis labels so they stay legible over the
-   gradient fill. The stroke is kept thin and theme-neutral so it only lifts
-   the text off the fill without thickening the glyphs into a heavy/bold look. */
+/* Axis labels are drawn above the series (wwwroot/js/chart-axis-labels.js), each with
+   a halo in the card surface colour so the line and fill pass behind it instead of
+   crossing the glyphs. paint-order keeps the halo under the text; the surface token
+   follows the light/dark theme. */
 .fm-tsvc-card .apexcharts-yaxis-texts-g text,
 .fm-tsvc-card .apexcharts-xaxis-texts-g text {
     paint-order: stroke;
-    stroke: rgba(128, 128, 128, 0.25);
-    stroke-width: 1px;
+    stroke: var(--mud-palette-surface);
+    stroke-width: 4px;
     stroke-linejoin: round;
+}
+
+/* The raised y-axis group sits over the plot; keep it from swallowing hover events. */
+.fm-tsvc-card .apexcharts-yaxis {
+    pointer-events: none;
 }
 
 /* The bottom y tick marks the empty gutter reserved for the x-axis labels
