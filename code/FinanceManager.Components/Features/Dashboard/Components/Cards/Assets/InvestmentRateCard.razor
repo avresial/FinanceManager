@@ -8,7 +8,7 @@
                                  AriaLabel="About investment rate card">
                     <MudText Typo="Typo.h6">Investment rate</MudText>
                 </CardInfoTooltip>
-                <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">Net investment purchases relative to salary.</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.body2">Net investment purchases relative to salary.</MudText>
             </div>
         </div>
 
@@ -20,7 +20,7 @@
         }
         else if (_hasError)
         {
-            <MudText Typo="Typo.body2" Color="MudBlazor.Color.Secondary">Investment rate unavailable.</MudText>
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">Investment rate unavailable.</MudText>
         }
         else
         {
@@ -36,20 +36,20 @@
                 {
                     @* No salary in the period means no denominator — say so instead of showing a misleading rate. *@
                     <div class="d-flex flex-column mr-auto">
-                        <MudText Typo="Typo.h5" Color="MudBlazor.Color.Secondary">No rate</MudText>
-                        <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">no salary this month</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.h5">No rate</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.caption">no salary this month</MudText>
                     </div>
                 }
                 <div class="d-none d-sm-flex flex-column align-end">
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">ON TRACK FOR</MudText>
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">ON TRACK FOR</MudText>
                     <MudText Typo="Typo.subtitle1">@FormatProjection()</MudText>
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">by year end</MudText>
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">by year end</MudText>
                 </div>
             </div>
 
             <div class="d-flex justify-space-between mb-1">
-                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">Monthly rate · last 12 months</MudText>
-                <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">Monthly rate · last 12 months</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
             </div>
             @* The chart is laid out in an absolutely positioned inner box so ApexCharts' 100% height
                resolves to the space left after the header and footer, instead of its 150px fallback
@@ -79,11 +79,11 @@
             <MudDivider Class="my-1" Style="flex-grow:0;" />
             <MudGrid Spacing="1">
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">@SelectedMonthName salary</MudText>
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">@SelectedMonthName salary</MudText>
                     <MudText Typo="Typo.body2">@FormatAmount(SelectedMonthRate?.Salary ?? 0)</MudText>
                 </MudItem>
                 <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="MudBlazor.Color.Secondary">@SelectedMonthName invested</MudText>
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">@SelectedMonthName invested</MudText>
                     <MudText Typo="Typo.body2"
                              Color="@(SelectedMonthRate?.InvestmentsChange > 0 ? MudBlazor.Color.Success : MudBlazor.Color.Default)">
                         @FormatChange(SelectedMonthRate?.InvestmentsChange ?? 0)

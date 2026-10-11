@@ -18,7 +18,7 @@ else
         }
 
         <MudText Typo="Typo.h5">External Service Keys</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <MudText Class="mud-text-secondary" Typo="Typo.body2">
             Configure API credentials for third-party integrations.
             Changes take effect immediately without redeployment.
             Keys set here override values from environment variables and <code>appsettings.json</code>.
@@ -42,7 +42,7 @@ else
                                                        ValueChanged="@(v => service.IsEnabled = v)"
                                                        Color="Color.Primary" />
                                         </MudStack>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@service.Description</MudText>
+                                        <MudText Class="mud-text-secondary" Typo="Typo.body2">@service.Description</MudText>
                                     </MudStack>
                                     <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-actions">
                                         <MudTooltip Text="Documentation">
@@ -112,7 +112,7 @@ else
         </MudGrid>
 
         <MudText Typo="Typo.h5" Class="mt-4">Maintenance API Key</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <MudText Class="mud-text-secondary" Typo="Typo.body2">
             Shared secret for scheduled maintenance calls (e.g. the weekly investment price backfill
             triggered from GitHub Actions). The key is stored hashed and shown only once — copy it into
             the <code>MAINTENANCE_API_KEY</code> repository secret right after generating.

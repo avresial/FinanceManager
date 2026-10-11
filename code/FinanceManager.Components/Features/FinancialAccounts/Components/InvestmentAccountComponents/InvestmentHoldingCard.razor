@@ -25,7 +25,7 @@
                         <div class="fm-holding-header">
                             <div class="fm-holding-title-group">
                                 <MudText Typo="Typo.subtitle2" Class="fm-holding-ticker">@holding.Ticker</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fm-holding-exchange">
+                                <MudText Typo="Typo.caption" Class="fm-holding-exchange mud-text-secondary">
                                     Exchange · @(string.IsNullOrWhiteSpace(holding.ExchangeName) ? "Not specified" : holding.ExchangeName)
                                 </MudText>
                             </div>
