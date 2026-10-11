@@ -55,7 +55,7 @@
     else if (_loadError is null && _page.Count == 0)
     {
         <MudPaper Outlined Class="pa-3">
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">
                 No log entries match the current filter.
             </MudText>
         </MudPaper>
@@ -71,11 +71,11 @@
                             <MudChip T="string" Size="Size.Small" Color="@LevelColor(entry.Level)" Variant="Variant.Filled" Class="ma-0">
                                 @entry.Level.ToString()
                             </MudChip>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">
                                 @entry.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                             </MudText>
                             <MudSpacer />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary"
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption"
                                      Style="overflow-wrap:anywhere;min-width:0">
                                 @entry.Category
                             </MudText>
@@ -116,7 +116,7 @@
     @if (_loadError is null)
     {
         <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="flex-wrap">
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Class="mud-text-secondary" Typo="Typo.caption">
                 Showing @FromDisplay()&ndash;@ToDisplay() of @_totalCount
             </MudText>
             <MudSpacer />

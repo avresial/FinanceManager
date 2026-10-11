@@ -18,7 +18,7 @@ else
         }
 
         <MudText Typo="Typo.h5">AI Providers</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <MudText Class="mud-text-secondary" Typo="Typo.body2">
             Configure the models and credentials used for AI features.
             Changes take effect immediately without redeployment.
             Values set here override environment variables and <code>appsettings.json</code>.
@@ -42,7 +42,7 @@ else
                                                        ValueChanged="@(v => provider.IsEnabled = v)"
                                                        Color="Color.Primary" />
                                         </MudStack>
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@provider.Description</MudText>
+                                        <MudText Class="mud-text-secondary" Typo="Typo.body2">@provider.Description</MudText>
                                     </MudStack>
                                     <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="fm-card-info-actions">
                                         <MudTooltip Text="Documentation">
@@ -106,7 +106,7 @@ else
                                         <MudStack Spacing="2">
                                             @if (provider.Models.Count == 0)
                                             {
-                                                <MudText Typo="Typo.body2" Color="Color.Secondary">No models configured.</MudText>
+                                                <MudText Class="mud-text-secondary" Typo="Typo.body2">No models configured.</MudText>
                                             }
                                             else
                                             {
@@ -177,7 +177,7 @@ else
 
         <MudText Typo="Typo.h5">Default Fallback Strategy</MudText>
 
-        <MudText Typo="Typo.body2" Color="Color.Secondary">
+        <MudText Class="mud-text-secondary" Typo="Typo.body2">
             Providers are tried in order. On failure or empty response the next entry is used.
             Entries referencing a disabled provider or model are grayed out and will be skipped at runtime.
         </MudText>

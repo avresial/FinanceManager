@@ -36,9 +36,9 @@ else
     @if (VisibleSubscriptions.Count == 0)
     {
         <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Large" Color="Color.Secondary" />
+            <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.Subscriptions" Size="Size.Large" />
             <MudText Typo="Typo.h6" Class="mt-2">No subscriptions to show</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">
                 Import more transaction history or show muted and cancelled items.
             </MudText>
         </MudPaper>
@@ -67,7 +67,7 @@ else
                                     }
                                     @if (item.IsMuted)
                                     {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">Muted</MudChip>
+                                        <MudChip T="string" Size="Size.Small">Muted</MudChip>
                                     }
                                     @if (item.PriceDelta > 0)
                                     {
@@ -101,23 +101,23 @@ else
 
                         <MudGrid Spacing="1">
                             <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Next expected</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption">Next expected</MudText>
                                 <MudText Typo="Typo.body1" Class="font-weight-600">
                                     @(item.IsCancelled ? "—" : DateFormatter.Format(item.NextExpectedChargeDate))
                                 </MudText>
                             </MudItem>
                             <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Last charge</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption">Last charge</MudText>
                                 <MudText Typo="Typo.body1" Class="font-weight-600">
                                     @MoneyFormatter.Format(item.LastAmount, Currency)
                                 </MudText>
                             </MudItem>
                             <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Monthly equivalent</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption">Monthly equivalent</MudText>
                                 <MudText Typo="Typo.body1">@MoneyFormatter.Format(item.MonthlyCost, Currency)</MudText>
                             </MudItem>
                             <MudItem xs="6">
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Annual cost</MudText>
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption">Annual cost</MudText>
                                 <MudText Typo="Typo.body1">@MoneyFormatter.Format(item.AnnualCost, Currency)</MudText>
                             </MudItem>
                         </MudGrid>

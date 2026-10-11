@@ -16,6 +16,7 @@ description: Reference for MudBlazor 9.x components used in FinanceManager. Cons
 - **Icons**: `Icons.Material.Filled.*`, `Icons.Material.Outlined.*`, `Icons.Material.Rounded.*`.
 - **Sizing enum values**: `Size.Small`, `Size.Medium`, `Size.Large`.
 - **Color enum values**: `Color.Default`, `Color.Primary`, `Color.Secondary`, `Color.Tertiary`, `Color.Success`, `Color.Warning`, `Color.Error`, `Color.Info`, `Color.Surface`, `Color.Inherit`.
+- **Color usage**: the amber accent (`Color.Primary`/`Color.Secondary`) is reserved for actions (buttons, links), the selected/active state, and at most one key figure per card. Descriptions, subtitles, footnotes, period labels and empty-state hints are muted text: use `Class="mud-text-secondary"` (or `var(--mud-palette-text-secondary)`), never `Color="Color.Secondary"`. `Color.Success`/`Error`/`Warning` are for gains, losses and alerts only.
 
 ---
 
