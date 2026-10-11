@@ -14,6 +14,8 @@ public partial class PortfolioReturnCardContainer
     private PortfolioReturnCardModel? _model;
     private Currency _currency = DefaultCurrency.PLN;
     private bool _isLoading;
+    private bool _hasError;
+    private AssetsPageCardsRefreshContext? _paintedContext;
 
     [Parameter] public string? Height { get; set; }
     [Parameter] public DateTime StartDateTime { get; set; }
@@ -37,14 +39,26 @@ public partial class PortfolioReturnCardContainer
         var version = _gate.Claim();
         var start = StartDateTime.Date;
         var end = EndDateTime;
-        _model = null;
-        _isLoading = true;
-        await RefreshingChanged.InvokeAsync(true);
+        _isLoading = _model is null;
+        _hasError = false;
         try
         {
+            await RefreshingChanged.InvokeAsync(true);
             var user = await LoginService.GetLoggedUser();
             var currency = await SettingsService.GetCurrencyAsync();
-            if (!_gate.IsCurrent(version) || user is null) return;
+            if (!_gate.IsCurrent(version)) return;
+            if (user is null)
+            {
+                _model = null;
+                _paintedContext = null;
+                return;
+            }
+            if (_paintedContext?.UserId != user.UserId || _paintedContext.CurrencyId != currency.Id)
+            {
+                _model = null;
+                _paintedContext = null;
+            }
+            _isLoading = _model is null;
             _currency = currency;
             var context = new AssetsPageCardsRefreshContext
             {
@@ -78,15 +92,26 @@ public partial class PortfolioReturnCardContainer
                     Model = model,
                     FetchedAtUtc = DateTime.UtcNow,
                 },
-                OnSnapshotPainted = Paint,
-                OnRefreshed = Paint,
+                OnSnapshotPainted = model => Paint(model, context),
+                OnRefreshed = model => Paint(model, context),
             });
-            if (_gate.IsCurrent(version) && result.IsBlockingFailure)
-                _model = fallback is null ? null : PortfolioReturnCardModel.FromSource(fallback);
+            if (_gate.IsCurrent(version))
+            {
+                _hasError = result.Error is not null;
+                if (_hasError && _model is null && fallback is not null)
+                {
+                    _model = PortfolioReturnCardModel.FromSource(fallback);
+                    _paintedContext = context;
+                }
+            }
         }
         catch (Exception exception)
         {
-            if (_gate.IsCurrent(version)) Logger.LogError(exception, "Could not load portfolio returns");
+            if (_gate.IsCurrent(version))
+            {
+                _hasError = true;
+                Logger.LogError(exception, "Could not load portfolio returns");
+            }
         }
         finally
         {
@@ -98,9 +123,10 @@ public partial class PortfolioReturnCardContainer
         }
     }
 
-    private Task Paint(PortfolioReturnCardModel model)
+    private Task Paint(PortfolioReturnCardModel model, AssetsPageCardsRefreshContext context)
     {
         _model = model;
+        _paintedContext = context;
         _isLoading = false;
         return InvokeAsync(StateHasChanged);
     }

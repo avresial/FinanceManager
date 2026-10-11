@@ -16,6 +16,8 @@ public partial class LiabilitiesTimeSeriesCard
     private bool _isLoading;
     private bool _hasError;
     private string _currency = "PLN";
+    private (int UserId, int CurrencyId)? _owner;
+    private bool _hasDisplayedModel;
 
     // Guards against a slower, earlier reload overwriting a newer date/currency selection: every
     // Reload claims an incrementing version and only commits its result if it is still the latest.
@@ -46,9 +48,9 @@ public partial class LiabilitiesTimeSeriesCard
         // Claimed here rather than inside the coordinator so the same version also guards the
         // logged-out branch below, which commits state before the run starts.
         var requestVersion = _gate.Claim();
-        await RefreshingChanged.InvokeAsync(true);
         try
         {
+            await RefreshingChanged.InvokeAsync(true);
             await LoadAsync(requestVersion);
         }
         finally
@@ -71,13 +73,23 @@ public partial class LiabilitiesTimeSeriesCard
             if (_gate.IsCurrent(requestVersion))
             {
                 ChartData = [];
+                _owner = null;
+                _hasDisplayedModel = false;
                 _isLoading = false;
                 StateHasChanged();
             }
             return;
         }
 
-        _currency = (await SettingsService.GetCurrencyAsync()).ShortName;
+        var currency = await SettingsService.GetCurrencyAsync();
+        if (!_gate.IsCurrent(requestVersion)) return;
+        if (_owner != (user.UserId, currency.Id))
+        {
+            ChartData = [];
+            _hasDisplayedModel = false;
+        }
+        _owner = (user.UserId, currency.Id);
+        _currency = currency.ShortName;
 
         var result = await SnapshotStore.RefreshTimeSeriesAsync(
             user.UserId,
@@ -94,7 +106,7 @@ public partial class LiabilitiesTimeSeriesCard
             onSnapshotPainted: ShowData,
             onSnapshotMissing: () =>
             {
-                _isLoading = true;
+                _isLoading = !_hasDisplayedModel;
                 StateHasChanged();
                 return Task.CompletedTask;
             },
@@ -103,14 +115,8 @@ public partial class LiabilitiesTimeSeriesCard
         if (!_gate.IsCurrent(requestVersion))
             return;
 
-        // A failed fetch behind a painted snapshot keeps the chart on screen; only a surface with
-        // nothing to show falls back to the error state.
-        if (result.IsBlockingFailure)
-        {
-            Logger.LogError(result.Error, "Error getting liabilities time series data");
-            ChartData = [];
-            _hasError = true;
-        }
+        _hasError = result.Error is not null;
+        if (_hasError) Logger.LogError(result.Error, "Error getting liabilities time series data");
 
         _isLoading = false;
         StateHasChanged();
@@ -119,6 +125,7 @@ public partial class LiabilitiesTimeSeriesCard
     private Task ShowData(TimeSeriesCardModel model)
     {
         ChartData = model.Series;
+        _hasDisplayedModel = true;
         _isLoading = false;
         StateHasChanged();
         return Task.CompletedTask;

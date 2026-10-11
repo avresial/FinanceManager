@@ -34,6 +34,10 @@ public partial class LiabilitiesPage : ComponentBase
         StateHasChanged();
     }
 
+    // Stable callbacks let indicator-only renders leave unchanged card parameters alone.
+    private Task SetHistoryRefreshing(bool refreshing) => SetCardRefreshing("liabilities-history", refreshing);
+    private Task SetDistributionRefreshing(bool refreshing) => SetCardRefreshing("liabilities-distribution", refreshing);
+
     private Task SetCardRefreshing(string cardId, bool refreshing)
     {
         if (refreshing) _refreshingCards.Add(cardId);

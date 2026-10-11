@@ -36,6 +36,15 @@
         </div>
     </div>
 
+    @if (HasError && Data.Count > 0)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">Couldn't load data
+            @if (OnRetry.HasDelegate)
+            {
+                <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
+            }
+        </MudAlert>
+    }
     @* ---------- Body: chart / loading / empty / error. Chart fills remaining space edge-to-edge. ---------- *@
     <div style="flex:1;min-height:0;position:relative;">
         @switch (State)

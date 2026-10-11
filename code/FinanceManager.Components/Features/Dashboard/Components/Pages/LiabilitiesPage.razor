@@ -19,11 +19,11 @@
             {
                 case "liabilities-history":
                     <LiabilitiesTimeSeriesCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
-                                               RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                                               RefreshingChanged="SetHistoryRefreshing" />
                     break;
                 case "liabilities-distribution":
                     <LiabilitiesDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
-                                                         RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                                                         RefreshingChanged="SetDistributionRefreshing" />
                     break;
             }
             </RefreshingCardFrame>

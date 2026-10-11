@@ -18,19 +18,19 @@
             {
                 case "assets-history":
                     <AssetsTimeSeriesCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
-                                                   RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                                                   RefreshingChanged="SetHistoryRefreshing" />
                     break;
                 case "assets-distribution":
                     <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
-                                                    RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                                                    RefreshingChanged="SetDistributionRefreshing" />
                     break;
                 case "portfolio-return":
-                    <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight"
-                                                  RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                    <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                  RefreshingChanged="SetPortfolioReturnRefreshing" />
                     break;
                 case "return-attribution":
-                    <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" FetchReturns="GetPortfolioReturns" Height="@DashboardCardGrid.CardHeight"
-                                                             RefreshingChanged="@(refreshing => SetCardRefreshing(cardId, refreshing))" />
+                    <PortfolioReturnAttributionCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                             RefreshingChanged="SetReturnAttributionRefreshing" />
                     break;
                 case "investment-paycheck":
                     <InvestmentPaycheckEstimatorCard Height="@DashboardCardGrid.CardHeight" />
