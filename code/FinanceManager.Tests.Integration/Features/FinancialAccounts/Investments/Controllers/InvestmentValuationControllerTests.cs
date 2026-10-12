@@ -32,6 +32,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     private static readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private static readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
 
+    protected override bool ReuseApplicationHost => false;
+
     protected override void ConfigureServices(IServiceCollection services)
     {
         _inflationIndexProvider.Reset();
