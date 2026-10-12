@@ -61,6 +61,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Show "Next 90 days" on its own line under the Cash flow forecast card title instead of wrapping "days" onto a separate line. #920
+- Show short, unbroken category labels on the Return attribution chart (Cash flows, Market, FX, Fees) instead of hyphenating the full names mid-word; hover a label to see its full name. #921
 - Show exactly one selected item in the Settings side menu: the item you clicked no longer stays highlighted after scrolling moves the selection, the selected item stands out more clearly, and the menu no longer slides under the app bar. #922
 - Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
