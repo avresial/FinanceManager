@@ -43,8 +43,11 @@ public class PortfolioReturnAttributionCardTests
         cut.WaitForAssertion(() => Assert.Equal(5, cut.FindAll("[data-testid='return-attribution-column']").Count));
         var categories = cut.FindAll("[data-testid='return-attribution-category']");
         Assert.Equal(
-            ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
+            ["FX", "Cash flows", "Fees", "Market", "End"],
             categories.Select(category => category.TextContent.Trim()));
+        Assert.Equal(
+            ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
+            categories.Select(category => category.GetAttribute("title")));
 
         var values = cut.FindAll("[data-testid='return-attribution-value']");
         Assert.Equal(
