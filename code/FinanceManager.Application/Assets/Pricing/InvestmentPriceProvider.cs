@@ -5,6 +5,7 @@ using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,8 @@ public class InvestmentPriceProvider(
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService,
     IMemoryCache cache,
-    ILogger<InvestmentPriceProvider> logger) : IInvestmentPriceProvider
+    ILogger<InvestmentPriceProvider> logger,
+    IGuestSessionAccessor? guestSessionAccessor = null) : IInvestmentPriceProvider
 {
     private const int _fetchLookbackDays = 7;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(60);
@@ -50,7 +52,11 @@ public class InvestmentPriceProvider(
         if (assetListingId <= 0) return InvestmentPriceResult.NotFound();
 
         // Cache-first: a hit must not depend on any repository I/O.
-        var cacheKey = $"INVEST_PRICE_{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{assetListingId}";
+        // Guest databases reuse listing ids but contain independently seeded quotes.
+        var cacheScope = guestSessionAccessor?.IsGuest == true
+            ? $"GUEST_{guestSessionAccessor.GuestUserId}_"
+            : string.Empty;
+        var cacheKey = $"INVEST_PRICE_{cacheScope}{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{assetListingId}";
         if (cache.TryGetValue(cacheKey, out decimal cached)) return InvestmentPriceResult.Success(cached);
 
         var listing = await listingRepository.Get(assetListingId, ct);
@@ -171,6 +177,11 @@ public class InvestmentPriceProvider(
             if (converted > 0)
                 series[date] = converted;
         }
+
+        // The closing value must use the same quote, cache scope and exact FX resolution as
+        // point valuation. A range may have carried FX after its provider budget was exhausted.
+        if (latestKnown is not null)
+            series[endDate] = await GetPricePerUnitAsync(assetListingId, targetCurrency, end, ct);
 
         return series;
     }
