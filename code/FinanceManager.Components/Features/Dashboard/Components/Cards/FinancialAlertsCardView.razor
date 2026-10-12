@@ -2,55 +2,29 @@
 @using FinanceManager.Components.Features.Alerts.Components
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
-    <MudPaper Class="d-flex flex-column px-4 pt-3 pb-1 flex-shrink-0" Elevation="0" data-testid="alert-card-header">
-        <div class="d-flex align-center justify-space-between gap-2 fm-card-info-header">
-            <div class="d-flex align-center gap-1" style="min-width:0;">
-                @if (SelectedAlert is not null)
-                {
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
-                                   Size="Size.Small"
-                                   OnClick="OnBack"
-                                   aria-label="Back to alerts" />
-                }
-                <CardInfoTooltip Text="Configured financial conditions that are currently triggered."
-                                 AriaLabel="About financial alerts card">
-                    <MudText Typo="Typo.h5" Class="text-truncate">
-                        @(SelectedAlert?.AlertTitle ?? "Alerts")
-                    </MudText>
-                </CardInfoTooltip>
-            </div>
+    <CardHeader Title="@(SelectedAlert?.AlertTitle ?? "Alerts")"
+                InfoText="Configured financial conditions that are currently triggered."
+                InfoAriaLabel="About financial alerts card"
+                Leading="@(SelectedAlert is null ? null : BackButton)"
+                Actions="@(SelectedAlert is null ? ManageAlertsButton : null)">
+        <SubtitleContent>
             @if (SelectedAlert is null)
             {
-                <MudTooltip Text="Manage alerts">
-                    <MudIconButton Href="Alerts"
-                                   Icon="@Icons.Material.Filled.Settings"
-                                   Color="Color.Primary"
-                                   Size="Size.Small"
-                                   aria-label="Manage alerts"
-                                   Class="flex-shrink-0" />
-                </MudTooltip>
+                @if (IsLoading)
+                {
+                    <StringSpinner CharactersCount="4" />
+                }
+                else if (ConfiguredCount > 0)
+                {
+                    @($"{Triggered.Count} triggered of {ConfiguredCount} configured")
+                }
             }
-        </div>
-        @if (SelectedAlert is null)
-        {
-            @if (IsLoading)
+            else
             {
-                <MudText Typo="Typo.subtitle1" Class="text-muted"><StringSpinner CharactersCount="4" /></MudText>
+                @($"{AlertPresentation.ComparisonDetail(SelectedAlert)} · {AlertPresentation.OccurrenceLabel(SelectedAlert)}")
             }
-            else if (ConfiguredCount > 0)
-            {
-                <MudText Typo="Typo.subtitle1" Class="text-muted">
-                    @Triggered.Count triggered of @ConfiguredCount configured
-                </MudText>
-            }
-        }
-        else
-        {
-            <MudText Typo="Typo.caption" Class="text-muted">
-                @AlertPresentation.ComparisonDetail(SelectedAlert) · @AlertPresentation.OccurrenceLabel(SelectedAlert)
-            </MudText>
-        }
-    </MudPaper>
+        </SubtitleContent>
+    </CardHeader>
 
     <MudPaper Class="flex-grow-1 overflow-auto d-flex flex-column" Style="min-height:0;" Elevation="0">
         @if (SelectedAlert is null)
@@ -170,3 +144,19 @@
         }
     </MudPaper>
 </MudCard>
+
+@code {
+    private RenderFragment BackButton => @<MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                                                         Size="Size.Small"
+                                                         OnClick="OnBack"
+                                                         aria-label="Back to alerts" />;
+
+    private RenderFragment ManageAlertsButton => @<MudTooltip Text="Manage alerts">
+        <MudIconButton Href="Alerts"
+                       Icon="@Icons.Material.Filled.Settings"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       aria-label="Manage alerts"
+                       Class="flex-shrink-0" />
+    </MudTooltip>;
+}

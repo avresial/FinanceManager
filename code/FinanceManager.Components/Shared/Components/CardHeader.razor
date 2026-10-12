@@ -1,0 +1,95 @@
+@* Shared header for dashboard-style cards (Dashboard, Assets, Liabilities). Every card gets the same
+   title typography, one muted context line, a right-aligned key figure and a right-aligned action slot.
+   The header never draws its own loading chrome, so RefreshingCardFrame's top bar stays the single
+   refresh indicator. *@
+<div class="@ResolvedClass" data-testid="card-header">
+    @if (Leading is not null)
+    {
+        <div class="fm-card-header-leading">@Leading</div>
+    }
+    <div class="fm-card-header-text">
+        @if (HasInfo)
+        {
+            <CardInfoTooltip Text="@(InfoText ?? string.Empty)"
+                             TooltipContent="InfoContent"
+                             TooltipClass="@InfoTooltipClass"
+                             Heading="@Title"
+                             AriaLabel="@(InfoAriaLabel ?? $"About {Title} card")">
+                <MudText Typo="Typo.h6" HtmlTag="h2" Class="fm-card-header-title">@Title</MudText>
+            </CardInfoTooltip>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" HtmlTag="h2" Class="fm-card-header-title" title="@Title">@Title</MudText>
+        }
+        @if (SubtitleContent is not null)
+        {
+            <div class="fm-card-header-subtitle">@SubtitleContent</div>
+        }
+        else if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <div class="fm-card-header-subtitle" title="@Subtitle">@Subtitle</div>
+        }
+    </div>
+    @if (KeyFigure is not null || Actions is not null)
+    {
+        <div class="fm-card-header-aside">
+            @if (KeyFigure is not null)
+            {
+                <div class="fm-card-header-figure">
+                    <div class="fm-card-header-figure-value">@KeyFigure</div>
+                    @if (KeyFigureBadge is not null)
+                    {
+                        <div class="fm-card-header-badge">@KeyFigureBadge</div>
+                    }
+                </div>
+            }
+            @if (Actions is not null)
+            {
+                <div class="fm-card-header-actions">@Actions</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Card title. Always one line; a long title truncates and stays readable in the info tooltip.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Plain-language explanation shown when the title is hovered or focused.</summary>
+    [Parameter] public string? InfoText { get; set; }
+
+    /// <summary>Rich tooltip body (e.g. a glossary). Replaces <see cref="InfoText"/> when set.</summary>
+    [Parameter] public RenderFragment? InfoContent { get; set; }
+
+    /// <summary>Extra classes for the tooltip surface (e.g. <c>fm-card-info-glossary</c>).</summary>
+    [Parameter] public string? InfoTooltipClass { get; set; }
+
+    /// <summary>Accessible label for the title trigger. Defaults to "About {Title} card".</summary>
+    [Parameter] public string? InfoAriaLabel { get; set; }
+
+    /// <summary>Optional control before the title, such as a back button in a drill-down view.</summary>
+    [Parameter] public RenderFragment? Leading { get; set; }
+
+    /// <summary>Optional muted context line under the title (period or scope, e.g. "Next 90 days").</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Markup variant of <see cref="Subtitle"/> (e.g. a loading spinner). Wins over <see cref="Subtitle"/>.</summary>
+    [Parameter] public RenderFragment? SubtitleContent { get; set; }
+
+    /// <summary>Optional right-aligned main number.</summary>
+    [Parameter] public RenderFragment? KeyFigure { get; set; }
+
+    /// <summary>Optional change badge shown under <see cref="KeyFigure"/>.</summary>
+    [Parameter] public RenderFragment? KeyFigureBadge { get; set; }
+
+    /// <summary>Optional right-aligned actions (icon button, compact toggle, "View all" link).</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>Extra classes for the header root, e.g. to adjust padding inside an already padded card.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private bool HasInfo => !string.IsNullOrWhiteSpace(InfoText) || InfoContent is not null;
+
+    private string ResolvedClass => string.IsNullOrWhiteSpace(Class) ? "fm-card-header" : $"fm-card-header {Class}";
+}

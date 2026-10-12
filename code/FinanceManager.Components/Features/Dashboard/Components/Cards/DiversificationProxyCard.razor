@@ -1,12 +1,8 @@
 <MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+    <CardHeader Title="Asset diversification"
+                InfoText="Based on the number of asset classes and unique holdings. This is not investment advice."
+                InfoAriaLabel="About asset diversification card" />
     <div class="diversification-card">
-        <div class="diversification-card__head d-flex align-center justify-space-between">
-            <CardInfoTooltip Text="Based on the number of asset classes and unique holdings. This is not investment advice."
-                             AriaLabel="About asset diversification card">
-                <span class="diversification-card__title">Asset diversification</span>
-            </CardInfoTooltip>
-        </div>
-
         @if (_isLoading)
         {
             <div class="diversification-card__center">

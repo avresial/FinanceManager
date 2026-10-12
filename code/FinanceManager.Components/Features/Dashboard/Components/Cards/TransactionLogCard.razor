@@ -2,14 +2,9 @@
 @using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 
 <MudCard Outlined Class="rounded-lg d-flex flex-column fm-txlog-card" Style="@($"height:{Height};")">
-    <MudCardHeader Class="py-2 flex-shrink-0">
-        <CardHeaderContent>
-            <CardInfoTooltip Text="Your latest transactions from all accounts, newest first."
-                             AriaLabel="About transaction log card">
-                <MudText Typo="Typo.h6" Class="fm-title">Transaction log</MudText>
-            </CardInfoTooltip>
-        </CardHeaderContent>
-    </MudCardHeader>
+    <CardHeader Title="Transaction log"
+                InfoText="Your latest transactions from all accounts, newest first."
+                InfoAriaLabel="About transaction log card" />
     <MudDivider Class="flex-grow-0" />
 
     <ScrollFadeArea Class="mud-card-content flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">

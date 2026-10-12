@@ -4,37 +4,31 @@
 
 <MudCard Outlined="true" Class="rounded-lg fm-tsvc-card" Style="@($"overflow:hidden;height:{Height};display:flex;flex-direction:column;")">
 
-    @* ---------- Header: title + caption (left), value + delta (right). Stacks on mobile. ---------- *@
-    <div class="fm-tsvc-header">
-        <div class="fm-tsvc-header-row fm-card-info-header">
-            <div class="fm-tsvc-left">
-                <CardInfoTooltip Text="@InfoText"
-                                 AriaLabel="@($"About {Title} card")">
-                    <MudText Typo="Typo.h5" Class="fm-tsvc-title">@Title</MudText>
-                </CardInfoTooltip>
-                <span class="fm-tsvc-caption">@CaptionText</span>
-            </div>
-
+    <CardHeader Title="@Title"
+                InfoText="@InfoText"
+                InfoAriaLabel="@($"About {Title} card")"
+                Subtitle="@CaptionText">
+        <KeyFigure>
             @if (State == LoadState.Loading)
             {
                 <div class="fm-tsvc-shimmer"></div>
             }
             else if (State == LoadState.Ready)
             {
-                <div class="fm-tsvc-right">
-                    <span class="fm-tsvc-value">@FormatMoney(HeaderValue)</span>
-                    @if (ShowDelta)
-                    {
-                        <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
-                    }
-                </div>
+                <span class="fm-tsvc-value">@FormatMoney(HeaderValue)</span>
             }
             else
             {
                 <span class="fm-tsvc-value fm-tsvc-value--muted">&mdash;</span>
             }
-        </div>
-    </div>
+        </KeyFigure>
+        <KeyFigureBadge>
+            @if (State == LoadState.Ready && ShowDelta)
+            {
+                <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
+            }
+        </KeyFigureBadge>
+    </CardHeader>
 
     @if (HasError && Data.Count > 0)
     {

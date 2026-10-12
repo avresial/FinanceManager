@@ -1,27 +1,21 @@
 @using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 
 <MudCard Outlined Class="fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
-    <MudCardContent Class="fee-drag-card__content d-flex flex-column flex-grow-1">
-        <div class="fee-drag-card__header">
-            <CardInfoTooltip Text="How ETF total expense ratios reduce annual investment returns and compound into long-term cost."
-                             AriaLabel="About ETF fee drag card"
-                             TooltipClass="fm-card-info-glossary">
-                <ChildContent>
-                    <MudText Typo="Typo.h6">ETF fee drag</MudText>
-                </ChildContent>
-                <TooltipContent>
-                    <div class="fm-card-info-glossary-head">Understanding ETF fee drag</div>
-                    <dl>
-                        <dt>Annual fee cost</dt>
-                        <dd>The estimated yearly cost of the expense ratios on your current ETF holdings.</dd>
-                        <dt>Compound drag</dt>
-                        <dd>Fees reduce the amount that can compound over time. Adjust the assumed return to explore different outcomes.</dd>
-                    </dl>
-                </TooltipContent>
-            </CardInfoTooltip>
-            <MudText Class="mud-text-secondary" Typo="Typo.body2">Estimated cost of ETF expense ratios</MudText>
-        </div>
-
+    <CardHeader Title="ETF fee drag"
+                InfoAriaLabel="About ETF fee drag card"
+                InfoTooltipClass="fm-card-info-glossary"
+                Subtitle="Estimated cost of ETF expense ratios">
+        <InfoContent>
+            <div class="fm-card-info-glossary-head">Understanding ETF fee drag</div>
+            <dl>
+                <dt>Annual fee cost</dt>
+                <dd>The estimated yearly cost of the expense ratios on your current ETF holdings.</dd>
+                <dt>Compound drag</dt>
+                <dd>Fees reduce the amount that can compound over time. Adjust the assumed return to explore different outcomes.</dd>
+            </dl>
+        </InfoContent>
+    </CardHeader>
+    <MudCardContent Class="fee-drag-card__content d-flex flex-column flex-grow-1 pt-0">
         @if (_isLoading)
         {
             <div class="fee-drag-card__state" data-testid="fee-drag-loading">

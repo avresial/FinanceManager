@@ -39,6 +39,12 @@ public partial class CardInfoTooltip
     /// <summary>Extra CSS classes for the tooltip surface (e.g. sizing for a rich glossary).</summary>
     [Parameter] public string? TooltipClass { get; set; }
 
+    /// <summary>
+    /// Tooltip heading. Defaults to "About this card"; shared card headers pass the card title so a
+    /// truncated title can still be read in full.
+    /// </summary>
+    [Parameter] public string? Heading { get; set; }
+
     private string ResolvedAriaLabel => string.IsNullOrWhiteSpace(AriaLabel) ? "About this card" : AriaLabel!;
 
     private string ResolvedTooltipClass => string.IsNullOrWhiteSpace(TooltipClass)
@@ -53,7 +59,7 @@ public partial class CardInfoTooltip
 
         builder.OpenElement(sequence++, "div");
         builder.AddAttribute(sequence++, "class", "fm-card-info-tooltip-kicker");
-        builder.AddContent(sequence++, "About this card");
+        builder.AddContent(sequence++, string.IsNullOrWhiteSpace(Heading) ? "About this card" : Heading);
         builder.CloseElement();
 
         if (TooltipContent is null)

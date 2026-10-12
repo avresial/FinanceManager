@@ -4,27 +4,23 @@
 @using FinanceManager.Domain.Shared.Charting
 
 <MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex fm-card-info-header gap-2 pa-3 pb-0 flex-shrink-0" Elevation="0">
-        <div class="ld-header-text">
-            <CardInfoTooltip Text="How your liabilities split across accounts or types."
-                             AriaLabel="About liabilities distribution card">
-                <MudText Typo="Typo.h5">Liabilities distribution</MudText>
-            </CardInfoTooltip>
+    <CardHeader Title="Liabilities distribution"
+                InfoText="How your liabilities split across accounts or types."
+                InfoAriaLabel="About liabilities distribution card">
+        <KeyFigure>
             @if (IsLoading)
             {
-                <MudText Typo="Typo.h6" Class="text-muted">
-                    <StringSpinner CharactersCount="4" />
-                </MudText>
+                <StringSpinner CharactersCount="4" />
             }
             else if (TotalLiabilities != 0)
             {
-                <MudText Class="fm-card-total">@MoneyFormatter.Format(TotalLiabilities, CurrencyShortName)</MudText>
+                <span class="fm-card-total">@MoneyFormatter.Format(TotalLiabilities, CurrencyShortName)</span>
             }
-        </div>
-        <div class="fm-card-info-actions">
+        </KeyFigure>
+        <Actions>
             <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
-        </div>
-    </MudPaper>
+        </Actions>
+    </CardHeader>
 
     @if (HasError)
     {

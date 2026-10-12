@@ -68,6 +68,13 @@ public class CardInfoAffordanceCoverageTests
 
         foreach (var file in razorFiles)
         {
+            var relativePath = Path.GetRelativePath(componentsRoot, file);
+            // CardHeader is the shared host of the tooltip, not a card surface itself.
+            if (relativePath == Path.Combine("Shared", "Components", "CardHeader.razor"))
+            {
+                continue;
+            }
+
             var text = File.ReadAllText(file);
             var coverage = AnalyzeCardCoverage(text);
             var relative = Path.GetRelativePath(componentsRoot, file);
@@ -115,7 +122,9 @@ public class CardInfoAffordanceCoverageTests
                 continue;
             }
 
-            if (token.Value.StartsWith("<CardInfoTooltip", StringComparison.Ordinal))
+            // CardHeader hosts the CardInfoTooltip around its title, so it counts as the card's affordance.
+            if (token.Value.StartsWith("<CardInfoTooltip", StringComparison.Ordinal)
+                || token.Value.StartsWith("<CardHeader", StringComparison.Ordinal))
             {
                 tooltipTotal++;
                 if (openCards.TryPeek(out var card))
@@ -186,7 +195,7 @@ public class CardInfoAffordanceCoverageTests
     }
 
     private static readonly Regex _cardMarkupTokenPattern = new(
-        @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])",
+        @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])|<CardHeader(?=[\s>/])",
         RegexOptions.Compiled);
 
     private static readonly Regex _commentPattern = new(

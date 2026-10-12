@@ -6,13 +6,11 @@
          @onfocusin="OnFocusIn" @onfocusout="OnFocusOut">
 
         @* ---- Header ---- *@
-        <div class="ins-head">
-            <CardInfoTooltip Text="Short AI-generated insights about your recent finances."
-                             AriaLabel="About insights card">
-                <span class="ins-eyebrow">Insights</span>
-            </CardInfoTooltip>
-            <span class="ins-spacer"></span>
-            <div class="fm-card-info-actions">
+        <CardHeader Title="Insights"
+                    InfoText="Short AI-generated insights about your recent finances."
+                    InfoAriaLabel="About insights card"
+                    Class="pb-0">
+            <Actions>
                 @if (!IsLoading && CurrentInsight is not null)
                 {
                     <span class="ins-time">@GetRelativeTime(CurrentInsight.CreatedAt)</span>
@@ -21,8 +19,8 @@
                     <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Style="font-size:12px;line-height:1" />
                     AI
                 </span>
-            </div>
-        </div>
+            </Actions>
+        </CardHeader>
 
         @* ---- Story progress bar (carousel mode only) ---- *@
         @if (!IsLoading && _insights.Count > 1)

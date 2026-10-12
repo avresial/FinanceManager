@@ -3,14 +3,11 @@
 @using System.Globalization
 
 <MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};overflow-y:auto;")" data-testid="return-attribution-card">
-    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
-        <div class="attribution-heading">
-            <CardInfoTooltip Text="Explains the selected portfolio value change using external cash movement, known fees, currency translation, and the remaining investment effect."
-                             AriaLabel="About return attribution">
-                <MudText Typo="Typo.h6">Return attribution</MudText>
-            </CardInfoTooltip>
-            <span class="attribution-range">@RangeText</span>
-        </div>
+    <CardHeader Title="Return attribution"
+                InfoText="Explains the selected portfolio value change using external cash movement, known fees, currency translation, and the remaining investment effect."
+                InfoAriaLabel="About return attribution"
+                Subtitle="@RangeText" />
+    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4 pt-1">
         <div class="attribution-helper">
             Why the portfolio changed over the selected range.
         </div>

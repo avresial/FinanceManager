@@ -1,11 +1,3 @@
-.portfolio-return-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-}
-
 ::deep .portfolio-return-muted {
     color: var(--mud-palette-text-secondary);
 }

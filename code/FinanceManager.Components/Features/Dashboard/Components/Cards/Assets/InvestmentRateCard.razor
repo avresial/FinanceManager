@@ -1,17 +1,11 @@
 @using ApexCharts
 
 <MudCard Outlined Class="rounded-lg d-flex flex-column investment-rate-card" Style="@($"height:{Height};overflow:hidden;")">
-    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4" Style="min-height:0;">
-        <div class="mb-2">
-            <div>
-                <CardInfoTooltip Text="What share of your salary you invest each month, and where the year is heading."
-                                 AriaLabel="About investment rate card">
-                    <MudText Typo="Typo.h6">Investment rate</MudText>
-                </CardInfoTooltip>
-                <MudText Class="mud-text-secondary" Typo="Typo.body2">Net investment purchases relative to salary.</MudText>
-            </div>
-        </div>
-
+    <CardHeader Title="Investment rate"
+                InfoText="What share of your salary you invest each month, and where the year is heading."
+                InfoAriaLabel="About investment rate card"
+                Subtitle="Net investment purchases relative to salary." />
+    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4 pt-1" Style="min-height:0;">
         @if (_isLoading)
         {
             <MudText Typo="Typo.h3" Class="mb-1 text-muted">
