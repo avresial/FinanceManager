@@ -61,6 +61,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Show the selected dates (for example "12 Sep – 12 Oct") in the date range control on phones instead of "Custom range". #924
+- Show exactly one selected item in the Settings side menu: the item you clicked no longer stays highlighted after scrolling moves the selection, the selected item stands out more clearly, and the menu no longer slides under the app bar. #922
 - Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
 - Keep the Investment rate footer inside its card, stop Return attribution labels breaking mid-word, keep the Asset diversification hint visible on phones, and centre the legend on single-category distribution cards. #884
