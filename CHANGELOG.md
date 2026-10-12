@@ -60,6 +60,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Show storage usage on the Settings page for every signed-in user, including the demo account, instead of failing with an access error that only administrators avoided. #923
 - Show short, unbroken category labels on the Return attribution chart (Cash flows, Market, FX, Fees) instead of hyphenating the full names mid-word; hover a label to see its full name. #921
 - Show exactly one selected item in the Settings side menu: the item you clicked no longer stays highlighted after scrolling moves the selection, the selected item stands out more clearly, and the menu no longer slides under the app bar. #922
 - Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
