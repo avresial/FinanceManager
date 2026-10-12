@@ -101,7 +101,7 @@ public class AssetsTimeSeriesCardContainerTests
         cut.WaitForAssertion(() =>
         {
             Assert.False(View(cut).IsLoading);
-            Assert.Equal(!stored, View(cut).HasError);
+            Assert.True(View(cut).HasError);
             if (stored) Assert.Equal(10, View(cut).Model!.Series.Single().Value);
             else Assert.Null(View(cut).Model);
         });

@@ -83,7 +83,7 @@ public partial class TimeSeriesValueCard
 
     private LoadState State =>
         IsLoading ? LoadState.Loading
-        : HasError ? LoadState.Error
+        : HasError && Data.Count == 0 ? LoadState.Error
         : Data.Count == 0 ? LoadState.Empty
         : LoadState.Ready;
 

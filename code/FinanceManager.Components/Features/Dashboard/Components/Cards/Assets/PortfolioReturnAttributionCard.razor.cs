@@ -43,12 +43,14 @@ public partial class PortfolioReturnAttributionCard
             if (Model is null)
                 return [];
 
-            var components = new (string Label, decimal Value)[]
+            // The axis shows a short label because the columns are too narrow for the full name;
+            // the full name stays in the category tooltip and the chart's accessible summary. #921
+            var components = new (string Label, string ShortLabel, decimal Value)[]
             {
-                ("External cash movement", Model.ExternalCashMovement ?? 0m),
-                ("Market / valuation effect", Model.MarketEffect ?? 0m),
-                ("FX effect", Model.FxEffect ?? 0m),
-                ("Known transaction fees", Model.FeeEffect ?? 0m),
+                ("External cash movement", "Cash flows", Model.ExternalCashMovement ?? 0m),
+                ("Market / valuation effect", "Market", Model.MarketEffect ?? 0m),
+                ("FX effect", "FX", Model.FxEffect ?? 0m),
+                ("Known transaction fees", "Fees", Model.FeeEffect ?? 0m),
             };
 
             var steps = new List<AttributionStep>(components.Length);
@@ -57,7 +59,7 @@ public partial class PortfolioReturnAttributionCard
             {
                 var start = runningTotal;
                 runningTotal += component.Value;
-                steps.Add(new(component.Label, component.Value, start, runningTotal));
+                steps.Add(new(component.Label, component.ShortLabel, component.Value, start, runningTotal));
             }
 
             return steps;
@@ -69,11 +71,11 @@ public partial class PortfolioReturnAttributionCard
         get
         {
             var columns = AttributionSteps
-                .Select(step => new AttributionColumn(step.Label, step.Value, step.Start, step.End, false))
+                .Select(step => new AttributionColumn(step.Label, step.ShortLabel, step.Value, step.Start, step.End, false))
                 .ToList();
 
             if (Model?.TotalChange is decimal totalChange)
-                columns.Add(new("End", totalChange, 0m, totalChange, true));
+                columns.Add(new("End", "End", totalChange, 0m, totalChange, true));
 
             return columns;
         }
@@ -190,9 +192,9 @@ public partial class PortfolioReturnAttributionCard
         return MoneyFormatter.FormatSigned(amount, Currency.ShortName);
     }
 
-    private sealed record AttributionStep(string Label, decimal Value, decimal Start, decimal End);
+    private sealed record AttributionStep(string Label, string ShortLabel, decimal Value, decimal Start, decimal End);
 
-    private sealed record AttributionColumn(string Label, decimal Value, decimal Start, decimal End, bool IsTotal);
+    private sealed record AttributionColumn(string Label, string ShortLabel, decimal Value, decimal Start, decimal End, bool IsTotal);
 
     private sealed record ChartAxisScale(decimal Minimum, decimal Maximum, decimal Interval);
 }

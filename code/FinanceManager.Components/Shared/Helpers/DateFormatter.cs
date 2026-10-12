@@ -61,4 +61,21 @@ public static class DateFormatter
 
         return $"{Format(start)}{_rangeSeparator}{Format(end)}";
     }
+
+    /// <summary>
+    /// Range without the year for tight spaces, e.g. <c>12 Sep – 12 Oct</c>, <c>4–20 Oct</c>. Keeps the years
+    /// when the range crosses a year boundary, because dropping them would make it ambiguous.
+    /// </summary>
+    public static string FormatCompactRange(DateTime start, DateTime end)
+    {
+        var startDate = DateOnly.FromDateTime(start);
+        var endDate = DateOnly.FromDateTime(end);
+        if (startDate.Year != endDate.Year) return FormatRange(startDate, endDate);
+        if (startDate == endDate) return FormatDayMonth(endDate);
+
+        if (startDate.Month == endDate.Month)
+            return $"{startDate.Day.ToString(Culture)}–{FormatDayMonth(endDate)}";
+
+        return $"{FormatDayMonth(startDate)}{_rangeSeparator}{FormatDayMonth(endDate)}";
+    }
 }

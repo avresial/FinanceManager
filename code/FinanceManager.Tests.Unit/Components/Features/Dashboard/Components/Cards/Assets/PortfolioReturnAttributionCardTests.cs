@@ -43,8 +43,11 @@ public class PortfolioReturnAttributionCardTests
         cut.WaitForAssertion(() => Assert.Equal(5, cut.FindAll("[data-testid='return-attribution-column']").Count));
         var categories = cut.FindAll("[data-testid='return-attribution-category']");
         Assert.Equal(
-            ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
+            ["FX", "Cash flows", "Fees", "Market", "End"],
             categories.Select(category => category.TextContent.Trim()));
+        Assert.Equal(
+            ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
+            categories.Select(category => category.GetAttribute("title")));
 
         var values = cut.FindAll("[data-testid='return-attribution-value']");
         Assert.Equal(
@@ -114,6 +117,21 @@ public class PortfolioReturnAttributionCardTests
             It.Is<PortfolioReturnAttributionCardSnapshot>(snapshot => snapshot.Model!.TotalChange == 200m)), Times.Once));
     }
 
+    [Fact]
+    public async Task RefreshStartCallbackFailure_StillClearsIndicator()
+    {
+        await using var context = CreateContext(new QueuedAssetsHandler());
+        var refreshing = new List<bool>();
+        context.Render<PortfolioReturnAttributionCardContainer>(p => p
+            .Add(x => x.StartDateTime, new DateTime(2026, 8, 1))
+            .Add(x => x.RefreshingChanged, value =>
+            {
+                refreshing.Add(value);
+                if (value) throw new InvalidOperationException("Callback failed");
+            }));
+        Assert.Equal([true, false], refreshing);
+    }
+
     private static readonly DateTime _start = new(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = _start.AddDays(6);
     private static readonly string _key = $"portfolio-return-attribution:1:{DefaultCurrency.PLN.Id}";
@@ -151,7 +169,7 @@ public class PortfolioReturnAttributionCardTests
             "unavailable" => "Attribution unavailable",
             _ => Amount(150m),
         }, cut.Markup));
-        Assert.DoesNotContain("Could not load return attribution", cut.Markup);
+        Assert.Equal(outcome == "failure", cut.Markup.Contains("Could not load return attribution", StringComparison.Ordinal));
         cut.WaitForAssertion(() => snapshots.Verify(service => service.SetAsync(_key,
             It.IsAny<PortfolioReturnAttributionCardSnapshot>()), changed ? Times.Once : Times.Never));
         snapshots.Verify(service => service.SetAsync(It.IsAny<string>(), It.IsAny<PortfolioReturnCardSnapshot>()), Times.Never);

@@ -15,7 +15,7 @@
                            OnClick="@(() => OnMenuOpenChanged(!_isMenuOpen))" aria-label="@($"Date range: {CurrentDisplayLabel}")"
                            aria-haspopup="menu" aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
                     <span class="fm-range-label">@CurrentDisplayLabel</span>
-                    <span class="fm-range-label-compact">@(_selected == DateRangeHelper.CustomRangeKey ? "Custom range" : CurrentDisplayLabel)</span>
+                    <span class="fm-range-label-compact">@CompactDisplayLabel</span>
                 </MudButton>
             </ActivatorContent>
             <ChildContent>
@@ -71,6 +71,14 @@
             DateFormatter.FormatRange(start, end),
         DateRangeHelper.CustomRangeKey => "Custom range",
         _ => _presets.FirstOrDefault(preset => preset.Key == _selected).Label ?? "Select range"
+    };
+
+    // Phones hide the full label; a custom range keeps its dates in a shorter, year-less form. #924
+    private string CompactDisplayLabel => _selected switch
+    {
+        DateRangeHelper.CustomRangeKey when _customRange is { Start: DateTime start, End: DateTime end } =>
+            DateFormatter.FormatCompactRange(start, end),
+        _ => CurrentDisplayLabel
     };
 
     protected override void OnInitialized()

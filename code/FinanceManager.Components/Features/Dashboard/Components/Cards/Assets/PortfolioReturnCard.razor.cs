@@ -15,6 +15,7 @@ public partial class PortfolioReturnCard
     [Parameter] public PortfolioReturnCardModel? Model { get; set; }
     [Parameter] public Currency Currency { get; set; } = DefaultCurrency.PLN;
     [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
     [Parameter] public EventCallback Retry { get; set; }
 
     private MoneyWeightedReturnResult? MoneyWeightedReturn => Model?.MoneyWeightedStatus is MoneyWeightedReturnStatus status ? new(Model.AnnualizedReturn, status, StartDateTime, EndDateTime) : null;

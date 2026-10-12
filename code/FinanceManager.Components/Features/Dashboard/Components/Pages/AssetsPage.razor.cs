@@ -1,5 +1,4 @@
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Shared.Helpers;
 using Microsoft.AspNetCore.Components;
 
@@ -18,22 +17,8 @@ public partial class AssetsPage : ComponentBase
         new("diversification", "Diversification", new(6, 6)),
         new("fee-drag", "ETF fee drag", new(6, 6)),
     ];
-    private AssetsPageCardsRefreshContext? _returnsContext;
-    private Task<PortfolioReturnSourceModel>? _returnsRequest;
-    [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
-
-    private Task<PortfolioReturnSourceModel> GetPortfolioReturns(AssetsPageCardsRefreshContext context)
-    {
-        if (_returnsRequest is null || _returnsContext?.UserId != context.UserId
-            || _returnsContext.CurrencyId != context.CurrencyId
-            || _returnsContext.StartDateTime != context.StartDateTime
-            || _returnsContext.EndDateTime != context.EndDateTime)
-        {
-            _returnsContext = context;
-            _returnsRequest = AssetsCache.GetFreshReturnsAsync(context);
-        }
-        return _returnsRequest;
-    }
+    // Cards whose reload for the selected range is in flight; their frames show the refresh indicator.
+    private readonly HashSet<string> _refreshingCards = [];
 
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
@@ -51,9 +36,22 @@ public partial class AssetsPage : ComponentBase
 
     public void DateChanged((DateTime Start, DateTime End) changed)
     {
-        _returnsRequest = null;
         StartDate = changed.Start;
         EndDate = changed.End;
         StateHasChanged();
+    }
+
+    // Stable callbacks let indicator-only renders leave unchanged card parameters alone.
+    private Task SetHistoryRefreshing(bool refreshing) => SetCardRefreshing("assets-history", refreshing);
+    private Task SetDistributionRefreshing(bool refreshing) => SetCardRefreshing("assets-distribution", refreshing);
+    private Task SetPortfolioReturnRefreshing(bool refreshing) => SetCardRefreshing("portfolio-return", refreshing);
+    private Task SetReturnAttributionRefreshing(bool refreshing) => SetCardRefreshing("return-attribution", refreshing);
+
+    private Task SetCardRefreshing(string cardId, bool refreshing)
+    {
+        if (refreshing) _refreshingCards.Add(cardId);
+        else _refreshingCards.Remove(cardId);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

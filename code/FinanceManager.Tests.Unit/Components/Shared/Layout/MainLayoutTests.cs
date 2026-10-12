@@ -1,5 +1,4 @@
 using Bunit;
-using FinanceManager.Components;
 using FinanceManager.Components.Shared.Layout;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +14,7 @@ public class MainLayoutTests
     [Theory]
     [InlineData(Breakpoint.Lg)]
     [InlineData(Breakpoint.Xs)]
-    public async Task Version_IsBelowAccountActions_OnlyInOpenDrawer(Breakpoint breakpoint)
+    public async Task Drawer_HasNoStandaloneVersionLabel_AtDesktopAndMobileBreakpoints(Breakpoint breakpoint)
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -41,15 +40,12 @@ public class MainLayoutTests
             cut.Find("[aria-label='Toggle navigation menu']").Click();
         }
 
-        var label = cut.Find("aside [data-testid='app-version']");
-        Assert.Equal(ApplicationVersion.Version, label.TextContent);
-        Assert.True(cut.Markup.IndexOf("nav-logout", StringComparison.Ordinal) <
-                    cut.Markup.IndexOf("app-version", StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[data-testid='app-version']"));
         Assert.Equal(mobile ? DrawerVariant.Temporary : DrawerVariant.Mini, cut.FindComponent<MudDrawer>().Instance.Variant);
 
         cut.Find("[aria-label='Toggle navigation menu']").Click();
         Assert.Empty(cut.FindAll("[data-testid='app-version']"));
         cut.Find("[aria-label='Toggle navigation menu']").Click();
-        Assert.Single(cut.FindAll("aside [data-testid='app-version']"));
+        Assert.Empty(cut.FindAll("[data-testid='app-version']"));
     }
 }

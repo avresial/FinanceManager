@@ -31,10 +31,6 @@
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings" data-testid="nav-settings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut data-testid="nav-logout">Log out</MudNavLink>
                 </MudNavMenu>
-                @if (_drawerOpen)
-                {
-                    <AppVersionLabel />
-                }
             </MudDrawer>
 
             <MudMainContent>

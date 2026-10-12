@@ -16,6 +16,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
 {
     private readonly RefreshVersionGate _gate = new();
     private bool _isLoading;
+    private bool _isRefreshing;
     private bool _hasError;
     private bool _hasDisplayedModel;
     private (int UserId, int CurrencyId, DateTime StartDate, DateTime EndDate)? _displayScope;
@@ -30,6 +31,9 @@ public partial class AssetsDistributionOverviewCard : IDisposable
     // When the dashboard supplies a prepared model the card renders it directly;
     // otherwise it hydrates its own snapshot and always refreshes.
     [Parameter] public DistributionCardModel? Model { get; set; }
+
+    // Reports whether a self-load for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ILogger<AssetsDistributionOverviewCard> Logger { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
@@ -55,6 +59,8 @@ public partial class AssetsDistributionOverviewCard : IDisposable
                 return;
             }
 
+            _isRefreshing = true;
+            await RefreshingChanged.InvokeAsync(true);
             var user = await LoginService.GetLoggedUser();
             if (!_gate.IsCurrent(version)) return;
             if (user is null)
@@ -67,10 +73,10 @@ public partial class AssetsDistributionOverviewCard : IDisposable
             }
 
             var scope = (user.UserId, currency.Id, start, end.Date);
-            var sameScope = _displayScope == scope && _hasDisplayedModel;
+            var sameOwner = _displayScope?.UserId == user.UserId && _displayScope?.CurrencyId == currency.Id && _hasDisplayedModel;
             _currency = currency;
             _hasError = false;
-            if (!sameScope)
+            if (!sameOwner)
             {
                 _displayScope = scope;
                 _hasDisplayedModel = false;
@@ -108,7 +114,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
                 OnSnapshotPainted = model => ShowData(model, scope),
                 OnSnapshotMissing = () =>
                 {
-                    if (!sameScope)
+                    if (!sameOwner)
                     {
                         _typeData = [];
                         _walletData = [];
@@ -120,7 +126,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
                 OnRefreshed = model => ShowData(model, scope),
             });
             if (!_gate.IsCurrent(version)) return;
-            _hasError = result.IsBlockingFailure && !_hasDisplayedModel;
+            _hasError = result.Error is not null;
             _isLoading = false;
         }
         catch (Exception ex)
@@ -129,6 +135,15 @@ public partial class AssetsDistributionOverviewCard : IDisposable
             _hasError = true;
             _isLoading = false;
             Logger.LogError(ex, "Error resolving assets distribution context");
+        }
+        finally
+        {
+            // A superseded self-load leaves the flag alone: the newer one owns it now.
+            if (_gate.IsCurrent(version) && _isRefreshing)
+            {
+                _isRefreshing = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
         }
     }
 

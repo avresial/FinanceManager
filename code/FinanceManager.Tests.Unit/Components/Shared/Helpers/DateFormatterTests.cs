@@ -28,6 +28,16 @@ public class DateFormatterTests
         Assert.Equal(expected, DateFormatter.FormatRange(DateOnly.Parse(start, CultureInfo.InvariantCulture), DateOnly.Parse(end, CultureInfo.InvariantCulture)));
     }
 
+    [Theory]
+    [InlineData("2026-10-04", "2026-10-04", "4 Oct")]
+    [InlineData("2026-10-04", "2026-10-20", "4–20 Oct")]
+    [InlineData("2026-09-12", "2026-10-12", "12 Sep – 12 Oct")]
+    [InlineData("2025-12-30", "2026-01-02", "30 Dec 2025 – 2 Jan 2026")]
+    public void FormatCompactRange_DropsYearUnlessRangeCrossesYears(string start, string end, string expected)
+    {
+        Assert.Equal(expected, DateFormatter.FormatCompactRange(DateTime.Parse(start, CultureInfo.InvariantCulture), DateTime.Parse(end, CultureInfo.InvariantCulture)));
+    }
+
     [Fact]
     public void Format_IgnoresCurrentCulture_AndNeverOutputsNumericDayMonth()
     {
