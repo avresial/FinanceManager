@@ -215,10 +215,9 @@
     color: var(--mud-palette-text-secondary);
     font-size: 0.64rem;
     line-height: 1.05;
-    /* Break between words, hyphenating only a word too long for its column;
-       overflow-wrap:anywhere split labels mid-word ("movemen t"). */
-    overflow-wrap: break-word;
-    hyphens: auto;
+    /* Labels are short enough to fit; wrap only between words and never hyphenate. #921 */
+    overflow-wrap: normal;
+    hyphens: manual;
     text-align: center;
 }
 

@@ -76,7 +76,8 @@
                     @foreach (var column in columns)
                     {
                         <span class="attribution-category @(column.IsTotal ? "total" : null)"
-                              data-testid="return-attribution-category">@column.Label</span>
+                              title="@column.Label"
+                              data-testid="return-attribution-category">@column.ShortLabel</span>
                     }
                 </div>
             </div>
