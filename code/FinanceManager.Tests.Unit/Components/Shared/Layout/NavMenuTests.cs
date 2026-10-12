@@ -38,7 +38,7 @@ public class NavMenuTests
 
         var brand = cut.Find("[data-testid='nav-brand']");
         Assert.Equal(brandText, brand.TextContent);
-        Assert.Equal("FinanceManager", brand.GetAttribute("aria-label"));
+        Assert.Equal($"FinanceManager, version {ApplicationVersion.Version}", brand.GetAttribute("aria-label"));
         Assert.Equal("0", brand.GetAttribute("tabindex"));
         Assert.Equal($"Version {ApplicationVersion.Version}", cut.FindComponent<MudTooltip>().Instance.Text);
         Assert.DoesNotContain(ApplicationVersion.Version, brand.TextContent);
