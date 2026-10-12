@@ -1,0 +1,18 @@
+/* Sit below the app bar so the first item is never hidden behind it while the page scrolls. */
+.settings-nav {
+    position: sticky;
+    top: var(--mud-appbar-height);
+}
+
+/* MudBlazor tints a focused item that is not selected. Scroll-spy moves the selection while the
+   clicked item keeps focus, so two items looked selected at once. Keep the tint for keyboard focus
+   only, and make the selected item clearly stronger than the hover tint (MudBlazor sets the selected
+   tint with !important, so the override must too). #922 */
+.settings-nav ::deep .mud-list-item-clickable:focus:not(:focus-visible):not(.mud-selected-item) {
+    background-color: transparent;
+}
+
+.settings-nav ::deep .mud-list-item.mud-selected-item {
+    background-color: rgba(var(--mud-palette-primary-rgb), 0.16) !important;
+    font-weight: 500;
+}
