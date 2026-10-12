@@ -252,7 +252,9 @@ internal class InvestmentValuationService(
                     dayValue += holding * price;
             }
 
-            if (dayValue != 0m) result[date] = dayValue;
+            // Keep an explicit closing zero so downstream buckets cannot reuse yesterday's
+            // value after a final sale or an unavailable closing price.
+            if (dayValue != 0m || date == endDate) result[date] = dayValue;
         }
 
         return result;

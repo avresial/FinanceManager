@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ public class InvestmentPriceProviderTests
     private readonly Mock<ICurrencyRepository> _currencyRepository = new();
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly Mock<IGuestSessionAccessor> _guestSessionAccessor = new();
 
     public InvestmentPriceProviderTests()
     {
@@ -47,7 +49,35 @@ public class InvestmentPriceProviderTests
         _currencyRepository.Object,
         _currencyExchangeService.Object,
         _cache,
-        LoggerFactory.Create(_ => { }).CreateLogger<InvestmentPriceProvider>());
+        LoggerFactory.Create(_ => { }).CreateLogger<InvestmentPriceProvider>(),
+        _guestSessionAccessor.Object);
+
+    [Fact]
+    public async Task GetPricePerUnit_DoesNotReuseAnotherGuestSandboxesCachedListing()
+    {
+        var asOf = new DateTime(2024, 6, 7);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        var quote = new PriceQuote
+        {
+            AssetListingId = 10,
+            Price = 100m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(asOf, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay
+        };
+        _priceQuoteRepository.Seed(quote);
+        _guestSessionAccessor.SetupGet(x => x.IsGuest).Returns(true);
+        _guestSessionAccessor.SetupGet(x => x.GuestUserId).Returns(-1);
+        Assert.Equal(100m, await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken));
+
+        // A second sandbox reuses the listing id but has its own seeded price.
+        quote.Price = 200m;
+        _guestSessionAccessor.SetupGet(x => x.GuestUserId).Returns(-2);
+        Assert.Equal(200m, await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken));
+
+        _guestSessionAccessor.SetupGet(x => x.GuestUserId).Returns(-1);
+        Assert.Equal(100m, await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken));
+    }
 
     private static AssetListing Listing(string tradingCurrency = "USD", decimal multiplier = 1m) => new()
     {
@@ -416,6 +446,9 @@ public class InvestmentPriceProviderTests
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "GBP"), _usd, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
             .ReturnsAsync([(mon, 1.2m), (thu, 1.3m)]);
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateResultAsync(It.Is<Currency>(c => c.ShortName == "GBP"), _usd, fri))
+            .ReturnsAsync(CurrencyExchangeRateResult.Success(1.4m));
 
         var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, mon, fri, TestContext.Current.CancellationToken);
 
@@ -423,12 +456,77 @@ public class InvestmentPriceProviderTests
         Assert.Equal(120m, series[new DateTime(2024, 1, 2)]);  // carries Monday's rate forward
         Assert.Equal(132m, series[wed]);                       // 110 × 1.2
         Assert.Equal(143m, series[thu]);                       // 110 × 1.3
-        Assert.Equal(143m, series[fri]);                       // carries Thursday's rate forward
+        Assert.Equal(154m, series[fri]);                       // closing day resolves its own rate
 
         // No per-day point conversions may happen for the gap days.
         _currencyExchangeService.Verify(
             x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
             Times.Never);
+        _currencyExchangeService.Verify(
+            x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), _usd, fri),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(7)]
+    [InlineData(8)]
+    [InlineData(9)]
+    public async Task GetPricePerUnitSeries_ClosingPriceMatchesPointDespiteWeekendQuotes(int endDay)
+    {
+        var friday = new DateTime(2024, 6, 7);
+        var end = new DateTime(2024, 6, endDay);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing());
+        foreach (var (date, price) in new[] { (friday, 100m), (friday.AddDays(1), 200m), (friday.AddDays(2), 300m) })
+            _priceQuoteRepository.Seed(new PriceQuote
+            {
+                AssetListingId = 10,
+                Price = price,
+                Currency = "USD",
+                PriceTime = new DateTimeOffset(date, TimeSpan.Zero),
+                QuoteType = PriceQuoteType.EndOfDay
+            });
+
+        var sut = CreateSut();
+        var point = await sut.GetPricePerUnitAsync(10, _usd, end, TestContext.Current.CancellationToken);
+        var series = await sut.GetPricePerUnitSeriesAsync(10, _usd, friday, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(100m, point);
+        Assert.Equal(point, series[end]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetPricePerUnitSeries_ClosingPriceUsesPointFxInsteadOfCarriedRangeRate(bool pending)
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 6, 7);
+        _listingRepository.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(Listing("GBP"));
+        foreach (var date in new[] { start, end })
+            _priceQuoteRepository.Seed(new PriceQuote
+            {
+                AssetListingId = 10,
+                Price = 100m,
+                Currency = "GBP",
+                PriceTime = new DateTimeOffset(date, TimeSpan.Zero),
+                QuoteType = PriceQuoteType.EndOfDay
+            });
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), _usd, start, end))
+            .ReturnsAsync([(start, 1.2m), (end, null)]);
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), _usd, end))
+            .ReturnsAsync(pending
+                ? CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
+                : CurrencyExchangeRateResult.Success(1.5m));
+
+        var sut = CreateSut();
+        var series = await sut.GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);
+        var point = await sut.GetPricePerUnitAsync(10, _usd, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(pending ? 0m : 150m, point);
+        Assert.Equal(point, series[end]);
+        Assert.Equal(120m, series[start]);
     }
 
     [Fact]

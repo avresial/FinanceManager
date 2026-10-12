@@ -328,7 +328,7 @@ public class InvestmentValuationServiceTests
 
         Assert.DoesNotContain(start, series.Keys);
         Assert.Equal(45m, series[start.AddDays(1)]); // 3 * 15
-        Assert.DoesNotContain(end, series.Keys); // 0 holding after sell
+        Assert.Equal(0m, series[end]); // explicit closing zero after sell
 
         _priceProvider.Verify(
             x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()),
