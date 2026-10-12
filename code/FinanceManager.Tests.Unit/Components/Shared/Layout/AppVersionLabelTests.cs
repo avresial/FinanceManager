@@ -8,7 +8,7 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Layout;
 public class AppVersionLabelTests
 {
     [Fact]
-    public void Renders_ApplicationVersion_InAppBarCaption()
+    public void Renders_ApplicationVersion_InDrawerCaption()
     {
         using var context = new BunitContext();
 
@@ -16,6 +16,6 @@ public class AppVersionLabelTests
 
         var label = cut.Find("[data-testid='app-version']");
         Assert.Equal(ApplicationVersion.Version, label.TextContent);
-        Assert.Contains("fm-appbar-version", label.ClassList);
+        Assert.Contains("fm-drawer-version", label.ClassList);
     }
 }

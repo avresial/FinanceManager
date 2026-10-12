@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Move the application version from the app bar to the bottom of the expanded navigation drawer, below account actions. #917
 - Keep the axis labels of the Net worth, Closing balance, Assets value, Liabilities value and Net cash flow charts readable: value labels now sit above the line with a card-coloured halo instead of being crossed by it, date labels (including rotated labels) are nudged horizontally inside the card instead of being cut off at the edges, and short cards show fewer value ticks. #901
 - Reserve the amber accent colour for actions, selected state and key figures: descriptions, subtitles, footnotes, period labels and empty-state hints across the Dashboard, Assets, Alerts, Subscriptions, Cash flow forecast, Settings, Transaction rules, MCP connection and Admin pages now use muted text (including the Accounts heading), and the colour rule is documented. #897
 - Show a loading bar and dimmed content on the Dashboard cards that depend on the date range while a newly selected range loads, and keep the previous data with a Retry message when loading it fails. #895

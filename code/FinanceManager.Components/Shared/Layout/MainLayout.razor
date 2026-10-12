@@ -14,7 +14,6 @@
                 <div class="fm-appbar-title"><SectionOutlet SectionName="page-title" /></div>
                 <MudSpacer />
                 <div class="fm-appbar-actions"><SectionOutlet SectionName="page-actions" /></div>
-                <AppVersionLabel />
             </MudAppBar>
 
             <MudDrawer @bind-Open="_drawerOpen" Variant="@_drawerVariant" Elevation="0">
@@ -32,6 +31,10 @@
                     <MudNavLink Icon="@Icons.Material.Filled.Settings" Href="UserSettings" data-testid="nav-settings">Settings</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" @onclick=LogOut data-testid="nav-logout">Log out</MudNavLink>
                 </MudNavMenu>
+                @if (_drawerOpen)
+                {
+                    <AppVersionLabel />
+                }
             </MudDrawer>
 
             <MudMainContent>
