@@ -60,6 +60,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Show "Next 90 days" on its own line under the Cash flow forecast card title instead of wrapping "days" onto a separate line. #920
 - Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904
 - Stop dashboard time-series charts from clipping their lowest value label and drawing date labels over the line: ticks now land on round values, a gutter keeps dates clear of the data, close-together ticks keep one decimal (`-21.4k`) instead of repeating `-22k`, and negative labels keep their minus sign. #884
 - Keep the Investment rate footer inside its card, stop Return attribution labels breaking mid-word, keep the Asset diversification hint visible on phones, and centre the legend on single-category distribution cards. #884
