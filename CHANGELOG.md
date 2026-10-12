@@ -61,6 +61,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Show "Next 90 days" on its own line under the Cash flow forecast card title instead of wrapping "days" onto a separate line. #920
+- Show storage usage on the Settings page for every signed-in user, including the demo account, instead of failing with an access error that only administrators avoided. #923
 - Show short, unbroken category labels on the Return attribution chart (Cash flows, Market, FX, Fees) instead of hyphenating the full names mid-word; hover a label to see its full name. #921
 - Show exactly one selected item in the Settings side menu: the item you clicked no longer stays highlighted after scrolling moves the selection, the selected item stands out more clearly, and the menu no longer slides under the app bar. #922
 - Stop the demo account's random one-off purchases from showing up as duplicate entries (such as "Tram pass" twice) in Recurring transactions. #904

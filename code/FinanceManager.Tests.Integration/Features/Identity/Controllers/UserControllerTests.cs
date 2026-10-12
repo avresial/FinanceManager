@@ -168,6 +168,30 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
     }
 
     [Fact]
+    public async Task GetRecordCapacity_ForOwnUser_ReturnsCapacity()
+    {
+        await SeedUser();
+        Authorize(_testUserName, _testUserId, UserRole.User);
+
+        var capacity = await new UserHttpClient(Client).GetRecordCapacity(_testUserId);
+
+        Assert.NotNull(capacity);
+        Assert.True(capacity!.TotalCapacity > 0);
+        Assert.Equal(5, capacity.UsedCapacity);
+    }
+
+    [Fact]
+    public async Task GetRecordCapacity_ForOtherUser_ReturnsForbidden()
+    {
+        await SeedUser();
+        Authorize("otheruser", _testUserId + 1, UserRole.User);
+
+        var response = await Client.GetAsync($"{Client.BaseAddress}api/User/GetRecordCapacity/{_testUserId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdatePassword_ReturnsOkTrue_AndPasswordChanged()
     {
         // arrange
