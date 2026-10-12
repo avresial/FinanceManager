@@ -69,13 +69,18 @@ public class UserController(
     }
 
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, User")]
     [HttpGet]
     [Route("GetRecordCapacity/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(RecordCapacity))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRecordCapacity(int userId, CancellationToken cancellationToken = default)
     {
+        // The Settings page shows every user their own storage use; only Admins may read another user's. #923
+        if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, userId))
+            return Forbid();
+
         var user = await userRepository.GetUser(userId);
         if (user is null) return NotFound();
 
