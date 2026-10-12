@@ -56,6 +56,16 @@
     .fm-dashboard-datepicker-container ::deep .mud-button-root {
         padding: 4px 8px;
     }
+
+    /* The compact label shows the dates (#924), so the calendar icon is dropped to leave them room;
+       the dropdown arrow never shrinks, so a label that is still too long ellipsizes instead. */
+    .fm-dashboard-datepicker-container ::deep .mud-button-icon-start {
+        display: none;
+    }
+
+    .fm-dashboard-datepicker-container ::deep .mud-button-icon-end {
+        flex-shrink: 0;
+    }
 }
 
 .fm-range-label-compact {

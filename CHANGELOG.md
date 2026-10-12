@@ -60,6 +60,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Show the selected dates (for example "12 Sep – 12 Oct") in the date range control on phones instead of "Custom range". #924
 - Show "Next 90 days" on its own line under the Cash flow forecast card title instead of wrapping "days" onto a separate line. #920
 - Show storage usage on the Settings page for every signed-in user, including the demo account, instead of failing with an access error that only administrators avoided. #923
 - Show short, unbroken category labels on the Return attribution chart (Cash flows, Market, FX, Fees) instead of hyphenating the full names mid-word; hover a label to see its full name. #921
