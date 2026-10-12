@@ -159,7 +159,7 @@ public class PortfolioReturnCardTests
     }
 
     [Fact]
-    public async Task RangeChange_HidesPreviousCashFlowWhileLoading()
+    public async Task RangeChange_KeepsPreviousCashFlowAndCaptionWhileLoading()
     {
         var secondStart = _end.AddDays(1);
         var secondEnd = secondStart.AddDays(6);
@@ -177,8 +177,9 @@ public class PortfolioReturnCardTests
             .Add(component => component.StartDateTime, secondStart)
             .Add(component => component.EndDateTime, secondEnd));
         Assert.Equal(2, handler.MoneyWeightedRequestCount);
-        Assert.DoesNotContain("Net external cash flow", cut.Markup);
-        Assert.Single(cut.FindAll(".portfolio-return-fact"));
+        Assert.Contains("Net external cash flow", cut.Markup);
+        Assert.Contains("1–7 Aug 2026", cut.Markup);
+        Assert.Equal(2, cut.FindAll(".portfolio-return-fact").Count);
 
         handler.Complete(1,
             new(0.1m, MoneyWeightedReturnStatus.Available, secondStart, secondEnd),

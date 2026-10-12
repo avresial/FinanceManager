@@ -64,7 +64,7 @@ public class OverviewPagesInitialRangeTests
         Assert.Equal(DateTimeKind.Utc, startDate().Kind);
     }
 
-    private static BunitContext CreateContext()
+    internal static BunitContext CreateContext(HttpMessageHandler? returnsHandler = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -72,12 +72,15 @@ public class OverviewPagesInitialRangeTests
         context.Services.AddSingleton(new DashboardCardVisibilityService(Mock.Of<ISnapshotService>(),
             Mock.Of<ILoginService>(), NullLogger<DashboardCardVisibilityService>.Instance));
         context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(),
-            new MemoryCache(new MemoryCacheOptions()), new AssetsHttpClient(new HttpClient()),
+            new MemoryCache(new MemoryCacheOptions()), new AssetsHttpClient(new HttpClient(returnsHandler ?? new HttpClientHandler()) { BaseAddress = new Uri("http://localhost/") }),
             NullLogger<AssetsPageCardsCacheService>.Instance));
         context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
-        context.ComponentFactories.AddStub<PortfolioReturnCardContainer>();
-        context.ComponentFactories.AddStub<PortfolioReturnAttributionCardContainer>();
+        if (returnsHandler is null)
+        {
+            context.ComponentFactories.AddStub<PortfolioReturnCardContainer>();
+            context.ComponentFactories.AddStub<PortfolioReturnAttributionCardContainer>();
+        }
         context.ComponentFactories.AddStub<InvestmentPaycheckEstimatorCard>();
         context.ComponentFactories.AddStub<InvestmentRateCard>();
         context.ComponentFactories.AddStub<DiversificationProxyCard>();

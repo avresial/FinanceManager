@@ -16,6 +16,10 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilit
 public partial class LiabilitiesDistributionOverviewCard
 {
     private bool _isLoading;
+    private bool _isRefreshing;
+    private bool _hasError;
+    private bool _hasDisplayedModel;
+    private (int UserId, int CurrencyId)? _owner;
     private Currency _currency = DefaultCurrency.PLN;
     private List<NameValueResult> _typeData = [];
     private List<NameValueResult> _accountData = [];
@@ -30,6 +34,9 @@ public partial class LiabilitiesDistributionOverviewCard
     // When the dashboard supplies a prepared model the card renders it directly;
     // otherwise it self-loads from the API as in standalone usage.
     [Parameter] public DistributionCardModel? Model { get; set; }
+
+    // Reports whether a self-load for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ILogger<LiabilitiesDistributionOverviewCard> Logger { get; set; }
     [Inject] public required LiabilitiesHttpClient LiabilitiesHttpClient { get; set; }
@@ -54,6 +61,14 @@ public partial class LiabilitiesDistributionOverviewCard
             _typeData = ToPositive(Model.TypeData);
             _accountData = ToPositive(Model.AccountData);
             _isLoading = false;
+            _hasError = false;
+            _hasDisplayedModel = true;
+            _owner = null;
+            if (_isRefreshing)
+            {
+                _isRefreshing = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
             StateHasChanged();
             return;
         }
@@ -66,6 +81,25 @@ public partial class LiabilitiesDistributionOverviewCard
     private async Task LoadSelf()
     {
         var requestVersion = _gate.Claim();
+        try
+        {
+            _isRefreshing = true;
+            await RefreshingChanged.InvokeAsync(true);
+            await LoadSelfAsync(requestVersion);
+        }
+        finally
+        {
+            // A superseded self-load leaves the flag alone: the newer one owns it now.
+            if (_gate.IsCurrent(requestVersion) && _isRefreshing)
+            {
+                _isRefreshing = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
+        }
+    }
+
+    private async Task LoadSelfAsync(int requestVersion)
+    {
         var startDate = StartDateTime;
         var endDate = EndDateTime;
 
@@ -82,6 +116,17 @@ public partial class LiabilitiesDistributionOverviewCard
             return;
         }
 
+        var currency = await SettingsService.GetCurrencyAsync();
+        if (!_gate.IsCurrent(requestVersion)) return;
+        if (_owner != (user.UserId, currency.Id))
+        {
+            _typeData = [];
+            _accountData = [];
+            _hasDisplayedModel = false;
+        }
+        _owner = (user.UserId, currency.Id);
+        _currency = currency;
+        _hasError = false;
         var result = await SnapshotStore.RefreshDistributionAsync(
             user.UserId,
             _currency.Id,
@@ -99,7 +144,7 @@ public partial class LiabilitiesDistributionOverviewCard
             onSnapshotPainted: ShowData,
             onSnapshotMissing: () =>
             {
-                _isLoading = true;
+                _isLoading = !_hasDisplayedModel;
                 StateHasChanged();
                 return Task.CompletedTask;
             },
@@ -108,10 +153,8 @@ public partial class LiabilitiesDistributionOverviewCard
         if (!_gate.IsCurrent(requestVersion))
             return;
 
-        // This card has no blocking error surface; a failed refresh behind a painted snapshot keeps it
-        // visible, and a failed first load simply leaves the empty state (matching the previous behaviour).
-        if (result.IsBlockingFailure)
-            Logger.LogError(result.Error, "Error loading liabilities distribution");
+        _hasError = result.Error is not null;
+        if (_hasError) Logger.LogError(result.Error, "Error loading liabilities distribution");
 
         _isLoading = false;
         StateHasChanged();
@@ -119,6 +162,7 @@ public partial class LiabilitiesDistributionOverviewCard
 
     private Task ShowData(DistributionCardModel model)
     {
+        _hasDisplayedModel = true;
         _typeData = model.TypeData;
         _accountData = model.AccountData;
         _isLoading = false;
@@ -131,6 +175,9 @@ public partial class LiabilitiesDistributionOverviewCard
         if (!_gate.IsCurrent(requestVersion)) return;
         _typeData = [];
         _accountData = [];
+        _owner = null;
+        _hasDisplayedModel = false;
+        _hasError = false;
         _isLoading = false;
         StateHasChanged();
     }

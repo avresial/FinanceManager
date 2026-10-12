@@ -21,6 +21,10 @@ public partial class PortfolioReturnAttributionCardContainer
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "380px";
     [Parameter] public Func<AssetsPageCardsRefreshContext, Task<PortfolioReturnSourceModel>>? FetchReturns { get; set; }
+
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
+
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -35,12 +39,11 @@ public partial class PortfolioReturnAttributionCardContainer
         var version = _gate.Claim();
         var start = StartDateTime.Date;
         var end = EndDateTime;
-        if (_paintedContext?.StartDateTime != start || _paintedContext.EndDateTime.Date != end.Date)
-            _model = null;
         _isLoading = _model is null;
         _hasError = false;
         try
         {
+            await RefreshingChanged.InvokeAsync(true);
             var user = await LoginService.GetLoggedUser();
             var currency = await SettingsService.GetCurrencyAsync();
             if (!_gate.IsCurrent(version)) return;
@@ -51,7 +54,10 @@ public partial class PortfolioReturnAttributionCardContainer
                 return;
             }
             if (_paintedContext?.UserId != user.UserId || _paintedContext.CurrencyId != currency.Id)
+            {
                 _model = null;
+                _paintedContext = null;
+            }
             _isLoading = _model is null;
             _currency = currency;
             var context = new AssetsPageCardsRefreshContext
@@ -61,7 +67,6 @@ public partial class PortfolioReturnAttributionCardContainer
                 StartDateTime = start,
                 EndDateTime = end,
             };
-            _paintedContext = context;
             var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<PortfolioReturnAttributionCardSnapshot, PortfolioReturnAttributionCardModel>
             {
                 Key = $"portfolio-return-attribution:{user.UserId}:{currency.Id}",
@@ -86,28 +91,33 @@ public partial class PortfolioReturnAttributionCardContainer
                     Model = model,
                     FetchedAtUtc = DateTime.UtcNow,
                 },
-                OnSnapshotPainted = Paint,
-                OnRefreshed = Paint,
+                OnSnapshotPainted = model => Paint(model, context),
+                OnRefreshed = model => Paint(model, context),
             });
-            if (_gate.IsCurrent(version)) _hasError = result.IsBlockingFailure && _model is null;
+            if (_gate.IsCurrent(version)) _hasError = result.Error is not null;
         }
         catch (Exception exception)
         {
             if (_gate.IsCurrent(version))
             {
-                _hasError = _model is null;
+                _hasError = true;
                 Logger.LogError(exception, "Could not load portfolio return attribution");
             }
         }
         finally
         {
-            if (_gate.IsCurrent(version)) _isLoading = false;
+            if (_gate.IsCurrent(version))
+            {
+                _isLoading = false;
+                await RefreshingChanged.InvokeAsync(false);
+            }
         }
     }
 
-    private Task Paint(PortfolioReturnAttributionCardModel model)
+    private Task Paint(PortfolioReturnAttributionCardModel model, AssetsPageCardsRefreshContext context)
     {
         _model = model;
+        _paintedContext = context;
         _isLoading = false;
         return InvokeAsync(StateHasChanged);
     }

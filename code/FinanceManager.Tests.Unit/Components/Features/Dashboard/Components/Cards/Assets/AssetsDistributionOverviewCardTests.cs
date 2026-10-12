@@ -89,7 +89,7 @@ public class AssetsDistributionOverviewCardTests
         cut.WaitForAssertion(() =>
         {
             Assert.False(View(cut).IsLoading);
-            Assert.Equal(!stored, View(cut).HasError);
+            Assert.True(View(cut).HasError);
             if (stored) Assert.Equal(10, View(cut).TypeData.Single().Value);
             else Assert.Empty(View(cut).TypeData);
         });
@@ -113,7 +113,7 @@ public class AssetsDistributionOverviewCardTests
         await Drain(cut);
 
         Assert.Equal(10, View(cut).TypeData.Single().Value);
-        Assert.False(View(cut).HasError);
+        Assert.True(View(cut).HasError);
         Assert.False(View(cut).IsLoading);
     }
 
@@ -330,6 +330,36 @@ public class AssetsDistributionOverviewCardTests
         handler.Complete(0, Points(20));
         await Drain(cut);
         Assert.Equal(20, View(cut).TypeData.Single().Value);
+    }
+
+    [Fact]
+    public void PreparedModel_WithoutSelfLoad_DoesNotReportRefresh()
+    {
+        using var context = Context(new DistributionHandler());
+        var refreshing = new List<bool>();
+        context.Render<AssetsDistributionOverviewCard>(p => p
+            .Add(x => x.Model, new DistributionCardModel(Points(50), []))
+            .Add(x => x.RefreshingChanged, value => refreshing.Add(value)));
+        Assert.Empty(refreshing);
+    }
+
+    [Fact]
+    public async Task PreparedModel_SupersedingSelfLoad_ClearsRefreshOnce()
+    {
+        var handler = new DistributionHandler();
+        using var context = Context(handler);
+        var refreshing = new List<bool>();
+        var cut = context.Render<AssetsDistributionOverviewCard>(p => p
+            .Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end)
+            .Add(x => x.RefreshingChanged, value => refreshing.Add(value)));
+        Assert.Equal([true], refreshing);
+        cut.Render(p => p.Add(x => x.Model, new DistributionCardModel(Points(50), [])));
+        Assert.Equal([true, false], refreshing);
+        handler.Complete(0, Points(10));
+        await Drain(cut);
+        cut.Render();
+        Assert.Equal([true, false], refreshing);
+        Assert.Equal(50, View(cut).TypeData.Single().Value);
     }
 
     private void Stored(decimal value, DateTime? start = null) =>

@@ -2,7 +2,7 @@
 @using FinanceManager.Domain.MoneyFlow.Entities
 @using System.Globalization
 
-<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")" data-testid="return-attribution-card">
+<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};overflow-y:auto;")" data-testid="return-attribution-card">
     <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4">
         <div class="attribution-heading">
             <CardInfoTooltip Text="Explains the selected portfolio value change using external cash movement, known fees, currency translation, and the remaining investment effect."
@@ -15,14 +15,15 @@
             Why the portfolio changed over the selected range.
         </div>
 
+        @if (HasError)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load return attribution.
+                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry" AriaLabel="Retry return attribution">Retry</MudButton>
+            </MudAlert>
+        }
         @if (IsLoading)
         {
             <MudText Typo="Typo.h3" Class="text-muted"><StringSpinner CharactersCount="6" /></MudText>
-        }
-        else if (HasError)
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load return attribution.</MudAlert>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="Retry" AriaLabel="Retry return attribution">Retry</MudButton>
         }
         else if (Model?.IsAvailable == true)
         {
@@ -92,7 +93,7 @@
                 }
             </div>
         }
-        else
+        else if (!HasError)
         {
             <MudText Class="mud-text-secondary" Typo="Typo.h5">@StatusLabel</MudText>
             <MudText Class="mud-text-secondary" Typo="Typo.body2">@StatusText</MudText>

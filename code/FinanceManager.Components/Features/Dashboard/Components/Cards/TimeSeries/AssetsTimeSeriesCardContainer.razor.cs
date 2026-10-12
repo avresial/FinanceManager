@@ -11,6 +11,7 @@ public partial class AssetsTimeSeriesCardContainer
 {
     private readonly RefreshVersionGate _gate = new();
     private TimeSeriesCardModel? _model;
+    private (int UserId, int CurrencyId)? _owner;
     private bool _isLoading;
     private bool _hasError;
     private string _currency = "PLN";
@@ -18,6 +19,9 @@ public partial class AssetsTimeSeriesCardContainer
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; }
     [Parameter] public string Height { get; set; } = "250px";
+
+    // Reports whether a reload for the selected range is in flight, so the page can show the refresh indicator.
+    [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
@@ -34,11 +38,13 @@ public partial class AssetsTimeSeriesCardContainer
         var end = EndDateTime;
         try
         {
+            await RefreshingChanged.InvokeAsync(true);
             var user = await LoginService.GetLoggedUser();
             if (!_gate.IsCurrent(version)) return;
             if (user is null)
             {
                 _model = null;
+                _owner = null;
                 _isLoading = false;
                 _hasError = false;
                 return;
@@ -46,6 +52,9 @@ public partial class AssetsTimeSeriesCardContainer
 
             var currency = await SettingsService.GetCurrencyAsync();
             if (!_gate.IsCurrent(version)) return;
+            if (_owner != (user.UserId, currency.Id)) _model = null;
+            _owner = (user.UserId, currency.Id);
+            _isLoading = _model is null;
             _currency = currency.ShortName;
             _hasError = false;
             var context = new AssetsPageCardsRefreshContext
@@ -76,24 +85,27 @@ public partial class AssetsTimeSeriesCardContainer
                 OnSnapshotPainted = ShowData,
                 OnSnapshotMissing = () =>
                 {
-                    _model = null;
-                    _isLoading = true;
+                    _isLoading = _model is null;
                     StateHasChanged();
                     return Task.CompletedTask;
                 },
                 OnRefreshed = ShowData,
             });
             if (!_gate.IsCurrent(version)) return;
-            _hasError = result.IsBlockingFailure;
+            _hasError = result.Error is not null;
             _isLoading = false;
         }
         catch (Exception exception)
         {
             if (!_gate.IsCurrent(version)) return;
-            _model = null;
             _hasError = true;
             _isLoading = false;
             Logger.LogError(exception, "Error resolving assets time series context");
+        }
+        finally
+        {
+            // A superseded reload leaves the flag alone: the newer reload owns it now.
+            if (_gate.IsCurrent(version)) await RefreshingChanged.InvokeAsync(false);
         }
     }
 

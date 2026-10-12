@@ -12,6 +12,10 @@
         </div>
         <div class="portfolio-return-subtitle mb-3">Performance for the selected range.</div>
 
+        @if (HasError)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load portfolio returns.</MudAlert>
+        }
         <div class="portfolio-return-metrics">
             <section class="portfolio-return-metric portfolio-return-metric--money" aria-label="Money-weighted return">
                 <div class="portfolio-return-metric-heading">
@@ -66,7 +70,7 @@
             {
                 <MudText Typo="Typo.body2" Class="portfolio-return-muted mt-3">Neither return is available for this range.</MudText>
             }
-            @if (MoneyWeightedReturn is null || TimeWeightedReturn is null)
+            @if (HasError || MoneyWeightedReturn is null || TimeWeightedReturn is null)
             {
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry"
                            AriaLabel="Retry unavailable return">Retry unavailable return</MudButton>
