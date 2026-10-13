@@ -40,9 +40,14 @@ public sealed class PostgresConnectionTimeoutTests
 
             var providerFailure = Assert.IsType<NpgsqlException>(failure.InnerException);
             Assert.IsType<TimeoutException>(providerFailure.InnerException);
-            Assert.Contains("NpgsqlTimeout.CheckAndGetTimeLeft", failure.ToString());
-            Assert.Contains("NpgsqlConnector.ConnectAsync", failure.ToString());
-            Assert.Contains("PoolingDataSource.OpenNewConnector", failure.ToString());
+            // Npgsql retries the open without GSS/SSL after the first attempt times out, so the frame that
+            // finally throws (deadline check, socket connect, or startup read) depends on how much of the
+            // timeout is left. Assert the open path itself rather than that varying leaf frame.
+            var providerStack = providerFailure.StackTrace;
+            Assert.NotNull(providerStack);
+            Assert.Contains("NpgsqlConnector.Open(", providerStack);
+            Assert.Contains("PoolingDataSource.OpenNewConnector", providerStack);
+            Assert.Contains("RelationalConnection.OpenAsync", providerStack);
             Assert.Contains("CurrencyRepository.EnsureDefaults", failure.ToString());
         }
         finally
