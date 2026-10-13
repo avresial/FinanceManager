@@ -60,7 +60,16 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<List<UserDetails>> GetUsers(int recordIndex, int recordsCount) =>
-        await httpClient.GetFromJsonAsync<List<UserDetails>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}")
-        ?? throw new InvalidOperationException("The users response was empty.");
+    public async Task<List<UserDetails>> GetUsers(int recordIndex, int recordsCount)
+    {
+        var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}");
+
+        // An out-of-range page is a valid "no users" answer; other failures surface so the page can show an error.
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            return [];
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<UserDetails>>()
+            ?? throw new InvalidOperationException("The users response was empty.");
+    }
 }
