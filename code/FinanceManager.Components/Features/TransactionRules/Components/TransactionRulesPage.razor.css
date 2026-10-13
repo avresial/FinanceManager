@@ -16,7 +16,9 @@
 .rule-row:focus-visible { outline: 3px solid var(--mud-palette-primary); outline-offset: -3px; }
 .rule-number { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--mud-palette-primary); }
 .rule-row-copy { flex: 1; min-width: 0; }
-.rule-name { display: block; font-weight: 600; }
+.rule-name { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.rule-detail-header > div { min-width: 0; max-width: 100%; }
+.rule-detail-header ::deep .rule-name { overflow-wrap: anywhere; }
 .rule-summary { display: block; color: var(--mud-palette-text-secondary); font-size: .875rem; margin-top: .25rem; overflow-wrap: anywhere; }
 .rule-state { font-size: .75rem; border: 1px solid var(--mud-palette-divider); padding: .25rem .5rem; border-radius: 1rem; white-space: nowrap; }
 .rule-state.enabled { color: var(--mud-palette-success-text); background: var(--mud-palette-success); }
@@ -62,4 +64,8 @@
     .rule-chevron { margin-left: auto; }
     .rule-detail { padding: .75rem; }
     .rule-step { gap: .75rem; }
+    /* Three nested frames (workspace, editor, condition box) left the condition fields about
+       270px wide, wrapping "Stop after match" and "Ignore case". Drop the outer frame on phones. */
+    .creation-workspace { padding: 0; border: none; }
+    ::deep .rule-editor { padding: 12px !important; }
 }

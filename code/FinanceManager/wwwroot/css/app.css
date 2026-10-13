@@ -167,3 +167,84 @@ code {
         display: none;
     }
 }
+
+/* MudBlazor's default dialogs (delete confirmations) span the full phone width with no gutter.
+   Keep the same 16px side gutter as the page content. */
+@media (max-width: 599.98px) {
+    .mud-dialog:not(.mud-dialog-fullscreen) {
+        margin: 16px;
+        max-width: calc(100% - 32px);
+    }
+}
+
+/* Alerts table on phones: MudTable stacks each cell as "label | value"; without min-width:0 the
+   value blocks (long names, matched transactions) can't shrink and run past the card edge. */
+@media (max-width: 599.98px) {
+    /* Auto table layout lets the widest truncated link stretch the table past the card. */
+    .fm-alerts-table table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .fm-alerts-table .mud-table-cell {
+        min-width: 0;
+        gap: 12px;
+    }
+
+    .fm-alerts-table .alerts-cell {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-wrap: anywhere;
+    }
+}
+
+/* Import "Mapped preview" and conflict-review tables: keep cells on one line so a long contractor name scrolls the
+   table sideways instead of squeezing the other columns into unreadable slivers on phones. */
+.fm-mapped-preview th,
+.fm-mapped-preview td {
+    white-space: nowrap;
+}
+
+.fm-mapped-preview td {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tighter cells on phones so three short columns (date, units, bond) fit without scrolling. */
+@media (max-width: 599.98px) {
+    .fm-mapped-preview th,
+    .fm-mapped-preview td {
+        padding: 6px 8px !important;
+    }
+
+    /* Headers are short phrases; let them wrap so the values decide the column widths. */
+    .fm-mapped-preview th {
+        white-space: normal;
+    }
+}
+
+/* Import preview delimiter: sits at the right of the intro text on wide screens and takes the
+   full row, like the other fields, once it wraps below the text on phones. */
+.fm-delimiter-select {
+    margin-left: auto;
+    max-width: 220px;
+    min-width: 160px;
+}
+
+@media (max-width: 599.98px) {
+    .fm-delimiter-select {
+        margin-left: 0;
+        max-width: none;
+        flex: 1 1 100%;
+    }
+}
+
+/* Welcome preview carousel: on phones the prev/next arrows sit on top of the full-width preview
+   image. Swiping works there, so hide the arrows and keep the bullets (which have no
+   align-self-center class). */
+@media (max-width: 599.98px) {
+    .fm-onb-carousel .mud-icon-button.align-self-center {
+        display: none;
+    }
+}

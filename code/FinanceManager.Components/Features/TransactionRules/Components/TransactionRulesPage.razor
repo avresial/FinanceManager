@@ -67,7 +67,7 @@
                             <div class="rule-detail-header">
                                 <div>
                                     <MudText Typo="Typo.overline" Class="mud-text-secondary">Rule @number · @(rule.IsEnabled ? "Enabled" : "Disabled")</MudText>
-                                    <MudText Typo="Typo.h6">@rule.Name</MudText>
+                                    <MudText Typo="Typo.h6" Class="rule-name">@rule.Name</MudText>
                                 </div>
                                 @if (_editingId != rule.Id)
                                 {
@@ -240,10 +240,10 @@
                 <MudTextField T="string" @bind-Value="_name" Label="Rule name"
                               Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
             </MudItem>
-            <MudItem xs="6" md="3">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSwitch T="bool" @bind-Value="_enabled" Color="Color.Primary" Label="Enabled" />
             </MudItem>
-            <MudItem xs="6" md="3">
+            <MudItem xs="12" sm="6" md="3">
                 <MudSwitch T="bool" @bind-Value="_stopProcessing" Color="Color.Primary" Label="Stop after match" />
             </MudItem>
         </MudGrid>

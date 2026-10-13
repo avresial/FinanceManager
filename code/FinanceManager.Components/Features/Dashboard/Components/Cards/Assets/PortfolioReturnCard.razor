@@ -1,14 +1,12 @@
 @using FinanceManager.Components.Shared.Components
 @using FinanceManager.Domain.MoneyFlow.Entities
 
-<MudCard Outlined Class="rounded-lg" data-testid="portfolio-return-card" Style="@($"height:{Height};overflow-y:auto;")">
+<MudCard Outlined Class="rounded-lg fm-phone-auto-height" data-testid="portfolio-return-card" Style="@($"height:{Height};overflow-y:auto;")">
     <CardHeader Title="Portfolio return"
                 InfoText="Compares annualized money-weighted return with cumulative time-weighted return for the selected period."
                 InfoAriaLabel="About portfolio return"
                 Subtitle="@RangeText" />
     <MudCardContent Class="pa-4 pt-1">
-        <div class="portfolio-return-subtitle mb-3">Performance for the selected range.</div>
-
         @if (HasError)
         {
             <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load portfolio returns.</MudAlert>
@@ -72,10 +70,14 @@
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="Retry"
                            AriaLabel="Retry unavailable return">Retry unavailable return</MudButton>
             }
-            <div class="portfolio-return-insight" data-testid="portfolio-return-insight">
-                <span class="portfolio-return-insight-icon"><MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" /></span>
-                <span>@InsightText</span>
-            </div>
+            @* The insight explains the two returns, so it only earns its space when one is available. *@
+            @if (HasAvailableReturn)
+            {
+                <div class="portfolio-return-insight" data-testid="portfolio-return-insight">
+                    <span class="portfolio-return-insight-icon"><MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" /></span>
+                    <span>@InsightText</span>
+                </div>
+            }
         }
 
         <div class="portfolio-return-footer">

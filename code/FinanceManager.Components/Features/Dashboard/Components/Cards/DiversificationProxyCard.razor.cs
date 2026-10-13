@@ -177,6 +177,13 @@ public partial class DiversificationProxyCard
     {
         var explanations = new List<string>();
 
+        // With nothing held there is no "concentration" to warn about; say what is missing instead.
+        if (score.Score == 0 && score.AssetClassScore == 0 && score.HoldingsScore == 0)
+        {
+            explanations.Add("No holdings yet — add investments to see how diversified they are.");
+            return explanations;
+        }
+
         switch (score.Band)
         {
             case "Limited":

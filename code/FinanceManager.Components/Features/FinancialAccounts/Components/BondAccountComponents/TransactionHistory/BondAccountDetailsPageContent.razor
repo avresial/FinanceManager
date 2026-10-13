@@ -6,6 +6,12 @@
     {
         <AccountDetailsPageContentSkeleton />
     }
+    else
+    {
+        <MudAlert Severity="Severity.Error" Class="ma-4">
+            Could not load this account. Reload the page to try again.
+        </MudAlert>
+    }
 }
 else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
@@ -89,8 +95,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
         </div>
     }
 
-    <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true">
-        <MudPaper Class="p-5">
+    <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true" ZIndex="1150">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
             <AddBondEntry BondAccount=Account ActionCompleted="HideAddOverlay" />
         </MudPaper>
     </MudOverlay>

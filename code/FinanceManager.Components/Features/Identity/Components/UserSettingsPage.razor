@@ -222,9 +222,9 @@
                                       Class="flex-grow-1" />
                         <MudButton Variant="Variant.Outlined"
                                    Color="Color.Error"
-                                   Disabled="@(_deleteConfirmation != _requiredDeleteConfirmation)"
+                                   Disabled="@(_isDeletingAccount || _deleteConfirmation != _requiredDeleteConfirmation)"
                                    OnClick="DeleteMyAccount">
-                            Delete account
+                            @(_isDeletingAccount ? "Deleting…" : "Delete account")
                         </MudButton>
                     </div>
                 </section>
@@ -251,6 +251,10 @@
     }
     else if (_isLoadingPage)
     {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" role="status">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+            <MudText>Loading settings…</MudText>
+        </MudStack>
     }
     else
     {

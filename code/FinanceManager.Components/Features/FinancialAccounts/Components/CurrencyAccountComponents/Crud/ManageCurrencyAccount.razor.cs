@@ -19,6 +19,7 @@ public partial class ManageCurrencyAccount
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
+    private string? _errorMessage;
     private CurrencyAccount? _currencyAccount = null;
     private bool _isRecalculating;
     private bool _hasEntries;
@@ -42,6 +43,7 @@ public partial class ManageCurrencyAccount
 
     protected override async Task OnParametersSetAsync()
     {
+        _errorMessage = null;
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -60,11 +62,13 @@ public partial class ManageCurrencyAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading currency account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not load the account. Please try again.";
         }
     }
 
     public async Task Update()
     {
+        _errorMessage = null;
         try
         {
 
@@ -89,11 +93,13 @@ public partial class ManageCurrencyAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error updating currency account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not update the account. Please try again.";
         }
     }
 
     public async Task Remove()
     {
+        _errorMessage = null;
         try
         {
 
@@ -111,6 +117,7 @@ public partial class ManageCurrencyAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error removing currency account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not delete the account. Please try again.";
         }
     }
 

@@ -41,7 +41,7 @@
    the custom-range picker on the account details pages. *@
 <div class="fm-dashboard-custom-range-picker">
     <MudDateRangePicker @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
-                        DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
+                        DateRangeChanged="OnCustomDateRangeChanged" MaxDate="DateTime.UtcNow.Date" PickerVariant="PickerVariant.Dialog" />
 </div>
 
 @code {
@@ -116,14 +116,16 @@
 
     private void OnCustomDateRangeChanged(DateRange? range)
     {
-        _customRange = range;
         if (range is not { Start: DateTime start, End: DateTime end }) return;
-
-        _selected = DateRangeHelper.CustomRangeKey;
 
         // The picker returns midnight for the end day; include the whole selected day, clamped to now.
         var now = DateTime.UtcNow;
         var inclusiveEnd = end.Date.AddDays(1).AddTicks(-1);
-        DateChanged((start, inclusiveEnd < now ? inclusiveEnd : now));
+        var clampedEnd = inclusiveEnd < now ? inclusiveEnd : now;
+        if (start > clampedEnd) return;
+
+        _customRange = new DateRange(start.Date, clampedEnd.Date);
+        _selected = DateRangeHelper.CustomRangeKey;
+        DateChanged((start, clampedEnd));
     }
 }

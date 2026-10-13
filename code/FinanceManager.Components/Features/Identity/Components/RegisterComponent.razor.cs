@@ -14,6 +14,8 @@ public partial class RegisterComponent
 {
 
     private bool _success;
+    private bool _isRegistering;
+    private bool _accountCreated;
     private string[] _errors = [];
     private MudForm? _form;
     private LoginModel _loginModel = new();
@@ -29,26 +31,39 @@ public partial class RegisterComponent
 
     private async Task Register()
     {
-        if (_form is not null)
-        {
-            await _form.Validate();
-            if (!_form.IsValid || _loginModel is null || string.IsNullOrEmpty(_loginModel.Login) || string.IsNullOrEmpty(_loginModel.Password))
-            {
-                _errors = ["Incorrect username or password"];
-                return;
-            }
-        }
-        List<string> newErrors = [];
-        if (_loginModel.Login is not null && _loginModel.Password is not null)
-        {
-            if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel.Free, FirstName, LastName))
-                newErrors.Add("Incorrect username or password.");
-            else if ((await LoginService.Login(_loginModel.Login, _loginModel.Password)).IsSuccess)
-                Navigation.NavigateTo("");
-        }
+        if (_isRegistering) return;
 
-        _errors = newErrors.ToArray();
-        _loginModel.Password = string.Empty;
+        _isRegistering = true;
+        _accountCreated = false;
+        try
+        {
+            if (_form is not null)
+            {
+                await _form.Validate();
+                if (!_form.IsValid || _loginModel is null || string.IsNullOrEmpty(_loginModel.Login) || string.IsNullOrEmpty(_loginModel.Password))
+                {
+                    _errors = ["Incorrect username or password"];
+                    return;
+                }
+            }
+            List<string> newErrors = [];
+            if (_loginModel.Login is not null && _loginModel.Password is not null)
+            {
+                if (!await UserService.AddUser(_loginModel.Login, _loginModel.Password, PricingLevel.Free, FirstName, LastName))
+                    newErrors.Add("Incorrect username or password.");
+                else if ((await LoginService.Login(_loginModel.Login, _loginModel.Password)).IsSuccess)
+                    Navigation.NavigateTo("");
+                else
+                    _accountCreated = true;
+            }
+
+            _errors = [.. newErrors];
+            _loginModel.Password = string.Empty;
+        }
+        finally
+        {
+            _isRegistering = false;
+        }
     }
     private static string? ValidateEmail(string arg)
     {

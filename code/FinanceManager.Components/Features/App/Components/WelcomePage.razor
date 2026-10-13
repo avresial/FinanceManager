@@ -126,13 +126,13 @@
         </MudText>
     </div>
 
-    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6" Style="height: 460px;"
+    <MudCarousel TData="object" Class="rounded-lg mud-width-full mb-6 fm-onb-carousel" Style="height: 460px;"
                  ShowArrows="true" ShowBullets="true" EnableSwipeGesture="true" AutoCycle="true"
                  AutoCycleTime="TimeSpan.FromSeconds(6)" Elevation="0">
         @foreach (var preview in _previews)
         {
             <MudCarouselItem Transition="Transition.Slide">
-                <div class="d-flex flex-column align-center justify-center" style="height: 100%;">
+                <div class="d-flex flex-column align-center justify-center onb-slide">
                     <img src="@preview.Light" alt="@preview.Caption" class="onb-img onb-carousel onb-light rounded-lg" />
                     <img src="@preview.Dark" alt="@preview.Caption" class="onb-img onb-carousel onb-dark rounded-lg" />
                 </div>

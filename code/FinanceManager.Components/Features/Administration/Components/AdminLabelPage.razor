@@ -5,7 +5,12 @@
 
 <PageTitle>Labels - Admin</PageTitle>
 
-@if (!_isLoading)
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate aria-label="Loading labels…" />
+    <MudText role="status">Loading labels…</MudText>
+}
+else
 {
     <MudStack Spacing="2">
         @foreach (var message in _errors)
@@ -17,10 +22,10 @@
     <MudGrid Spacing="3" Class="mt-1">
         <MudItem xs="12" md="@(_showSuggestions ? 7 : 12)">
             <MudStack Spacing="2">
-                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <div class="admin-toolbar d-flex flex-wrap align-center gap-2">
                     <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged"
                                   Placeholder="Search by name" Immediate="true" Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Class="flex-grow-1" />
+                                  AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Class="admin-search flex-grow-1" />
                     <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add label" Href="Admin/AddLabel"
                                    Color="Color.Primary" />
                     @if (!_showSuggestions)
@@ -30,7 +35,7 @@
                             AI suggestions
                         </MudButton>
                     }
-                </MudStack>
+                </div>
 
                 @if (_elements.Any())
                 {

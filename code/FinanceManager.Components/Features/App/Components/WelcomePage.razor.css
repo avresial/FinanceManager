@@ -16,10 +16,19 @@
     height: auto;
 }
 
+/* Each slide keeps a strip free at the bottom for the carousel's bullets, so they never sit
+   on top of the preview image. */
+.onb-slide {
+    height: 100%;
+    padding-bottom: 56px;
+    box-sizing: border-box;
+}
+
 .onb-carousel {
-    max-height: 400px;
+    max-height: 100%;
     max-width: 100%;
     height: auto;
+    object-fit: contain;
 }
 
 @media (prefers-color-scheme: dark) {

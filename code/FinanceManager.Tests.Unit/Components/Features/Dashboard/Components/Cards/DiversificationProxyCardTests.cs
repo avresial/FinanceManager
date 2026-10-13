@@ -18,6 +18,16 @@ public class DiversificationProxyCardTests
     }
 
     [Fact]
+    public void BuildExplanations_NoHoldings_ExplainsMissingHoldingsInsteadOfConcentration()
+    {
+        var score = new DiversificationScore(0, 0, 0, "Limited");
+
+        var result = DiversificationProxyCard.BuildExplanations(score);
+
+        Assert.Equal(["No holdings yet — add investments to see how diversified they are."], result);
+    }
+
+    [Fact]
     public void BuildExplanations_ModerateBand_ReturnsEmpty()
     {
         var score = new DiversificationScore(50, 25, 25, "Moderate");

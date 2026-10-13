@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.TransactionHistory;
 
@@ -17,6 +18,7 @@ public partial class BondTransactionRow
     [Parameter] public BondDetails? BondDetails { get; set; }
     [Parameter] public bool IsMobile { get; set; }
 
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<BondTransactionRow> Logger { get; set; }
@@ -126,6 +128,9 @@ public partial class BondTransactionRow
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while removing entry");
+            Snackbar.Add("Could not remove the entry. Please try again.", Severity.Error);
+            _removeEntryVisibility = true;
+            return;
         }
 
         await AccountDataSynchronizationService.AccountChanged();

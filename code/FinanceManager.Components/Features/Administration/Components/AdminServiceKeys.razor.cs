@@ -98,7 +98,7 @@ public partial class AdminServiceKeys : ComponentBase
 
     private async Task SaveServiceAsync(ServiceModel service)
     {
-        _savingServices.Add(service.ServiceName);
+        if (!_savingServices.Add(service.ServiceName)) return;
         try
         {
             string? apiKey = string.IsNullOrWhiteSpace(service.NewApiKey) ? null : service.NewApiKey.Trim();
@@ -113,9 +113,9 @@ public partial class AdminServiceKeys : ComponentBase
             service.CaptureSnapshot();
             Snackbar.Add($"{service.DisplayName} saved.", Severity.Success);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to save {service.DisplayName}: {ex.Message}");
+            _errors.Add($"Unable to save {service.DisplayName}. Please try again.");
         }
         finally
         {

@@ -4,7 +4,7 @@
 <div class="pa-2 mud-list-item-clickable"
      style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
-    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="w-100">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
                  Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
                  Size="Size.Small" />

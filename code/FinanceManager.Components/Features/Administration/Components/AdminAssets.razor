@@ -8,6 +8,11 @@
 
 @if (!_isLoading)
 {
+    @if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+    }
+
     <MudStack Spacing="2">
         @foreach (var message in _errors)
         {
@@ -15,14 +20,14 @@
         }
     </MudStack>
 
-    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+    <div class="admin-toolbar d-flex flex-wrap align-center gap-2 mt-2">
         <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged" Placeholder="Search by name or ISIN"
                       Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true"
-                      Class="flex-grow-1" />
+                      Class="admin-search flex-grow-1" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="Admin/AddAsset"
                    StartIcon="@Icons.Material.Filled.Add">Add asset</MudButton>
         <FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.InstrumentImport Imported="@(_ => ReloadAssetsAsync())" />
-    </MudStack>
+    </div>
 
     @if (_pagedElements.Any())
     {
@@ -59,7 +64,7 @@
             </PagerContent>
         </MudTable>
     }
-    else
+    else if (_loadError is null)
     {
         <MudAlert Severity="Severity.Info" Class="mt-3">No assets found.</MudAlert>
     }

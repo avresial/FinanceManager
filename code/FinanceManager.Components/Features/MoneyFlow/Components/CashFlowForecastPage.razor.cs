@@ -156,6 +156,11 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             model.Forecast.ExpectedTransactions,
             ForecastActivityGrouper.StartingBalance(model.Forecast));
         _currency = model.Currency;
+        // A flat series (e.g. no accounts yet) gives ApexCharts a zero range, which it labels
+        // "0.0k" over "0" on top of the line; the scale says nothing then, so hide it.
+        var values = model.Forecast.HistoricalSeries.Concat(model.Forecast.ForecastSeries).Select(point => point.Value).ToList();
+        if (_chartOptions.Yaxis?.FirstOrDefault()?.Labels is YAxisLabels labels)
+            labels.Show = values.Count > 0 && values.Max() != values.Min();
         _paintedKey = key;
         _isLoading = false;
         _hasError = false;

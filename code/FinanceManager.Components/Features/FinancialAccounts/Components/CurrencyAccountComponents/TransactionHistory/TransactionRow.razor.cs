@@ -4,6 +4,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.TransactionHistory;
 
@@ -24,6 +25,7 @@ public partial class TransactionRow
     /// <summary>True when the surrounding rows all carry the identical time, so showing it on each row says nothing.</summary>
     [Parameter] public bool SiblingsShareSameTime { get; set; }
 
+    [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<TransactionRow> Logger { get; set; }
@@ -99,6 +101,9 @@ public partial class TransactionRow
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error while removing entry");
+            Snackbar.Add("Could not remove the entry. Please try again.", Severity.Error);
+            _removeEntryVisibility = true;
+            return;
         }
 
         await AccountDataSynchronizationService.AccountChanged();

@@ -33,6 +33,7 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
     private IScrollSpy _scrollSpy = null!;
     private bool _isSavingPreferences;
     private bool _isSavingPassword;
+    private bool _isDeletingAccount;
     private bool _scrollSpyStarted;
 
     private string _displayName = string.Empty;
@@ -156,12 +157,14 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
 
         _errors.Clear();
         _isSavingPreferences = true;
+        var submittedCurrencyId = _selectedCurrencyId;
+        var submittedBenchmark = _selectedBenchmark;
         try
         {
-            if (_selectedCurrencyId != _initialCurrencyId)
-                await UpdatePreferredCurrency();
-            if (_selectedBenchmark?.ListingId != _initialBenchmark?.ListingId)
-                await UpdatePreferredBenchmark();
+            if (submittedCurrencyId != _initialCurrencyId)
+                await UpdatePreferredCurrency(submittedCurrencyId);
+            if (submittedBenchmark?.ListingId != _initialBenchmark?.ListingId)
+                await UpdatePreferredBenchmark(submittedBenchmark);
         }
         finally
         {
@@ -309,19 +312,19 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
         return body;
     }
 
-    private async Task UpdatePreferredCurrency()
+    private async Task UpdatePreferredCurrency(int submittedCurrencyId)
     {
         if (_loggedUser is null) return;
 
-        var result = await UserService.UpdatePreferredCurrency(_loggedUser.UserId, _selectedCurrencyId);
+        var result = await UserService.UpdatePreferredCurrency(_loggedUser.UserId, submittedCurrencyId);
         if (!result)
         {
             _errors.Insert(0, "Failed to change preferred currency.");
             return;
         }
 
-        _initialCurrencyId = _selectedCurrencyId;
-        var selectedCurrency = _currencies.FirstOrDefault(x => x.Id == _selectedCurrencyId);
+        _initialCurrencyId = submittedCurrencyId;
+        var selectedCurrency = _currencies.FirstOrDefault(x => x.Id == submittedCurrencyId);
         if (selectedCurrency is not null)
         {
             UserSettingsService.SetCurrency(selectedCurrency);
@@ -329,22 +332,22 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task UpdatePreferredBenchmark()
+    private async Task UpdatePreferredBenchmark(InstrumentSearchResultDto? submittedBenchmark)
     {
         if (_loggedUser is null) return;
 
-        var result = await UserService.UpdatePreferredBenchmark(_loggedUser.UserId, _selectedBenchmark?.ListingId);
+        var result = await UserService.UpdatePreferredBenchmark(_loggedUser.UserId, submittedBenchmark?.ListingId);
         if (!result)
         {
             _errors.Insert(0, "Failed to change investment benchmark.");
             return;
         }
 
-        _initialBenchmark = _selectedBenchmark;
-        UserSettingsService.SetBenchmark(_selectedBenchmark);
-        _info.Insert(0, _selectedBenchmark is null
+        _initialBenchmark = submittedBenchmark;
+        UserSettingsService.SetBenchmark(submittedBenchmark);
+        _info.Insert(0, submittedBenchmark is null
             ? "Investment benchmark changed to Polish inflation."
-            : $"Investment benchmark changed to {_selectedBenchmark.Ticker}.");
+            : $"Investment benchmark changed to {submittedBenchmark.Ticker}.");
     }
 
     private void OnBenchmarkChanged(InstrumentSearchResultDto? benchmark)
@@ -364,17 +367,26 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
 
     private async Task DeleteMyAccount()
     {
-        if (_loggedUser is null) return;
-        var result = await UserService.Delete(_loggedUser.UserId);
-        if (!result)
-        {
-            _errors.Insert(0, "Failed to remove user.");
-            return;
-        }
+        if (_loggedUser is null || _isDeletingAccount) return;
 
-        _errors.Clear();
-        await LoginService.Logout();
-        NavigationManager.NavigateTo("/");
+        _isDeletingAccount = true;
+        try
+        {
+            var result = await UserService.Delete(_loggedUser.UserId);
+            if (!result)
+            {
+                _errors.Insert(0, "Failed to remove user.");
+                return;
+            }
+
+            _errors.Clear();
+            await LoginService.Logout();
+            NavigationManager.NavigateTo("/");
+        }
+        finally
+        {
+            _isDeletingAccount = false;
+        }
     }
 
     private Color GetStorageIndicatorColor()

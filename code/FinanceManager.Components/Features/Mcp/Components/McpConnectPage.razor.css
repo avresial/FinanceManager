@@ -72,6 +72,17 @@ code {
     overflow-wrap: anywhere;
 }
 
+/* Values like URLs stay on one line and scroll inside their chip instead of breaking
+   mid-word into a detached fragment on narrow phones. */
+dl code {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    vertical-align: bottom;
+}
+
 .copy-row code,
 dl code {
     padding: .45rem .65rem;
@@ -147,8 +158,19 @@ dd {
 }
 
 @media (max-width: 42rem) {
+    /* Same 16px side gutter as the other pages; the JSON block wraps long URLs instead. */
     .mcp-connect {
-        width: min(100% - 1.25rem, 58rem);
+        width: min(100% - 2rem, 58rem);
+    }
+
+    pre code {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .connect-card ::deep h2 {
+        font-size: 1.25rem;
+        line-height: 1.6;
     }
 
     .client-grid {

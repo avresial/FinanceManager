@@ -15,6 +15,8 @@ public partial class FinancialInsightsCarouselView : IDisposable
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
     [Parameter] public List<FinancialInsight> Insights { get; set; } = [];
 
     private FinancialInsight? CurrentInsight =>

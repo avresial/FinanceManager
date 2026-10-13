@@ -38,7 +38,7 @@
                     <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Filter by category</MudText>
                     @foreach (var label in AvailableLabels)
                     {
-                        <MudMenuItem OnClick="@(() => ToggleLabel(label))" AutoClose="false" Style="padding: 2.65px;">
+                        <MudMenuItem OnClick="@(() => ToggleLabel(label))" AutoClose="false" Style="padding: 2px 16px 2px 4px;">
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                 <MudCheckBox Value="@SelectedLabels.Contains(label)" T="bool" Dense="true" ReadOnly="true" />
                                 <MudText Typo="Typo.body2">@label</MudText>

@@ -230,7 +230,10 @@ public sealed class AdminDashboardSnapshotTests
     {
         using var handler = new ChartHandler(Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
         await using var context = Context(new Mock<ISnapshotService>(), handler);
-        Assert.Throws<HttpRequestException>(() => context.Render<AdminDashboard>());
+        var cut = context.Render<AdminDashboard>();
+
+        // A failed chart load is shown in its card instead of crashing the dashboard.
+        cut.WaitForAssertion(() => Assert.Contains("Unable to load new users.", cut.Markup));
     }
 
     [Theory]

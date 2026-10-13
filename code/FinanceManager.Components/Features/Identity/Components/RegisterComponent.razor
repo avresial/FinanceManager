@@ -14,7 +14,7 @@
 <MudContainer MaxWidth="MaxWidth.Small" style="height:100vh;" Class="d-flex flex-column justify-center">
     <MudGrid Justify="Justify.Center">
         <MudItem sm="10" xs="12">
-            <MudPaper Class="p-5">
+            <MudPaper Class="py-12 px-4 px-sm-12">
                 <MudText Typo="Typo.h4" Class="text-center mb-3 mt-3">Finance Manager</MudText>
                 <MudText Typo="Typo.h2" Class="mb-4 fs-6 fw-normal text-center">Create your account</MudText>
                 @if (_errors is not null)
@@ -23,6 +23,12 @@
                     {
                         <MudAlert Severity="Severity.Error" Class="my-3">@error</MudAlert>
                     }
+                }
+                @if (_accountCreated)
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-3">
+                        Account created. Please <MudLink Href="login">sign in</MudLink>.
+                    </MudAlert>
                 }
                 <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
                     <MudTextField @bind-Value="_loginModel.Login" T="string" Label="Email" Variant="Variant.Outlined"
@@ -39,8 +45,8 @@
                         Immediate Required InputType="InputType.Password" />
 
                     <MudButton Class="my-2" Variant="Variant.Filled" Color="Color.Primary" type="submit"
-                        @onclick=Register>
-                        <MudText Typo="Typo.h5">Register</MudText>
+                        @onclick=Register Disabled="_isRegistering">
+                        <MudText Typo="Typo.h5">@(_isRegistering ? "Registering…" : "Register")</MudText>
                     </MudButton>
                     <MudButton Href="login" Class="my-2" Variant="Variant.Outlined" Color="Color.Primary">
                         <MudText Typo="Typo.h5">Login</MudText>

@@ -12,9 +12,8 @@
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
-            <div class="alert alert-info" role="alert">
-                CSV import isn't available for investment accounts. Add transactions from the account details page.
-            </div>
+            <PageHeader Title="Import" />
+            <MudAlert Severity="Severity.Info" Class="ma-4">CSV import isn't available for investment accounts. Add transactions from the account details page.</MudAlert>
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {
@@ -22,9 +21,7 @@
         }
         else
         {
-            <div class="alert alert-danger" role="alert">
-                @AccountType type is not supported.
-            </div>
+            <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
         }
     </div>
 </ComponentStateView>

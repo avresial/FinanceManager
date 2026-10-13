@@ -9,8 +9,8 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Components;
 [Trait("Category", "Unit")]
 public class TimeSeriesValueCardDeltaTests
 {
-    private const string _green = "#66BB6A";
-    private const string _red = "#EF5350";
+    private const string _green = "fm-tsvc-delta--good";
+    private const string _red = "fm-tsvc-delta--bad";
     private static readonly DateTime _start = new(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
@@ -23,7 +23,7 @@ public class TimeSeriesValueCardDeltaTests
 
         var delta = cut.Find(".fm-tsvc-delta");
         Assert.Equal("Debt ▼ 400.00 PLN", delta.TextContent);
-        Assert.Contains(_green, delta.GetAttribute("style"));
+        Assert.Contains(_green, delta.ClassName);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class TimeSeriesValueCardDeltaTests
 
         var delta = cut.Find(".fm-tsvc-delta");
         Assert.Equal("Debt ▲ 500.00 PLN", delta.TextContent);
-        Assert.Contains(_red, delta.GetAttribute("style"));
+        Assert.Contains(_red, delta.ClassName);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class TimeSeriesValueCardDeltaTests
 
         var delta = cut.Find(".fm-tsvc-delta");
         Assert.Equal("Debt unchanged", delta.TextContent);
-        Assert.Contains(_green, delta.GetAttribute("style"));
+        Assert.Contains(_green, delta.ClassName);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class TimeSeriesValueCardDeltaTests
 
         var delta = cut.Find(".fm-tsvc-delta");
         Assert.Equal("▲ +10.0 %", delta.TextContent);
-        Assert.Contains(_green, delta.GetAttribute("style"));
+        Assert.Contains(_green, delta.ClassName);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class TimeSeriesValueCardDeltaTests
         var cut = RenderCard(context, isDebt: true, 0m, -500m);
         var delta = cut.Find(".fm-tsvc-delta");
         Assert.Equal("Debt ▲ 500.00 PLN", delta.TextContent);
-        Assert.Contains(_red, delta.GetAttribute("style"));
+        Assert.Contains(_red, delta.ClassName);
     }
 
     [Fact]

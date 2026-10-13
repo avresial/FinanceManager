@@ -7,7 +7,7 @@
 {
     <AccountDetailsPageContentSkeleton />
 }
-else if (_transactions.Count == 0)
+else if (_transactions.Count == 0 && IsUnfilteredHistoryQuery)
 {
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudPaper Class="pa-8 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
@@ -20,12 +20,24 @@ else if (_transactions.Count == 0)
 }
 else
 {
-    <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
-                        Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
-                        ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
-                        SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
-                        ChartData="@ChartData" BenchmarkData="@BenchmarkData" CapitalData="@CapitalData" BenchmarkName="@_benchmarkName"
-                        IsMobile="@_isMobile" />
+    @if (_hasChartLoadError)
+    {
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <MudAlert Severity="Severity.Error" Class="my-3">
+                Could not load chart and valuation data.
+                <MudButton Color="Color.Primary" OnClick="QueueChartDataRefresh">Retry</MudButton>
+            </MudAlert>
+        </MudContainer>
+    }
+    else
+    {
+        <AccountDetailsHero AccountName="@_accountName" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
+                            Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                            ChangeLabel="Asset appreciation" ShowChangeRange="false" IsBalanceLoading="@_isChartLoading"
+                            SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
+                            ChartData="@ChartData" BenchmarkData="@BenchmarkData" CapitalData="@CapitalData" BenchmarkName="@_benchmarkName"
+                            IsMobile="@_isMobile" />
+    }
 
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudGrid Spacing="3">
@@ -78,10 +90,13 @@ else
             {
                 <MudItem lg="4">
                     <MudStack Spacing="4">
-                        <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                                   Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
+                        @if (!_hasChartLoadError)
+                        {
+                            <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                                       Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
-                        <InvestmentHoldingCard Holdings="@_holdings" />
+                            <InvestmentHoldingCard Holdings="@_holdings" />
+                        }
 
                         <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
                     </MudStack>
@@ -102,10 +117,13 @@ else
             </MudStack>
             <MudDivider />
             <MudStack Spacing="4" Class="pa-4">
-                <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
-                                           Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
+                @if (!_hasChartLoadError)
+                {
+                    <AppreciationBreakdownCard CapitalValue="@_capitalValue" CurrentValue="@_currentValue"
+                                               Currency="@_currency.ShortName" Label="Asset appreciation" IsLoading="@_isChartLoading" />
 
-                <InvestmentHoldingCard Holdings="@_holdings" />
+                    <InvestmentHoldingCard Holdings="@_holdings" />
+                }
 
                 <InvestmentAccountMoversCard TopEntries="@(_top5 ?? [])" BottomEntries="@(_bottom5 ?? [])" />
             </MudStack>

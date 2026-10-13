@@ -61,7 +61,8 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
     private bool _isChartLoading;
     private readonly RefreshVersionGate _chartGate = new();
 
-    public bool IsLoading = false;
+    // Start as loading so the first render shows the skeleton instead of an empty page.
+    public bool IsLoading = true;
     public BondAccount? Account { get; set; }
     public string ErrorMessage { get; set; } = string.Empty;
     public List<TimeSeriesModel> ChartData { get; set; } = [];

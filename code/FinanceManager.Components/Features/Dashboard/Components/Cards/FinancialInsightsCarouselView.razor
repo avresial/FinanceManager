@@ -50,6 +50,12 @@
                     <div class="ins-skel" style="height:24px;width:52px;border-radius:9999px"></div>
                 </div>
             }
+            else if (HasError)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">Unable to load financial insights.
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnRetry">Retry</MudButton>
+                </MudAlert>
+            }
             else if (!_insights.Any())
             {
                 <div class="ins-empty">
@@ -66,7 +72,7 @@
             {
                 <div class="ins-fade" @key="_currentIndex">
                     <div class="ins-insight-title">@CurrentInsight!.Title</div>
-                    <div class="ins-insight-msg">@CurrentInsight!.Message</div>
+                    <div class="ins-insight-msg" tabindex="0" role="region" aria-label="Insight message">@CurrentInsight!.Message</div>
                 </div>
                 @if (_insights.Count <= 1)
                 {

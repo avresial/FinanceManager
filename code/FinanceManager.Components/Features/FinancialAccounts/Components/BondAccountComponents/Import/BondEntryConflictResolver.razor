@@ -26,7 +26,7 @@ else if (_dayGroups.Any())
         </MudStack>
 
         <MudPaper Outlined="true" Elevation="0" Class="px-4 py-2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full">
+            <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="3" Class="mud-width-full">
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Default">
                     @ResolvedCount / @_dayGroups.Count
                 </MudChip>
@@ -34,9 +34,9 @@ else if (_dayGroups.Any())
 
                 <MudSpacer />
 
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default"
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" Style="white-space: nowrap;"
                            OnClick="@(() => PickAll(ResolveChoice.Imported))">Keep all imported</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default"
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" Style="white-space: nowrap;"
                            OnClick="@(() => PickAll(ResolveChoice.Existing))">Keep all existing</MudButton>
             </MudStack>
         </MudPaper>
@@ -94,7 +94,7 @@ else if (_dayGroups.Any())
                                 }
                                 else
                                 {
-                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0">
+                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0" Class="fm-mapped-preview" Style="overflow-x: auto;">
                                         <thead>
                                             <tr>
                                                 <th>Posting date</th>
@@ -142,7 +142,7 @@ else if (_dayGroups.Any())
                                 }
                                 else
                                 {
-                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0">
+                                    <MudSimpleTable Dense="true" Hover="false" Elevation="0" Class="fm-mapped-preview" Style="overflow-x: auto;">
                                         <thead>
                                             <tr>
                                                 <th>Posting date</th>

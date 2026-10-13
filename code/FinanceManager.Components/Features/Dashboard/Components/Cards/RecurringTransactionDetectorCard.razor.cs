@@ -20,6 +20,8 @@ public partial class RecurringTransactionDetectorCard : IDisposable
     private bool _isLoading;
     private bool _disposed;
     private bool _isLoadingDetail;
+    private bool _hasError;
+    private bool _hasDetailError;
     private List<RecurringTransactionResult> _data = [];
     private decimal _totalMonthlySpend;
     private RecurringTransactionResult? _selectedItem;
@@ -44,6 +46,7 @@ public partial class RecurringTransactionDetectorCard : IDisposable
     private async Task LoadData()
     {
         var version = _refreshGate.Claim();
+        _hasError = false;
         var user = await LoginService.GetLoggedUser();
         if (_disposed || !_refreshGate.IsCurrent(version)) return;
         if (user is null)
@@ -72,7 +75,8 @@ public partial class RecurringTransactionDetectorCard : IDisposable
         if (_disposed || !_refreshGate.IsCurrent(version)) return;
 
         _isLoading = false;
-        if (result.IsBlockingFailure)
+        _hasError = result.IsBlockingFailure;
+        if (_hasError)
         {
             Logger.LogError(result.Error, "Unable to load recurring transactions.");
             Snackbar.Add("Unable to load recurring transactions.", Severity.Error);
@@ -104,6 +108,7 @@ public partial class RecurringTransactionDetectorCard : IDisposable
         _selectedItem = item;
         _detailEntries = [];
         _isLoadingDetail = true;
+        _hasDetailError = false;
         StateHasChanged();
 
         try
@@ -119,7 +124,10 @@ public partial class RecurringTransactionDetectorCard : IDisposable
         {
             Logger.LogError(ex, "Failed to load entries for {Name}", item.Name);
             if (requestVersion == _detailRequestVersion)
+            {
+                _hasDetailError = true;
                 Snackbar.Add("Unable to load transaction details.", Severity.Error);
+            }
         }
         finally
         {
@@ -130,6 +138,8 @@ public partial class RecurringTransactionDetectorCard : IDisposable
             }
         }
     }
+
+    private Task RetryDetail() => _selectedItem is null ? Task.CompletedTask : SelectItem(_selectedItem);
 
     private void Back()
     {

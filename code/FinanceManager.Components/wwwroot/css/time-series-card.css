@@ -23,6 +23,30 @@
     white-space: nowrap;
 }
 
+/* Good/bad tokens mirror transaction-log-card.css and flip under prefers-color-scheme: dark,
+   which is how this app flips theme; the light pair keeps the text readable on white. */
+.fm-tsvc-delta--good {
+    color: #2E7D32;
+    background: rgba(46, 125, 50, 0.15);
+}
+
+.fm-tsvc-delta--bad {
+    color: #C62828;
+    background: rgba(198, 40, 40, 0.13);
+}
+
+@media (prefers-color-scheme: dark) {
+    .fm-tsvc-delta--good {
+        color: #66BB6A;
+        background: rgba(102, 187, 106, 0.15);
+    }
+
+    .fm-tsvc-delta--bad {
+        color: #EF5350;
+        background: rgba(239, 83, 80, 0.15);
+    }
+}
+
 /* Header value placeholder shown while the series loads. */
 .fm-tsvc-shimmer {
     width: 160px;
@@ -49,7 +73,9 @@
    crossing the glyphs. paint-order keeps the halo under the text; the surface token
    follows the light/dark theme. */
 .fm-tsvc-card .apexcharts-yaxis-texts-g text,
-.fm-tsvc-card .apexcharts-xaxis-texts-g text {
+.fm-tsvc-card .apexcharts-xaxis-texts-g text,
+.fm-hero-chart .apexcharts-yaxis-texts-g text,
+.fm-hero-chart .apexcharts-xaxis-texts-g text {
     paint-order: stroke;
     stroke: var(--mud-palette-surface);
     stroke-width: 4px;
@@ -57,7 +83,8 @@
 }
 
 /* The raised y-axis group sits over the plot; keep it from swallowing hover events. */
-.fm-tsvc-card .apexcharts-yaxis {
+.fm-tsvc-card .apexcharts-yaxis,
+.fm-hero-chart .apexcharts-yaxis {
     pointer-events: none;
 }
 

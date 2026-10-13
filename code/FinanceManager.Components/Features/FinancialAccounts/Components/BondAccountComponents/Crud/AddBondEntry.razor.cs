@@ -18,6 +18,7 @@ public partial class AddBondEntry : ComponentBase
 
     private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
+    private bool _isAdding;
     private string[] _errors = [];
     private MudForm? _form;
 
@@ -58,57 +59,68 @@ public partial class AddBondEntry : ComponentBase
 
     public async Task Add()
     {
-        if (_form is null)
-        {
-            _errors = ["Form initialization error. Please try again."];
-            return;
-        }
-
-        await _form.Validate();
-
-        if (!_form.IsValid)
-        {
-            _errors = ["Please correct the validation errors before submitting."];
-            return;
-        }
-        if (!ValueChange.HasValue)
-        {
-            _errors = ["Value change is required."];
-            return;
-        }
-        if (!_postingDate.HasValue || !_time.HasValue)
-        {
-            _errors = ["Date and time are required."];
-            return;
-        }
-        if (_selectedBond is null)
-        {
-            _errors = ["Bond selection is required."];
-            return;
-        }
-
-        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
-            _time.Value.Seconds);
-
-        BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
-        {
-            Labels = GetLabels().ToList()
-        };
+        if (_isAdding) return;
+        _isAdding = true;
+        _errors = [];
         try
         {
-            await FinancialAccountService.AddEntry(bondAccountEntry);
+            if (_form is null)
+            {
+                _errors = ["Form initialization error. Please try again."];
+                return;
+            }
+
+            await _form.Validate();
+
+            if (!_form.IsValid)
+            {
+                _errors = ["Please correct the validation errors before submitting."];
+                return;
+            }
+            if (!ValueChange.HasValue)
+            {
+                _errors = ["Value change is required."];
+                return;
+            }
+            if (!_postingDate.HasValue || !_time.HasValue)
+            {
+                _errors = ["Date and time are required."];
+                return;
+            }
+            if (_selectedBond is null)
+            {
+                _errors = ["Bond selection is required."];
+                return;
+            }
+
+            DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
+                _time.Value.Seconds);
+
+            BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
+            {
+                Labels = GetLabels().ToList()
+            };
+            try
+            {
+                await FinancialAccountService.AddEntry(bondAccountEntry);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error adding entry");
+                _errors = ["Could not add the entry. Please try again."];
+            }
+            if (_errors.Length == 0)
+            {
+                _ = AccountDataSynchronizationService.AccountChanged();
+                await ActionCompleted.InvokeAsync();
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            Logger.LogError(ex, "Error adding entry");
-            _errors = [ex.Message];
-        }
-        if (_errors.Length == 0)
-        {
-            _ = AccountDataSynchronizationService.AccountChanged();
-            await ActionCompleted.InvokeAsync();
+            _isAdding = false;
         }
     }
+
     public IEnumerable<FinancialLabel> GetLabels()
     {
         if (_selectedLabels is null || _selectedLabels.Count() == 0) yield break;

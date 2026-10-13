@@ -88,7 +88,7 @@
                 <div class="d-flex flex-grow-1">
                     <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3">Assets</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-4">Manage your assets like a real pro</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4 px-4 px-md-0">Manage your assets like a real pro</MudText>
                     </MudPaper>
                 </div>
             </MudItem>
@@ -108,7 +108,7 @@
                 <div class="d-flex flex-grow-1">
                     <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
                         <MudText Typo="Typo.h3">Accounts</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-4">Track cash, shares, ETF, real estate value and more...</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4 px-4 px-md-0">Track cash, shares, ETF, real estate value and more...</MudText>
                     </MudPaper>
                 </div>
             </MudItem>
@@ -140,8 +140,8 @@
         <MudContainer MaxWidth="MaxWidth.Large" style="min-height: 100vh;" Class="d-flex flex-grow-1 gap-4 align-center">
 
             <MudGrid Class="py-5">
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                <MudItem xs="12" sm="6" md="4" Class="d-flex">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4 d-flex flex-column flex-grow-1">
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <div class="fm-card-info-centered">
@@ -154,7 +154,7 @@
                         </MudCardHeader>
                         <MudCardContent>
                             <div class="d-flex justify-center">
-                                <MudText Typo="Typo.h3">Free</MudText>
+                                <MudText Typo="Typo.h5">Free</MudText>
                             </div>
                             <MudList T="string" Class="mx-auto mt-4" Style="width:300px;">
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
@@ -168,13 +168,13 @@
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
-                        <MudCardActions Class="d-flex justify-center">
+                        <MudCardActions Class="d-flex justify-center mt-auto">
                             <MudButton Href="register" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Style="width:50%;">Start Now</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                <MudItem xs="12" sm="6" md="4" Class="d-flex">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4 d-flex flex-column flex-grow-1">
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <div class="fm-card-info-centered">
@@ -201,13 +201,13 @@
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
-                        <MudCardActions Class="d-flex justify-center">
+                        <MudCardActions Class="d-flex justify-center mt-auto">
                             <MudButton Disabled Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
-                <MudItem xs="12" sm="12" md="4">
-                    <MudCard Elevation="25" Class="rounded-lg pb-4">
+                <MudItem xs="12" sm="12" md="4" Class="d-flex">
+                    <MudCard Elevation="25" Class="rounded-lg pb-4 d-flex flex-column flex-grow-1">
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <div class="fm-card-info-centered">
@@ -234,7 +234,7 @@
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
-                        <MudCardActions Class="d-flex justify-center">
+                        <MudCardActions Class="d-flex justify-center mt-auto">
                             <MudButton Disabled Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
                         </MudCardActions>
                     </MudCard>

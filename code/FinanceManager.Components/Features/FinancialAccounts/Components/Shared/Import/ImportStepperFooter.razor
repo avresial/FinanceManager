@@ -1,23 +1,24 @@
 <MudDivider />
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="pa-4">
+@* Wraps on phones so the primary label ("Begin import") stays on one line. *@
+<MudStack Row="true" Wrap="Wrap.Wrap" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="pa-4" Style="row-gap: 8px;">
     <MudButton Variant="Variant.Text" Color="Color.Default"
                StartIcon="@Icons.Material.Filled.Close"
                Disabled="DisableClear"
                OnClick="Clear">Clear</MudButton>
 
-    <MudStack Row="true" Spacing="2">
+    <MudStack Row="true" Spacing="2" Class="ml-auto">
         @if (ShowBackAction)
         {
             <MudButton Variant="Variant.Outlined" Color="Color.Default"
                        StartIcon="@Icons.Material.Filled.ArrowBack"
-                       OnClick="Back">Back</MudButton>
+                       OnClick="Back" Style="white-space: nowrap;">Back</MudButton>
         }
         @if (ShowPrimaryAction)
         {
             <MudButton Variant="Variant.Filled" Color="Color.Primary"
                        EndIcon="@Icons.Material.Filled.ArrowForward"
                        Disabled="@(!CanContinue)"
-                       OnClick="PrimaryClick">@PrimaryLabel</MudButton>
+                       OnClick="PrimaryClick" Style="white-space: nowrap;">@PrimaryLabel</MudButton>
         }
     </MudStack>
 </MudStack>

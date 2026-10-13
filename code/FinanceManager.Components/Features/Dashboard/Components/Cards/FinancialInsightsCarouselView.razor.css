@@ -133,7 +133,8 @@
     margin: 8px 0 0;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
 }
 
 .ins-tags-body {

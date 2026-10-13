@@ -60,16 +60,7 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<List<UserDetails>> GetUsers(int recordIndex, int recordsCount)
-    {
-        try
-        {
-            var result = await httpClient.GetFromJsonAsync<List<UserDetails>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}");
-            return result ?? [];
-        }
-        catch
-        {
-            return [];
-        }
-    }
+    public async Task<List<UserDetails>> GetUsers(int recordIndex, int recordsCount) =>
+        await httpClient.GetFromJsonAsync<List<UserDetails>>($"{httpClient.BaseAddress}api/AdministrationUsers/GetUsers/{recordIndex}/{recordsCount}")
+        ?? throw new InvalidOperationException("The users response was empty.");
 }

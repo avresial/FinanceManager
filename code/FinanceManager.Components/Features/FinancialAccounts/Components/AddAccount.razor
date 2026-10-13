@@ -30,7 +30,13 @@
                 </MudSelect>
             }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success)" Class="ml-auto" @onclick=Add data-testid="account-submit">Add</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success || _isAdding)" Class="ml-auto" @onclick=Add data-testid="account-submit">
+            @if (_isAdding)
+            {
+                <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+            }
+            Add
+        </MudButton>
         @if (_addedAccountId is not null)
         {
             <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="my-3">

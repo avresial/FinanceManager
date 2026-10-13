@@ -1,4 +1,5 @@
-// Keeps the axis labels of the dashboard time-series cards (TimeSeriesValueCard) readable.
+// Keeps the axis labels of the dashboard time-series cards (TimeSeriesValueCard) and the
+// account details hero chart (AccountDetailsHero) readable.
 //
 // ApexCharts has no option for either fix, so they are applied to the rendered SVG:
 //  1. The floating y-axis labels sit inside the plot, but ApexCharts emits their group before
@@ -11,7 +12,8 @@
 (function () {
     'use strict';
 
-    var SELECTOR = '.fm-tsvc-card svg.apexcharts-svg';
+    // Dashboard time-series cards and the account details hero chart share the edge-to-edge layout.
+    var SELECTOR = '.fm-tsvc-card svg.apexcharts-svg, .fm-hero-chart svg.apexcharts-svg';
     var EDGE_PADDING_PX = 4;
     var scheduled = false;
 

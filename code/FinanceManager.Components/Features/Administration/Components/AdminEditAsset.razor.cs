@@ -15,6 +15,7 @@ public partial class AdminEditAsset : ComponentBase
     [Inject] public required AssetHttpClient AssetHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
+    [Inject] public required NavigationManager NavigationManager { get; set; }
 
     private bool _isLoading = true;
     private bool _isSaving;
@@ -117,6 +118,9 @@ public partial class AdminEditAsset : ComponentBase
                 _asset = created;
                 _isNew = false;
                 _info.Add("Asset created. You can now add listings.");
+                // Move to the edit route so a refresh or the breadcrumb reflects the created asset
+                // instead of reopening an empty Add form. Same component, so state is kept.
+                NavigationManager.NavigateTo($"Admin/EditAsset/{created.Id}", replace: true);
             }
             else
             {
@@ -253,6 +257,7 @@ public partial class AdminEditAsset : ComponentBase
 
     private async Task SaveSymbol(MarketDataSymbolDto symbol)
     {
+        if (_isSaving) return;
         _errors.Clear();
         _info.Clear();
         _isSaving = true;
@@ -263,9 +268,9 @@ public partial class AdminEditAsset : ComponentBase
             else
                 _errors.Add("Failed to save symbol.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to save symbol: {ex.Message}");
+            _errors.Add("Unable to save the symbol. Please try again.");
         }
         finally
         {
@@ -275,6 +280,7 @@ public partial class AdminEditAsset : ComponentBase
 
     private async Task DeleteSymbol(MarketDataSymbolDto symbol)
     {
+        if (_isSaving) return;
         _isSaving = true;
         try
         {
@@ -283,9 +289,9 @@ public partial class AdminEditAsset : ComponentBase
             else
                 _errors.Add("Failed to delete symbol.");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to delete symbol: {ex.Message}");
+            _errors.Add("Unable to delete the symbol. Please try again.");
         }
         finally
         {

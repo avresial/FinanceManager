@@ -5,6 +5,11 @@
 
 <PageTitle>Users - Admin</PageTitle>
 
+@if (_loadError is not null)
+{
+    <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+}
+
 <MudStack Spacing="2">
     @foreach (var message in _errors)
     {
@@ -18,7 +23,7 @@
                   Class="flex-grow-1" />
 </MudStack>
 <MudTable @ref="@Table" Items="@_pagedElements" RowsPerPage="@_recordsPerPage" Dense Breakpoint="Breakpoint.Sm"
-          LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
+          Loading="_isLoading" LoadingProgressColor="Color.Info" Elevation="0" Class="my-3">
     <HeaderContent>
         <MudTh>User id</MudTh>
         <MudTh>User name</MudTh>
@@ -44,6 +49,12 @@
             </MudMenu>
         </MudTd>
     </RowTemplate>
+    <NoRecordsContent>
+        @if (!_isLoading && _loadError is null)
+        {
+            <MudText>@(string.IsNullOrWhiteSpace(_searchText) ? "No users found." : "No users match this search.")</MudText>
+        }
+    </NoRecordsContent>
     <PagerContent>
         @if (Table is not null && _pagesCount > 1)
         {

@@ -7,6 +7,7 @@ namespace FinanceManager.Components.Features.Administration.Components;
 
 public partial class EditLabelPage : ComponentBase
 {
+    private bool _isUpdatingName;
     private readonly List<string> _errors = [];
     private readonly List<string> _warnings = [];
     private readonly List<string> _info = [];
@@ -26,6 +27,10 @@ public partial class EditLabelPage : ComponentBase
     protected override async Task OnParametersSetAsync()
     {
         _isLoadingPage = true;
+        _labelData = null;
+        _errors.Clear();
+        _warnings.Clear();
+        _info.Clear();
 
         try
         {
@@ -41,9 +46,9 @@ public partial class EditLabelPage : ComponentBase
                 .FirstOrDefault(c => c.Kind == FinancialLabelClassificationCatalog.SpendingNecessityKind)?.Value
                 ?? string.Empty;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to load label data: {ex.Message}");
+            _errors.Add("Failed to load label data. Please try again.");
         }
 
         _isLoadingPage = false;
@@ -73,24 +78,38 @@ public partial class EditLabelPage : ComponentBase
     }
     private async Task UpdateNameAsync()
     {
-        if (_labelData is null) return;
-        if (NameField is null) return;
-        if (_nameForm is null) return;
-
-        await _nameForm.Validate();
-        if (_nameForm.IsValid)
+        if (_isUpdatingName) return;
+        _isUpdatingName = true;
+        try
         {
-            var result = await FinancialLabelHttpClient.UpdateName(_labelData.Id, NameField);
-            if (!result)
+            if (_labelData is null) return;
+            if (NameField is null) return;
+            if (_nameForm is null) return;
+
+            await _nameForm.Validate();
+            if (_nameForm.IsValid)
             {
-                _errors.Insert(0, "Failed to change name.");
-                return;
+                var submittedName = NameField;
+                var submittedLabelId = _labelData.Id;
+                var result = await FinancialLabelHttpClient.UpdateName(submittedLabelId, submittedName);
+                // The page may have navigated to another label while the request ran.
+                if (_labelData is null || _labelData.Id != submittedLabelId) return;
+                if (!result)
+                {
+                    _errors.Insert(0, "Failed to change name.");
+                    return;
+                }
+                else
+                {
+                    _errors.Clear();
+                    _labelData.Name = submittedName;
+                    _info.Insert(0, "Name changed successfully.");
+                }
             }
-            else
-            {
-                _errors.Clear();
-                _info.Insert(0, "Name changed successfully.");
-            }
+        }
+        finally
+        {
+            _isUpdatingName = false;
         }
     }
 

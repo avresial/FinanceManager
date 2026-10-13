@@ -148,7 +148,7 @@ public partial class AdminAiProviders : ComponentBase
 
     private async Task SaveProviderAsync(ProviderModel provider)
     {
-        _savingProviders.Add(provider.ProviderName);
+        if (!_savingProviders.Add(provider.ProviderName)) return;
         try
         {
             string? apiKey = string.IsNullOrEmpty(provider.NewApiKey) ? null : provider.NewApiKey;
@@ -164,9 +164,9 @@ public partial class AdminAiProviders : ComponentBase
             provider.CaptureSnapshot();
             Snackbar.Add($"{provider.DisplayName} saved.", Severity.Success);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to save {provider.DisplayName}: {ex.Message}");
+            _errors.Add($"Unable to save {provider.DisplayName}. Please try again.");
         }
         finally
         {
@@ -238,6 +238,7 @@ public partial class AdminAiProviders : ComponentBase
 
     private async Task SaveFallbackAsync()
     {
+        if (_savingFallback) return;
         _savingFallback = true;
         try
         {
@@ -245,13 +246,14 @@ public partial class AdminAiProviders : ComponentBase
                 .Select((e, i) => new AiFallbackEntryDto(e.ProviderName, e.Model, i))
                 .ToList();
 
+            var submittedSignature = FallbackSignature();
             await ApiClient.UpdateFallbackAsync(new UpdateFallbackRequest(entries));
-            _savedFallbackSignature = FallbackSignature();
+            _savedFallbackSignature = submittedSignature;
             Snackbar.Add("Fallback strategy saved.", Severity.Success);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add($"Failed to save fallback strategy: {ex.Message}");
+            _errors.Add("Unable to save the fallback strategy. Please try again.");
         }
         finally
         {

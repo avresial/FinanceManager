@@ -12,6 +12,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
 public partial class FinancialInsightsCarousel : IDisposable
 {
+    private bool _hasError;
     private bool _isLoading;
     private bool _disposed;
     private List<FinancialInsight> _insights = [];
@@ -31,6 +32,7 @@ public partial class FinancialInsightsCarousel : IDisposable
     private async Task LoadInsightsAsync()
     {
         var version = _refreshGate.Claim();
+        _hasError = false;
         var user = await LoginService.GetLoggedUser();
         if (_disposed || !_refreshGate.IsCurrent(version)) return;
         if (user is null)
@@ -54,7 +56,8 @@ public partial class FinancialInsightsCarousel : IDisposable
         if (_disposed || !_refreshGate.IsCurrent(version)) return;
 
         _isLoading = false;
-        if (result.IsBlockingFailure)
+        _hasError = result.IsBlockingFailure;
+        if (_hasError)
         {
             Snackbar.Add("Unable to load financial insights.", Severity.Error);
         }

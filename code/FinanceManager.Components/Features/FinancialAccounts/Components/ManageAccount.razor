@@ -20,9 +20,7 @@
         }
         else
         {
-            <div class="alert alert-danger" role="alert">
-                @AccountType type is not supported.
-            </div>
+            <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
         }
     </div>
 </ComponentStateView>
