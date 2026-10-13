@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Give every Dashboard, Assets and Liabilities card the same header: one title size on a single line (the full title appears in its info tooltip), one muted line for the period or scope, the main amount aligned to the right, and actions such as View all, Manage alerts or the Type / Account toggle aligned to the right. On phones the amount and actions move below the title instead of overflowing. #902
+- Show the application version in a tooltip when hovering over or focusing the FinanceManager logo, instead of displaying it in the app bar or navigation footer. #917
 - Show the same loading bar and dimmed content on the Assets and Liabilities cards that depend on the date range while a newly selected range loads, without restarting unchanged card requests or leaving the indicator active when prepared data takes over. Failed range refreshes retain previously displayed data and show an error with Retry; return cards keep the matching date caption until fresh data arrives. #912
 - Keep the axis labels of the Net worth, Closing balance, Assets value, Liabilities value and Net cash flow charts readable: value labels now sit above the line with a card-coloured halo instead of being crossed by it, date labels (including rotated labels) are nudged horizontally inside the card instead of being cut off at the edges, and short cards show fewer value ticks. #901
 - Reserve the amber accent colour for actions, selected state and key figures: descriptions, subtitles, footnotes, period labels and empty-state hints across the Dashboard, Assets, Alerts, Subscriptions, Cash flow forecast, Settings, Transaction rules, MCP connection and Admin pages now use muted text (including the Accounts heading), and the colour rule is documented. #897
@@ -62,6 +63,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Show the selected dates (for example "12 Sep – 12 Oct") in the date range control on phones instead of "Custom range". #924
+- Keep the Assets history and distribution totals consistent for the selected closing date, including guest sessions and unavailable investment prices. #919
 - Show "Next 90 days" on its own line under the Cash flow forecast card title instead of wrapping "days" onto a separate line. #920
 - Show storage usage on the Settings page for every signed-in user, including the demo account, instead of failing with an access error that only administrators avoided. #923
 - Show short, unbroken category labels on the Return attribution chart (Cash flows, Market, FX, Fees) instead of hyphenating the full names mid-word; hover a label to see its full name. #921

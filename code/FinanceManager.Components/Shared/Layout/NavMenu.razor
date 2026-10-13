@@ -1,13 +1,9 @@
 ﻿@using FinanceManager.Domain.Identity.Entities
 <MudNavMenu Class="pt-2" aria-label="Primary">
-    @if (DrawerIsOpen)
-    {
-        <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary">FinanceManager</MudText>
-    }
-    else
-    {
-        <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary" aria-label="FinanceManager">FM</MudText>
-    }
+    <MudTooltip Text="@($"Version {ApplicationVersion.Version}")" Placement="Placement.Right" Inline="false" Style="pointer-events: none;">
+        <MudText Typo="Typo.h6" Class="px-4" Color="Color.Primary" aria-label="@($"FinanceManager, version {ApplicationVersion.Version}")"
+                 tabindex="0" data-testid="nav-brand">@(DrawerIsOpen ? "FinanceManager" : "FM")</MudText>
+    </MudTooltip>
     <MudDivider Class="my-2" />
     <MudNavLink Icon="@Icons.Material.Filled.Dashboard" Href="" Match="NavLinkMatch.All" data-testid="nav-dashboard">Dashboard</MudNavLink>
 

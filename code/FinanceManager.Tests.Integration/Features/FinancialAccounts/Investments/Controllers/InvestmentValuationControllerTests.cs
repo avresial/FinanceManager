@@ -1,7 +1,9 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -27,11 +29,17 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     private const int _usdCurrencyId = 840;
     private static readonly DateTime _asOf = new(2024, 6, 10);
     private TestDatabase? _testDatabase;
+    private static readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
     private static readonly Mock<IInflationIndexProvider> _inflationIndexProvider = new();
+
+    protected override bool ReuseApplicationHost => false;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         _inflationIndexProvider.Reset();
+        _currencyExchangeService.Reset();
+        services.RemoveAll<ICurrencyExchangeService>();
+        services.AddSingleton(_currencyExchangeService.Object);
 
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
@@ -139,6 +147,52 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
 
         Assert.NotEmpty(series);
         Assert.Equal(300m, series[_asOf]); // 3 units * 100 USD on the priced day
+    }
+
+    [Theory]
+    [InlineData(7, false)]
+    [InlineData(8, false)]
+    [InlineData(9, false)]
+    [InlineData(10, false)]
+    [InlineData(10, true)]
+    public async Task GetValueSeries_ClosingValueMatchesPointAndAssetsDistribution(int endDay, bool pending)
+    {
+        await SeedHoldingsWithPrice();
+        var context = _testDatabase!.Context;
+        context.Currencies.Add(new Currency(985, "PLN", "PLN"));
+        var friday = new DateTime(2024, 6, 7);
+        var end = new DateTime(2024, 6, endDay);
+        foreach (var (date, price) in new[] { (friday, 100m), (friday.AddDays(1), 200m), (friday.AddDays(2), 300m) })
+            context.PriceQuotes.Add(new PriceQuote
+            {
+                AssetListingId = _listingId,
+                Price = price,
+                Currency = "USD",
+                PriceTime = new DateTimeOffset(date, TimeSpan.Zero),
+                QuoteType = PriceQuoteType.EndOfDay
+            });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync([(friday, 3m)]);
+        _currencyExchangeService
+            .Setup(x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), end))
+            .ReturnsAsync(pending
+                ? CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
+                : CurrencyExchangeRateResult.Success(4m));
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
+        var point = await client.GetValueAsync(_testAccountId, 985, end);
+        var series = await client.GetValueSeriesAsync(_testAccountId, 985, friday, end);
+        var assets = new AssetsHttpClient(Client);
+        var currency = new Currency(985, "PLN", "PLN");
+        var distribution = await assets.GetEndAssetsPerType(_testUserId, currency, end);
+        var history = await assets.GetAssetsTimeSeries(_testUserId, currency, friday, end);
+
+        Assert.Equal(pending ? 0m : 1200m, point);
+        Assert.Equal(point, series[end]);
+        Assert.Equal(point, distribution.Sum(x => x.Value));
+        Assert.Equal(point, history.MaxBy(x => x.DateTime)!.Value);
     }
 
     [Fact]

@@ -53,6 +53,29 @@ public class CardInfoAffordanceCoverageTests
         Assert.Contains("card 1", mismatches[0]);
     }
 
+    [Theory]
+    [InlineData("<CardHeader Title=\"Title only\" />", false)]
+    [InlineData("<CardHeader Title=\"Empty info\" InfoText=\"\" />", false)]
+    [InlineData("<CardHeader Title=\"Blank info\" InfoText=\"   \" />", false)]
+    [InlineData("<CardHeader Title=\"Plain info\" InfoText=\"Explanation\" />", true)]
+    [InlineData("<CardHeader Title=\"Bound info\" InfoContent=\"@TooltipBody\" />", true)]
+    [InlineData("<CardHeader Title=\"Rich info\"><InfoContent><p>Explanation</p></InfoContent></CardHeader>", true)]
+    [InlineData("<CardHeader Title=\"Empty slot\"><InfoContent>   </InfoContent></CardHeader>", false)]
+    public void CardScopeValidation_CountsOnlyHeadersWithInformation(string header, bool hasInformation)
+    {
+        var mismatches = FindCardCoverageMismatches($"<MudCard>{header}</MudCard>");
+
+        if (hasInformation)
+        {
+            Assert.Empty(mismatches);
+        }
+        else
+        {
+            Assert.Single(mismatches);
+            Assert.Contains("card 1", mismatches[0]);
+        }
+    }
+
     [Fact]
     public void EveryMudCard_HasExactlyOneCardInfoTooltip()
     {
@@ -122,9 +145,15 @@ public class CardInfoAffordanceCoverageTests
                 continue;
             }
 
-            // CardHeader hosts the CardInfoTooltip around its title, so it counts as the card's affordance.
-            if (token.Value.StartsWith("<CardInfoTooltip", StringComparison.Ordinal)
-                || token.Value.StartsWith("<CardHeader", StringComparison.Ordinal))
+            var isHeader = token.Value.StartsWith("<CardHeader", StringComparison.Ordinal);
+            if (isHeader && !_headerInformationPattern.Matches(token.Value)
+                    .Any(information => !string.IsNullOrWhiteSpace(information.Groups["info"].Value)))
+            {
+                continue;
+            }
+
+            // A shared header only supplies the affordance when it has information content.
+            if (token.Value.StartsWith("<CardInfoTooltip", StringComparison.Ordinal) || isHeader)
             {
                 tooltipTotal++;
                 if (openCards.TryPeek(out var card))
@@ -195,7 +224,11 @@ public class CardInfoAffordanceCoverageTests
     }
 
     private static readonly Regex _cardMarkupTokenPattern = new(
-        @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])|<CardHeader(?=[\s>/])",
+        @"</MudCard\s*>|<MudCard(?=[\s>/])[^>]*>|<CardInfoTooltip(?=[\s>/])|<CardHeader(?=[\s>/])[^>]*(?:/>|>[\s\S]*?</CardHeader\s*>)",
+        RegexOptions.Compiled);
+
+    private static readonly Regex _headerInformationPattern = new(
+        """\b(?:InfoText|InfoContent)\s*=\s*(?:"(?<info>[^"]*)"|'(?<info>[^']*)')|<InfoContent(?=[\s>])[^>]*>(?<info>[\s\S]*?)</InfoContent\s*>""",
         RegexOptions.Compiled);
 
     private static readonly Regex _commentPattern = new(

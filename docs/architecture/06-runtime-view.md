@@ -82,7 +82,7 @@ sequenceDiagram
     Trades-->>Value: Net quantities by listing
     loop Nonzero holding
         Value->>Price: GetPricePerUnitAsync(listing, target currency, date)
-        Price->>Cache: TryGetValue(listing, currency, day)
+        Price->>Cache: TryGetValue(guest scope, listing, currency, day)
         alt Cached successful price
             Cache-->>Price: Price
         else Cache miss
@@ -121,7 +121,7 @@ Important branches:
 - Provider quotes are multiplied by the listing price multiplier and normalized from minor quote units such as GBX into GBP before storage. Raw price/currency and provider metadata remain in the quote.
 - Typed price results can report `NotYetPublished` with a retry time. The scalar `GetPricePerUnitAsync` wrapper maps unavailable results to zero; account valuation omits nonpositive prices. A numeric total therefore can represent partial pricing rather than complete valuation.
 - Historical conversion can fall back to USD when the requested FX is unavailable. Such fallback values are not cached under the requested-currency key; the remaining interpretation risk is recorded in [chapter 11](11-risks-and-technical-debt.md).
-- Series valuation batches transaction reads and prices each distinct listing; EF operations stay sequential. Price-series FX retrieval is batched by currency/range with documented gap-fill behavior. See [integration details](concepts/integrations.md) and [financial concepts](08-crosscutting-concepts.md).
+- Series valuation batches transaction reads and prices each distinct listing; EF operations stay sequential. Price-series FX retrieval is batched by currency/range with documented gap-fill behavior; its closing day uses the point-price resolver, and a closing zero is retained. Guest price cache keys include the sandbox session identity. See [integration details](concepts/integrations.md) and [financial concepts](08-crosscutting-concepts.md).
 
 ## 6.3 Asynchronous currency import and conflict resolution
 
