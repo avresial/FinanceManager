@@ -30,11 +30,6 @@
     white-space: nowrap;
 }
 
-/* Regular-weight card title (the app's h6 ships at 500, too heavy vs the design). */
-.fm-txlog-card .fm-title {
-    font-weight: 400;
-}
-
 .fm-txlog-card .fm-pos {
     color: var(--fm-pos);
 }

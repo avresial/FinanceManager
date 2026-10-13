@@ -1,20 +1,8 @@
-.attribution-heading,
 .attribution-total {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.5rem;
-}
-
-.attribution-heading {
-    flex-wrap: wrap;
-}
-
-.attribution-range {
-    margin-left: auto;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.75rem;
-    white-space: nowrap;
 }
 
 .attribution-helper {

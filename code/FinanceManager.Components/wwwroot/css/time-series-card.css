@@ -3,53 +3,7 @@
    (FinanceManager.WebUi.styles.css) is not wired up, so .razor.css isolation
    does not apply at runtime. Class names are fm-tsvc-* to avoid collisions. */
 
-/* Header: split row on desktop (title/caption left, value/delta right). */
-.fm-tsvc-header {
-    padding: 16px 18px 12px;
-    flex: none;
-}
-
-.fm-tsvc-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 14px;
-}
-
-.fm-tsvc-left {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.fm-tsvc-title {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fm-tsvc-caption {
-    font-size: 12px;
-    color: var(--mud-palette-text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fm-tsvc-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    flex: none;
-}
-
 .fm-tsvc-value {
-    font-size: 1.9rem;
-    font-weight: 400;
-    line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
 
@@ -128,27 +82,4 @@
 .fm-tsvc-card .apexcharts-tooltip {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
     border: none !important;
-}
-
-/* Mobile: stack the header so the title isn't squeezed out by the value readout. */
-@media (max-width: 599.98px) {
-    .fm-tsvc-header {
-        padding: 12px 14px 0;
-    }
-
-    .fm-tsvc-header-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-    }
-
-    .fm-tsvc-right {
-        flex-direction: row;
-        align-items: baseline;
-        gap: 10px;
-    }
-
-    .fm-tsvc-value {
-        font-size: 1.55rem;
-    }
 }

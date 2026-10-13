@@ -1,0 +1,86 @@
+/* Title block takes the remaining width; the aside (key figure + actions) stays on the right and
+   wraps under the title only when the card is too narrow for both, so nothing overflows at 375px. */
+.fm-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 4px 12px;
+    padding: 12px 16px 8px;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.fm-card-header-leading {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin: -2px -4px 0 -8px;
+}
+
+.fm-card-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    /* Basis auto: the aside wraps below before the title is truncated; the title only
+       ellipsizes when it alone is wider than the card. */
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fm-card-header ::deep .fm-card-header-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fm-card-header-subtitle {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fm-card-header-aside {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: auto;
+}
+
+.fm-card-header-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 0;
+}
+
+.fm-card-header-figure-value {
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.fm-card-header-badge {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.fm-card-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-height: 28px;
+}

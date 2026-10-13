@@ -45,8 +45,8 @@ public class RangeRefreshFailureTests
             .Add(x => x.Refreshing, refreshing.Add));
         cut.WaitForAssertion(() => Assert.False(refreshing.Last()));
         var previousValue = cut.Find(valueSelector).TextContent;
-        var rangeSelector = card == typeof(PortfolioReturnCardContainer) ? ".portfolio-return-header .mud-typography-caption"
-            : card == typeof(PortfolioReturnAttributionCardContainer) ? ".attribution-range" : null;
+        var rangeSelector = card == typeof(PortfolioReturnCardContainer) ? ".fm-card-header-subtitle"
+            : card == typeof(PortfolioReturnAttributionCardContainer) ? ".fm-card-header-subtitle" : null;
         var previousRange = rangeSelector is null ? null : cut.Find(rangeSelector).TextContent;
         handler.Phase = 1;
         cut.Render(p => p.Add(x => x.Start, _start.AddDays(7)).Add(x => x.End, _end.AddDays(7)));

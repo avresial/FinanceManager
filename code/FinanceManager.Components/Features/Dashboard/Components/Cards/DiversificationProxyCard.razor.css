@@ -13,11 +13,12 @@
     --track-strong: rgba(0, 0, 0, 0.22);
 
     box-sizing: border-box;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 18px 18px 16px;
+    padding: 4px 18px 16px;
     container-type: inline-size;
 }
 
@@ -32,21 +33,6 @@
         --track: rgba(255, 255, 255, 0.11);
         --track-strong: rgba(255, 255, 255, 0.30);
     }
-}
-
-/* ---- Header ---- */
-.diversification-card__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.diversification-card__title {
-    font-family: var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: var(--mud-palette-text-primary);
 }
 
 /* ---- Body (gauge | breakdown) ---- */

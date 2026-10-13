@@ -7,12 +7,6 @@
     padding: 16px 18px;
 }
 
-.fee-drag-card__header {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
 .fee-drag-card__hero {
     align-items: baseline;
     display: flex;

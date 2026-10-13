@@ -38,10 +38,10 @@ public sealed class FinancialAlertsCardTests
         await using var context = CreateContext(outcomes: [triggered], alerts: [alert1, alert2]);
         var cut = context.Render<FinancialAlertsCard>();
 
-        var headerRow = cut.Find(".fm-card-info-header");
+        var headerRow = cut.Find(".fm-card-header");
         Assert.NotNull(headerRow);
 
-        var titleInHeader = headerRow.QuerySelector(".mud-typography-h5");
+        var titleInHeader = headerRow.QuerySelector(".fm-card-header-title");
         Assert.NotNull(titleInHeader);
         Assert.Equal("Alerts", titleInHeader.TextContent.Trim());
 
@@ -57,7 +57,7 @@ public sealed class FinancialAlertsCardTests
         Assert.NotNull(tooltip);
 
         // Configured / triggered summary must be present below the header row
-        var summary = cut.Find(".mud-typography-subtitle1.text-muted");
+        var summary = cut.Find(".fm-card-header-subtitle");
         Assert.NotNull(summary);
         Assert.Contains("1 triggered of 2 configured", summary.TextContent);
     }
@@ -160,7 +160,7 @@ public sealed class FinancialAlertsCardTests
 
         await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
 
-        var header = cut.Find("[data-testid='alert-card-header']");
+        var header = cut.Find(".fm-card-header");
         Assert.Contains("Large transaction", header.TextContent);
         Assert.NotNull(header.QuerySelector("button[aria-label='Back to alerts']"));
         Assert.Contains("1 match", header.TextContent);
@@ -581,7 +581,7 @@ public sealed class FinancialAlertsCardTests
         cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
         await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
         cut.WaitForAssertion(() => Assert.Contains("Transaction #42", cut.Find("[data-testid='alert-detail-occurrences']").TextContent), _timeout);
-        Assert.Contains("Stored alert", cut.Find("[data-testid='alert-card-header']").TextContent);
+        Assert.Contains("Stored alert", cut.Find(".fm-card-header").TextContent);
 
         handler.Complete(0, [StoredOutcome()], StoredAlerts());
         await Drain(cut);
@@ -618,7 +618,7 @@ public sealed class FinancialAlertsCardTests
     private static List<FinancialAlertDto> StoredAlerts() => [CreateAlertDto(title: "One"), CreateAlertDto(title: "Two")];
 
     private static string Subtitle(IRenderedComponent<FinancialAlertsCard> cut) =>
-        cut.Find(".mud-typography-subtitle1.text-muted").TextContent;
+        cut.Find(".fm-card-header-subtitle").TextContent;
 
     private static Task Drain(IRenderedComponent<FinancialAlertsCard> cut) => cut.InvokeAsync(async () => await Task.Delay(50));
 

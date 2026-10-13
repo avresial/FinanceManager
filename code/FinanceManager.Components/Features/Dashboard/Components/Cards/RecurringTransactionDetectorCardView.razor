@@ -1,51 +1,29 @@
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
-<MudCard Outlined Class="d-flex flex-nowrap" Style="@($"height:{Height};")">
-    <MudPaper Class="d-flex align-center flex-grow-0 px-4 pt-3 pb-1 fm-card-info-header" Elevation="0">
-        <div class="flex-grow-1" style="min-width:0;">
-            <div class="d-flex align-center gap-1">
-                @if (SelectedItem is not null)
-                {
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="OnBack" aria-label="Back to recurring transactions" />
-                }
-                <CardInfoTooltip Text="Transactions that repeat on a schedule, with their monthly cost. Select one to see its entries."
-                                 AriaLabel="About recurring transactions card">
-                    @if (SelectedItem is null)
-                    {
-                        <MudText Typo=Typo.h5>Recurring transactions</MudText>
-                    }
-                    else
-                    {
-                        <MudText Typo=Typo.h5>@SelectedItem.Name</MudText>
-                    }
-                </CardInfoTooltip>
-            </div>
+<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+    <CardHeader Title="@(SelectedItem?.Name ?? "Recurring transactions")"
+                InfoText="Transactions that repeat on a schedule, with their monthly cost. Select one to see its entries."
+                InfoAriaLabel="About recurring transactions card"
+                Leading="@(SelectedItem is null ? null : BackButton)"
+                Actions="@(SelectedItem is null ? ViewAllButton : null)">
+        <SubtitleContent>
             @if (SelectedItem is null)
             {
                 @if (IsLoading)
                 {
-                    <MudText Typo=Typo.subtitle1 Class="text-muted">
-                        <StringSpinner CharactersCount="4" />
-                    </MudText>
+                    <StringSpinner CharactersCount="4" />
                 }
                 else if (Data.Count > 0)
                 {
-                    <MudText Typo=Typo.subtitle1 Class="text-muted">@MoneyFormatter.Format(TotalMonthlySpend, Currency)/mo</MudText>
+                    @($"{MoneyFormatter.Format(TotalMonthlySpend, Currency)}/mo")
                 }
             }
             else if (DetailEntries.Count > 0)
             {
-                <MudText Typo=Typo.caption Class="text-muted">@DetailEntries.First().PostingDate.Year</MudText>
+                @DetailEntries.First().PostingDate.Year
             }
-        </div>
-        @if (SelectedItem is null)
-        {
-            <MudButton Href="/Subscriptions" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
-                       Class="flex-shrink-0" aria-label="See all recurring transactions">
-                View all
-            </MudButton>
-        }
-    </MudPaper>
+        </SubtitleContent>
+    </CardHeader>
 
     <ScrollFadeArea Class="flex-grow-1 overflow-auto" Style="min-height:0;">
         @if (SelectedItem is null)
@@ -131,3 +109,12 @@
         }
     </ScrollFadeArea>
 </MudCard>
+
+@code {
+    private RenderFragment BackButton => @<MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" OnClick="OnBack" aria-label="Back to recurring transactions" />;
+
+    private RenderFragment ViewAllButton => @<MudButton Href="/Subscriptions" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                                       Class="flex-shrink-0" aria-label="See all recurring transactions">
+        View all
+    </MudButton>;
+}
