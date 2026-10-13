@@ -275,8 +275,11 @@ public class CashFlowForecastPageTests
 
         var selection = ClickHorizon(cut, 30);
         await handler.Started(30);
-        Assert.DoesNotContain("INITIAL", cut.Markup);
-        Assert.Contains("mud-skeleton", cut.Markup);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain("INITIAL", cut.Markup);
+            Assert.Contains("mud-skeleton", cut.Markup);
+        });
         handler.Complete(Forecast("LATEST", 30));
         await selection;
         Assert.Contains("LATEST", cut.Markup);
@@ -301,7 +304,9 @@ public class CashFlowForecastPageTests
         cut.WaitForAssertion(() => snapshots.Verify(service => service.GetAsync<CashFlowForecastPageSnapshot>("cash-flow-forecast-page:7:0:60"), Times.Once));
         var latestSelection = ClickHorizon(cut, 30);
         await handler.Started(30);
-        Assert.Contains("LATEST", cut.Markup);
+        // The fetch can start before the renderer flushes the snapshot paint when the click is
+        // dispatched while the 90-day completion still holds the renderer, so wait for the paint.
+        cut.WaitForAssertion(() => Assert.Contains("LATEST", cut.Markup));
 
         staleRead.SetResult(Snapshot(Forecast("STALE", 60)));
         await staleSelection;
