@@ -34,6 +34,12 @@
                     <ChartSpinner MaxHeight=@Height />
                 </div>
             }
+            else if (HasError)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">Unable to load recurring transactions.
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnRetry">Retry</MudButton>
+                </MudAlert>
+            }
             else if (Data.Count > 0)
             {
                 <MudList T="string" Dense Class="px-2 py-0">
@@ -43,8 +49,8 @@
                             <div class="d-flex align-items-center gap-3 w-100">
                                 <MudIcon Icon="@(item.IsIncome ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.Repeat)"
                                          Color="@(item.IsIncome ? Color.Success : Color.Inherit)" Size="Size.Small" />
-                                <div class="flex-grow-1">
-                                    <MudText Typo="Typo.body2" Class="font-weight-500">@item.Name</MudText>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <MudText Typo="Typo.body2" Class="font-weight-500" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@item.Name">@item.Name</MudText>
                                     <MudProgressLinear Value="@GetPercentage(item.Value)" Color="Color.Warning"
                                                       Class="mt-1" Size="Size.Small" />
                                 </div>
@@ -71,6 +77,12 @@
                 <div style="height:100%">
                     <ChartSpinner MaxHeight=@Height />
                 </div>
+            }
+            else if (HasDetailError)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">Unable to load transaction details.
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnRetryDetail">Retry</MudButton>
+                </MudAlert>
             }
             else if (DetailEntries.Count > 0)
             {

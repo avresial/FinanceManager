@@ -10,7 +10,7 @@
 <PageTitle>Admin dashboard</PageTitle>
 
 <MudGrid Spacing="3">
-    <MudItem xs="6" md="3">
+    <MudItem xs="12" sm="6" md="3">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
@@ -20,24 +20,26 @@
                             <MudText>Total users count</MudText>
                         </CardInfoTooltip>
                     </div>
-                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
-                        <b>
-                            @if (_userCount.HasValue)
-                            {
-                                @_userCount
-                            }
-                            else
-                            {
-                                <StringSpinner CharactersCount="3" />
-                            }
-                        </b>
-                    </MudText>
+                    <ComponentStateView ErrorMessage="@(_userCountLoadFailed && !_userCount.HasValue ? "Unable to load this metric. Reload the page to try again." : null)">
+                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary" Style="font-size: clamp(1.25rem, 5.5vw, 3rem);">
+                            <b>
+                                @if (_userCount.HasValue)
+                                {
+                                    @_userCount
+                                }
+                                else
+                                {
+                                    <StringSpinner CharactersCount="3" />
+                                }
+                            </b>
+                        </MudText>
+                    </ComponentStateView>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="6" md="3">
+    <MudItem xs="12" sm="6" md="3">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
@@ -47,24 +49,26 @@
                             <MudText>Accounts count</MudText>
                         </CardInfoTooltip>
                     </div>
-                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
-                        <b>
-                            @if (_accountsCount.HasValue)
-                            {
-                                @_accountsCount
-                            }
-                            else
-                            {
-                                <StringSpinner CharactersCount="3" />
-                            }
-                        </b>
-                    </MudText>
+                    <ComponentStateView ErrorMessage="@(_accountsCountLoadFailed && !_accountsCount.HasValue ? "Unable to load this metric. Reload the page to try again." : null)">
+                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary" Style="font-size: clamp(1.25rem, 5.5vw, 3rem);">
+                            <b>
+                                @if (_accountsCount.HasValue)
+                                {
+                                    @_accountsCount
+                                }
+                                else
+                                {
+                                    <StringSpinner CharactersCount="3" />
+                                }
+                            </b>
+                        </MudText>
+                    </ComponentStateView>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="6" md="3">
+    <MudItem xs="12" sm="6" md="3">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
@@ -74,24 +78,26 @@
                             <MudText>Total tracked money</MudText>
                         </CardInfoTooltip>
                     </div>
-                    <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary" Style="overflow-wrap: anywhere;">
-                        <b>
-                            @if (_totalTrackedMoney.HasValue)
-                            {
-                                @MoneyFormatter.Format(_totalTrackedMoney.Value, "PLN")
-                            }
-                            else
-                            {
-                                <StringSpinner CharactersCount="3" />
-                            }
-                        </b>
-                    </MudText>
+                    <ComponentStateView ErrorMessage="@(_totalTrackedMoneyLoadFailed && !_totalTrackedMoney.HasValue ? "Unable to load this metric. Reload the page to try again." : null)">
+                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary" Style="font-size: clamp(1.25rem, 5.5vw, 3rem); overflow-wrap: anywhere;">
+                            <b>
+                                @if (_totalTrackedMoney.HasValue)
+                                {
+                                    @MoneyFormatter.Format(_totalTrackedMoney.Value, "PLN")
+                                }
+                                else
+                                {
+                                    <StringSpinner CharactersCount="3" />
+                                }
+                            </b>
+                        </MudText>
+                    </ComponentStateView>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
     </MudItem>
 
-    <MudItem xs="6" md="3">
+    <MudItem xs="12" sm="6" md="3">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
@@ -101,16 +107,20 @@
                             <MudText>Today's new visitors</MudText>
                         </CardInfoTooltip>
                     </div>
-                    <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">
-                        @if (_newVisitorsToday.HasValue)
-                        {
-                            @_newVisitorsToday
-                        }
-                        else
-                        {
-                            <StringSpinner CharactersCount="3" />
-                        }
-                    </MudText>
+                    <ComponentStateView ErrorMessage="@(_newVisitorsTodayLoadFailed && !_newVisitorsToday.HasValue ? "Unable to load this metric. Reload the page to try again." : null)">
+                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary" Style="font-size: clamp(1.25rem, 5.5vw, 3rem);">
+                            <b>
+                                @if (_newVisitorsToday.HasValue)
+                                {
+                                    @_newVisitorsToday
+                                }
+                                else
+                                {
+                                    <StringSpinner CharactersCount="3" />
+                                }
+                            </b>
+                        </MudText>
+                    </ComponentStateView>
                 </MudPaper>
             </MudCardContent>
         </MudCard>
@@ -135,6 +145,10 @@
                                          XValue="@(e => DateFormatter.FormatDayMonth(e.Date))"
                                          YValue="@(e => (decimal)e.Value)" />
                     </ApexChart>
+                }
+                else if (_dailyActiveUsersLoadFailed)
+                {
+                    <MudAlert Severity="Severity.Error">Unable to load daily active users. Reload the page to try again.</MudAlert>
                 }
                 else
                 {
@@ -165,6 +179,10 @@
                                          XValue="@(e => DateFormatter.FormatDayMonth(e.Date))"
                                          YValue="@(e => (decimal)e.Value)" />
                     </ApexChart>
+                }
+                else if (_newUsersLoadFailed)
+                {
+                    <MudAlert Severity="Severity.Error">Unable to load new users. Reload the page to try again.</MudAlert>
                 }
                 else
                 {

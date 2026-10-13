@@ -27,12 +27,16 @@
                     <MudDatePicker Label="End date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
                 }
+                else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
+                {
+                    <MudAlert Severity="Severity.Info">CSV export isn't available for investment accounts.</MudAlert>
+                }
                 else if (string.IsNullOrEmpty(ErrorMessage))
                 {
                     <MudAlert Severity="Severity.Info">This account has no entries available to export.</MudAlert>
                 }
 
-                <MudStack Row="true" Spacing="2">
+                <MudStack Row="true" Spacing="2" Class="mt-4">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanDownload || _isDownloading)"
                                OnClick="DownloadSelected">
                         @if (_isDownloading)

@@ -9,6 +9,7 @@ namespace FinanceManager.Components.Features.Administration.Components;
 
 public partial class EditUserPage : ComponentBase
 {
+    private bool _isChangingPassword;
     private readonly List<string> _errors = [];
     private readonly List<string> _warnings = [];
     private readonly List<string> _info = [];
@@ -32,6 +33,10 @@ public partial class EditUserPage : ComponentBase
     protected override async Task OnParametersSetAsync()
     {
         _isLoadingPage = true;
+        _userData = null;
+        _errors.Clear();
+        _warnings.Clear();
+        _info.Clear();
 
         try
         {
@@ -40,8 +45,8 @@ public partial class EditUserPage : ComponentBase
         }
         catch (Exception ex)
         {
-            _errors.Add($"Failed to load user data: {ex.Message}");
-            // _logger.LogError(ex, "Error loading user data");
+            _errors.Add("Failed to load user data. Please try again.");
+            Logger.LogError(ex, "Failed to load user data");
         }
 
         _isLoadingPage = false;
@@ -103,40 +108,49 @@ public partial class EditUserPage : ComponentBase
     }
     private async Task ChangePasswordAsync()
     {
-        if (_userData is null) return;
-        if (_passwordForm is null) return;
-        if (string.IsNullOrEmpty(_password)) return;
-        if (string.IsNullOrEmpty(_confirmPassword)) return;
-
-        await _passwordForm.Validate();
-        if (_passwordForm.IsValid)
+        if (_isChangingPassword) return;
+        _isChangingPassword = true;
+        try
         {
-            if (!string.Equals(_password, _confirmPassword, StringComparison.Ordinal))
+            if (_userData is null) return;
+            if (_passwordForm is null) return;
+            if (string.IsNullOrEmpty(_password)) return;
+            if (string.IsNullOrEmpty(_confirmPassword)) return;
+
+            await _passwordForm.Validate();
+            if (_passwordForm.IsValid)
             {
-                _warnings.Insert(0, "New passwords do not match.");
-                return;
-            }
-            else
-            {
-                var result = await UserService.UpdatePassword(_userData.UserId, _confirmPassword);
-                if (!result)
+                if (!string.Equals(_password, _confirmPassword, StringComparison.Ordinal))
                 {
-                    _errors.Insert(0, "Failed to change password.");
+                    _warnings.Insert(0, "New passwords do not match.");
                     return;
                 }
                 else
                 {
-                    _errors.Clear();
-                    _info.Insert(0, "Password changed successfully.");
+                    var result = await UserService.UpdatePassword(_userData.UserId, _confirmPassword);
+                    if (!result)
+                    {
+                        _errors.Insert(0, "Failed to change password.");
+                        return;
+                    }
+                    else
+                    {
+                        _errors.Clear();
+                        _info.Insert(0, "Password changed successfully.");
 
-                    // Only clear the inputs on success — a failed validation or update should leave what the
-                    // admin typed in place so they can fix it rather than re-enter from scratch.
-                    _password = "";
-                    _confirmPassword = "";
-                    if (_passwordField is not null)
-                        await _passwordField.ResetAsync();
+                        // Only clear the inputs on success — a failed validation or update should leave what the
+                        // admin typed in place so they can fix it rather than re-enter from scratch.
+                        _password = "";
+                        _confirmPassword = "";
+                        if (_passwordField is not null)
+                            await _passwordField.ResetAsync();
+                    }
                 }
             }
+        }
+        finally
+        {
+            _isChangingPassword = false;
         }
     }
 }

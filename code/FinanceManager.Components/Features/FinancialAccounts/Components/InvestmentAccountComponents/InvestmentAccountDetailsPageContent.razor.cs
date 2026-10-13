@@ -74,6 +74,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     private DateTime _dateEnd = DateTime.UtcNow;
     private DateRange? _customDateRange;
     private bool _isChartLoading;
+    private bool _hasChartLoadError;
     private readonly RefreshVersionGate _chartGate = new();
     private decimal _currentBalance;
     private decimal _capitalValue;
@@ -366,6 +367,8 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         var dateStart = _dateStart;
         var dateEnd = _dateEnd;
         var transactions = _transactions.ToList();
+        var chartPainted = false;
+        _hasChartLoadError = false;
         _isChartLoading = true;
 
         _ = InvokeAsync(async () =>
@@ -395,15 +398,28 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
                         transactions,
                         benchmark,
                         benchmarkName),
-                    onSnapshotPainted: ApplyChartModel,
+                    onSnapshotPainted: model =>
+                    {
+                        chartPainted = true;
+                        return ApplyChartModel(model);
+                    },
                     onSnapshotMissing: ShowChartLoading,
-                    onRefreshed: ApplyChartModel);
+                    onRefreshed: model =>
+                    {
+                        chartPainted = true;
+                        return ApplyChartModel(model);
+                    });
 
                 if (_chartGate.IsCurrent(version) && result.IsBlockingFailure)
+                {
+                    _hasChartLoadError = true;
                     Logger.LogError(result.Error, "Error while loading investment account chart data.");
+                }
             }
             catch (Exception ex)
             {
+                if (_chartGate.IsCurrent(version) && !chartPainted)
+                    _hasChartLoadError = true;
                 Logger.LogError(ex, "Error while loading investment account chart data.");
             }
             finally
@@ -495,6 +511,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
     // window that a concurrent entries load is reading.
     private Task ApplyChartModel(InvestmentAccountChartModel model)
     {
+        _hasChartLoadError = false;
         ChartData.Clear();
         ChartData.AddRange(model.Series);
         BenchmarkData.Clear();

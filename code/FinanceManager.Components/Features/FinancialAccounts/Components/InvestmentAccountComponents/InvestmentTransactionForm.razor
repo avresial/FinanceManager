@@ -38,6 +38,10 @@
             </MudSelect>
             <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
             <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : MoneyFormatter.FormatNumber(_formUnitPrice))" ReadOnly="true" Disabled="true" />
+            @if (_isPriceLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="Loading price" />
+            }
             @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>

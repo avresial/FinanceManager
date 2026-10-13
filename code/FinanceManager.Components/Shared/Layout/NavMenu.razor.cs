@@ -15,6 +15,7 @@ public partial class NavMenu : ComponentBase, IDisposable
     private bool _displayAssetsLink = false;
     private bool _displayLiabilitiesLink = false;
     private int? _currentUserId;
+    private bool _isRetrying;
     private readonly CancellationTokenSource _disposeTokenSource = new();
 
     [Parameter] public bool DrawerIsOpen { get; set; }
@@ -41,7 +42,8 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = "Unable to load accounts.";
+            Logger.LogError(ex, "Error while loading nav menu");
         }
     }
 
@@ -95,7 +97,10 @@ public partial class NavMenu : ComponentBase, IDisposable
         if (user is null)
         {
             _currentUserId = null;
+            var errorMessage = ErrorMessage;
             ClearState();
+            ErrorMessage = errorMessage;
+            await InvokeAsync(StateHasChanged);
             return;
         }
 
@@ -132,7 +137,7 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = "Unable to load accounts.";
             Logger.LogError(ex, "Error while getting logged user for nav menu");
             return null;
         }
@@ -157,12 +162,35 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            ErrorMessage = "Unable to load accounts.";
             Logger.LogError(ex, "Error while refreshing nav menu snapshot");
         }
 
         if (!cancellationToken.IsCancellationRequested)
             await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RetryAsync()
+    {
+        if (_isRetrying || _disposeTokenSource.IsCancellationRequested) return;
+
+        _isRetrying = true;
+        try
+        {
+            await LoadCachedStateAndRefreshAsync(forceRefresh: true, _disposeTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Unable to load accounts.";
+            Logger.LogError(ex, "Error while retrying nav menu load");
+        }
+        finally
+        {
+            _isRetrying = false;
+        }
     }
 
     private void ApplySnapshot(NavMenuCacheSnapshot snapshot)

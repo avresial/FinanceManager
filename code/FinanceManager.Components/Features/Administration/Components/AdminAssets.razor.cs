@@ -9,6 +9,7 @@ namespace FinanceManager.Components.Features.Administration.Components;
 public partial class AdminAssets : ComponentBase
 {
     private bool _isLoading = true;
+    private string? _loadError;
     private int _elementsPerPage = 20;
     private int _pagesCount;
     private string _searchText = string.Empty;
@@ -24,27 +25,25 @@ public partial class AdminAssets : ComponentBase
     [Inject] public required AssetHttpClient AssetHttpClient { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _allElements = await AssetHttpClient.GetAssets();
-        }
-        catch (Exception)
-        {
-            _errors.Add("Failed while getting assets");
-            _isLoading = false;
-            return;
-        }
-
-        ApplyFilter();
-        _isLoading = false;
-    }
+    protected override Task OnInitializedAsync() => ReloadAssetsAsync();
 
     private async Task ReloadAssetsAsync()
     {
-        _allElements = await AssetHttpClient.GetAssets();
-        ApplyFilter();
+        _isLoading = true;
+        _loadError = null;
+        try
+        {
+            _allElements = await AssetHttpClient.GetAssets();
+            ApplyFilter();
+        }
+        catch (Exception)
+        {
+            _loadError = "Unable to load assets. Refresh the page to try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private void PageChanged(int i)

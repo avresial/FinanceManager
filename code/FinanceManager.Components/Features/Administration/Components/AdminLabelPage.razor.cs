@@ -95,7 +95,8 @@ public partial class AdminLabelPage : ComponentBase
             return;
         }
 
-        _elements = PageItems(SelectedPage);
+        _allElements = _allElements.Where(item => item.Id != labelId).ToList();
+        ApplyFilter();
     }
 
     private void OnSearchChanged(string value)

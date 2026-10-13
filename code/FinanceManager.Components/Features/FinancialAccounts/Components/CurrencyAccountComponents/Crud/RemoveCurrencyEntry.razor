@@ -1,17 +1,14 @@
 @if (CurrencyAccountEntry is not null)
 {
     <MudContainer MaxWidth="MaxWidth.Medium">
-        <MudGrid Justify="Justify.Center">
+        <MudGrid Justify="Justify.FlexStart">
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Remove</MudText>
                 <MudText Typo="Typo.subtitle1">@CurrencyAccountName</MudText>
             </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudAutocomplete @bind-Value="_entryType" Label="Entry type" Variant="Variant.Text" ReadOnly />
-            </MudItem>
         
             <MudItem xs="12" sm="6">
-                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@_currency.ShortName" Adornment="Adornment.End" ReadOnly />
+                <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_balanceChange" Label="Balance change" Variant="Variant.Text" AdornmentText="@Currency" Adornment="Adornment.End" ReadOnly />
             </MudItem>
 
             <MudItem xs="12" sm="6">

@@ -15,6 +15,10 @@
     {
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
     }
+    else if (_loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+    }
     else if (_listings.Count == 0)
     {
         <MudAlert Severity="Severity.Info">Add an asset listing before entering a price.</MudAlert>

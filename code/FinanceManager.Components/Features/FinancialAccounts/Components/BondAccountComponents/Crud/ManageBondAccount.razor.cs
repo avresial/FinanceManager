@@ -17,6 +17,7 @@ public partial class ManageBondAccount
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
+    private string? _errorMessage;
     private BondAccount? _bondAccount = null;
     private bool _isRecalculating;
 
@@ -35,6 +36,7 @@ public partial class ManageBondAccount
 
     protected override async Task OnParametersSetAsync()
     {
+        _errorMessage = null;
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -49,11 +51,13 @@ public partial class ManageBondAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading bond account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not load the account. Please try again.";
         }
     }
 
     public async Task Update()
     {
+        _errorMessage = null;
         try
         {
 
@@ -78,11 +82,13 @@ public partial class ManageBondAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error updating bond account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not update the account. Please try again.";
         }
     }
 
     public async Task Remove()
     {
+        _errorMessage = null;
         try
         {
 
@@ -100,6 +106,7 @@ public partial class ManageBondAccount
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error removing bond account with ID {AccountId}", AccountId);
+            _errorMessage = "Could not delete the account. Please try again.";
         }
     }
 

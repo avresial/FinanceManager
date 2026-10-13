@@ -17,6 +17,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 public partial class ExpenseDistributionOverviewCard
 {
     private readonly RefreshVersionGate _gate = new();
+    private bool _hasError;
     private bool _isLoading = true;
     private Currency _currency = DefaultCurrency.PLN;
     private List<NameValueResult> _data = [];
@@ -42,6 +43,7 @@ public partial class ExpenseDistributionOverviewCard
     {
         // Claimed first on both paths so a parent-supplied model supersedes any in-flight self-load.
         var version = _gate.Claim();
+        _hasError = false;
         if (Model is not null)
         {
             var model = Model;
@@ -127,6 +129,7 @@ public partial class ExpenseDistributionOverviewCard
 
     private void ReportLoadFailure(Exception? ex)
     {
+        _hasError = true;
         Logger.LogError(ex, "Unable to load expense distribution.");
         Snackbar.Add("Unable to load expense distribution.", Severity.Error);
     }

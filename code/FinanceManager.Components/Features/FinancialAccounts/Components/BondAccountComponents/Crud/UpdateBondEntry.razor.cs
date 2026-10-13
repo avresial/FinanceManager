@@ -4,7 +4,9 @@ using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Crud;
@@ -16,6 +18,7 @@ public partial class UpdateBondEntry
     private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];
+    private bool _isUpdating;
     private MudForm? _form;
 
     private DateTime? _postingDate = DateTime.Today;
@@ -34,6 +37,8 @@ public partial class UpdateBondEntry
     [Parameter] public required BondAccount BondAccount { get; set; }
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 
+    [Inject] public required ILogger<UpdateBondEntry> Logger { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
@@ -53,7 +58,7 @@ public partial class UpdateBondEntry
         if (_loadedEntryId.HasValue && _loadedEntryId.Value == BondAccountEntry.EntryId) return;
         _loadedEntryId = BondAccountEntry.EntryId;
 
-        _currency = settingsService.GetCurrency();
+        _currency = SettingsService.GetCurrency();
         _postingDate = BondAccountEntry.PostingDate;
         _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
         _valueChange = BondAccountEntry.ValueChange;
@@ -73,35 +78,46 @@ public partial class UpdateBondEntry
 
     public async Task Update()
     {
-        if (_form is null) return;
-        await _form.Validate();
-
-        if (!_form.IsValid) return;
-        if (!_valueChange.HasValue) return;
-        if (!_postingDate.HasValue) return;
-        if (!_time.HasValue) return;
-        if (_selectedBond is null) return;
-
-        DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-        BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
-        {
-            Labels = GetLabels().ToList()
-        };
-
+        if (_form is null || _isUpdating) return;
+        _isUpdating = true;
         try
         {
-            await FinancialAccountService.UpdateEntry(bondAccountEntry);
-        }
-        catch (Exception ex)
-        {
-            _errors = [ex.ToString()];
-        }
+            await _form.Validate();
 
-        if (_errors.Length == 0)
-        {
-            await AccountDataSynchronizationService.AccountChanged();
+            if (!_form.IsValid) return;
+            if (!_valueChange.HasValue) return;
+            if (!_postingDate.HasValue) return;
+            if (!_time.HasValue) return;
+            if (_selectedBond is null) return;
 
-            await ActionCompleted.InvokeAsync();
+            DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
+            BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
+            {
+                Labels = GetLabels().ToList()
+            };
+
+            // Clear a previous failure so a successful retry closes the editor.
+            _errors = [];
+            try
+            {
+                await FinancialAccountService.UpdateEntry(bondAccountEntry);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error updating entry");
+                _errors = ["Could not update the entry. Please try again."];
+            }
+
+            if (_errors.Length == 0)
+            {
+                await AccountDataSynchronizationService.AccountChanged();
+
+                await ActionCompleted.InvokeAsync();
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
         }
     }
 

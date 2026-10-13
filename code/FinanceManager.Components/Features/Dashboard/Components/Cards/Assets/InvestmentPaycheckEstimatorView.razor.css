@@ -69,19 +69,11 @@
     font-weight: 500;
     font-size: 13px;
     line-height: 1.4;
-    cursor: pointer;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    transition: background 120ms ease;
-}
-
-.pc-vs-pill:hover,
-.pc-vs-pill:focus-visible {
-    background: rgba(255, 143, 0, 0.28);
-    outline: none;
 }
 
 .pc-slider-block {
@@ -201,4 +193,10 @@
 
 .pc-foot-meta--warn {
     color: var(--mud-palette-warning);
+}
+
+@media (max-width: 600px) {
+    .pc-foot {
+        margin-top: 10px;
+    }
 }

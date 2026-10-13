@@ -16,6 +16,8 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
     public async Task<IEnumerable<AvailableAccount>> GetAvailableAccountsAsync()
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyAccount");
+        // The API answers 404 when the user has no currency accounts yet.
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return [];
         var result = await response.Content.ReadFromJsonAsync<IEnumerable<AvailableAccount>>();
         return result ?? [];
     }

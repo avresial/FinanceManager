@@ -18,6 +18,12 @@ public partial class AdminDashboard : ComponentBase
     private int? _accountsCount = default;
     private decimal? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
+    private bool _userCountLoadFailed;
+    private bool _accountsCountLoadFailed;
+    private bool _totalTrackedMoneyLoadFailed;
+    private bool _newVisitorsTodayLoadFailed;
+    private bool _dailyActiveUsersLoadFailed;
+    private bool _newUsersLoadFailed;
 
     private readonly RefreshVersionGate _totalTrackedMoneyGate = new();
     private readonly RefreshVersionGate _userCountGate = new();
@@ -120,11 +126,16 @@ public partial class AdminDashboard : ComponentBase
         }
     }
 
-    private Task LoadTotalTrackedMoneyAsync(int userId) =>
-        SnapshotStore.RefreshTotalTrackedMoneyAsync(userId, _totalTrackedMoneyGate,
+    private async Task LoadTotalTrackedMoneyAsync(int userId)
+    {
+        var result = await SnapshotStore.RefreshTotalTrackedMoneyAsync(userId, _totalTrackedMoneyGate,
             () => AdministrationUsersHttpClient.GetTotalTrackedMoney(),
             onSnapshotPainted: ShowTotalTrackedMoney,
             onRefreshed: ShowTotalTrackedMoney);
+        _totalTrackedMoneyLoadFailed = result.IsBlockingFailure;
+        if (_totalTrackedMoneyLoadFailed)
+            StateHasChanged();
+    }
 
     private Task ShowTotalTrackedMoney(AdminTotalTrackedMoneyCardModel model)
     {
@@ -133,14 +144,19 @@ public partial class AdminDashboard : ComponentBase
         return Task.CompletedTask;
     }
 
-    private Task LoadUserCountAsync(int userId) =>
-        SnapshotStore.RefreshUsersCountAsync(
+    private async Task LoadUserCountAsync(int userId)
+    {
+        var result = await SnapshotStore.RefreshUsersCountAsync(
             userId,
             _userCountGate,
             _userCountGate.Claim(),
             () => AdministrationUsersHttpClient.GetUsersCount(),
             onSnapshotPainted: ShowUserCount,
             onRefreshed: ShowUserCount);
+        _userCountLoadFailed = result.IsBlockingFailure;
+        if (_userCountLoadFailed)
+            StateHasChanged();
+    }
 
     private Task ShowUserCount(AdminUsersCountCardModel model)
     {
@@ -149,14 +165,19 @@ public partial class AdminDashboard : ComponentBase
         return Task.CompletedTask;
     }
 
-    private Task LoadAccountsCountAsync(int userId) =>
-        SnapshotStore.RefreshAccountsCountAsync(
+    private async Task LoadAccountsCountAsync(int userId)
+    {
+        var result = await SnapshotStore.RefreshAccountsCountAsync(
             userId,
             _accountsCountGate,
             _accountsCountGate.Claim(),
             () => AdministrationUsersHttpClient.GetAccountsCount(),
             onSnapshotPainted: ShowAccountsCount,
             onRefreshed: ShowAccountsCount);
+        _accountsCountLoadFailed = result.IsBlockingFailure;
+        if (_accountsCountLoadFailed)
+            StateHasChanged();
+    }
 
     private Task ShowAccountsCount(AdminAccountsCountCardModel model)
     {
@@ -165,8 +186,9 @@ public partial class AdminDashboard : ComponentBase
         return Task.CompletedTask;
     }
 
-    private Task LoadNewVisitorsTodayAsync(int userId) =>
-        SnapshotStore.RefreshNewVisitorsTodayAsync(
+    private async Task LoadNewVisitorsTodayAsync(int userId)
+    {
+        var result = await SnapshotStore.RefreshNewVisitorsTodayAsync(
             userId,
             DateTime.UtcNow.Date,
             _newVisitorsTodayGate,
@@ -174,6 +196,10 @@ public partial class AdminDashboard : ComponentBase
             day => NewVisitorsHttpClient.GetVisit(day),
             onSnapshotPainted: ShowNewVisitorsToday,
             onRefreshed: ShowNewVisitorsToday);
+        _newVisitorsTodayLoadFailed = result.IsBlockingFailure;
+        if (_newVisitorsTodayLoadFailed)
+            StateHasChanged();
+    }
 
     private Task ShowNewVisitorsToday(AdminNewVisitorsTodayCardModel model)
     {
@@ -195,8 +221,12 @@ public partial class AdminDashboard : ComponentBase
             OnRefreshed = PaintNewUsersAsync,
         });
 
-        if (result.IsBlockingFailure)
-            throw result.Error!;
+        _newUsersLoadFailed = result.IsBlockingFailure;
+        if (_newUsersLoadFailed)
+        {
+            Logger.LogError(result.Error, "Error loading admin new users chart.");
+            StateHasChanged();
+        }
     }
 
     private Task PaintNewUsersAsync(List<ChartEntryModel> model)
@@ -221,10 +251,12 @@ public partial class AdminDashboard : ComponentBase
             OnRefreshed = PaintDailyActiveUsersAsync,
         });
 
-        // Unlike the new users chart, this chart never failed the dashboard before snapshots existed (it stayed
-        // on its loading state), so a failure with nothing painted is logged instead of failing the other cards.
-        if (result.IsBlockingFailure)
+        _dailyActiveUsersLoadFailed = result.IsBlockingFailure;
+        if (_dailyActiveUsersLoadFailed)
+        {
             Logger.LogError(result.Error, "Error loading admin daily active users chart.");
+            StateHasChanged();
+        }
     }
 
     private Task PaintDailyActiveUsersAsync(List<ChartEntryModel> model)

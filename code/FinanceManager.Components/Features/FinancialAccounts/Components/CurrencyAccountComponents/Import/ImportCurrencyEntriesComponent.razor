@@ -36,7 +36,7 @@
                         <MudStack Spacing="0">
                             <MudText Typo="Typo.subtitle2">Column mapping</MudText>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                                We've guessed mappings from your CSV headers. Adjust if anything looks wrong, then preview the result below.
+                                Match your CSV columns to these fields. Columns we recognise from earlier imports are filled in for you; check them, then preview the result below.
                             </MudText>
                         </MudStack>
 
@@ -95,15 +95,15 @@
 
                         <MudDivider />
 
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
                             <MudIcon Icon="@Icons.Material.Outlined.SwapHoriz" Size="Size.Small" Color="Color.Primary" />
-                            <MudText Typo="Typo.subtitle2">Mapped preview</MudText>
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary">· how rows will be imported</MudText>
+                            <MudText Typo="Typo.subtitle2" Style="white-space: nowrap;">Mapped preview</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">how rows will be imported</MudText>
                         </MudStack>
 
                         @if (_mappedPreview.Any())
                         {
-                            <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;" Elevation="0">
+                            <MudSimpleTable Dense="true" Hover="true" Style="overflow-x: auto;" Elevation="0" Class="fm-mapped-preview">
                                 <thead>
                                     <tr>
                                         <th>Posting date</th>
@@ -129,6 +129,10 @@
                                 </tbody>
                             </MudSimpleTable>
                         }
+                        else if (!_erorrs.Any())
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Map Posting date and Value change to see how rows will be imported.</MudText>
+                        }
 
                         @foreach (var error in _erorrs)
                         {
@@ -137,7 +141,7 @@
                     </MudStack>
                 </MudStep>
 
-                <MudStep Title="Review" SecondaryText="Resolve conflicts" @bind-Completed="_step3Complete"
+                <MudStep Title="Review" SecondaryText="Resolve conflicts" Completed="@ShowImportCompletedMessage"
                          Disabled="@(_step2Complete == false)">
                     <MudStack Spacing="3" Class="pa-4">
 
@@ -204,6 +208,15 @@
                             <ImportCompletePanel AccountId="AccountId" AccountName="@AccountName" Clear="Clear" />
                         }
 
+                        @if (ShowImportFailedActions)
+                        {
+                            @* A failed job keeps the stepper locked (even with unresolved conflicts), so always offer the way out here. *@
+                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Justify="Justify.Center">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Clear">Import another file</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"AccountDetails/{AccountId}")">Return to @AccountName</MudButton>
+                            </MudStack>
+                        }
+
                     </MudStack>
                 </MudStep>
             </ChildContent>
@@ -213,7 +226,7 @@
             </ActionContent>
         </MudStepper>
 
-        <ImportStepperFooter DisableClear="_step3Complete"
+        <ImportStepperFooter DisableClear="@(_step3Complete && !ShowImportFailedActions)"
                              ShowBackAction="ShowBackAction"
                              ShowPrimaryAction="ShowPrimaryAction"
                              CanContinue="CanContinue"

@@ -33,6 +33,13 @@
             @("A")
         }
     </MudText>
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mx-2">
+            @ErrorMessage
+            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="_isRetrying" OnClick="RetryAsync">Retry</MudButton>
+        </MudAlert>
+    }
     @if (Accounts is not null && Accounts.Any())
     {
         @foreach (var account in Accounts)

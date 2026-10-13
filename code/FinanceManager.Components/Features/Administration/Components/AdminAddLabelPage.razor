@@ -30,7 +30,7 @@
                                   RequiredError="Name is required!" />
 
 
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success)">Add</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success || _isSubmitting)">@(_isSubmitting ? "Adding…" : "Add")</MudButton>
                 </MudForm>
             </MudItem>
         </MudGrid>
@@ -67,6 +67,7 @@
     private FinancialLabel _labelData = new FinancialLabel() { Name = string.Empty };
 
     private bool _success;
+    private bool _isSubmitting;
 
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
 
@@ -74,23 +75,37 @@
 
     private async Task UpdateNameAsync()
     {
-        if (_labelData is null) return;
-        if (_nameForm is null) return;
+        if (_isSubmitting) return;
+        _isSubmitting = true;
 
-        await _nameForm.Validate();
-        if (_nameForm.IsValid)
+        try
         {
-            var result = await FinancialLabelHttpClient.Add(new(_labelData.Name));
-            if (!result)
+            if (_labelData is null) return;
+            if (_nameForm is null) return;
+
+            await _nameForm.Validate();
+            if (_nameForm.IsValid)
             {
-                _errors.Insert(0, "Adding label failed.");
-                return;
+                var result = await FinancialLabelHttpClient.Add(new(_labelData.Name));
+                if (!result)
+                {
+                    _errors.Insert(0, "Adding label failed.");
+                    return;
+                }
+                else
+                {
+                    _errors.Clear();
+                    _info.Insert(0, "Added new label successfully.");
+                }
             }
-            else
-            {
-                _errors.Clear();
-                _info.Insert(0, "Added new label successfully.");
-            }
+        }
+        catch (Exception)
+        {
+            _errors.Insert(0, "Adding label failed. Please try again.");
+        }
+        finally
+        {
+            _isSubmitting = false;
         }
     }
 

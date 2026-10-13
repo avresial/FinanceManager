@@ -33,6 +33,8 @@ public partial class InvestmentTransactionForm : ComponentBase
     private decimal? _formFee;
     private string? _formNotes;
     private bool _saving;
+    private int _priceRequestVersion;
+    private bool _isPriceLoading;
     private bool _noPriceAvailable;
     private string? _error;
 
@@ -46,6 +48,8 @@ public partial class InvestmentTransactionForm : ComponentBase
 
     private void ResetForm()
     {
+        _priceRequestVersion++;
+        _isPriceLoading = false;
         _initializedTransactionId = Transaction?.Id;
         _editingId = Transaction?.Id;
         _selectedInstrument = Transaction is null ? null : new InvestmentInstrumentOptionDto
@@ -76,13 +80,15 @@ public partial class InvestmentTransactionForm : ComponentBase
     private bool IsUnsupportedExternalEdit => _editingId is not null
         && _selectedInstrument?.Source == InstrumentOptionSource.External;
 
-    private bool CanSave => !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
+    private bool CanSave => !_isPriceLoading && !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
         && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task CloseAsync() => await VisibleChanged.InvokeAsync(false);
 
     private async Task OnInstrumentSelectedAsync(InvestmentInstrumentOptionDto? dto)
     {
+        _priceRequestVersion++;
+        _isPriceLoading = false;
         _selectedInstrument = dto;
         _noPriceAvailable = false;
         _error = null;
@@ -116,15 +122,21 @@ public partial class InvestmentTransactionForm : ComponentBase
 
     private async Task RefreshFormPriceAsync()
     {
+        var version = ++_priceRequestVersion;
+        _isPriceLoading = false;
+        _noPriceAvailable = false;
         if (_selectedInstrument?.AssetListingId is not long listingId || _formTradeDate is not DateTime tradeDate)
         {
             _formUnitPrice = 0m;
             return;
         }
 
+        _isPriceLoading = true;
         try
         {
             var priceInfo = await TransactionHttpClient.GetListingPriceAsync(listingId, DateOnly.FromDateTime(tradeDate));
+            if (version != _priceRequestVersion) return;
+
             if (priceInfo?.LatestPrice is decimal price)
                 _formUnitPrice = price;
             else
@@ -135,9 +147,16 @@ public partial class InvestmentTransactionForm : ComponentBase
         }
         catch (Exception ex)
         {
+            if (version != _priceRequestVersion) return;
+
             Logger.LogError(ex, "Failed to fetch price for listing {ListingId}", listingId);
             _formUnitPrice = 0m;
             _noPriceAvailable = true;
+        }
+        finally
+        {
+            if (version == _priceRequestVersion)
+                _isPriceLoading = false;
         }
     }
 
@@ -167,7 +186,7 @@ public partial class InvestmentTransactionForm : ComponentBase
             return;
         }
 
-        if (!CanSave) return;
+        if (_saving || !CanSave) return;
         _saving = true;
         _error = null;
         try
@@ -201,9 +220,7 @@ public partial class InvestmentTransactionForm : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to save investment transaction for account {AccountId}", AccountId);
-            _error = ex is HttpRequestException && !string.IsNullOrWhiteSpace(ex.Message)
-                ? ex.Message
-                : "Could not save the transaction.";
+            _error = "Could not save the transaction. Please try again.";
             Snackbar.Add(_error, Severity.Error);
         }
         finally

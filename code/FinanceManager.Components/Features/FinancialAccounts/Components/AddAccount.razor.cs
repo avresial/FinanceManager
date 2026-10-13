@@ -16,14 +16,12 @@ public partial class AddAccount : ComponentBase
 
     private int? _addedAccountId = null;
     private bool _success;
-    private string[] _errors = { };
+    private bool _isAdding;
+    private string[] _errors = [];
     private int _currencyId;
     private List<Currency> _currencies = [];
 
-    private readonly string[] _accountTypes =
-    {
-        "Currency account", "Stock account", "Bond account"
-    };
+    private readonly string[] _accountTypes = ["Currency account", "Stock account", "Bond account"];
 
     // Lets the welcome screen deep-link straight to a preselected account type (e.g. AddAccount?type=Stock).
     [Parameter, SupplyParameterFromQuery] public string? Type { get; set; }
@@ -49,39 +47,49 @@ public partial class AddAccount : ComponentBase
 
     public async Task Add()
     {
+        if (_isAdding) return;
+        _isAdding = true;
+        _errors = [];
         try
         {
-            switch (_selectedAccountType)
+            try
             {
-                case "Currency account":
-                    _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName, _currencyId));
-                    break;
+                switch (_selectedAccountType)
+                {
+                    case "Currency account":
+                        _addedAccountId = await CurrencyAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName, _currencyId));
+                        break;
 
-                case "Stock account":
-                    _addedAccountId = await InvestmentAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
-                    break;
+                    case "Stock account":
+                        _addedAccountId = await InvestmentAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
+                        break;
 
-                case "Bond account":
-                    _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
-                    break;
+                    case "Bond account":
+                        _addedAccountId = await BondAccountHttpClient.AddAccountAsync(new Domain.FinancialAccounts.Shared.Commands.AddAccount(_accountName));
+                        break;
+                }
             }
+            catch (Exception ex)
+            {
+                _addedAccountId = null;
+                _errors = ["Could not add the account. Please try again."];
+                Logger.LogError(ex, "Error while adding currency account");
+            }
+
+
+            if (_errors.Length == 0)
+            {
+                _accountName = string.Empty;
+                _selectedAccountType = string.Empty;
+                await AccountDataSynchronizationService.AccountChanged();
+            }
+
+            StateHasChanged();
         }
-        catch (Exception ex)
+        finally
         {
-            _addedAccountId = null;
-            _errors = [ex.Message];
-            Logger.LogError(ex, "Error while adding currency account");
+            _isAdding = false;
         }
-
-
-        if (_errors.Length == 0)
-        {
-            _accountName = string.Empty;
-            _selectedAccountType = string.Empty;
-            await AccountDataSynchronizationService.AccountChanged();
-        }
-
-        StateHasChanged();
     }
 
     private IEnumerable<string> AccountNameValidation(string name)

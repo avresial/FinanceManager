@@ -29,7 +29,7 @@
                         <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Square="false" Size="Size.Large">
                             <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" />
                         </MudAvatar>
-                        <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                        <MudStack Spacing="1" AlignItems="AlignItems.Center" Class="text-center">
                             <MudText Typo="Typo.body1"><b>Drop CSV file here, or click to browse</b></MudText>
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@Description</MudText>
                         </MudStack>
@@ -47,24 +47,25 @@
     else
     {
         <MudPaper Outlined="true" Elevation="0" Class="pa-4">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
-                <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Square="true" Size="Size.Medium">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Square="true" Size="Size.Medium" Style="flex-shrink:0;">
                     <MudIcon Icon="@Icons.Material.Outlined.Description" />
                 </MudAvatar>
                 <MudStack Spacing="0" Style="flex:1;min-width:0;">
-                    <MudText Typo="Typo.body1"><b>@FileName</b></MudText>
+                    <MudText Typo="Typo.body1" Class="text-truncate" title="@FileName"><b>@FileName</b></MudText>
                     <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                        <b>@($"{FileSize / 1024.0:F1} KB")</b> ·
-                        <b>@TotalRowCount rows</b> ·
-                        <b>@Headers.Count columns</b> detected
+                        <b>@($"{FileSize / 1024.0:F1}\u00A0KB")</b> ·
+                        <b>@($"{TotalRowCount}\u00A0rows")</b> ·
+                        <b>@($"{Headers.Count}\u00A0columns")</b> detected
                     </MudText>
                 </MudStack>
-                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" OnClick="Clear">Replace</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small" OnClick="Clear" Style="flex-shrink:0;">Replace</MudButton>
             </MudStack>
         </MudPaper>
 
-        <MudStack Row="true" AlignItems="AlignItems.End" Class="mt-2 mud-width-full">
-            <MudStack Spacing="0">
+        @* Wraps on phones so the intro text keeps a readable width instead of squeezing beside the select. *@
+        <MudStack Row="true" Wrap="Wrap.Wrap" AlignItems="AlignItems.End" Class="mt-2 mud-width-full">
+            <MudStack Spacing="0" Style="flex: 1 1 240px; min-width: 0;">
                 <MudText Typo="Typo.subtitle2">
                     Preview
                     <MudText Inline="true" Typo="Typo.caption" Class="mud-text-secondary">
@@ -77,7 +78,7 @@
             </MudStack>
             <MudSelect T="string" Label="Delimiter" Value="Delimiter" ValueChanged="DelimiterChanged"
                        Variant="Variant.Outlined" Margin="Margin.Dense"
-                       Class="ml-auto" Style="max-width: 220px;">
+                       Class="fm-delimiter-select">
                 <MudSelectItem T="string" Value="@(",")">Comma  ( , )</MudSelectItem>
                 <MudSelectItem T="string" Value="@(";")">Semicolon  ( ; )</MudSelectItem>
                 <MudSelectItem T="string" Value="@("\t")">Tab  ( \t )</MudSelectItem>
@@ -99,7 +100,7 @@
                     <tr>
                         @for (var i = 0; i < Headers.Count; i++)
                         {
-                            <td>@Truncate(i < row.Count ? row[i] : string.Empty)</td>
+                            <td style="white-space: nowrap;">@Truncate(i < row.Count ? row[i] : string.Empty)</td>
                         }
                     </tr>
                 }

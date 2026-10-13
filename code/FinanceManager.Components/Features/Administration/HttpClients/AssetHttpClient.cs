@@ -11,19 +11,9 @@ public class AssetHttpClient(HttpClient httpClient, ILogger<AssetHttpClient> log
 {
     private string Base => $"{httpClient.BaseAddress}api/admin/assets";
 
-    public async Task<List<AssetDto>> GetAssets(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var result = await httpClient.GetFromJsonAsync<List<AssetDto>>(Base, cancellationToken);
-            return result ?? [];
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error fetching assets: {Message}", ex.Message);
-            return [];
-        }
-    }
+    public async Task<List<AssetDto>> GetAssets(CancellationToken cancellationToken = default) =>
+        await httpClient.GetFromJsonAsync<List<AssetDto>>(Base, cancellationToken)
+        ?? throw new InvalidOperationException("The assets response was empty.");
 
     public async Task<AssetDto?> GetAsset(long id, CancellationToken cancellationToken = default)
     {

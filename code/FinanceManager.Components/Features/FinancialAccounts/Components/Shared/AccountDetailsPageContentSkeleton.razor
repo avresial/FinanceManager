@@ -1,10 +1,15 @@
 <div class="@ChartContainerClass">
-    <MudPaper Height="150px" Width="100%" Elevation="0" Style="background-color: transparent" />
+    @* Placeholder for the balance header and chart so the top of the page isn't blank while loading. *@
+    <div class="pa-4">
+        <MudSkeleton Animation="Animation.Wave" Width="80px" />
+        <MudSkeleton Animation="Animation.Wave" Width="200px" Height="44px" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave" Width="100%" Height="150px" Class="mt-2" />
+    </div>
 </div>
 
 <MudContainer>
     <MudGrid Spacing="3">
-        <MudItem xs="12" lg="9">
+        <MudItem xs="12" lg="8">
             <MudGrid Spacing="0">
                 <MudItem xs="12">
                     <MudExpansionPanels Elevation="0" MultiExpansion>
@@ -23,7 +28,7 @@
                 </MudItem>
             </MudGrid>
         </MudItem>
-        <MudItem xs="0" lg="3">
+        <MudItem xs="0" lg="4">
             <MudStack Spacing="2">
                 <MudToolBar Dense="true">
                     <MudSpacer />

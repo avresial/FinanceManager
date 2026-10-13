@@ -37,7 +37,12 @@
             @if (KeyFigure is not null)
             {
                 <div class="fm-card-header-figure">
-                    <div class="fm-card-header-figure-value">@KeyFigure</div>
+                    <MudTooltip Inline="false" RootStyle="min-width:0;max-width:100%;">
+                        <TooltipContent>@KeyFigure</TooltipContent>
+                        <ChildContent>
+                            <div class="fm-card-header-figure-value" tabindex="0">@KeyFigure</div>
+                        </ChildContent>
+                    </MudTooltip>
                     @if (KeyFigureBadge is not null)
                     {
                         <div class="fm-card-header-badge">@KeyFigureBadge</div>

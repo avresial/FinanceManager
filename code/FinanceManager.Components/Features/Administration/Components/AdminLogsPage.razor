@@ -74,16 +74,19 @@
                             <MudText Class="mud-text-secondary" Typo="Typo.caption">
                                 @entry.TimestampUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
                             </MudText>
-                            <MudSpacer />
-                            <MudText Class="mud-text-secondary" Typo="Typo.caption"
-                                     Style="overflow-wrap:anywhere;min-width:0">
-                                @entry.Category
-                            </MudText>
-                            <MudTooltip Text="Copy log details">
-                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default"
-                                               OnClick="@(() => CopyDetailsAsync(entry))"
-                                               Size="Size.Small" aria-label="@($"Copy log details for entry {entry.Id}")" />
-                            </MudTooltip>
+                            <div class="d-flex align-center gap-2" style="flex:1 1 240px;min-width:0">
+                                <MudText Class="mud-text-secondary" Typo="Typo.caption" title="@entry.Category"
+                                         Style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                    @entry.Category
+                                </MudText>
+                                <div class="flex-shrink-0">
+                                    <MudTooltip Text="Copy log details">
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default"
+                                                       OnClick="@(() => CopyDetailsAsync(entry))"
+                                                       Size="Size.Small" aria-label="@($"Copy log details for entry {entry.Id}")" />
+                                    </MudTooltip>
+                                </div>
+                            </div>
                         </MudStack>
 
                         <MudText Typo="Typo.body2" Style="overflow-wrap:anywhere;word-break:break-word">

@@ -2,11 +2,6 @@
     color: var(--mud-palette-text-secondary);
 }
 
-.portfolio-return-subtitle {
-    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
-    font-size: 0.875rem;
-}
-
 .portfolio-return-metrics {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -64,8 +59,8 @@
     display: flex;
     align-items: flex-start;
     gap: 0.65rem;
-    margin-top: 1rem;
-    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
     border-radius: 0.5rem;
     border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 18%, var(--mud-palette-divider));
     background: color-mix(in srgb, var(--mud-palette-warning) 6%, var(--mud-palette-surface));
@@ -82,8 +77,8 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--mud-palette-divider);
 }
 

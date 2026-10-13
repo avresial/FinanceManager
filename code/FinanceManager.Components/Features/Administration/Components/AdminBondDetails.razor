@@ -5,7 +5,12 @@
 
 <PageTitle>Bonds - Admin</PageTitle>
 
-@if (!_isLoading)
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate aria-label="Loading bonds…" />
+    <MudText role="status">Loading bonds…</MudText>
+}
+else
 {
     <MudStack Spacing="2">
         @foreach (var message in _errors)

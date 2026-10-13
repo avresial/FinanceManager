@@ -4,13 +4,11 @@
 @using FinanceManager.Components.Shared.CustomValidationAttributes
 @using FinanceManager.Domain.FinancialAccounts.Shared.Repositories
 
-@inject ISettingsService settingsService
-
 @if (BondAccountEntry is not null && BondAccount is not null)
 {
     <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudContainer MaxWidth="MaxWidth.Medium">
-            <MudGrid Justify="Justify.Center">
+            <MudGrid Justify="Justify.FlexStart">
                 <MudItem xs="12" sm="12" md="12">
                     <MudText Typo="Typo.h4">Update</MudText>
                     <MudText Typo="Typo.subtitle1">@BondAccount.Name</MudText>
@@ -51,7 +49,11 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update
+                        @foreach (var error in _errors)
+                        {
+                            <MudAlert Severity="Severity.Error" Class="mb-2">@error</MudAlert>
+                        }
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update Disabled="_isUpdating">Update
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
                                    Class="mx-2">Cancel</MudButton>

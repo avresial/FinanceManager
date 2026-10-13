@@ -1,0 +1,14 @@
+.admin-toolbar ::deep .mud-button-root {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.admin-toolbar ::deep .admin-search {
+    min-width: 0;
+}
+
+@media (max-width: 599.98px) {
+    .admin-toolbar ::deep .admin-search {
+        flex-basis: 100%;
+    }
+}

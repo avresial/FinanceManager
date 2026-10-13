@@ -52,6 +52,13 @@
     white-space: nowrap;
 }
 
+/* Wider screens have room, so the labels no longer need to touch the item borders. */
+@media (min-width: 600px) {
+    .fm-tx-toolbar ::deep .mud-toggle-item {
+        padding: 4px 12px;
+    }
+}
+
 /* Same reason: the split add-entry button keeps the icon and its chevron tight.
    !important because MudBlazor's own button-group rule is more specific. */
 .fm-tx-toolbar ::deep .mud-button-group-root .mud-icon-button {

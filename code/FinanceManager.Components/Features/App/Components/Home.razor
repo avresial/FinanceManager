@@ -2,7 +2,21 @@
 
 <PageTitle>Finance manager</PageTitle>
 
-@if (!_isLoading)
+@if (_isLoading)
+{
+    <div class="pa-6" role="status">
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <MudText Class="mt-2">Loading accounts…</MudText>
+    </div>
+}
+else if (_hasAccountLoadingError)
+{
+    <MudAlert Severity="Severity.Error" Class="ma-6">
+        Could not load accounts. Please retry.
+        <MudButton OnClick="LoadAccountsAsync" Color="Color.Primary">Retry</MudButton>
+    </MudAlert>
+}
+else
 {
     @if (_showWelcome)
     {

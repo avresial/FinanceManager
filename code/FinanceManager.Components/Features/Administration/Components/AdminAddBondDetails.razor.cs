@@ -15,6 +15,7 @@ public partial class AdminAddBondDetails : ComponentBase
 
     private MudForm? _form;
     private bool _isValid;
+    private bool _isSubmitting;
 
     private string _name = string.Empty;
     private string _issuer = string.Empty;
@@ -55,74 +56,77 @@ public partial class AdminAddBondDetails : ComponentBase
                 _selectedCurrency = currencies.FirstOrDefault(x => x.ShortName == DefaultCurrency.PLN.ShortName) ?? currencies[0];
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add(ex.Message);
+            _errors.Add("Failed to load bond options. Please try again.");
         }
     }
 
     private async Task AddBondDetails()
     {
-        _errors.Clear();
-        _info.Clear();
-
-        if (_form is null)
-        {
-            _errors.Add("Form initialization error. Please try again.");
-            return;
-        }
-
-        await _form.Validate();
-        if (!_form.IsValid)
-        {
-            _errors.Add("Please correct the validation errors before submitting.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_issuer))
-        {
-            _errors.Add("Name and issuer are required.");
-            return;
-        }
-
-        if (!_startDate.HasValue || !_endDate.HasValue)
-        {
-            _errors.Add("Start and end emission dates are required.");
-            return;
-        }
-
-        if (_endDate.Value.Date < _startDate.Value.Date)
-        {
-            _errors.Add("End emission date must be after start emission date.");
-            return;
-        }
-
-        if (!_unitValue.HasValue || _unitValue.Value <= 0)
-        {
-            _errors.Add("Unit value must be greater than 0.");
-            return;
-        }
-
-        if (_calculationMethods.Count == 0)
-        {
-            _errors.Add("At least one calculation method is required.");
-            return;
-        }
-
-        var bond = new BondDetails
-        {
-            Name = _name.Trim(),
-            Issuer = _issuer.Trim(),
-            StartEmissionDate = DateOnly.FromDateTime(_startDate.Value),
-            EndEmissionDate = DateOnly.FromDateTime(_endDate.Value),
-            Type = _selectedType,
-            Currency = _selectedCurrency,
-            UnitValue = _unitValue.Value,
-            CalculationMethods = _calculationMethods.ToList(),
-        };
+        if (_isSubmitting) return;
+        _isSubmitting = true;
 
         try
         {
+            _errors.Clear();
+            _info.Clear();
+
+            if (_form is null)
+            {
+                _errors.Add("Form initialization error. Please try again.");
+                return;
+            }
+
+            await _form.Validate();
+            if (!_form.IsValid)
+            {
+                _errors.Add("Please correct the validation errors before submitting.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_issuer))
+            {
+                _errors.Add("Name and issuer are required.");
+                return;
+            }
+
+            if (!_startDate.HasValue || !_endDate.HasValue)
+            {
+                _errors.Add("Start and end emission dates are required.");
+                return;
+            }
+
+            if (_endDate.Value.Date < _startDate.Value.Date)
+            {
+                _errors.Add("End emission date must be after start emission date.");
+                return;
+            }
+
+            if (!_unitValue.HasValue || _unitValue.Value <= 0)
+            {
+                _errors.Add("Unit value must be greater than 0.");
+                return;
+            }
+
+            if (_calculationMethods.Count == 0)
+            {
+                _errors.Add("At least one calculation method is required.");
+                return;
+            }
+
+            var bond = new BondDetails
+            {
+                Name = _name.Trim(),
+                Issuer = _issuer.Trim(),
+                StartEmissionDate = DateOnly.FromDateTime(_startDate.Value),
+                EndEmissionDate = DateOnly.FromDateTime(_endDate.Value),
+                Type = _selectedType,
+                Currency = _selectedCurrency,
+                UnitValue = _unitValue.Value,
+                CalculationMethods = _calculationMethods.ToList(),
+            };
+
             var result = await BondDetailsHttpClient.Add(bond);
             if (result is null)
             {
@@ -133,9 +137,13 @@ public partial class AdminAddBondDetails : ComponentBase
             _info.Add("Bond details added successfully.");
             NavigationManager.NavigateTo("Admin/Bonds");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errors.Add(ex.Message);
+            _errors.Add("Failed to add bond details. Please try again.");
+        }
+        finally
+        {
+            _isSubmitting = false;
         }
     }
 

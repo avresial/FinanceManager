@@ -28,7 +28,7 @@ else
             @foreach (var service in _services)
             {
                 <MudItem xs="12" md="6">
-                    <MudCard Outlined>
+                    <MudCard Outlined Class="h-100">
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -40,6 +40,7 @@ else
                                             </CardInfoTooltip>
                                             <MudSwitch T="bool" Value="@service.IsEnabled"
                                                        ValueChanged="@(v => service.IsEnabled = v)"
+                                                       Disabled="@_savingServices.Contains(service.ServiceName)"
                                                        Color="Color.Primary" />
                                         </MudStack>
                                         <MudText Class="mud-text-secondary" Typo="Typo.body2">@service.Description</MudText>
@@ -61,6 +62,7 @@ else
                                 <MudTextField T="string" Label="Base URL"
                                               Value="@service.BaseUrl"
                                               ValueChanged="@(v => service.BaseUrl = v)"
+                                              Disabled="@_savingServices.Contains(service.ServiceName)"
                                               Immediate
                                               Variant="Variant.Outlined" />
 
@@ -71,6 +73,7 @@ else
                                               Label="@(service.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
                                               Value="@service.NewApiKey"
                                               ValueChanged="@(v => service.NewApiKey = v)"
+                                              Disabled="@_savingServices.Contains(service.ServiceName)"
                                               Immediate
                                               InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
                                               Variant="Variant.Outlined"

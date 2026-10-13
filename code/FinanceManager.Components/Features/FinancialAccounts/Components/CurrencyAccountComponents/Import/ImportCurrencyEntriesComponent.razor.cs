@@ -46,11 +46,18 @@ public partial class ImportCurrencyEntriesComponent :
         ? (double)ActiveJobStatus.ProcessedEntries / ActiveJobStatus.TotalEntries * 100d
         : 0d;
     private bool ShowImportProgress => ActiveJobStatus?.Status is AsyncImportJobState.Queued or AsyncImportJobState.Running;
+    // A failed job also reports IsCompleted, so it must not count as a successful import.
     private bool CanReturnToAccount => ActiveImportJobId.HasValue &&
         (ActiveJobStatus?.IsCompleted ?? false) &&
+        ActiveJobStatus?.Status != AsyncImportJobState.Failed &&
+        string.IsNullOrWhiteSpace(JobError) &&
         UnresolvedConflictCount == 0 &&
         LiveConflicts.All(x => x.IsResolved || x.Conflict.IsExactMatch);
     private bool ShowAsyncImportCompletedMessage => _stepIndex == 2 && CanReturnToAccount;
+    private bool ShowImportFailedActions => _stepIndex == 2 &&
+        ActiveImportJobId.HasValue &&
+        (ActiveJobStatus?.IsCompleted ?? false) &&
+        (ActiveJobStatus?.Status == AsyncImportJobState.Failed || !string.IsNullOrWhiteSpace(JobError));
     private bool ShowSynchronousImportCompletedMessage => _stepIndex == 2 &&
         !ActiveImportJobId.HasValue &&
         (ActiveJobStatus?.IsCompleted ?? true) &&

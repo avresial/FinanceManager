@@ -14,6 +14,7 @@ public partial class AdminPrices : ComponentBase
     private decimal? _price;
     private bool _isLoading = true;
     private bool _isSaving;
+    private string? _loadError;
 
     [Inject] public required AssetHttpClient AssetHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
@@ -22,13 +23,26 @@ public partial class AdminPrices : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        var assets = await AssetHttpClient.GetAssets();
-        var details = await Task.WhenAll(assets.Select(asset => AssetHttpClient.GetAsset(asset.Id)));
-        _listings.AddRange(details.OfType<AssetDto>().SelectMany(asset => asset.Listings.Select(listing => new ListingOption(
-            listing.Id,
-            $"{asset.Name} · {listing.Ticker} · {listing.ExchangeName} · {listing.TradingCurrency}",
-            listing.TradingCurrency))));
-        _isLoading = false;
+        try
+        {
+            var assets = await AssetHttpClient.GetAssets();
+            var details = await Task.WhenAll(assets.Select(asset => AssetHttpClient.GetAsset(asset.Id)));
+            if (details.Any(detail => detail is null))
+                throw new InvalidOperationException("An asset listing response was unavailable.");
+
+            _listings.AddRange(details.OfType<AssetDto>().SelectMany(asset => asset.Listings.Select(listing => new ListingOption(
+                listing.Id,
+                $"{asset.Name} · {listing.Ticker} · {listing.ExchangeName} · {listing.TradingCurrency}",
+                listing.TradingCurrency))));
+        }
+        catch (Exception)
+        {
+            _loadError = "Unable to load asset listings. Refresh the page to try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
     private async Task Save()
@@ -38,13 +52,22 @@ public partial class AdminPrices : ComponentBase
             return;
 
         _isSaving = true;
-        var saved = await AssetHttpClient.AddManualPrice(
-            listingId,
-            new ManualPriceRequest(price, new DateTimeOffset(DateTime.SpecifyKind(date.Date, DateTimeKind.Utc))));
-        _isSaving = false;
-
-        Snackbar.Add(saved ? "Manual price saved." : "Failed to save manual price.", saved ? Severity.Success : Severity.Error);
-        if (saved) _price = null;
+        try
+        {
+            var saved = await AssetHttpClient.AddManualPrice(
+                listingId,
+                new ManualPriceRequest(price, new DateTimeOffset(DateTime.SpecifyKind(date.Date, DateTimeKind.Utc))));
+            Snackbar.Add(saved ? "Manual price saved." : "Unable to save the price. Try again.", saved ? Severity.Success : Severity.Error);
+            if (saved) _price = null;
+        }
+        catch (Exception)
+        {
+            Snackbar.Add("Unable to save the price. Try again.", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
     }
 
     private sealed record ListingOption(long Id, string Label, string Currency);

@@ -25,7 +25,7 @@
         <KeyFigureBadge>
             @if (State == LoadState.Ready && ShowDelta)
             {
-                <span class="fm-tsvc-delta" style="@($"color:{DeltaColor};background:{DeltaBackground};")">@DeltaText</span>
+                <span class="fm-tsvc-delta @DeltaClass">@DeltaText</span>
             }
         </KeyFigureBadge>
     </CardHeader>

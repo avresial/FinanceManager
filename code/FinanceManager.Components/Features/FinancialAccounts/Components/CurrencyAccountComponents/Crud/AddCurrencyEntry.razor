@@ -5,7 +5,7 @@
 <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
     <MudContainer MaxWidth="MaxWidth.Medium">
 
-        <MudGrid Justify="Justify.Center">
+        <MudGrid Justify="Justify.FlexStart">
             <MudItem xs="12" sm="12" md="12">
                 <MudText Typo="Typo.h4">Add new entry</MudText>
                 <MudText Typo="Typo.subtitle1">@CurrencyAccount.Name</MudText>
@@ -41,7 +41,13 @@
                     Variant="Variant.Text" MaxLength="140" Counter="140" />
             </MudItem>
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add>Add</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add Disabled="@_isAdding">
+                    @if (_isAdding)
+                    {
+                        <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                    }
+                    Add
+                </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
                     Class="mx-2">Cancel</MudButton>
                 @if (CustomButton is not null)

@@ -128,8 +128,8 @@ public partial class TimeSeriesValueCard
 
     private bool DeltaIsUp => IsDebt ? DebtChange > 0 : DeltaPct >= 0;
     private bool DeltaIsGood => IsDebt ? DebtChange <= 0 : DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
-    private string DeltaColor => DeltaIsGood ? "#66BB6A" : "#EF5350";
-    private string DeltaBackground => DeltaIsGood ? "rgba(102,187,106,0.15)" : "rgba(239,83,80,0.15)";
+    // Colors come from theme-aware tokens in time-series-card.css so the badge stays legible in light and dark mode.
+    private string DeltaClass => DeltaIsGood ? "fm-tsvc-delta--good" : "fm-tsvc-delta--bad";
 
     private string DeltaText
     {

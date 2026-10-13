@@ -10,7 +10,8 @@ namespace FinanceManager.Components.Features.Administration.Components;
 
 public partial class AdminUsers : ComponentBase
 {
-    private int _usersCount = 0;
+    private bool _isLoading = true;
+    private string? _loadError;
     private int _recordsPerPage = 20;
     private int _pagesCount;
     private string _searchText = string.Empty;
@@ -26,13 +27,29 @@ public partial class AdminUsers : ComponentBase
     public int SelectedPage { get; set; } = 1;
     public MudTable<UserDetails>? Table { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadUsersAsync();
+
+    private async Task LoadUsersAsync()
     {
-        _usersCount = await AdministrationUsersHttpClient.GetUsersCount() ?? 0;
-        if (_usersCount > 0)
+        _isLoading = true;
+        _loadError = null;
+        try
         {
-            _allElements = await AdministrationUsersHttpClient.GetUsers(0, _usersCount);
+            var usersCount = await AdministrationUsersHttpClient.GetUsersCount()
+                ?? throw new InvalidOperationException("The users count response was empty.");
+            List<UserDetails> users = usersCount > 0
+                ? await AdministrationUsersHttpClient.GetUsers(0, usersCount)
+                : [];
+            _allElements = users;
             ApplyFilter();
+        }
+        catch (Exception)
+        {
+            _loadError = "Unable to load users. Refresh the page to try again.";
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 
@@ -83,9 +100,8 @@ public partial class AdminUsers : ComponentBase
             return;
         }
 
-        _usersCount = await AdministrationUsersHttpClient.GetUsersCount() ?? 0;
-
-        _allElements = await AdministrationUsersHttpClient.GetUsers(0, _usersCount);
+        _allElements = _allElements.Where(user => user.UserId != userId).ToList();
         ApplyFilter();
+        await LoadUsersAsync();
     }
 }

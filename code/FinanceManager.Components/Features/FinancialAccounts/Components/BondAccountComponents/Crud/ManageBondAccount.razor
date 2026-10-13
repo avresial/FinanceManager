@@ -1,5 +1,10 @@
 @using FinanceManager.Domain.Identity.Entities
 
+@if (_errorMessage is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3">@_errorMessage</MudAlert>
+}
+
 @if (_bondAccount is not null)
 {
     <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
@@ -17,14 +22,16 @@
                         }
                     </MudItem>
                 }
-                <MudItem xs="8">
+                <MudItem xs="12">
                     <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Text" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Recalculate Disabled="_isRecalculating" StartIcon="@Icons.Material.Filled.Calculate">Recalculate balance</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")" Class="ml-auto">Cancel</MudButton>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Recalculate Disabled="_isRecalculating" StartIcon="@Icons.Material.Filled.Calculate">Recalculate balance</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")">Cancel</MudButton>
+                    </MudStack>
                 </MudItem>
             </MudGrid>
         </MudContainer>

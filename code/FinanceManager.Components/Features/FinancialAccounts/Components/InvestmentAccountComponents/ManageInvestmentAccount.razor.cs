@@ -15,6 +15,7 @@ public partial class ManageInvestmentAccount : ComponentBase
     private MudForm? _form;
     private bool _success;
     private string[] _errors = [];
+    private string? _errorMessage;
 
     private InvestmentAccount? _investmentAccount;
 
@@ -31,6 +32,7 @@ public partial class ManageInvestmentAccount : ComponentBase
 
     protected override async Task OnParametersSetAsync()
     {
+        _errorMessage = null;
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -45,12 +47,13 @@ public partial class ManageInvestmentAccount : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading Investment Account with AccountId {AccountId}", AccountId);
-            _errors = [$"An error occurred while loading the account: {ex.Message}"];
+            _errorMessage = "Could not load the account. Please try again.";
         }
     }
 
     public async Task Update()
     {
+        _errorMessage = null;
         try
         {
             if (_form is null) return;
@@ -72,12 +75,13 @@ public partial class ManageInvestmentAccount : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error updating Investment Account with AccountId {AccountId}", AccountId);
-            _errors = [ex.Message];
+            _errorMessage = "Could not update the account. Please try again.";
         }
     }
 
     public async Task Remove()
     {
+        _errorMessage = null;
         try
         {
             var options = new DialogOptions { CloseOnEscapeKey = true };
@@ -94,7 +98,7 @@ public partial class ManageInvestmentAccount : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error removing Investment Account with AccountId {AccountId}", AccountId);
-            _errors = [ex.Message];
+            _errorMessage = "Could not delete the account. Please try again.";
         }
     }
 }

@@ -5,7 +5,12 @@
 
 <PageTitle>Edit label - Admin</PageTitle>
 
-@if (_labelData is not null)
+@if (_isLoadingPage)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate aria-label="Loading label" />
+    <MudText role="status">Loading label…</MudText>
+}
+else if (_labelData is not null)
 { 
     <MudGrid Spacing="6">
         <MudItem xs="12">
@@ -16,7 +21,7 @@
         <MudItem xs="12">
             <MudText Typo="Typo.h6">Change name</MudText>
             <MudGrid>
-                <MudItem xs="8">
+                <MudItem xs="12" sm="8">
                     <MudForm @ref="_nameForm" @bind-IsValid="@_success" Spacing="3">
 
                         <MudTextField T="string" Label="Name" HelperText="Choose a name" @bind-value="NameField"
@@ -24,7 +29,7 @@
                                       RequiredError="Name is required!" />
 
 
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success)">Update name</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-4 align-self-start" OnClick="UpdateNameAsync" Disabled="@(!_success || _isUpdatingName)">@(_isUpdatingName ? "Updating…" : "Update name")</MudButton>
                     </MudForm>
                 </MudItem>
             </MudGrid>
@@ -34,7 +39,7 @@
         <MudItem xs="12">
             <MudText Typo="Typo.h6">Spending classification</MudText>
             <MudGrid>
-                <MudItem xs="8">
+                <MudItem xs="12" sm="8">
                     <MudSelect T="string" Label="Classification" @bind-Value="_selectedClassification"
                                HelperText="Categorise this label for the expense distribution chart">
                         <MudSelectItem Value="@FinancialLabelClassificationCatalog.EssentialValue">Essential</MudSelectItem>
@@ -69,11 +74,14 @@
         </MudItem>
     </MudGrid>
 }
-else if (_isLoadingPage)
-{
-
-}
 else
 {
-    <MudAlert Severity="Severity.Error">Label with id @LabelId could not be found.</MudAlert>
+    @foreach (var message in _errors)
+    {
+        <MudAlert Severity="Severity.Error">@message</MudAlert>
+    }
+    @if (_errors.Count == 0)
+    {
+        <MudAlert Severity="Severity.Error">Label with id @LabelId could not be found.</MudAlert>
+    }
 }

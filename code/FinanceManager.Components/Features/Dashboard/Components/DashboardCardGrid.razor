@@ -9,7 +9,7 @@
         <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Show cards</MudText>
         @foreach (var card in MenuCards ?? Cards.Select(card => new DashboardCardDescriptor(card.Id, card.Title)))
         {
-            <MudMenuItem OnClick="@(() => ToggleCard(card.Id))" AutoClose="false" Style="padding: 2.65px;">
+            <MudMenuItem OnClick="@(() => ToggleCard(card.Id))" AutoClose="false" Style="padding: 2px 16px 2px 4px;">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudCheckBox Value="@(!CardVisibility.IsHidden(card.Id, Page))" T="bool" Dense="true"
                                  ReadOnly="true" Color="Color.Primary" />

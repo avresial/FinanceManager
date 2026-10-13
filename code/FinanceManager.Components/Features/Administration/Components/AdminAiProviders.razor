@@ -28,7 +28,7 @@ else
             @foreach (var provider in _providers)
             {
                 <MudItem xs="12" md="6">
-                    <MudCard Outlined>
+                    <MudCard Outlined Class="h-100">
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -40,6 +40,7 @@ else
                                             </CardInfoTooltip>
                                             <MudSwitch T="bool" Value="@provider.IsEnabled"
                                                        ValueChanged="@(v => provider.IsEnabled = v)"
+                                                       Disabled="@_savingProviders.Contains(provider.ProviderName)"
                                                        Color="Color.Primary" />
                                         </MudStack>
                                         <MudText Class="mud-text-secondary" Typo="Typo.body2">@provider.Description</MudText>
@@ -61,6 +62,7 @@ else
                                 <MudTextField T="string" Label="Base URL"
                                               Value="@provider.BaseUrl"
                                               ValueChanged="@(v => provider.BaseUrl = v)"
+                                              Disabled="@_savingProviders.Contains(provider.ProviderName)"
                                               Immediate
                                               Variant="Variant.Outlined" />
 
@@ -70,6 +72,7 @@ else
                                 <MudTextField T="string" Label="@(provider.HasApiKey ? "API Key (set — enter new to replace)" : "API Key")"
                                               Value="@provider.NewApiKey"
                                               ValueChanged="@(v => provider.NewApiKey = v)"
+                                              Disabled="@_savingProviders.Contains(provider.ProviderName)"
                                               Immediate
                                               InputType="@(apiKeyVisible ? InputType.Text : InputType.Password)"
                                               Variant="Variant.Outlined"
@@ -83,6 +86,12 @@ else
                                         <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
                                         <MudText Typo="Typo.body2" Color="Color.Success">API key configured</MudText>
                                     }
+                                    else if (string.Equals(provider.ProviderName, "Ollama", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        @* Ollama is a local runner and needs no key (see its description), so "no key" is not a warning. *@
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Default" Size="Size.Small" />
+                                        <MudText Typo="Typo.body2" Class="mud-text-secondary">No API key needed</MudText>
+                                    }
                                     else
                                     {
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
@@ -93,6 +102,7 @@ else
                                 <MudNumericField T="int" Label="Timeout (seconds)"
                                                  Value="@provider.RequestTimeoutSeconds"
                                                  ValueChanged="@(v => provider.RequestTimeoutSeconds = v)"
+                                                 Disabled="@_savingProviders.Contains(provider.ProviderName)"
                                                  Immediate
                                                  Min="1" Max="3600"
                                                  Variant="Variant.Outlined" />
@@ -232,16 +242,11 @@ else
                                    aria-label="Remove fallback entry" />
                 </MudTd>
             </RowTemplate>
-            <FooterContent>
-                <MudTr>
-                    <MudTd colspan="4" Class="pa-0">
-                        <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.Add"
-                                   FullWidth OnClick="AddFallbackEntry">Add Entry</MudButton>
-                    </MudTd>
-                </MudTr>
-            </FooterContent>
         </MudTable>
+
+        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Class="align-self-start" OnClick="AddFallbackEntry">Add Entry</MudButton>
 
         @if (_fallbackEntries.Count == 0)
         {

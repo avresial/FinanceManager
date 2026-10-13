@@ -20,7 +20,6 @@ public partial class BondEntryConflictResolver
 
     private bool _isLoading;
     private string? _errorMessage;
-    private int _accountId;
     private List<DayGroup> _dayGroups = [];
     private readonly Dictionary<DateTime, ResolveChoice> _dayChoices = new();
     private Dictionary<int, string> _bondNamesById = [];
@@ -57,8 +56,6 @@ public partial class BondEntryConflictResolver
                 .Select(g => new DayGroup(g.Key, g.ToList()))
                 .ToList();
 
-            if (_dayGroups.Count > 0)
-                _accountId = _dayGroups[0].Conflicts[0].AccountId;
 
             var presentDays = new HashSet<DateTime>(_dayGroups.Select(g => g.Date));
             foreach (var key in _dayChoices.Keys.Where(k => !presentDays.Contains(k)).ToList())
@@ -66,7 +63,7 @@ public partial class BondEntryConflictResolver
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(BondEntryConflictResolver), _accountId);
+            Logger.LogError(ex, "Error initializing {Component}", nameof(BondEntryConflictResolver));
         }
         _isLoading = false;
     }
@@ -119,7 +116,7 @@ public partial class BondEntryConflictResolver
         catch (Exception ex)
         {
             _errorMessage = "Could not submit conflict decisions. Please try again.";
-            Logger.LogError(ex, "Error submitting conflict resolutions for account {AccountId}", _accountId);
+            Logger.LogError(ex, "Error submitting conflict resolutions");
         }
         _isLoading = false;
         StateHasChanged();

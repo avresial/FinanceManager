@@ -175,16 +175,16 @@ else
                                     <MudTd DataLabel="Action">
                                         <MudStack Row Spacing="1">
                                             <MudIconButton Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small"
-                                                           OnClick="@(() => SaveSymbol(context))" aria-label="Save symbol" />
+                                                           OnClick="@(() => SaveSymbol(context))" Disabled="_isSaving" aria-label="Save symbol" />
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                                           OnClick="@(() => DeleteSymbol(context))" aria-label="Delete symbol" />
+                                                           OnClick="@(() => DeleteSymbol(context))" Disabled="_isSaving" aria-label="Delete symbol" />
                                         </MudStack>
                                     </MudTd>
                                 </RowTemplate>
                             </MudTable>
                         }
 
-                        <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                        <MudStack Row Wrap="Wrap.Wrap" Spacing="2" AlignItems="AlignItems.Center">
                             <MudSelect T="MarketDataProvider" @bind-Value="NewSymbol(listing.Id).Provider" Label="Provider"
                                        Dense Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:160px">
                                 @foreach (var p in Enum.GetValues<MarketDataProvider>())
@@ -193,7 +193,7 @@ else
                                 }
                             </MudSelect>
                             <MudTextField T="string" @bind-Value="NewSymbol(listing.Id).Symbol" Label="Symbol"
-                                          Dense Variant="Variant.Outlined" Margin="Margin.Dense" Class="flex-grow-1" />
+                                          Dense Variant="Variant.Outlined" Margin="Margin.Dense" Class="flex-grow-1" Style="min-width:0;" />
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                                        OnClick="@(() => AddSymbol(listing))" Disabled="_isSaving">Add symbol</MudButton>
                         </MudStack>

@@ -132,8 +132,8 @@
             </MudItem>
 
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddBondDetails">Add</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel">Cancel </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddBondDetails" Disabled="_isSubmitting">@(_isSubmitting ? "Adding…" : "Add")</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" Class="ml-2" OnClick="Cancel" Disabled="_isSubmitting">Cancel </MudButton>
             </MudItem>
         </MudGrid>
     </MudForm>

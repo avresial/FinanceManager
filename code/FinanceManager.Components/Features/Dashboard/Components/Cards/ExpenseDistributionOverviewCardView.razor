@@ -26,6 +26,12 @@
                 <ChartSpinner MaxHeight=@Height />
             </div>
         }
+        else if (HasError)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true">Unable to load expense distribution.
+                <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
+            </MudAlert>
+        }
         else if (Data.Any() && TotalExpenses > 0)
         {
             <div class="ed-body">

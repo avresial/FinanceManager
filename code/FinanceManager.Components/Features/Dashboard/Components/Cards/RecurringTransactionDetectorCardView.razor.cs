@@ -11,6 +11,10 @@ public partial class RecurringTransactionDetectorCardView
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public bool IsLoadingDetail { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public bool HasDetailError { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnRetryDetail { get; set; }
     [Parameter] public List<RecurringTransactionResult> Data { get; set; } = [];
     [Parameter] public decimal TotalMonthlySpend { get; set; }
     [Parameter] public string Currency { get; set; } = "PLN";

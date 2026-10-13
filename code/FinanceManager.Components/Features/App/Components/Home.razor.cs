@@ -11,6 +11,7 @@ public partial class Home : ComponentBase
 {
     private bool _isLoading;
     private bool _showWelcome;
+    private bool _hasAccountLoadingError;
 
     [Inject] public required ILogger<Home> Logger { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -19,45 +20,42 @@ public partial class Home : ComponentBase
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
 
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadAccountsAsync();
+
+    private async Task LoadAccountsAsync()
     {
-        _isLoading = true;
-        var loggedUser = await LoginService.GetLoggedUser();
-
-        if (loggedUser is null)
-        {
-            Navigation.NavigateTo("login");
+        if (_isLoading)
             return;
-        }
 
-        Dictionary<int, Type>? availableAccounts = null;
+        _isLoading = true;
+        _hasAccountLoadingError = false;
         try
         {
-            availableAccounts = await FinancialAccountService.GetAvailableAccounts();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex.ToString());
-        }
+            var loggedUser = await LoginService.GetLoggedUser();
+            if (loggedUser is null)
+            {
+                Navigation.NavigateTo("login");
+                return;
+            }
 
-        if ((availableAccounts is null || availableAccounts.Count == 0) && loggedUser.UserName.ToLower() == "guest")
-        {
-            try
+            var availableAccounts = await FinancialAccountService.GetAvailableAccounts();
+            if (availableAccounts.Count == 0 && loggedUser.UserName.ToLower() == "guest")
             {
                 FinancialAccountService.InitializeMock();
                 availableAccounts = await FinancialAccountService.GetAvailableAccounts();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+                await AccountDataSynchronizationService.AccountChanged();
             }
 
-            await AccountDataSynchronizationService.AccountChanged();
+            _showWelcome = availableAccounts.Count == 0;
         }
-
-        if (availableAccounts is null || availableAccounts.Count == 0)
-            _showWelcome = true;
-
-        _isLoading = false;
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load accounts");
+            _hasAccountLoadingError = true;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 }

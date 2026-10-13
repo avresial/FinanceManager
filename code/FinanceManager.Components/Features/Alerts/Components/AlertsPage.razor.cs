@@ -20,6 +20,7 @@ public partial class AlertsPage : ComponentBase
 {
     private readonly List<string> _errors = [];
     private readonly Dictionary<Guid, AlertEvaluationOutcome> _outcomes = [];
+    private readonly HashSet<Guid> _pendingAlertIds = [];
     private List<FinancialAlertDto> _alerts = [];
     private AlertFormModel _form = new();
     private int _formVersion;
@@ -27,6 +28,8 @@ public partial class AlertsPage : ComponentBase
     private bool _isLoading = true;
     private bool _isRefreshing;
     private bool _isSaving;
+    private bool _isLoadingAccounts;
+    private bool _accountOptionsFailed;
     private int? _userId;
     private List<AvailableAccount> _accounts = [];
     private string _currencyCode = string.Empty;
@@ -50,6 +53,9 @@ public partial class AlertsPage : ComponentBase
 
     private async Task LoadFormOptionsAsync()
     {
+        if (_isLoadingAccounts) return;
+        _isLoadingAccounts = true;
+        _accountOptionsFailed = false;
         try
         {
             _accounts = [.. (await CurrencyAccountHttpClient.GetAvailableAccountsAsync()).OrderBy(account => account.AccountName)];
@@ -58,6 +64,11 @@ public partial class AlertsPage : ComponentBase
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unable to load account options for the alert form");
+            _accountOptionsFailed = true;
+        }
+        finally
+        {
+            _isLoadingAccounts = false;
         }
 
         await InvokeAsync(StateHasChanged);
@@ -203,6 +214,7 @@ public partial class AlertsPage : ComponentBase
 
     private async Task SaveAsync()
     {
+        if (_isSaving || (_editingId is Guid pendingId && _pendingAlertIds.Contains(pendingId))) return;
         _errors.Clear();
         if (string.IsNullOrWhiteSpace(_form.Title))
         {
@@ -211,6 +223,11 @@ public partial class AlertsPage : ComponentBase
         }
 
         var accountId = _form.AlertType == AlertType.AccountBalance ? _form.AccountId : null;
+        if (accountId is not null && (_isLoadingAccounts || _accountOptionsFailed))
+        {
+            _errors.Add("Load account options before saving this alert.");
+            return;
+        }
 
         var labelName = _form.AlertType == AlertType.CategorySpending ? NullIfWhiteSpace(_form.LabelName) : null;
         var merchantName = _form.AlertType == AlertType.MerchantSpending ? NullIfWhiteSpace(_form.MerchantName) : null;
@@ -262,7 +279,7 @@ public partial class AlertsPage : ComponentBase
             }
 
             Snackbar.Add(_editingId is null ? "Alert created." : "Alert updated.", Severity.Success);
-            CancelEdit();
+            ResetForm();
             await RefreshAfterMutationAsync();
         }
         catch (Exception ex)
@@ -278,6 +295,7 @@ public partial class AlertsPage : ComponentBase
 
     private async Task ToggleEnabledAsync(FinancialAlertDto alert, bool enabled)
     {
+        if (_isSaving || !_pendingAlertIds.Add(alert.Id)) return;
         try
         {
             if (!await HttpClient.SetEnabledAsync(alert.Id, enabled))
@@ -293,10 +311,15 @@ public partial class AlertsPage : ComponentBase
             Logger.LogError(ex, "Unable to toggle financial alert {AlertId}", alert.Id);
             Snackbar.Add("Unable to update this alert.", Severity.Error);
         }
+        finally
+        {
+            _pendingAlertIds.Remove(alert.Id);
+        }
     }
 
     private async Task DeleteAsync(FinancialAlertDto alert)
     {
+        if (_isSaving || !_pendingAlertIds.Add(alert.Id)) return;
         try
         {
             if (!await HttpClient.DeleteAsync(alert.Id))
@@ -315,10 +338,15 @@ public partial class AlertsPage : ComponentBase
             Logger.LogError(ex, "Unable to delete financial alert {AlertId}", alert.Id);
             Snackbar.Add("Unable to delete this alert.", Severity.Error);
         }
+        finally
+        {
+            _pendingAlertIds.Remove(alert.Id);
+        }
     }
 
     private void BeginEdit(FinancialAlertDto alert)
     {
+        if (_isSaving || _pendingAlertIds.Contains(alert.Id)) return;
         _editingId = alert.Id;
         _form = new AlertFormModel
         {
@@ -335,6 +363,12 @@ public partial class AlertsPage : ComponentBase
     }
 
     private void CancelEdit()
+    {
+        if (_isSaving) return;
+        ResetForm();
+    }
+
+    private void ResetForm()
     {
         _editingId = null;
         _form = new AlertFormModel();
