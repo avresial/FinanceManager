@@ -22,7 +22,6 @@ public partial class CurrencyEntryConflictResolver
 
     private bool _isLoading = false;
     private string? _errorMessage;
-    private int _accountId;
     private List<DayGroup> _dayGroups = [];
     private readonly Dictionary<DateTime, ResolveChoice> _dayChoices = new();
 
@@ -53,8 +52,6 @@ public partial class CurrencyEntryConflictResolver
                 .Select(g => new DayGroup(g.Key, g.ToList()))
                 .ToList();
 
-            if (_dayGroups.Count > 0)
-                _accountId = _dayGroups[0].Conflicts[0].Conflict.AccountId;
 
             // Prune day choices for days that disappeared between renders.
             var presentDays = new HashSet<DateTime>(_dayGroups.Select(g => g.Date));
@@ -63,7 +60,7 @@ public partial class CurrencyEntryConflictResolver
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error initializing {Component} for account {AccountId}", nameof(CurrencyEntryConflictResolver), _accountId);
+            Logger.LogError(ex, "Error initializing {Component}", nameof(CurrencyEntryConflictResolver));
         }
         _isLoading = false;
     }
@@ -150,7 +147,7 @@ public partial class CurrencyEntryConflictResolver
         catch (Exception ex)
         {
             _errorMessage = "Could not submit conflict decisions. Please try again.";
-            Logger.LogError(ex, "Error submitting conflict resolutions for account {AccountId}", _accountId);
+            Logger.LogError(ex, "Error submitting conflict resolutions");
         }
         _isLoading = false;
         StateHasChanged();
