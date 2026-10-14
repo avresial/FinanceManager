@@ -136,6 +136,18 @@ public class ChartHelperTests
     }
 
     [Fact]
+    public void GetNiceYScale_SnapsBoundsToRoundEvenlySpacedTicks()
+    {
+        // The uneven ticks seen on the hero chart came from a raw 5%-padded range (e.g. -74, -132, -190).
+        var scale = ChartHelper.GetNiceYScale(-360, -80, 5);
+        var step = (scale.Max - scale.Min) / scale.TickAmount;
+
+        Assert.True(scale.Min <= -360 && scale.Max >= -80);
+        Assert.Equal(0, scale.Min % step);
+        Assert.Equal(0, step % 10);
+    }
+
+    [Fact]
     public void GetYAxisTickFormatter_UsesWholeCompactTicksWhenTicksAreThousandsApart()
     {
         var formatter = ChartHelper.GetYAxisTickFormatter(0, 50_000, 5);

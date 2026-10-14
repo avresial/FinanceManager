@@ -162,6 +162,20 @@ public static class ChartHelper
         return (niceLow - step, niceHigh, bands + 1);
     }
 
+    /// <summary>
+    /// Y scale with round, evenly spaced ticks: the padded range is snapped outwards to a 1/2/5
+    /// step so every gridline lands on a round value. <paramref name="targetBands"/> is the
+    /// approximate number of bands; the returned tick amount is the exact band count.
+    /// </summary>
+    public static (double Min, double Max, int TickAmount) GetNiceYScale(double minimum, double maximum, int targetBands = 4)
+    {
+        var (low, high) = AddYRangePadding(minimum, maximum);
+        var step = GetNiceStep((high - low) / targetBands);
+        var niceLow = Math.Floor(low / step) * step;
+        var niceHigh = Math.Ceiling(high / step) * step;
+        return (niceLow, niceHigh, (int)Math.Round((niceHigh - niceLow) / step));
+    }
+
     private static double GetNiceStep(double rawStep)
     {
         var magnitude = Math.Pow(10, Math.Floor(Math.Log10(rawStep)));

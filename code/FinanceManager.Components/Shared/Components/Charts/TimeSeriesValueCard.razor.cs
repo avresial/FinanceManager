@@ -275,7 +275,7 @@ public partial class TimeSeriesValueCard
                 // so gridlines/labels must read on both a light and a dark card surface.
                 BorderColor = "rgba(128,128,128,0.18)",
                 StrokeDashArray = 0,
-                Padding = new Padding { Left = 0, Right = 0, Top = 4, Bottom = 0 },
+                Padding = new Padding { Left = 0, Right = 8, Top = 4, Bottom = 0 },
                 Xaxis = new GridXAxis { Lines = new Lines { Show = false } },
                 Yaxis = new GridYAxis { Lines = new Lines { Show = true } },
             },
@@ -312,24 +312,14 @@ public partial class TimeSeriesValueCard
                 new YAxis
                 {
                     // Min / Max / TickAmount are set per-series in ApplyYScale.
-                    // Floating = true: labels overlay the plot area instead of
-                    // occupying a reserved column to the left. This eliminates the
-                    // dead space on the left edge so the chart fills the card fully.
-                    // The labels are drawn above the series with a card-surface halo
-                    // (wwwroot/js/chart-axis-labels.js + css/time-series-card.css) so
-                    // the line passes behind them.
-                    Floating = true,
+                    // Labels sit in a reserved left gutter (not floating over the plot), so
+                    // the series line and fill never run through them. The grid's right
+                    // padding keeps the line off the card's right edge. #936
                     AxisBorder = new AxisBorder { Show = false },
                     AxisTicks = new AxisTicks { Show = false },
                     Labels = new YAxisLabels
                     {
-                        // Floating labels overlay the plot. Left-aligned so they grow
-                        // rightwards into the plot: right-aligned labels kept their right
-                        // edge fixed and longer ticks ("-21.4k") lost their minus sign
-                        // past the card's left border. OffsetX tunes the inset from the
-                        // left border.
-                        Align = Align.Left,
-                        OffsetX = 4,
+                        OffsetX = 0,
                         Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
                         Formatter = ChartHelper.CompactCurrencyTickFormatter,

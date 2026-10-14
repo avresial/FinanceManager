@@ -36,12 +36,6 @@ public partial class AccountDetailsHero
     [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
 
-    // Floating y-axis labels are right-aligned at this offset from the plot's left edge, so
-    // the value has to clear the widest label rather than the narrowest: the dashboard's 24
-    // suits "31k" but leaves a decimal tick like "301.03" flush against the page edge, and
-    // the hero chart is full-bleed (mx-n6) so there is no card padding to fall back on.
-    private const double _floatingYLabelOffsetX = 48;
-
     private const int _yAxisTickCount = 5;
 
     /// <summary>Legend/series name for the account's own balance series.</summary>
@@ -119,17 +113,17 @@ public partial class AccountDetailsHero
         var values = _chartData.Concat(_benchmarkData).Concat(_capitalData).Select(p => (double)p.Value).ToList();
         if (values.Count == 0) return;
 
-        var bounds = ChartHelper.AddYRangePadding(values.Min(), values.Max());
-        axis.Min = bounds.Min;
-        axis.Max = bounds.Max;
-        axis.TickAmount = _yAxisTickCount;
+        var scale = ChartHelper.GetNiceYScale(values.Min(), values.Max(), _yAxisTickCount);
+        axis.Min = scale.Min;
+        axis.Max = scale.Max;
+        axis.TickAmount = scale.TickAmount;
         axis.ForceNiceScale = false;
 
         // Account balances span a much wider magnitude range than the dashboard's portfolio
         // aggregates (a 300 PLN bond sits beside a 30k cash account), so the tick precision
         // is chosen from the scale actually on screen rather than fixed to "k".
         if (axis.Labels is YAxisLabels labels)
-            labels.Formatter = ChartHelper.GetYAxisTickFormatter(bounds.Min, bounds.Max, _yAxisTickCount);
+            labels.Formatter = ChartHelper.GetYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount);
     }
 
     private static ApexChartOptions<TimeSeriesModel> BuildChartOptions() => new()
@@ -174,7 +168,7 @@ public partial class AccountDetailsHero
             // gridlines and labels must read on both a light and a dark surface.
             BorderColor = "rgba(128,128,128,0.18)",
             StrokeDashArray = 0,
-            Padding = new Padding { Left = 0, Right = 0, Top = 4, Bottom = 0 },
+            Padding = new Padding { Left = 0, Right = 8, Top = 4, Bottom = 0 },
             Xaxis = new GridXAxis { Lines = new Lines { Show = false } },
             Yaxis = new GridYAxis { Lines = new Lines { Show = true } },
         },
@@ -201,17 +195,12 @@ public partial class AccountDetailsHero
             {
                 Show = true,
                 // Min / Max / TickAmount are set per-series in ApplyYScale.
-                // Floating = true: labels overlay the plot instead of occupying a reserved
-                // column, so the full-bleed chart keeps its edge-to-edge width.
-                Floating = true,
+                // Labels sit in a reserved left gutter so the series never runs through them. #936
                 AxisBorder = new AxisBorder { Show = false },
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new YAxisLabels
                 {
                     Show = true,
-                    // Nudges the floating labels right off the left chart edge so they sit
-                    // just inside the visible area rather than being cut by it.
-                    OffsetX = _floatingYLabelOffsetX,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter,
                 },
