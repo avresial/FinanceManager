@@ -5,7 +5,7 @@
 @using System.Globalization
 @inherits ImportEntriesComponentBase<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccount, ImportCurrencyEntriesComponent>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+<div>
 
     <PageHeader Title="@($"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
 
@@ -235,4 +235,4 @@
                              Back="GoToPreviousStep"
                              PrimaryClick="OnPrimaryClick" />
     </MudPaper>
-</MudContainer>
+</div>
