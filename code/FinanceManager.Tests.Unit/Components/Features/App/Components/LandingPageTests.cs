@@ -15,7 +15,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.App.Components;
 public class LandingPageTests
 {
     [Fact]
-    public async Task Renders_PricingHeadingAndDisabledGiftCodeButtonsWithFramedPreviews()
+    public async Task Renders_PricingHeadingAndDisabledGiftCodeButtonsWithResponsivePreviews()
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -39,6 +39,16 @@ public class LandingPageTests
             Assert.Equal("Available by gift code", button.TextContent.Trim());
         });
         Assert.Equal(6, cut.FindAll(".landing-preview img[alt]").Count);
-        Assert.Equal(4, cut.FindAll(".landing-preview-account").Count);
+
+        var pictures = cut.FindAll(".landing-preview picture");
+        Assert.Equal(6, pictures.Count);
+        Assert.All(pictures, picture =>
+        {
+            var mobileSource = picture.QuerySelector("source")!;
+            var desktopImage = picture.QuerySelector("img")!;
+            Assert.Equal("(max-width: 599.98px)", mobileSource.GetAttribute("media"));
+            Assert.EndsWith("-mobile.jpg", mobileSource.GetAttribute("srcset"));
+            Assert.EndsWith("-desktop.jpg", desktopImage.GetAttribute("src"));
+        });
     }
 }
