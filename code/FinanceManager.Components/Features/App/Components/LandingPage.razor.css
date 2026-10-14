@@ -1,0 +1,52 @@
+.landing-preview {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.landing-preview img {
+    display: block;
+    width: 100%;
+}
+
+.landing-preview-account {
+    aspect-ratio: 16 / 9;
+}
+
+/* Wallet 2's source screenshot includes whitespace around the chart. */
+.landing-preview-shares img {
+    width: 116%;
+    margin-left: -8%;
+    margin-top: -2%;
+}
+
+::deep .landing-gift-code:disabled {
+    /* MudBlazor marks disabled text color important; keep this explanation readable. */
+    color: var(--mud-palette-text-primary) !important;
+    border-color: var(--mud-palette-text-secondary);
+}
+
+@media (max-width: 599.98px) {
+    .landing-preview {
+        height: 360px;
+        aspect-ratio: auto;
+    }
+
+    /* Keep screenshot text at native scale and reveal a useful slice on phones. */
+    .landing-preview img {
+        width: auto;
+        max-width: none;
+        margin: 0;
+    }
+
+    .landing-preview-assets img {
+        transform: translate(-440px, -230px);
+    }
+
+    .landing-preview-account img {
+        transform: translate(-140px, -140px);
+    }
+
+    .landing-preview-shares img {
+        transform: translate(-220px, -140px);
+    }
+}
