@@ -1,0 +1,7 @@
+<MudContainer MaxWidth="MaxWidth.Small" Class="fm-account-form py-6">
+    @ChildContent
+</MudContainer>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

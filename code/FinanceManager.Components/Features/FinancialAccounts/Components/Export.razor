@@ -1,12 +1,9 @@
 @page "/Export/{AccountId:int}"
 <PageTitle>Export</PageTitle>
 
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6">Export</MudText>
-</SectionContent>
-
 <ComponentStateView IsLoading="@_isLoading" ErrorMessage="@ErrorMessage">
-    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-6">
+    <AccountFormContainer>
+        <PageHeader Title="Export" />
         <MudPaper Class="pa-4">
             <MudStack Spacing="2">
                 <MudText Typo="Typo.h4">Export data</MudText>
@@ -57,5 +54,5 @@
                 </MudStack>
             </MudStack>
         </MudPaper>
-    </MudContainer>
+    </AccountFormContainer>
 </ComponentStateView>

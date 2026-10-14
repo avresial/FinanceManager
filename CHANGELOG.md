@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Center Import, Export, Add account and Manage account forms at the same width, while keeping page titles in the app bar. #940
 - Give every Dashboard, Assets and Liabilities card the same header: one title size on a single line (the full title appears in its info tooltip), one muted line for the period or scope, the main amount aligned to the right, and actions such as View all, Manage alerts or the Type / Account toggle aligned to the right. On phones the amount and actions move below the title instead of overflowing. #902
 - Show the application version in a tooltip when hovering over or focusing the FinanceManager logo, instead of displaying it in the app bar or navigation footer. #917
 - Show the same loading bar and dimmed content on the Assets and Liabilities cards that depend on the date range while a newly selected range loads, without restarting unchanged card requests or leaving the indicator active when prepared data takes over. Failed range refreshes retain previously displayed data and show an error with Retry; return cards keep the matching date caption until fresh data arrives. #912
