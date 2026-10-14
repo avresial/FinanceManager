@@ -4,7 +4,7 @@
 <PageTitle>Add account</PageTitle>
 
 <AccountFormContainer>
-    <PageHeader InContent="true" Title="Add account" />
+    <PageHeader Title="Add account" />
     <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
                       Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" data-testid="account-name" />

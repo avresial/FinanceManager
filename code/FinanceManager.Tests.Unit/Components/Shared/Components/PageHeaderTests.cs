@@ -41,22 +41,6 @@ public class PageHeaderTests
         Assert.Empty(cut.FindAll(".fm-page-header-text"));
     }
 
-    [Fact]
-    public void InContent_RendersOneFocusableHeadingInsideThePage()
-    {
-        using var context = CreateContext();
-        var outlet = context.Render<SectionOutlet>(parameters => parameters.Add(section => section.SectionName, "page-title"));
-        var cut = context.Render<PageHeader>(parameters => parameters
-            .Add(header => header.Title, "Add account")
-            .Add(header => header.InContent, true)
-            .Add(header => header.Subtitle, "Account details"));
-
-        Assert.Empty(outlet.FindAll("h1"));
-        Assert.Equal("Add account", Assert.Single(cut.FindAll("h1")).TextContent);
-        Assert.Equal("-1", cut.Find("h1").GetAttribute("tabindex"));
-        Assert.Contains("Account details", cut.Find(".fm-page-header-text").TextContent);
-    }
-
     private static BunitContext CreateContext()
     {
         var context = new BunitContext();

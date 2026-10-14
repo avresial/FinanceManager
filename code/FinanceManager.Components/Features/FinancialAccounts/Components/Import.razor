@@ -13,7 +13,7 @@
             }
             else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
             {
-                <PageHeader InContent="true" Title="Import" />
+                <PageHeader Title="Import" />
                 <MudAlert Severity="Severity.Info" Class="ma-4">CSV import isn't available for investment accounts. Add transactions from the account details page.</MudAlert>
             }
             else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
