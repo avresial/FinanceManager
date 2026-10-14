@@ -99,6 +99,11 @@
     column-gap: 8px;
 }
 
+/* A leading control shares the left region with the title, leaving the aside on the right. */
+.fm-card-header--stacked-aside:has(.fm-card-header-leading) {
+    grid-template-columns: auto minmax(0, 1fr) fit-content(55%);
+}
+
 .fm-card-header--stacked-aside .fm-card-header-aside {
     flex-direction: column;
     align-items: flex-end;
