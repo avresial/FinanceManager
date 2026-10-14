@@ -1,0 +1,16 @@
+.landing-preview {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.landing-preview img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+::deep .landing-gift-code:disabled {
+    /* MudBlazor marks disabled text color important; keep this explanation readable. */
+    color: var(--mud-palette-text-primary) !important;
+    border-color: var(--mud-palette-text-secondary);
+}

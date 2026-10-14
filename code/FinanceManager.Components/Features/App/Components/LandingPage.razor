@@ -10,6 +10,7 @@
 
 <PageTitle>Welcome to Finance Manager</PageTitle>
 
+<div class="landing-page">
 <MudGrid>
     <MudItem xs="12">
         <MudToolBar>
@@ -66,8 +67,11 @@
     <MudItem xs="12" Class="py-5">
         <MudGrid style="min-height: 60vh;">
             <MudItem xs="12" md="6" Class="order-2 order-md-1 d-flex align-center ">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/Dashboard.jpg" Alt="Dashboard" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/dashboard-mobile.jpg" />
+                        <img src="IMGS/landing/dashboard-desktop.jpg" alt="Dashboard" />
+                    </picture>
                 </div>
             </MudItem>
 
@@ -94,8 +98,11 @@
             </MudItem>
 
             <MudItem xs="12" md="6" Class="d-flex align-center">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/Assets.jpg" Alt="Assets" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/assets-mobile.jpg" />
+                        <img src="IMGS/landing/assets-desktop.jpg" alt="Assets" />
+                    </picture>
                 </div>
             </MudItem>
         </MudGrid>
@@ -112,24 +119,36 @@
                     </MudPaper>
                 </div>
             </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-center mt-5">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/CashAccount.jpg" Alt="CashAccount" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+            <MudItem xs="12" md="6" Class="d-flex align-start">
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/cash-account-mobile.jpg" />
+                        <img src="IMGS/landing/cash-account-desktop.jpg" alt="CashAccount" />
+                    </picture>
                 </div>
             </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-center">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/SharesAccount.jpg" Alt="SharesAccount" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+            <MudItem xs="12" md="6" Class="d-flex align-start">
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/shares-account-mobile.jpg" />
+                        <img src="IMGS/landing/shares-account-desktop.jpg" alt="SharesAccount" />
+                    </picture>
                 </div>
             </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-center">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/RealEstateAccount.jpg" Alt="RealEstateAccount" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+            <MudItem xs="12" md="6" Class="d-flex align-start">
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/bond-account-mobile.jpg" />
+                        <img src="IMGS/landing/bond-account-desktop.jpg" alt="BondAccount" />
+                    </picture>
                 </div>
             </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-center">
-                <div class="d-flex flex-grow-1 m-4">
-                    <MudImage Fluid="true" Src="imgs/LoanAccount.jpg" Alt="LoanAccount" Class="flex-grow-1 rounded-lg p-4" Elevation="25" />
+            <MudItem xs="12" md="6" Class="d-flex align-start">
+                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
+                    <picture>
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/loan-account-mobile.jpg" />
+                        <img src="IMGS/landing/loan-account-desktop.jpg" alt="LoanAccount" />
+                    </picture>
                 </div>
             </MudItem>
 
@@ -137,7 +156,8 @@
     </MudItem>
 
     <MudItem xs="12">
-        <MudContainer MaxWidth="MaxWidth.Large" style="min-height: 100vh;" Class="d-flex flex-grow-1 gap-4 align-center">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-5">
+            <MudText Typo="Typo.h3" Class="text-center">Pricing</MudText>
 
             <MudGrid Class="py-5">
                 <MudItem xs="12" sm="6" md="4" Class="d-flex">
@@ -202,7 +222,7 @@
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center mt-auto">
-                            <MudButton Disabled Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
+                            <MudButton Disabled Class="landing-gift-code" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
@@ -235,7 +255,7 @@
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center mt-auto">
-                            <MudButton Disabled Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
+                            <MudButton Disabled Class="landing-gift-code" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" Style="width:70%;">Available by gift code</MudButton>
                         </MudCardActions>
                     </MudCard>
                 </MudItem>
@@ -243,3 +263,4 @@
         </MudContainer>
     </MudItem>
 </MudGrid>
+</div>
