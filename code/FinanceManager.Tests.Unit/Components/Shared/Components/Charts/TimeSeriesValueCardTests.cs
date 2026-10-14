@@ -13,14 +13,12 @@ public class TimeSeriesValueCardTests
     private static readonly DateTime _start = new(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task YAxis_KeepsFloatingLeftAlignedLabelsSoMinusSignsStayVisible()
+    public async Task YAxis_ReservesALeftGutterAndInsetsTheRightEdge()
     {
-        var yaxis = (await RenderedOptionsAsync(Points(-21400, -21600, -22000), "250px")).Yaxis!.Single();
+        var options = await RenderedOptionsAsync(Points(-21400, -21600, -22000), "250px");
 
-        Assert.True(yaxis.Floating);
-        var labels = Assert.IsType<YAxisLabels>(yaxis.Labels);
-        Assert.Equal(Align.Left, labels.Align);
-        Assert.Equal(4, labels.OffsetX);
+        Assert.NotEqual(true, options.Yaxis!.Single().Floating);
+        Assert.True(options.Grid!.Padding!.Right > 0);
     }
 
     [Fact]

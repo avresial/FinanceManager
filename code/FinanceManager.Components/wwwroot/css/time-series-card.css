@@ -68,24 +68,15 @@
     }
 }
 
-/* Axis labels are drawn above the series (wwwroot/js/chart-axis-labels.js), each with
-   a halo in the card surface colour so the line and fill pass behind it instead of
-   crossing the glyphs. paint-order keeps the halo under the text; the surface token
-   follows the light/dark theme. */
-.fm-tsvc-card .apexcharts-yaxis-texts-g text,
+/* X-axis date labels overlay the bottom of the plot, so they get a halo in the card surface
+   colour to stay legible over the fill. paint-order keeps the halo under the text. The y-axis
+   labels need none: they sit in their own gutter (see TimeSeriesValueCard). */
 .fm-tsvc-card .apexcharts-xaxis-texts-g text,
-.fm-hero-chart .apexcharts-yaxis-texts-g text,
 .fm-hero-chart .apexcharts-xaxis-texts-g text {
     paint-order: stroke;
     stroke: var(--mud-palette-surface);
     stroke-width: 4px;
     stroke-linejoin: round;
-}
-
-/* The raised y-axis group sits over the plot; keep it from swallowing hover events. */
-.fm-tsvc-card .apexcharts-yaxis,
-.fm-hero-chart .apexcharts-yaxis {
-    pointer-events: none;
 }
 
 /* The bottom y tick marks the empty gutter reserved for the x-axis labels
