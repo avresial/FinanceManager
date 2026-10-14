@@ -12,6 +12,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -35,7 +36,8 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     public async Task<IActionResult> StartAsyncImport(
         [FromBody] CurrencyDataImportDto importDto,
         [FromServices] ICurrencyImportJobStore jobStore,
-        [FromServices] ICurrencyImportJobChannel jobChannel)
+        [FromServices] ICurrencyImportJobChannel jobChannel,
+        [FromServices] IGuestSessionAccessor guestSessionAccessor)
     {
         if (importDto is null || importDto.Entries.Count == 0)
             return BadRequest("No import data provided.");
@@ -46,7 +48,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
             return Forbid();
 
         var jobId = jobStore.CreateJob(userId, importDto.AccountId, importDto.Entries.Count);
-        await jobChannel.QueueJob(new CurrencyImportJobRequest(jobId, userId, importDto.AccountId, importDto.Entries));
+        await jobChannel.QueueJob(new CurrencyImportJobRequest(jobId, userId, importDto.AccountId, importDto.Entries, guestSessionAccessor.GuestUserId));
 
         return Accepted(new CurrencyImportJobStartResponseDto(jobId));
     }
