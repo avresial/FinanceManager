@@ -27,6 +27,7 @@
 		</PackageReference>
 
 		<PackageReference Include="System.Memory.Data" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" />
 		<PackageReference Include="System.Security.Cryptography.Xml" />
 		<PackageReference Include="System.Security.Permissions" />
 		<PackageReference Include="System.Windows.Extensions" />

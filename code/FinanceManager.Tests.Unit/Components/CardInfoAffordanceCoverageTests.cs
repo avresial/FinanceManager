@@ -100,7 +100,7 @@ public class CardInfoAffordanceCoverageTests
 
             var text = File.ReadAllText(file);
             var coverage = AnalyzeCardCoverage(text);
-            var relative = Path.GetRelativePath(componentsRoot, file);
+            var relative = Path.GetRelativePath(componentsRoot, file).Replace('\\', '/');
             cardTotal += coverage.Cards.Count;
             tooltipTotal += coverage.TooltipCount;
 
