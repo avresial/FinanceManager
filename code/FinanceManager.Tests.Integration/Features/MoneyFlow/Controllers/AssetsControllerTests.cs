@@ -360,6 +360,27 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
+    public async Task GetFeeDragAnalysis_ForNegativeGuestUserIdReturnsEtfHoldings()
+    {
+        // Guest sandbox users are issued negative ids; the analysis must not treat them as invalid.
+        const int guestUserId = -2;
+        await SeedInvestmentAccountWithHoldings(userId: guestUserId, accountId: 23, listingId: 203, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m);
+        Authorize("TestUser", guestUserId, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetFeeDragAnalysis(
+            guestUserId,
+            DefaultCurrency.USD,
+            _nowUtc,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.TotalHoldingsCount);
+        Assert.Equal(500m, result.TotalHoldingsValue);
+        Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
+    }
+
+    [Fact]
     public async Task GetFeeDragAnalysis_WithInvalidReturnRateReturnsBadRequest()
     {
         Authorize("TestUser", 1, UserRole.User);

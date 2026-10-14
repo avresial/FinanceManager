@@ -93,6 +93,27 @@ public class FeeDragServiceTests
     }
 
     [Fact]
+    public async Task GetAnalysis_IncludesEtfHoldingsForGuestSandboxUserWithNegativeId()
+    {
+        // Guest sandbox users are issued negative ids, so they must not be treated as invalid.
+        const int guestUserId = -2;
+        var listing = CreateListing(401, "CSPX", null, AssetType.ETF);
+        var account = new InvestmentAccount(guestUserId, 40, "Investments");
+        _accountRepository.Setup(repository => repository.GetAll(guestUserId)).ReturnsAsync([account]);
+        _transactionRepository.Setup(repository => repository.GetByAccount(40, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreateTransaction(40, listing, InvestmentTransactionType.Buy, 3m)]);
+        _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(401, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(400m);
+
+        var result = await CreateService().GetAnalysisAsync(guestUserId, DefaultCurrency.PLN, new DateTime(2026, 9, 15), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.TotalHoldingsCount);
+        Assert.Equal(1200m, result.TotalHoldingsValue);
+        Assert.Equal(1, result.MissingTerCount);
+        Assert.Equal(1200m, result.MissingTerHoldingsValue);
+        Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
+    }
+
+    [Fact]
     public async Task GetAnalysis_RejectsReturnRateOutsideSupportedRange()
     {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
