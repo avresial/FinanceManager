@@ -4,6 +4,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Import;
 using FinanceManager.Application.Shared.Diagnostics;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.SignalR;
 using System.Diagnostics;
 
@@ -35,6 +36,11 @@ public sealed class CurrencyImportBackgroundService(
                 await PublishStatus(request.JobId, request.UserId, stoppingToken);
 
                 using var scope = scopeFactory.CreateScope();
+                // This scope has no HttpContext, so repositories would fall back to the shared
+                // database. Pin the guest first so they resolve the guest's in-memory sandbox. #942
+                if (request.GuestUserId is int guestUserId)
+                    scope.ServiceProvider.GetRequiredService<IGuestSessionAccessor>().SetGuestUserId(guestUserId);
+
                 var importService = scope.ServiceProvider.GetRequiredService<ICurrencyAccountImportService>();
                 var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
                 var domainEntries = request.Entries
