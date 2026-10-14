@@ -131,6 +131,28 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
+    public async Task AssetsAndLiabilities_PlaceToggleBeforeTotal()
+    {
+        await using var context = CreateContext();
+        var assets = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
+        var liabilities = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
+
+        AssertActionsPrecedeFigure(assets);
+        AssertActionsPrecedeFigure(liabilities);
+    }
+
+    [Fact]
+    public async Task Expense_HeaderHasNoActionsContainer()
+    {
+        await using var context = CreateContext();
+        var expenses = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single));
+
+        Assert.Contains("fm-card-header--stacked-aside", expenses.Find("[data-testid=card-header]").ClassList);
+        Assert.Empty(expenses.FindAll(".fm-card-header-actions"));
+        Assert.Single(expenses.FindAll(".fm-card-header-figure"));
+    }
+
+    [Fact]
     public async Task Liabilities_AccountToggle_SwitchesBetweenFigureAndChart()
     {
         await using var context = CreateContext();
@@ -162,6 +184,15 @@ public class DistributionOverviewCardViewTests
         Assert.Contains("Mortgage", cut.Find(".fm-legend-name").TextContent);
         Assert.Matches("100[.,]00", cut.Find(".fm-legend-amt").TextContent);
         Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
+    }
+
+    private static void AssertActionsPrecedeFigure(IRenderedComponent<IComponent> cut)
+    {
+        Assert.Contains("fm-card-header--stacked-aside", cut.Find("[data-testid=card-header]").ClassList);
+        var asideItems = cut.FindAll(".fm-card-header-aside > div");
+        Assert.Equal(2, asideItems.Count);
+        Assert.Contains("fm-card-header-actions", asideItems[0].ClassList);
+        Assert.Contains("fm-card-header-figure", asideItems[1].ClassList);
     }
 
     private static BunitContext CreateContext()

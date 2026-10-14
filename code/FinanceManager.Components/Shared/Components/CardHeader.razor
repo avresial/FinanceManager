@@ -34,6 +34,10 @@
     @if (KeyFigure is not null || Actions is not null)
     {
         <div class="fm-card-header-aside">
+            @if (StackedAside && Actions is not null)
+            {
+                <div class="fm-card-header-actions">@Actions</div>
+            }
             @if (KeyFigure is not null)
             {
                 <div class="fm-card-header-figure">
@@ -49,7 +53,7 @@
                     }
                 </div>
             }
-            @if (Actions is not null)
+            @if (!StackedAside && Actions is not null)
             {
                 <div class="fm-card-header-actions">@Actions</div>
             }
@@ -58,7 +62,7 @@
 </div>
 
 @code {
-    /// <summary>Card title. Always one line; a long title truncates and stays readable in the info tooltip.</summary>
+    /// <summary>Card title. Truncates by default; wraps when <see cref="StackedAside"/> keeps controls beside it.</summary>
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
 
     /// <summary>Plain-language explanation shown when the title is hovered or focused.</summary>
@@ -91,10 +95,13 @@
     /// <summary>Optional right-aligned actions (icon button, compact toggle, "View all" link).</summary>
     [Parameter] public RenderFragment? Actions { get; set; }
 
+    /// <summary>Keep actions at the top-right above the figure, alongside the title even on narrow cards.</summary>
+    [Parameter] public bool StackedAside { get; set; }
+
     /// <summary>Extra classes for the header root, e.g. to adjust padding inside an already padded card.</summary>
     [Parameter] public string? Class { get; set; }
 
     private bool HasInfo => !string.IsNullOrWhiteSpace(InfoText) || InfoContent is not null;
 
-    private string ResolvedClass => string.IsNullOrWhiteSpace(Class) ? "fm-card-header" : $"fm-card-header {Class}";
+    private string ResolvedClass => $"fm-card-header{(StackedAside ? " fm-card-header--stacked-aside" : string.Empty)}{(string.IsNullOrWhiteSpace(Class) ? string.Empty : $" {Class}")}";
 }
