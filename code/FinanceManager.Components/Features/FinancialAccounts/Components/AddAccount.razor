@@ -3,9 +3,9 @@
 
 <PageTitle>Add account</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
-    <PageHeader Title="Add account" />
-    <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors" Style="max-width:600px;">
+<AccountFormContainer>
+    <PageHeader InContent="true" Title="Add account" />
+    <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors">
         <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
                       Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" data-testid="account-name" />
 
@@ -51,4 +51,4 @@
             }
         </MudStack>
     </MudForm>
-</MudContainer>
+</AccountFormContainer>

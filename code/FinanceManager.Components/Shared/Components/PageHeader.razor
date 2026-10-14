@@ -1,7 +1,13 @@
-<SectionContent SectionName="page-title">
-    <MudText Typo="Typo.h6" HtmlTag="h1" Class="fm-page-title" tabindex="-1">@Title</MudText>
-</SectionContent>
-
+@if (InContent)
+{
+    <MudText Typo="Typo.h6" HtmlTag="h1" Class="fm-page-title mb-4" tabindex="-1">@Title</MudText>
+}
+else
+{
+    <SectionContent SectionName="page-title">
+        <MudText Typo="Typo.h6" HtmlTag="h1" Class="fm-page-title" tabindex="-1">@Title</MudText>
+    </SectionContent>
+}
 @if (!string.IsNullOrWhiteSpace(Subtitle) || Actions is not null)
 {
     <div class="fm-page-header">
@@ -20,6 +26,7 @@
 
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public bool InContent { get; set; }
     [Parameter] public string? Subtitle { get; set; }
     [Parameter] public RenderFragment? Actions { get; set; }
 }

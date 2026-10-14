@@ -5,23 +5,25 @@
 <PageTitle>Import transactions</PageTitle>
 
 <ComponentStateView IsLoading="@IsLoading" ErrorMessage="@ErrorMessage" ErrorSeverity="Severity.Warning">
-    <div class="container-fluid px-0" @ref="MyElementReference">
-        @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
-        {
-            <ImportCurrencyEntriesComponent AccountId="@AccountId" />
-        }
-        else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
-        {
-            <PageHeader Title="Import" />
-            <MudAlert Severity="Severity.Info" Class="ma-4">CSV import isn't available for investment accounts. Add transactions from the account details page.</MudAlert>
-        }
-        else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
-        {
-            <ImportBondEntriesComponent AccountId="@AccountId" />
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
-        }
-    </div>
+    <AccountFormContainer>
+        <div @ref="MyElementReference">
+            @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
+            {
+                <ImportCurrencyEntriesComponent AccountId="@AccountId" />
+            }
+            else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
+            {
+                <PageHeader InContent="true" Title="Import" />
+                <MudAlert Severity="Severity.Info" Class="ma-4">CSV import isn't available for investment accounts. Add transactions from the account details page.</MudAlert>
+            }
+            else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
+            {
+                <ImportBondEntriesComponent AccountId="@AccountId" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
+            }
+        </div>
+    </AccountFormContainer>
 </ComponentStateView>

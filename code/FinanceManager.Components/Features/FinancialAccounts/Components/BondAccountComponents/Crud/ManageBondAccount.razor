@@ -8,10 +8,10 @@
 @if (_bondAccount is not null)
 {
     <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
-        <MudContainer MaxWidth="MaxWidth.Medium">
+        <div>
             <MudGrid Justify="Justify.Center">
                 <MudItem xs="12" sm="12" md="12">
-                    <PageHeader Title="Manage account" Subtitle="@_bondAccount.Name" />
+                    <PageHeader InContent="true" Title="Manage account" Subtitle="@_bondAccount.Name" />
                 </MudItem>
                 @if (_errors.Any())
                 {
@@ -34,7 +34,7 @@
                     </MudStack>
                 </MudItem>
             </MudGrid>
-        </MudContainer>
+        </div>
     </MudForm>
 }
 else

@@ -5,22 +5,24 @@
 <PageTitle>Manage account</PageTitle>
 
 <ComponentStateView IsLoading="@IsLoading" ErrorMessage="@ErrorMessage" ErrorSeverity="Severity.Warning">
-    <div class="container-fluid px-0 mt-3" @ref="MyElementReference">
-        @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
-        {
-            <ManageCurrencyAccount AccountId="@AccountId" />
-        }
-        else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
-        {
-            <ManageInvestmentAccount AccountId="@AccountId" />
-        }
-        else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
-        {
-            <ManageBondAccount AccountId="@AccountId" />
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
-        }
-    </div>
+    <AccountFormContainer>
+        <div @ref="MyElementReference">
+            @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
+            {
+                <ManageCurrencyAccount AccountId="@AccountId" />
+            }
+            else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
+            {
+                <ManageInvestmentAccount AccountId="@AccountId" />
+            }
+            else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
+            {
+                <ManageBondAccount AccountId="@AccountId" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error" Class="ma-4">@AccountType type is not supported.</MudAlert>
+            }
+        </div>
+    </AccountFormContainer>
 </ComponentStateView>
