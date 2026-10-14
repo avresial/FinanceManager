@@ -109,6 +109,39 @@ public class CardHeaderTests
     }
 
     [Fact]
+    public async Task StackedAside_RendersActionsBeforeKeyFigure()
+    {
+        await using var context = CreateContext();
+
+        var cut = context.Render<CardHeader>(parameters => parameters
+            .Add(header => header.Title, "Distribution")
+            .Add(header => header.KeyFigure, Markup("<span id=\"total\">100 PLN</span>"))
+            .Add(header => header.Actions, Markup("<button id=\"toggle\">Type</button>"))
+            .Add(header => header.StackedAside, true));
+
+        var asideItems = cut.FindAll(".fm-card-header-aside > div");
+        Assert.Equal(2, asideItems.Count);
+        Assert.Contains("fm-card-header-actions", asideItems[0].ClassList);
+        Assert.Contains("fm-card-header-figure", asideItems[1].ClassList);
+    }
+
+    [Fact]
+    public async Task StackedAside_Default_PreservesFigureBeforeActions()
+    {
+        await using var context = CreateContext();
+
+        var cut = context.Render<CardHeader>(parameters => parameters
+            .Add(header => header.Title, "Distribution")
+            .Add(header => header.KeyFigure, Markup("<span id=\"total\">100 PLN</span>"))
+            .Add(header => header.Actions, Markup("<button id=\"toggle\">Type</button>")));
+
+        var asideItems = cut.FindAll(".fm-card-header-aside > div");
+        Assert.Equal(2, asideItems.Count);
+        Assert.Contains("fm-card-header-figure", asideItems[0].ClassList);
+        Assert.Contains("fm-card-header-actions", asideItems[1].ClassList);
+    }
+
+    [Fact]
     public async Task Leading_RendersBeforeTitle()
     {
         await using var context = CreateContext();

@@ -90,3 +90,28 @@
     flex: 0 0 auto;
     min-height: 28px;
 }
+
+/* Distribution controls stay anchored at the top-right regardless of the hosting page.
+   Both columns can shrink; titles and amounts wrap instead of displacing the toggle. */
+.fm-card-header--stacked-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(55%);
+    column-gap: 8px;
+}
+
+.fm-card-header--stacked-aside .fm-card-header-aside {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: 0;
+}
+
+.fm-card-header--stacked-aside ::deep .fm-card-header-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.fm-card-header--stacked-aside .fm-card-header-figure-value {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
