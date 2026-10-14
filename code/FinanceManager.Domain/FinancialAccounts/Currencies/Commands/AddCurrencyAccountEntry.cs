@@ -6,7 +6,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 
 public record AddCurrencyAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,
-    [Range(1, int.MaxValue)] int EntryId,
+    int EntryId, // Ignored on creation; the server generates the ID.
     [ReasonableDate] DateTime PostingDate,
     decimal Value,
     decimal ValueChange,
