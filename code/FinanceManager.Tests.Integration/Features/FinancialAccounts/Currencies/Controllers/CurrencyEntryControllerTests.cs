@@ -148,8 +148,11 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         Assert.Equal(oldDate, result);
     }
 
-    [Fact]
-    public async Task AddEntry_AddsEntry_Successfully()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(100)]
+    public async Task AddEntry_AddsEntry_WithServerGeneratedId(int requestedEntryId)
     {
         // arrange
         await SeedAccount();
@@ -157,7 +160,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         var client = new CurrencyEntryHttpClient(Client);
         var addEntry = new AddCurrencyAccountEntry(
             _testAccountId,
-            100,  // Use a unique entry ID that won't conflict
+            requestedEntryId,
             DateTime.UtcNow.Date.AddDays(-3),
             500m,
             250m,
@@ -180,6 +183,8 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
                                      e.Description == addEntry.Description,
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
+        Assert.True(dbEntry.EntryId > 0);
+        Assert.NotEqual(requestedEntryId, dbEntry.EntryId);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);
     }
 
