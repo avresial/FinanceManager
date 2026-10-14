@@ -9,4 +9,4 @@ public interface ICurrencyImportJobChannel
     IAsyncEnumerable<CurrencyImportJobRequest> ReadAll(CancellationToken cancellationToken);
 }
 
-public sealed record CurrencyImportJobRequest(Guid JobId, int UserId, int AccountId, IReadOnlyList<CurrencyEntryImportRecordDto> Entries);
+public sealed record CurrencyImportJobRequest(Guid JobId, int UserId, int AccountId, IReadOnlyList<CurrencyEntryImportRecordDto> Entries, int? GuestUserId = null);
