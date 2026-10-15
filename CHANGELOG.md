@@ -66,6 +66,7 @@ rules agents must follow when updating this file.
 
 ### Fixed
 - Show the demo (guest) account's ETF holdings, such as CSPX, on the Assets page ETF fee drag card instead of "No ETF holdings found". #950
+- Let content-light cards size naturally on mobile and compact empty states, insights, and sparse distributions while preserving equal-height desktop rows. #937
 - Let the demo (guest) account import CSV files: the import no longer fails with "Plan does not allow importing this many entries." and the rows are added to the demo account's data. #942
 - Add the landing page Pricing heading, remove the gap above plans, show new phone-sized app screenshots on phones and refreshed desktop screenshots on larger screens, and improve disabled gift-code text contrast in both themes. #941
 - Allow adding cash account entries without an existing transaction ID. #947
