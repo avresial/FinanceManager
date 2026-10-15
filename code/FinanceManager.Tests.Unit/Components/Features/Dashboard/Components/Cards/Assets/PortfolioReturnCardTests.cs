@@ -43,7 +43,7 @@ public class PortfolioReturnCardTests
         cut.WaitForAssertion(() => Assert.Contains("203.18%", cut.Markup));
 
         Assert.Contains("-3.82%", cut.Markup);
-        Assert.Contains("not your gain over these 31 days", cut.Find("[data-testid=portfolio-return-insight]").TextContent);
+        Assert.Contains("not your gain for the selected period", cut.Find("[data-testid=portfolio-return-insight]").TextContent);
         Assert.Contains("Large flows can make signs differ", cut.Markup);
         Assert.Equal(2, cut.FindAll(".portfolio-return-metric").Count);
         Assert.Equal("0", cut.Find("[aria-label='About money-weighted return']").GetAttribute("tabindex"));
@@ -63,7 +63,7 @@ public class PortfolioReturnCardTests
 
         Assert.Contains("10.00%", cut.Markup);
         Assert.Contains("how much you invested and when", cut.Markup);
-        Assert.Contains("not your gain over these 7 days", cut.Markup);
+        Assert.Contains("not your gain for the selected period", cut.Markup);
         Assert.Contains("TWR neutralizes external cash-flow timing", cut.Markup);
         Assert.Contains("Large flows can make signs differ", cut.Markup);
         Assert.Contains("Short ranges can magnify annualized XIRR", cut.Markup);

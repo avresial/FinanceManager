@@ -28,7 +28,7 @@ public partial class PortfolioReturnCard
     internal bool HasAvailableReturn => MoneyWeightedReturn?.IsAvailable == true || TimeWeightedReturn?.IsAvailable == true;
     internal decimal? ExternalCashMovement => Model?.ExternalCashMovement;
 
-    internal string InsightText => $"XIRR reflects how much you invested and when, as a yearly rate, not your gain over these {PeriodLength} days. "
+    internal string InsightText => "XIRR reflects how much you invested and when, as a yearly rate, not your gain for the selected period. "
         + "TWR neutralizes external cash-flow timing for this period. "
         + "Large flows can make signs differ. Short ranges can magnify annualized XIRR.";
 
