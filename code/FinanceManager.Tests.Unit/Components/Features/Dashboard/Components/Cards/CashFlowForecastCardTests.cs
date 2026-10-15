@@ -62,6 +62,7 @@ public sealed class CashFlowForecastCardTests
         await using var context = CreateContext(snapshots, handler);
 
         var cut = context.Render<CashFlowForecastCard>();
+        AssertPhoneAutoHeight(cut, "300px");
         await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), Xunit.TestContext.Current.CancellationToken);
 
         cut.WaitForAssertion(() =>
@@ -74,6 +75,13 @@ public sealed class CashFlowForecastCardTests
         cut.WaitForState(() => cut.RenderCount > renderCount);
         snapshots.Verify(
             service => service.SetAsync(It.IsAny<string>(), It.IsAny<CashFlowForecastCardSnapshot>()), Times.Never);
+    }
+
+    private static void AssertPhoneAutoHeight(IRenderedComponent<CashFlowForecastCard> cut, string height)
+    {
+        var card = cut.Find(".mud-card");
+        Assert.Contains("fm-phone-auto-height", card.ClassList);
+        Assert.Contains($"height:{height}", card.GetAttribute("style"));
     }
 
     [Fact]

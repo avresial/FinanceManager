@@ -14,10 +14,18 @@ public sealed class FinancialAlertsCardViewTests
         await using var context = CreateContext();
         var cut = context.Render<FinancialAlertsCardView>(parameters => parameters.Add(p => p.ConfiguredCount, 0));
 
+        AssertPhoneAutoHeight(cut);
         Assert.Contains("No alerts yet", cut.Markup);
         Assert.Equal("Alerts", cut.Find("[data-testid=alerts-create-button]").GetAttribute("href"));
         Assert.DoesNotContain("healthy", cut.Markup);
         Assert.DoesNotContain("configured", cut.Markup);
+    }
+
+    private static void AssertPhoneAutoHeight(Bunit.IRenderedComponent<FinancialAlertsCardView> cut)
+    {
+        var card = cut.Find("[data-testid=financial-alerts-card]");
+        Assert.Contains("fm-phone-auto-height", card.ClassList);
+        Assert.Contains("height:300px", card.GetAttribute("style"));
     }
 
     [Fact]
