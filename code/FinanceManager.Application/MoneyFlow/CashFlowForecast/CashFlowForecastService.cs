@@ -35,9 +35,11 @@ public sealed class CashFlowForecastService(
         if (!CashFlowForecastHorizons.IsSupported(horizonDays))
             throw new ArgumentOutOfRangeException(nameof(horizonDays), "The forecast horizon must be 30, 60, or 90 days.");
 
-        var asOfDate = dateTimeProvider.TodayUtc;
+        // Keep the current partial day: chart bucket dates must not truncate the entry read to midnight.
+        var asOf = dateTimeProvider.UtcNow;
+        var asOfDate = asOf.Date;
         var historyStart = asOfDate.AddDays(-_historyDays);
-        var accounts = await LoadCashAccounts(userId, historyStart, asOfDate, cancellationToken);
+        var accounts = await LoadCashAccounts(userId, historyStart, asOf, cancellationToken);
         // Cash accounts and recurring detector results use the application's base denomination;
         // neither model carries a per-account currency, so value both from PLN into the requested currency.
         var rates = await CurrencyRateSeries.LoadAsync(

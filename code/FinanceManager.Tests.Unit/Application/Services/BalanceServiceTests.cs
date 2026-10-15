@@ -104,6 +104,31 @@ public class CurrencyBalanceServiceTests
             Times.Never);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetClosingBalance_WithEqualPostingTimes_UsesNewestEntryId(bool newestFirst)
+    {
+        var date = new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc);
+        CurrencyAccountEntry[] entries =
+        [
+            new(1, 3, date, 634m, -366m),
+            new(1, 2, date, 1000m, 100m)
+        ];
+        if (!newestFirst) Array.Reverse(entries);
+        var account = new CurrencyAccount(1, 1, "Cash", entries, AccountLabel.Cash,
+            nextOlderEntry: new CurrencyAccountEntry(1, 1, date.AddDays(-1), 900m, 900m));
+        _financialAccountRepositoryMock
+            .Setup(repo => repo.GetAccounts<CurrencyAccount>(1, date.Date.AddDays(-1), date))
+            .Returns(new[] { account }.ToAsyncEnumerable());
+
+        var result = await _balanceService.GetClosingBalance(1, DefaultCurrency.PLN, date.Date.AddDays(-1), date);
+
+        Assert.Equal(900m, result[0].Value);
+        Assert.Equal(634m, result[^1].Value);
+        Assert.Equal(date.Date, result[^1].DateTime);
+    }
+
     [Fact]
     public async Task GetClosingBalance_ForLongRange_UsesLastValuePerBucket()
     {

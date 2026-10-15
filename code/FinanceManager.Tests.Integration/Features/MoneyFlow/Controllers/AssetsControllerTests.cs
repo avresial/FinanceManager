@@ -377,6 +377,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.NotNull(result);
         Assert.Equal(1, result.TotalHoldingsCount);
         Assert.Equal(500m, result.TotalHoldingsValue);
+        Assert.Equal(2.50m, result.AnnualFeeCost);
         Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
     }
 

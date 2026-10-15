@@ -99,18 +99,23 @@ public class FeeDragServiceTests
         const int guestUserId = -2;
         var listing = CreateListing(401, "CSPX", null, AssetType.ETF);
         var account = new InvestmentAccount(guestUserId, 40, "Investments");
-        _accountRepository.Setup(repository => repository.GetAll(guestUserId)).ReturnsAsync([account]);
+        var asOfDate = new DateTime(2026, 9, 15);
+        var futureTransaction = CreateTransaction(40, listing, InvestmentTransactionType.Buy, 5m);
+        futureTransaction.TradeDate = new DateOnly(2026, 9, 16);
+        _accountRepository.Setup(repository => repository.GetAll(guestUserId))
+            .ReturnsAsync([account, new InvestmentAccount(1, 41, "Other user")]);
         _transactionRepository.Setup(repository => repository.GetByAccount(40, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateTransaction(40, listing, InvestmentTransactionType.Buy, 3m)]);
-        _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(401, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(400m);
+            .ReturnsAsync([CreateTransaction(40, listing, InvestmentTransactionType.Buy, 3m), futureTransaction]);
+        _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(401, DefaultCurrency.PLN, asOfDate, It.IsAny<CancellationToken>())).ReturnsAsync(400m);
 
-        var result = await CreateService().GetAnalysisAsync(guestUserId, DefaultCurrency.PLN, new DateTime(2026, 9, 15), cancellationToken: TestContext.Current.CancellationToken);
+        var result = await CreateService().GetAnalysisAsync(guestUserId, DefaultCurrency.PLN, asOfDate, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.TotalHoldingsCount);
         Assert.Equal(1200m, result.TotalHoldingsValue);
         Assert.Equal(1, result.MissingTerCount);
         Assert.Equal(1200m, result.MissingTerHoldingsValue);
         Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
+        _transactionRepository.Verify(repository => repository.GetByAccount(41, It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

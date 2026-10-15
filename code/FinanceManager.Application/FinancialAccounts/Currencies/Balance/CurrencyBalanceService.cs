@@ -92,7 +92,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
         {
             if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
 
-            var orderedEntries = account.Entries.OrderBy(entry => entry.PostingDate).ToList();
+            var orderedEntries = account.Entries.OrderBy(entry => entry.PostingDate).ThenBy(entry => entry.EntryId).ToList();
             var runningBalance = account.NextOlderEntry?.Value ?? 0;
             var entryIndex = 0;
 
