@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -86,6 +87,10 @@ public partial class BondTransactionRow
 
     private string GetTitle() =>
         BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Name) ? BondDetails.Name : "Bond";
+
+    private string GetAccessibleName() =>
+        $"{GetTitle()}, {DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())}, " +
+        $"change {(Entry.ValueChange >= 0 ? "+" : "")}{FormatUnits(Entry.ValueChange)} units, position {FormatUnits(Entry.Value)} units; transaction details";
 
     private static string FormatUnits(decimal value) => value.ToString("0.####");
 

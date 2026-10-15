@@ -3,7 +3,7 @@
 <div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
      style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
      role="button" tabindex="0" aria-expanded="@_expanded.ToString().ToLowerInvariant()"
-     aria-label="@($"{GetTitle()} transaction details")" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
+     aria-label="@GetAccessibleName()" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
                  Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"

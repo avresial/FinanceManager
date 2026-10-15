@@ -23,7 +23,8 @@ public class BondTransactionRowTests
         var row = cut.Find("[role='button']");
 
         Assert.Equal("false", row.GetAttribute("aria-expanded"));
-        Assert.Equal("Poland Bond transaction details", row.GetAttribute("aria-label"));
+        Assert.StartsWith("Poland Bond,", row.GetAttribute("aria-label"));
+        Assert.Contains("change +2 units, position 12 units", row.GetAttribute("aria-label"));
 
         row.Click();
 
@@ -54,10 +55,24 @@ public class BondTransactionRowTests
         Assert.Contains("12 units", cut.Markup);
     }
 
-    private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile)
+    [Fact]
+    public async Task SameBondEntries_IncludeTheirPostingDateAndUnitsInAccessibleNames()
+    {
+        await using var context = CreateContext();
+        var first = RenderRow(context, false);
+        var later = RenderRow(context, false, new DateTime(2026, 2, 2, 12, 0, 0, DateTimeKind.Utc));
+        var firstName = first.Find("[role='button']").GetAttribute("aria-label");
+        var laterName = later.Find("[role='button']").GetAttribute("aria-label");
+
+        Assert.NotEqual(firstName, laterName);
+        Assert.Contains("change +2 units, position 12 units", firstName);
+        Assert.Contains("change +2 units, position 12 units", laterName);
+    }
+
+    private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile, DateTime? postingDate = null)
     {
         var account = new BondAccount(1, 1, "Bonds");
-        var entry = new BondAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc),
+        var entry = new BondAccountEntry(1, 7, postingDate ?? new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc),
             12m, 2m, 1);
         var details = new BondDetails
         {
