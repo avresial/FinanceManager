@@ -81,6 +81,56 @@ public class CashFlowForecastServiceTests
         Assert.All(result.ForecastSeries, point => Assert.Equal(1000m, point.Value));
     }
 
+    [Theory]
+    [InlineData(0, 0, 0)]
+    [InlineData(0, 0, 1)]
+    [InlineData(12, 0, 0)]
+    [InlineData(23, 59, 59)]
+    public async Task GetForecast_IncludesEntriesThroughCurrentUtcInstant(int hour, int minute, int second)
+    {
+        var now = new DateTimeOffset(2026, 9, 16, hour, minute, second, TimeSpan.Zero).UtcDateTime;
+        _clock.SetUtcNow(now);
+        CurrencyAccountEntry[] entries =
+        [
+            Entry(1, now.Date.AddDays(-1).AddTicks(-1), 900m),
+            Entry(2, now.Date.AddTicks(-1), 1000m),
+            Entry(3, now, 634m),
+            Entry(4, now.AddTicks(1), 9999m)
+        ];
+        _accounts
+            .Setup(x => x.GetAccounts<CurrencyAccount>(7, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+            .Returns((int _, DateTime start, DateTime end, bool _) =>
+                new[] { Account(entries.Where(entry => entry.PostingDate >= start && entry.PostingDate <= end).ToArray()) }
+                    .ToAsyncEnumerable());
+        SetupFlows();
+
+        var result = await _service.GetForecast(7, DefaultCurrency.PLN, 30, TestContext.Current.CancellationToken);
+
+        Assert.Equal(now.Date, result.AsOfDate);
+        Assert.Equal(1000m, HistoricalValueOn(result, now.Date.AddDays(-1)));
+        Assert.Equal(634m, result.HistoricalSeries[^1].Value);
+        Assert.Equal(634m, result.ForecastSeries[0].Value);
+        _accounts.Verify(x => x.GetAccounts<CurrencyAccount>(7, now.Date.AddDays(-30), now, true), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetForecast_RefreshAfterBackdatedEntry_UpdatesCurrentBalanceOnNoEntryDay()
+    {
+        _clock.SetUtcNow(new DateTime(2026, 9, 16, 12, 0, 0, DateTimeKind.Utc));
+        SetupAccounts(Account(Entry(1, _clock.UtcNow.AddDays(-2), 1000m)));
+        SetupFlows();
+        var before = await _service.GetForecast(7, DefaultCurrency.PLN, 30, TestContext.Current.CancellationToken);
+
+        SetupAccounts(Account(
+            Entry(1, _clock.UtcNow.AddDays(-2), 1000m),
+            Entry(2, _clock.UtcNow.AddDays(-1), 634m)));
+        var after = await _service.GetForecast(7, DefaultCurrency.PLN, 30, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1000m, before.ForecastSeries[0].Value);
+        Assert.Equal(634m, after.ForecastSeries[0].Value);
+        Assert.Equal(after.HistoricalSeries[^1].Value, after.ForecastSeries[0].Value);
+    }
+
     [Fact]
     public async Task GetForecast_RejectsUnsupportedHorizon()
     {

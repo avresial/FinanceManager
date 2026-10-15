@@ -67,6 +67,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Include today's effective cash entries in forecast balances and use the latest balance for transactions sharing a timestamp. #951
 - Let content-light cards size naturally on mobile and compact empty states, insights, and sparse distributions while preserving equal-height desktop rows. #937
 - Let the demo (guest) account import CSV files: the import no longer fails with "Plan does not allow importing this many entries." and the rows are added to the demo account's data. #942
 - Add the landing page Pricing heading, remove the gap above plans, show new phone-sized app screenshots on phones and refreshed desktop screenshots on larger screens, and improve disabled gift-code text contrast in both themes. #941
