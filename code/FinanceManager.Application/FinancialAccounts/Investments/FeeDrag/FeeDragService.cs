@@ -36,7 +36,8 @@ internal sealed class FeeDragService(
             AssumedAnnualReturnRate = assumedAnnualReturnRate,
         };
 
-        if (userId <= 0 || currency is null)
+        // Guest sandbox users have negative ids, so only the unset id 0 is treated as invalid.
+        if (userId == 0 || currency is null)
         {
             result.Projections = BuildProjections(0m, 0m, assumedAnnualReturnRate);
             return result;

@@ -83,6 +83,22 @@ public class FeeDragCardTests
         Assert.Contains("No ETF holdings found", cut.Markup);
     }
 
+    [Fact]
+    public async Task GuestUser_FetchesFeeDragAndRendersPopulatedState()
+    {
+        var handler = new FeeDragHandler();
+        await using var context = CreateContext(handler, User(-2));
+
+        var cut = Render(context);
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+        Assert.Contains("/api/Assets/GetFeeDragAnalysis/-2/", handler.Requests[0]);
+
+        handler.Complete(0, Analysis(250m));
+        cut.WaitForAssertion(() => Assert.Contains("250", cut.Find("[data-testid='fee-drag-annual-fee']").TextContent), _timeout);
+
+        Assert.Empty(cut.FindAll("[data-testid='fee-drag-empty']"));
+    }
+
     private static void AssertPhoneAutoHeight(IRenderedComponent<FeeDragCard> cut)
     {
         var card = cut.Find("[data-testid='fee-drag-card']");
@@ -356,9 +372,9 @@ public class FeeDragCardTests
         Holdings = [new FeeDragHolding { ListingId = 1, Ticker = "VWCE", Name = "World", Value = 10_000m, ExpenseRatio = 0.002m, AnnualFeeCost = annualFeeCost }],
     };
 
-    private static UserSession User() => new()
+    private static UserSession User(int userId = 1) => new()
     {
-        UserId = 1,
+        UserId = userId,
         UserName = "tester",
         Password = string.Empty,
         UserRole = UserRole.User,
