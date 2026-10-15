@@ -3,7 +3,7 @@
 @using FinanceManager.Domain.MoneyFlow.Entities
 @using FinanceManager.Domain.Shared.Charting
 
-<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")">
+<MudCard Outlined Class="fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="Liabilities distribution" StackedAside="true"
                 InfoText="How your liabilities split across accounts or types."
                 InfoAriaLabel="About liabilities distribution card">
@@ -28,7 +28,7 @@
             <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
         </MudAlert>
     }
-    <MudPaper Class="@($"flex-grow-1 d-flex {(HasError ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
+    <MudPaper Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
         @if (IsLoading)
         {
             <div style="width:100%;height:100%">
@@ -37,7 +37,7 @@
         }
         else if (ActiveData.Any() && TotalLiabilities > 0)
         {
-            <div class="fm-pie-body" style="@(HasError ? "height:auto;min-height:100%;" : null)">
+            <div class="fm-pie-body" style="@(HasError ? "height:auto;min-height:100%;" : IsSingleCategory ? "height:auto;" : null)">
                 @if (!IsSingleCategory)
                 {
                     <div class="fm-chart-wrap">
