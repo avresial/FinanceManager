@@ -6,6 +6,7 @@ using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Labels.Seeders;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Shared.Services;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Identity.Seeders;
@@ -18,12 +19,15 @@ public class GuestAccountSeeder(
     InvestmentAccountSeeder investmentAccountSeeder,
     BondAccountSeeder bondAccountSeeder,
     FinancialInsightsSeeder financialInsightsSeeder,
+    IDateTimeProvider dateTimeProvider,
     ILogger<GuestAccountSeeder> logger)
 {
     public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
     {
-        var start = DateTime.UtcNow.AddMonths(-6);
-        var end = DateTime.UtcNow;
+        // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
+        var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
+        var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var start = end.AddMonths(-6);
 
         await EnsureGuestUserRecord(guestUserId);
         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
@@ -32,10 +36,10 @@ public class GuestAccountSeeder(
         await bondDetailsSeeder.Seed(cancellationToken);
 
         logger.LogTrace("Seeding guest demo data for user {UserId}.", guestUserId);
-        await currencyAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
-        await investmentAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
+        await currencyAccountSeeder.Seed(guestUserId, start, end, demoSeed.CreateRandom(GuestDemoSeed.CashSalt), cancellationToken);
+        await investmentAccountSeeder.Seed(guestUserId, start, end, demoSeed.CreateRandom(GuestDemoSeed.InvestmentPricesSalt), cancellationToken);
         await bondAccountSeeder.Seed(guestUserId, start, end, cancellationToken);
-        await financialInsightsSeeder.SeedForGuest(guestUserId, cancellationToken);
+        await financialInsightsSeeder.SeedForGuest(guestUserId, end, cancellationToken);
         logger.LogTrace("Seeding finished.");
     }
 

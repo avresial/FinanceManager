@@ -3,7 +3,7 @@
 
 <MudCard Outlined Class="rounded-lg fm-phone-auto-height" data-testid="portfolio-return-card" Style="@($"height:{Height};overflow-y:auto;")">
     <CardHeader Title="Portfolio return"
-                InfoText="Compares annualized money-weighted return with cumulative time-weighted return for the selected period."
+                InfoText="XIRR reflects cash-flow size and timing as a yearly rate. TWR measures the selected period's return, adjusting for external cash flows. Their signs can differ."
                 InfoAriaLabel="About portfolio return"
                 Subtitle="@RangeText" />
     <MudCardContent Class="pa-4 pt-1">
@@ -15,7 +15,7 @@
             <section class="portfolio-return-metric portfolio-return-metric--money" aria-label="Money-weighted return">
                 <div class="portfolio-return-metric-heading">
                     <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small" /></span>
-                    <MudTooltip Text="Annualized investment performance that accounts for when contributions and withdrawals happened." Arrow="true">
+                    <MudTooltip Text="XIRR accounts for the size and timing of contributions and withdrawals, using actual days between cash flows and a 365-day year. It is annualized, not the percentage gained during the selected period." Arrow="true">
                         <span tabindex="0" aria-label="About money-weighted return">Money-weighted return (XIRR) ⓘ</span>
                     </MudTooltip>
                 </div>
@@ -38,7 +38,7 @@
             <section class="portfolio-return-metric portfolio-return-metric--time" aria-label="Time-weighted return">
                 <div class="portfolio-return-metric-heading">
                     <span class="portfolio-return-metric-icon"><MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" /></span>
-                    <MudTooltip Text="Portfolio performance with contributions and withdrawals removed from the return calculation." Arrow="true">
+                    <MudTooltip Text="TWR compounds daily returns after adjusting for external cash flows at the start of each day. It measures cumulative performance over the selected period and is not annualized." Arrow="true">
                         <span tabindex="0" aria-label="About time-weighted return">Time-weighted return (TWR) ⓘ</span>
                     </MudTooltip>
                 </div>
