@@ -75,7 +75,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 7, 20);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
         var salaryEntries = cashEntries
@@ -104,7 +104,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 5, 1);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
         var positives = cashEntries.Where(e => e.ValueChange > 0).ToList();
@@ -122,7 +122,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 31);
         var end = new DateTime(2026, 3, 10);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
 
@@ -146,7 +146,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 6, 30);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
         var monthlyNegatives = cashEntries
@@ -164,7 +164,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 4, 30);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashEntries = GetCashEntries();
         // Exclude the fixed transaction days (stock day 3, rent/utilities day 4, bond day 5, loan repayment day 6).
@@ -188,7 +188,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2024, 9, 1);
         var end = new DateTime(2026, 10, 1);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var fixedDescriptions = new[] { "Opening balance", "Loan disbursement", "Monthly salary", "Rent payment", "Utilities bill", "Loan repayment" };
         var randomNegatives = GetCashEntries()
@@ -216,7 +216,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 3, 15);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, _savedAccounts.Count);
         Assert.Contains(_savedAccounts, a => a.AccountType == AccountLabel.Cash);
@@ -230,7 +230,7 @@ public class CurrencyAccountSeederTests
             .Setup(r => r.GetAvailableAccounts(It.IsAny<int>()))
             .Returns(new[] { new AvailableAccount(1, "Existing") }.ToAsyncEnumerable());
 
-        await _seeder.Seed(userId: 1, new DateTime(2026, 1, 15), new DateTime(2026, 2, 15), TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, new DateTime(2026, 1, 15), new DateTime(2026, 2, 15), new Random(1), TestContext.Current.CancellationToken);
 
         Assert.Empty(_savedAccounts);
     }
@@ -241,7 +241,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 3, 15);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var cashDisbursement = GetCashEntries().Single(e => e.Description == "Loan disbursement");
         Assert.Equal(start, cashDisbursement.PostingDate);
@@ -261,7 +261,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 31);
         var end = new DateTime(2026, 4, 10);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         foreach (var month in new[] { new DateTime(2026, 2, 1), new DateTime(2026, 3, 1), new DateTime(2026, 4, 1) })
         {
@@ -282,7 +282,7 @@ public class CurrencyAccountSeederTests
         var start = new DateTime(2026, 1, 31);
         var end = new DateTime(2026, 4, 10);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         foreach (var month in new[] { new DateTime(2026, 2, 1), new DateTime(2026, 3, 1), new DateTime(2026, 4, 1) })
         {
@@ -291,6 +291,36 @@ public class CurrencyAccountSeederTests
             Assert.Contains(bondPurchase.Labels, l => l.Name == "Investment");
             Assert.False(string.IsNullOrWhiteSpace(bondPurchase.Description));
         }
+    }
+
+    [Fact]
+    public async Task Seed_WithRandomsFromTheSameSeed_ProducesIdenticalCashEntries()
+    {
+        var first = await SeedCashEntries(new GuestDemoSeed(new DateOnly(2026, 10, 14)));
+        var second = await SeedCashEntries(new GuestDemoSeed(new DateOnly(2026, 10, 14)));
+
+        Assert.Equal(first, second);
+    }
+
+    [Fact]
+    public async Task Seed_WithRandomsFromDifferentSeeds_ProducesDifferentCashEntries()
+    {
+        var first = await SeedCashEntries(new GuestDemoSeed(new DateOnly(2026, 10, 14)));
+        var second = await SeedCashEntries(new GuestDemoSeed(new DateOnly(2026, 10, 15)));
+
+        Assert.NotEqual(first, second);
+    }
+
+    private async Task<List<string>> SeedCashEntries(GuestDemoSeed demoSeed)
+    {
+        _savedAccounts.Clear();
+        var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        await _seeder.Seed(userId: 1, end.AddMonths(-6), end, demoSeed.CreateRandom(GuestDemoSeed.CashSalt), TestContext.Current.CancellationToken);
+
+        return GetCashEntries()
+            .Select(e => $"{e.PostingDate:O}|{e.ValueChange}|{e.Description}|{string.Join(',', e.Labels.Select(l => l.Name))}")
+            .ToList();
     }
 
     private List<CurrencyAccountEntry> GetCashEntries() =>

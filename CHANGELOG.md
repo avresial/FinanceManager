@@ -14,6 +14,7 @@ rules agents must follow when updating this file.
 
 ### Changed
 - Explain why annualized XIRR and cumulative TWR can differ, including opposite signs and short-range annualization, while keeping both Portfolio return metrics. #907
+- Generate the same demo (guest) account data for every guest session on a given UTC day; the data changes from day to day. #952
 - Keep distribution card titles at the top-left and Type / Account controls at the top-right, with totals beneath the controls and no empty control row for Expense distribution, consistently across Dashboard, Assets, Liabilities and narrow cards. #938
 - Give the value labels of the dashboard time-series charts and the account details chart their own column on the left instead of floating over the plot, so the line never crosses them; the plot keeps a small gap at the right edge, and the account chart now uses round, evenly spaced value ticks. #936
 - Center Import, Export, Add account and Manage account forms at the same width, while keeping page titles in the app bar. #940
