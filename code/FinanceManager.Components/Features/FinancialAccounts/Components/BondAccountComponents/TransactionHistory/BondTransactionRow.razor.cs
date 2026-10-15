@@ -87,13 +87,6 @@ public partial class BondTransactionRow
     private string GetTitle() =>
         BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Name) ? BondDetails.Name : "Bond";
 
-    private string GetAvatarLabel()
-    {
-        var source = BondDetails?.Name;
-        if (string.IsNullOrWhiteSpace(source)) source = BondDetails?.Issuer;
-        return string.IsNullOrWhiteSpace(source) ? "B" : source.Trim()[..1].ToUpperInvariant();
-    }
-
     private static string FormatUnits(decimal value) => value.ToString("0.####");
 
     private Task ShowEditOverlay()
