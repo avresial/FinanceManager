@@ -28,7 +28,7 @@ public class InvestmentAccountSeeder(
     private const string _exchangeName = "London Stock Exchange";
     private const string _currency = "USD";
 
-    public async Task Seed(long userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task Seed(long userId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken = default)
     {
         if (userId is > int.MaxValue or < int.MinValue)
         {
@@ -50,7 +50,7 @@ public class InvestmentAccountSeeder(
         }
 
         var listing = await SeedAssetAndListing(cancellationToken);
-        var prices = await SeedPriceQuotes(listing.Id, start, end, cancellationToken);
+        var prices = await SeedPriceQuotes(listing.Id, start, end, random, cancellationToken);
 
         await SeedTransactions(userId, newAccountId, listing.Id, start, end, prices, cancellationToken);
     }
@@ -96,7 +96,7 @@ public class InvestmentAccountSeeder(
         return listing;
     }
 
-    private async Task<Dictionary<DateTime, decimal>> SeedPriceQuotes(long listingId, DateTime start, DateTime end, CancellationToken cancellationToken)
+    private async Task<Dictionary<DateTime, decimal>> SeedPriceQuotes(long listingId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken)
     {
         // Random-walk price seed near a plausible CSPX value so the UI shows life-like valuations.
         var prices = new Dictionary<DateTime, decimal>();
@@ -104,7 +104,7 @@ public class InvestmentAccountSeeder(
         for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var driftPercent = (decimal)((Random.Shared.NextDouble() - 0.48) * 0.04);
+            var driftPercent = (decimal)((random.NextDouble() - 0.48) * 0.04);
             price = Math.Clamp(price * (1 + driftPercent), 250m, 600m);
             price = Math.Round(price, 2);
             prices[date] = price;

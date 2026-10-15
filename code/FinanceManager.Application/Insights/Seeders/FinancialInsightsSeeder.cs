@@ -43,17 +43,17 @@ public class FinancialInsightsSeeder(IFinancialInsightsRepository financialInsig
             return;
         }
 
-        await SeedForGuest(guestUser.UserId, cancellationToken);
+        await SeedForGuest(guestUser.UserId, DateTime.UtcNow.Date, cancellationToken);
     }
 
     // Seeds the demo insights for a specific (per-session) guest user. Called from GuestAccountSeeder so the
     // insights card is populated for the throwaway in-memory guest DB created at login.
-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
+    public async Task SeedForGuest(int guestUserId, DateTime today, CancellationToken cancellationToken = default)
     {
         if (await financialInsightsRepository.GetCountByUser(guestUserId, cancellationToken) > 0)
             return;
 
-        var now = DateTime.UtcNow.Date;
+        var now = today.Date;
         var insights = new List<FinancialInsight>();
 
         for (var i = 0; i < _demoInsights.Length; i++)
