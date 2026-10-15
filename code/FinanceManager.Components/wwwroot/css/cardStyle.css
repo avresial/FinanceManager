@@ -9,9 +9,9 @@
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 600px) {
-    /* Override the inline dashboard height only on phones, where cards stack
-       in one column and an inner scroll would hide content without any cue. */
+@media (max-width: 959.98px) {
+    /* Match the grid's single-column layout below md. Chart cards keep their
+       explicit height; content cards can grow without an inner scroll. */
     .pc-card,
     .fm-phone-auto-height {
         height: auto !important;
