@@ -17,6 +17,19 @@ public class DistributionOverviewCardViewTests
     private static readonly List<NameValueResult> _two = [new("Mortgage", 75m), new("Loan", 25m)];
 
     [Fact]
+    public async Task DistributionCards_OptIntoPhoneAutoHeight_AndKeepSuppliedHeight()
+    {
+        await using var context = CreateContext();
+        var assets = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single).Add(x => x.Height, "411px"));
+        var liabilities = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single).Add(x => x.Height, "411px"));
+        var expenses = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single).Add(x => x.Height, "411px"));
+
+        AssertPhoneAutoHeight(assets, "411px");
+        AssertPhoneAutoHeight(liabilities, "411px");
+        AssertPhoneAutoHeight(expenses, "411px");
+    }
+
+    [Fact]
     public async Task Liabilities_SingleCategory_ShowsFigureWithoutChart()
     {
         await using var context = CreateContext();
@@ -193,6 +206,13 @@ public class DistributionOverviewCardViewTests
         Assert.Equal(2, asideItems.Count);
         Assert.Contains("fm-card-header-actions", asideItems[0].ClassList);
         Assert.Contains("fm-card-header-figure", asideItems[1].ClassList);
+    }
+
+    private static void AssertPhoneAutoHeight(IRenderedComponent<IComponent> cut, string height)
+    {
+        var card = cut.Find(".mud-card");
+        Assert.Contains("fm-phone-auto-height", card.ClassList);
+        Assert.Contains($"height:{height}", card.GetAttribute("style"));
     }
 
     private static BunitContext CreateContext()

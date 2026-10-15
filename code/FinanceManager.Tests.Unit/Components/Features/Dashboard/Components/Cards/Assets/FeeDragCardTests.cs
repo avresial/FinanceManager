@@ -78,8 +78,16 @@ public class FeeDragCardTests
         await using var context = CreateContext(new FeeDragHandler());
         var cut = context.Render<FeeDragCard>();
 
+        AssertPhoneAutoHeight(cut);
         Assert.NotNull(cut.Find("[data-testid='fee-drag-empty']"));
         Assert.Contains("No ETF holdings found", cut.Markup);
+    }
+
+    private static void AssertPhoneAutoHeight(IRenderedComponent<FeeDragCard> cut)
+    {
+        var card = cut.Find("[data-testid='fee-drag-card']");
+        Assert.Contains("fm-phone-auto-height", card.ClassList);
+        Assert.Contains("height:360px", card.GetAttribute("style"));
     }
 
     [Fact]
