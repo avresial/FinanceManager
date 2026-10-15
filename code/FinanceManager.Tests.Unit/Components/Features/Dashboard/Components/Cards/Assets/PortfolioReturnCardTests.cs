@@ -26,6 +26,30 @@ public class PortfolioReturnCardTests
     private static readonly DateTime _start = new(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = _start.AddDays(6);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1000)]
+    [InlineData(-1000)]
+    public async Task ShortRangeWithOppositeSigns_ExplainsAnnualizationWithoutChangingMetrics(int externalCashMovement)
+    {
+        await using var context = CreateContext(new ReturnsHandler(
+            new(2.0318m, MoneyWeightedReturnStatus.Available, _start, _start.AddDays(30)),
+            new(-0.0382m, TimeWeightedReturnStatus.Available, _start, _start.AddDays(30)),
+            PortfolioReturnAttributionResult.Available(0m, externalCashMovement, -externalCashMovement, 0m, 0m, _start, _start.AddDays(30))));
+
+        var cut = context.Render<PortfolioReturnCardContainer>(parameters => parameters
+            .Add(component => component.StartDateTime, _start)
+            .Add(component => component.EndDateTime, _start.AddDays(30)));
+        cut.WaitForAssertion(() => Assert.Contains("203.18%", cut.Markup));
+
+        Assert.Contains("-3.82%", cut.Markup);
+        Assert.Contains("not your gain for the selected period", cut.Find("[data-testid=portfolio-return-insight]").TextContent);
+        Assert.Contains("Large flows can make signs differ", cut.Markup);
+        Assert.Equal(2, cut.FindAll(".portfolio-return-metric").Count);
+        Assert.Equal("0", cut.Find("[aria-label='About money-weighted return']").GetAttribute("tabindex"));
+        Assert.Equal("0", cut.Find("[aria-label='About time-weighted return']").GetAttribute("tabindex"));
+    }
+
     [Fact]
     public async Task BothAvailable_ShowsMetricsAndFactualSummary()
     {
@@ -38,7 +62,11 @@ public class PortfolioReturnCardTests
         cut.WaitForAssertion(() => Assert.Contains("20.00%", cut.Markup));
 
         Assert.Contains("10.00%", cut.Markup);
-        Assert.Contains("Net external inflows of", cut.Markup);
+        Assert.Contains("how much you invested and when", cut.Markup);
+        Assert.Contains("not your gain for the selected period", cut.Markup);
+        Assert.Contains("TWR neutralizes external cash-flow timing", cut.Markup);
+        Assert.Contains("Large flows can make signs differ", cut.Markup);
+        Assert.Contains("Short ranges can magnify annualized XIRR", cut.Markup);
         Assert.Contains("Net external cash flow", cut.Markup);
         Assert.Contains("Period length", cut.Markup);
         Assert.Contains("7 days", cut.Markup);
@@ -62,7 +90,7 @@ public class PortfolioReturnCardTests
 
         Assert.Contains("Insufficient data", cut.Markup);
         Assert.DoesNotContain("Neither return is available", cut.Markup);
-        Assert.Contains("Cash-flow timing affects annualized XIRR", cut.Markup);
+        Assert.Contains("TWR neutralizes external cash-flow timing", cut.Markup);
     }
 
     [Fact]

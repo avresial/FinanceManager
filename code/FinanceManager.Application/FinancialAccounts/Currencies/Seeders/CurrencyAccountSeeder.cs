@@ -64,7 +64,7 @@ public class CurrencyAccountSeeder(
         new("Airbnb stay", "Travel"),
     ];
 
-    public async Task Seed(int userId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task Seed(int userId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken = default)
     {
         if (await currencyAccountRepository.GetAvailableAccounts(userId).AnyAsync(cancellationToken)) return;
 
@@ -72,13 +72,13 @@ public class CurrencyAccountSeeder(
         var labelByName = labels.ToDictionary(l => l.Name, StringComparer.OrdinalIgnoreCase);
 
         logger.LogTrace("Seeding cash currency account.");
-        await SeedCashAccount(userId, labelByName, start, end, cancellationToken);
+        await SeedCashAccount(userId, labelByName, start, end, random, cancellationToken);
 
         logger.LogTrace("Seeding loan currency account.");
         await SeedLoanAccount(userId, labelByName, start, end, cancellationToken);
     }
 
-    private async Task SeedCashAccount(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, CancellationToken cancellationToken)
+    private async Task SeedCashAccount(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, Random random, CancellationToken cancellationToken)
     {
         var account = new CurrencyAccount(userId, 0, $"{AccountLabel.Cash} 1", AccountLabel.Cash);
 
@@ -137,7 +137,7 @@ public class CurrencyAccountSeeder(
                     negativesThisMonth += GuestInvestmentPlan.LoanMonthlyRepayment;
                     break;
                 default:
-                    negativesThisMonth = AddRandomNegatives(account, date, labelByName, negativesThisMonth, randomAmountsByMerchant);
+                    negativesThisMonth = AddRandomNegatives(account, date, labelByName, negativesThisMonth, randomAmountsByMerchant, random);
                     break;
             }
         }
@@ -151,9 +151,10 @@ public class CurrencyAccountSeeder(
         DateTime date,
         Dictionary<string, FinancialLabel> labelByName,
         decimal negativesThisMonth,
-        Dictionary<string, List<int>> randomAmountsByMerchant)
+        Dictionary<string, List<int>> randomAmountsByMerchant,
+        Random random)
     {
-        var transactions = Random.Shared.Next(0, _maxRandomTransactionsPerDay + 1);
+        var transactions = random.Next(0, _maxRandomTransactionsPerDay + 1);
         for (var i = 0; i < transactions; i++)
         {
             // Rule from #240: total negatives within a month must stay strictly below the salary.
@@ -162,11 +163,11 @@ public class CurrencyAccountSeeder(
 
             var max = (int)Math.Floor(Math.Min(_maxRandomTransactionAmount, remaining));
             if (max < 1) break;
-            var merchant = _fakeMerchants[Random.Shared.Next(_fakeMerchants.Length)];
+            var merchant = _fakeMerchants[random.Next(_fakeMerchants.Length)];
             if (!randomAmountsByMerchant.TryGetValue(merchant.Description, out var usedAmounts))
                 randomAmountsByMerchant[merchant.Description] = usedAmounts = [];
 
-            if (!TryPickDistinctAmount(max, usedAmounts, out var amount)) continue;
+            if (!TryPickDistinctAmount(max, usedAmounts, random, out var amount)) continue;
             usedAmounts.Add(amount);
 
             var labels = LabelsFor(labelByName, merchant.LabelName);
@@ -180,11 +181,11 @@ public class CurrencyAccountSeeder(
     // (within the recurring detector's tolerance) can coincidentally look like a quarterly or annual
     // subscription and show up as duplicate "Tram pass"-style rows on the Subscriptions page (#904),
     // so every merchant's random amounts are kept clearly apart from each other.
-    private static bool TryPickDistinctAmount(int max, List<int> usedAmounts, out int amount)
+    private static bool TryPickDistinctAmount(int max, List<int> usedAmounts, Random random, out int amount)
     {
         for (var attempt = 0; attempt < _maxAmountPickAttempts; attempt++)
         {
-            var candidate = Random.Shared.Next(1, max + 1);
+            var candidate = random.Next(1, max + 1);
             if (usedAmounts.Any(used => AreTooSimilar(used, candidate))) continue;
 
             amount = candidate;
