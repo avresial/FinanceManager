@@ -6,6 +6,8 @@ using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -85,6 +87,50 @@ public class DashboardQueryServiceTests
         Assert.Single(result.ExpenseDistribution);
         Assert.Equal("Salary", result.LabelsValue[0].Name);
         Assert.Equal("Food", result.ExpenseDistribution[0].Name);
+    }
+
+    [Fact]
+    public async Task CachedOverview_RevaluesOnlyDistribution_WithoutMutatingCache_AndRetainsInvalidation()
+    {
+        var currency = DefaultCurrency.PLN;
+        var value = 300m;
+        var fail = false;
+        _currencyRepository.Setup(r => r.GetCurrency(currency.Id, It.IsAny<CancellationToken>())).ReturnsAsync(currency);
+        _netWorthService.Setup(x => x.GetNetWorth(_userId, currency, _start, _end)).ReturnsAsync(new Dictionary<DateTime, decimal>());
+        _liabilitiesService.Setup(x => x.GetEndLiabilitiesPerType(_userId, _start, _end)).Returns(Array.Empty<NameValueResult>().ToAsyncEnumerable());
+        _liabilitiesService.Setup(x => x.GetEndLiabilitiesPerAccount(_userId, _start, _end)).Returns(Array.Empty<NameValueResult>().ToAsyncEnumerable());
+        _assetsService.Setup(x => x.GetEndAssetsPerType(_userId, currency, _end))
+            .Returns(() => fail ? throw new InvalidOperationException("valuation failed") : new[] { new NameValueResult("Stock", value) }.ToAsyncEnumerable());
+        _assetsService.Setup(x => x.GetEndAssetsPerAccount(_userId, currency, _end))
+            .Returns(() => new[] { new NameValueResult("Investment", value) }.ToAsyncEnumerable());
+        var services = new ServiceCollection();
+        services.AddHybridCache();
+        using var provider = services.BuildServiceProvider();
+        var cache = provider.GetRequiredService<HybridCache>();
+        var cached = new CachingDashboardQueryService(_service, cache);
+        var ct = TestContext.Current.CancellationToken;
+
+        var initial = await cached.GetOverview(_userId, currency.Id, _start, _end, ct);
+        value = 420m;
+        var refreshed = await cached.GetOverview(_userId, currency.Id, _start, _end, ct);
+        Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
+        Assert.Equal(420m, Assert.Single(refreshed!.AssetsPerType).Value);
+        Assert.Equal(420m, Assert.Single(refreshed.AssetsPerAccount).Value);
+        _assetsService.Verify(x => x.GetEndAssetsPerType(_userId, currency, _end), Times.Exactly(2));
+        _assetsService.Verify(x => x.GetEndAssetsPerAccount(_userId, currency, _end), Times.Exactly(2));
+        _netWorthService.Verify(x => x.GetNetWorth(_userId, currency, _start, _end), Times.Once);
+
+        fail = true;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => cached.GetOverview(_userId, currency.Id, _start, _end, ct));
+        fail = false;
+        value = 450m;
+        var recovered = await cached.GetOverview(_userId, currency.Id, _start, _end, ct);
+        Assert.Equal(450m, Assert.Single(recovered!.AssetsPerType).Value);
+        Assert.Equal(300m, Assert.Single(initial.AssetsPerType).Value);
+
+        await new CacheInvalidator(cache).InvalidateUser(_userId, ct);
+        await cached.GetOverview(_userId, currency.Id, _start, _end, ct);
+        _netWorthService.Verify(x => x.GetNetWorth(_userId, currency, _start, _end), Times.Exactly(2));
     }
 
     [Fact]
