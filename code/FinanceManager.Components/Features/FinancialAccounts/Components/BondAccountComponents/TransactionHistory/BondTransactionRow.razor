@@ -1,10 +1,18 @@
-<div class="d-flex align-start pa-2 mud-list-item-clickable" style="cursor: pointer;"
-     role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
-    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start" Class="w-100">
+@using FinanceManager.Components.Shared.Helpers
+
+<div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
+     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     role="button" tabindex="0" aria-expanded="@_expanded.ToString().ToLowerInvariant()"
+     aria-label="@GetAccessibleName()" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                 Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
+                 Size="Size.Small" />
+
         @if (!IsMobile)
         {
-            <MudAvatar Size="Size.Medium" Variant="Variant.Filled" Color="Color.Default">
-                @GetAvatarLabel()
+            <MudAvatar Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Style="flex-shrink: 0;">
+                <MudIcon Icon="@TransactionRowPresentation.IconFor(Entry.Labels?.FirstOrDefault()?.Name, Entry.ValueChange)" Size="Size.Small" />
             </MudAvatar>
         }
 
@@ -14,7 +22,7 @@
                 @if (Entry.Labels is not null && Entry.Labels.Any())
                 {
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                             Style="height: 20px; font-size: 11px;">@Entry.Labels.First().Name</MudChip>
+                             Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
                 }
                 @if (BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Issuer))
                 {
@@ -22,38 +30,23 @@
                 }
                 @if (!IsMobile)
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Default">· @Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default" Style="flex-shrink: 0;">· @Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
                 }
             </MudStack>
         </MudStack>
 
-        @if (IsMobile)
-        {
-            <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
-                <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
-                         Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
-                    @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange) units
-                </MudText>
-                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">Position: @FormatUnits(Entry.Value) units</MudText>
-            </MudStack>
-        }
-        else
-        {
-            <MudText Typo="Typo.body1" Class="fm-tabular" Style="flex-shrink: 0; white-space: nowrap;"
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
+            <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
                      Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
                 @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange) units
             </MudText>
-
-            <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
-                <MudText Typo="Typo.overline" Color="Color.Default">Position</MudText>
-                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">@FormatUnits(Entry.Value) units</MudText>
-            </MudStack>
-        }
+            <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">Position: @FormatUnits(Entry.Value) units</MudText>
+        </MudStack>
     </MudStack>
 </div>
 
 <MudCollapse Expanded="_expanded">
-    <div class="px-4 pb-3" style="padding-left: 60px;">
+    <div class="px-4 pb-3" style="@(IsMobile ? "" : "padding-left: 60px;")">
         <MudGrid Spacing="2">
             <MudItem xs="6">
                 <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>

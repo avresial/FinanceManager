@@ -16,7 +16,7 @@
 else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
 {
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
-                        ChangeDescription="Account balance change over the selected range, including deposits" Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
+                        Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
                         SelectedRange="@_selectedRange" IsChartLoading="@_isChartLoading"
                         ChartData="@ChartData" CapitalData="@CapitalData" IsMobile="@_isMobile" />
 

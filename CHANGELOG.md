@@ -13,6 +13,7 @@ rules agents must follow when updating this file.
 - Redeem single-use gift codes for lifetime tier upgrades; admins can generate codes, revoke unused codes, and inspect their audit history. #859
 
 ### Changed
+- Align account detail card headings, Top movers controls, headline spacing, and bond transaction rows while preserving account-specific data and actions. #939
 - Explain why annualized XIRR and cumulative TWR can differ, including opposite signs and short-range annualization, while keeping both Portfolio return metrics. #907
 - Generate the same demo (guest) account data for every guest session on a given UTC day; the data changes from day to day. #952
 - Keep distribution card titles at the top-left and Type / Account controls at the top-right, with totals beneath the controls and no empty control row for Expense distribution, consistently across Dashboard, Assets, Liabilities and narrow cards. #938

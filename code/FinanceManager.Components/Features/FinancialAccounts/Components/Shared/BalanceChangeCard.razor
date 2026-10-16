@@ -1,13 +1,7 @@
 <MudCard Outlined="true" Style="background-color: transparent;">
+    <CardHeader Title="@(ShowRange ? $"{Label} · {RangeLabel}" : Label)" InfoText="@InfoText"
+                InfoAriaLabel="@($"About {Label} card")" />
     <MudCardContent>
-        <div class="d-flex align-center justify-space-between fm-card-info-header" style="gap:8px;">
-            <CardInfoTooltip Text="@InfoText"
-                             AriaLabel="@($"About {Label} card")">
-                <MudText Typo="Typo.overline" Color="Color.Default">
-                    @Label@(ShowRange ? $" · {RangeLabel}" : null)
-                </MudText>
-            </CardInfoTooltip>
-        </div>
         @* h4 rather than h3: in the narrow side column an h3 amount pushed the currency onto its own line. *@
         <MudText Typo="Typo.h4" Class="fm-tabular"
                  Color="@(BalanceChange >= 0 ? Color.Success : Color.Error)">
