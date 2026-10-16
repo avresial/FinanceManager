@@ -24,7 +24,7 @@ public partial class AssetsTimeSeriesCardContainer
     [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
+    [Inject] public required AssetsPageCardsRequestCoordinator AssetsRequests { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<AssetsTimeSeriesCardContainer> Logger { get; set; }
@@ -73,7 +73,7 @@ public partial class AssetsTimeSeriesCardContainer
                 ToModel = snapshot => snapshot.UserId == user.UserId && snapshot.CurrencyId == currency.Id
                     && snapshot.StartDate == start && snapshot.EndDate.Date == end.Date
                     ? new TimeSeriesCardModel(snapshot.Series) : null,
-                FetchAsync = async () => new TimeSeriesCardModel([.. (await AssetsCache.GetFreshTimeSeriesAsync(context)).OrderBy(x => x.DateTime)]),
+                FetchAsync = async () => new TimeSeriesCardModel([.. (await AssetsRequests.GetFreshTimeSeriesAsync(context)).OrderBy(x => x.DateTime)]),
                 ToSnapshot = model => new AssetsTimeSeriesSnapshot
                 {
                     UserId = user.UserId,

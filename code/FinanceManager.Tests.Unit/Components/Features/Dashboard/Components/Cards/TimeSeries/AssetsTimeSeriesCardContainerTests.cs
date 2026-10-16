@@ -1,4 +1,3 @@
-using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Models;
@@ -10,7 +9,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -168,13 +166,13 @@ public class AssetsTimeSeriesCardContainerTests
     }
 
     [Fact]
-    public async Task SharesSeriesRequestWithAssetsCache_AndSnapshotWriteIsIndependent()
+    public async Task SharesSeriesRequestWithRequestCoordinator_AndSnapshotWriteIsIndependent()
     {
         var handler = new SeriesHandler();
         using var context = Context(handler);
         var cut = Render(context);
-        var cache = context.Services.GetRequiredService<AssetsPageCardsCacheService>();
-        var aggregate = cache.GetSnapshotAsync(new AssetsPageCardsRefreshContext
+        var requests = context.Services.GetRequiredService<AssetsPageCardsRequestCoordinator>();
+        var shared = requests.GetFreshTimeSeriesAsync(new AssetsPageCardsRefreshContext
         {
             UserId = 1,
             CurrencyId = DefaultCurrency.PLN.Id,
@@ -183,7 +181,7 @@ public class AssetsTimeSeriesCardContainerTests
         });
         Assert.Equal(1, handler.Count);
         handler.Complete(0, Points(20));
-        await aggregate;
+        await shared;
         cut.WaitForAssertion(() => Assert.Equal(20, View(cut).Model!.Series.Single().Value));
         await Drain(cut);
         _snapshots.Verify(x => x.SetAsync(_key, It.IsAny<AssetsTimeSeriesSnapshot>()), Times.Once);
@@ -213,8 +211,7 @@ public class AssetsTimeSeriesCardContainerTests
         context.Services.AddSingleton(login.Object);
         context.Services.AddSingleton(settings.Object);
         context.Services.AddSingleton<ISnapshotRefreshCoordinator>(new SnapshotRefreshCoordinator(_snapshots.Object, NullLogger<SnapshotRefreshCoordinator>.Instance));
-        context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(), new MemoryCache(new MemoryCacheOptions()),
-            new AssetsHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }), NullLogger<AssetsPageCardsCacheService>.Instance));
+        context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }), NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
         return context;
     }
 
