@@ -1,4 +1,3 @@
-using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
@@ -12,7 +11,6 @@ using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -119,8 +117,7 @@ public class RangeRefreshFailureTests
         context.Services.AddSingleton(new LiabilitiesSnapshotStore(coordinator));
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         context.Services.AddSingleton(new LiabilitiesHttpClient(http));
-        context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(), new MemoryCache(new MemoryCacheOptions()),
-            new AssetsHttpClient(http), NullLogger<AssetsPageCardsCacheService>.Instance));
+        context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(http), NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
         return context;
     }
 

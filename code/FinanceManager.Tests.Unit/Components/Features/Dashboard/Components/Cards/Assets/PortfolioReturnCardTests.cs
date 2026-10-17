@@ -1,4 +1,3 @@
-using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Models;
@@ -9,7 +8,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -277,14 +275,14 @@ public class PortfolioReturnCardTests
     {
         var handler = new QueuedReturnsHandler();
         await using var context = CreateContext(handler);
-        var cache = context.Services.GetRequiredService<AssetsPageCardsCacheService>();
+        var requests = context.Services.GetRequiredService<AssetsPageCardsRequestCoordinator>();
         var range = new AssetsPageCardsRefreshContext { UserId = 1, CurrencyId = 1, StartDateTime = _start, EndDateTime = _end };
-        var first = cache.GetFreshReturnsAsync(range);
-        var second = cache.GetFreshReturnsAsync(range);
+        var first = requests.GetFreshReturnsAsync(range);
+        var second = requests.GetFreshReturnsAsync(range);
         Assert.Equal(1, handler.MoneyWeightedRequestCount);
         handler.Complete(0, Model(0.2m, 0.1m).MoneyWeightedReturn!, Model(0.2m, 0.1m).TimeWeightedReturn!);
         Assert.Same(await first, await second);
-        var later = cache.GetFreshReturnsAsync(range);
+        var later = requests.GetFreshReturnsAsync(range);
         Assert.Equal(2, handler.MoneyWeightedRequestCount);
         handler.Complete(1, Model(0.3m, 0.2m).MoneyWeightedReturn!, Model(0.3m, 0.2m).TimeWeightedReturn!);
         await later;
@@ -336,11 +334,9 @@ public class PortfolioReturnCardTests
         });
         context.Services.AddSingleton(login.Object);
 
-        context.Services.AddSingleton(new AssetsPageCardsCacheService(
-            Mock.Of<ILocalStorageService>(),
-            new MemoryCache(new MemoryCacheOptions()),
+        context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(
             new AssetsHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }),
-            NullLogger<AssetsPageCardsCacheService>.Instance));
+            NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
 
         return context;
     }

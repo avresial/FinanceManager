@@ -1,4 +1,3 @@
-using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using FinanceManager.Components.Features.Dashboard.Components;
@@ -12,7 +11,6 @@ using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Sections;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -71,9 +69,8 @@ public class OverviewPagesInitialRangeTests
         context.Services.AddMudServices();
         context.Services.AddSingleton(new DashboardCardVisibilityService(Mock.Of<ISnapshotService>(),
             Mock.Of<ILoginService>(), NullLogger<DashboardCardVisibilityService>.Instance));
-        context.Services.AddSingleton(new AssetsPageCardsCacheService(Mock.Of<ILocalStorageService>(),
-            new MemoryCache(new MemoryCacheOptions()), new AssetsHttpClient(new HttpClient(returnsHandler ?? new HttpClientHandler()) { BaseAddress = new Uri("http://localhost/") }),
-            NullLogger<AssetsPageCardsCacheService>.Instance));
+        context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(new HttpClient(returnsHandler ?? new HttpClientHandler()) { BaseAddress = new Uri("http://localhost/") }),
+            NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
         context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
         if (returnsHandler is null)

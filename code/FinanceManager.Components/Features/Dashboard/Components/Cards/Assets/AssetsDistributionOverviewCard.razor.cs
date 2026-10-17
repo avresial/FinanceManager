@@ -36,7 +36,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
     [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ILogger<AssetsDistributionOverviewCard> Logger { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsPageCardsCacheService { get; set; }
+    [Inject] public required AssetsPageCardsRequestCoordinator AssetsRequests { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -101,7 +101,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
                 ToModel = snapshot => snapshot.UserId == user.UserId && snapshot.CurrencyId == currency.Id
                     && snapshot.StartDate == start && snapshot.AsOfDate.Date == end.Date
                     ? new DistributionCardModel(snapshot.TypeData, snapshot.AccountData) : null,
-                FetchAsync = async () => await AssetsPageCardsCacheService.GetFreshDistributionAsync(context),
+                FetchAsync = async () => await AssetsRequests.GetFreshDistributionAsync(context),
                 ToSnapshot = model => new AssetsDistributionSnapshot
                 {
                     UserId = user.UserId,

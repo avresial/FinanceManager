@@ -21,7 +21,7 @@ public partial class PortfolioReturnCardContainer
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
+    [Inject] public required AssetsPageCardsRequestCoordinator AssetsRequests { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<PortfolioReturnCardContainer> Logger { get; set; }
@@ -78,7 +78,7 @@ public partial class PortfolioReturnCardContainer
                 FetchAsync = async () =>
                 {
                     fallback = await (forceRefresh || FetchReturns is null
-                        ? AssetsCache.GetFreshReturnsAsync(context) : FetchReturns(context));
+                        ? AssetsRequests.GetFreshReturnsAsync(context) : FetchReturns(context));
                     if (fallback.MoneyWeightedReturn is null || fallback.TimeWeightedReturn is null || fallback.Attribution is null)
                         throw new InvalidOperationException("A portfolio return request failed.");
                     return PortfolioReturnCardModel.FromSource(fallback);

@@ -14,7 +14,7 @@ and are not interchangeable. Pick by asking one question: **may the API request 
 | What is stored | The last *rendered* state of a UI surface | The last *fetched* data, with its validity window |
 | Why | The surface paints instantly instead of flashing a spinner | Fewer requests for data that does not change often |
 | Freshness | Refresh attempted on every visit — reconciled on a usable response; failed refresh retains stale content | Bounded by the entry's expiry rules |
-| Use for | Dashboard cards, transaction lists, charts | Nav menu state, assets-page cards, investment rate/estimate lookups |
+| Use for | Dashboard cards, transaction lists, charts | Nav menu state, investment rate/estimate lookups |
 
 A UI snapshot is never a source of truth. It is what the user looks at during the few hundred
 milliseconds the real request takes.
