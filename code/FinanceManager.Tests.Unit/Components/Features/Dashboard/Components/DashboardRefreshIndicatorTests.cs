@@ -145,6 +145,44 @@ public class DashboardRefreshIndicatorTests
         Assert.Empty(cut.FindAll(".mud-alert"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HydratedAssetsDistribution_RefreshesOnce_AndRetainsSnapshotOnError(bool fails)
+    {
+        var handler = new OverviewHandler();
+        var stored = Overview(DateTime.UtcNow.Date.AddDays(-7), DateTime.UtcNow);
+        stored.AssetsPerType = [new("Stock", 300m)];
+        stored.AssetsPerAccount = [new("Investment", 300m)];
+        using var context = CreateContext(handler);
+        var snapshots = Mock.Get(context.Services.GetRequiredService<ISnapshotService>());
+        snapshots.Setup(x => x.GetAsync<DashboardOverviewSnapshot>(It.IsAny<string>()))
+            .ReturnsAsync(DashboardOverviewSnapshot.FromDto(stored));
+        var cut = context.Render<DashboardComponent>();
+        decimal DisplayedStock() => cut.FindComponent<Stub<AssetsDistributionOverviewCard>>().Instance.Parameters.Get(x => x.Model)!.TypeData.Single().Value;
+        cut.WaitForAssertion(() => Assert.Equal(300m, DisplayedStock()), _timeout);
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+
+        if (fails)
+        {
+            handler.Fail(0);
+            cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-alert")), _timeout);
+            Assert.Equal(300m, DisplayedStock());
+            snapshots.Verify(x => x.SetAsync(It.IsAny<string>(), It.IsAny<DashboardOverviewSnapshot>()), Times.Never);
+        }
+        else
+        {
+            var fresh = Overview(cut.Instance.StartDate, cut.Instance.EndDate);
+            fresh.AssetsPerType = [new("Stock", 420m)];
+            fresh.AssetsPerAccount = [new("Investment", 420m)];
+            handler.Complete(0, fresh);
+            cut.WaitForAssertion(() => Assert.Equal(420m, DisplayedStock()), _timeout);
+            cut.WaitForAssertion(() => snapshots.Verify(x => x.SetAsync("dashboard-overview:1:0",
+                It.Is<DashboardOverviewSnapshot>(snapshot => snapshot.AssetsPerType.Single().Value == 420m)), Times.Once), _timeout);
+        }
+        Assert.Equal(1, handler.Count);
+    }
+
     private static (DateTime Start, DateTime End) NewRange(int days = 10)
     {
         var end = DateTime.UtcNow.Date.AddDays(-days);

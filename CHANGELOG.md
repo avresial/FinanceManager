@@ -68,6 +68,7 @@ rules agents must follow when updating this file.
 - Load the Dashboard with about 10 fewer requests after sign-in by no longer fetching the user, currency list and account lists more than once, and by reading sidebar account names from the account list instead of loading each account. #890
 
 ### Fixed
+- Keep refreshed Dashboard Assets distribution values aligned with the Assets page and investment account valuation, including updates during the dashboard cache window. #949
 - Show the demo (guest) account's ETF holdings, such as CSPX, on the Assets page ETF fee drag card instead of "No ETF holdings found". #950
 - Include today's effective cash entries in forecast balances and use the latest balance for transactions sharing a timestamp. #951
 - Let content-light cards size naturally on mobile and compact empty states, insights, and sparse distributions while preserving equal-height desktop rows. #937
