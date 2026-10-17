@@ -24,6 +24,34 @@ public class DashboardQueryService(
     IExpenseDistributionService expenseDistributionService,
     ICurrencyRepository currencyRepository) : IDashboardQueryService
 {
+    internal async Task<DashboardOverviewDto?> RefreshAssetsDistribution(
+        DashboardOverviewDto overview, CancellationToken cancellationToken)
+    {
+        var currency = await currencyRepository.GetCurrency(overview.CurrencyId, cancellationToken);
+        if (currency is null) return null;
+
+        var assetsPerType = await assetsService.GetEndAssetsPerType(overview.UserId, currency, overview.EndDate).ToListAsync(cancellationToken);
+        var assetsPerAccount = await assetsService.GetEndAssetsPerAccount(overview.UserId, currency, overview.EndDate).ToListAsync(cancellationToken);
+
+        // HybridCache can share this instance across callers: never mutate the cached overview.
+        return new DashboardOverviewDto
+        {
+            UserId = overview.UserId,
+            CurrencyId = overview.CurrencyId,
+            StartDate = overview.StartDate,
+            EndDate = overview.EndDate,
+            NetWorthSeries = overview.NetWorthSeries,
+            NetCashFlowSeries = overview.NetCashFlowSeries,
+            ClosingBalanceSeries = overview.ClosingBalanceSeries,
+            LiabilitiesPerType = overview.LiabilitiesPerType,
+            LiabilitiesPerAccount = overview.LiabilitiesPerAccount,
+            LabelsValue = overview.LabelsValue,
+            AssetsPerType = assetsPerType,
+            AssetsPerAccount = assetsPerAccount,
+            ExpenseDistribution = overview.ExpenseDistribution,
+        };
+    }
+
     public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
