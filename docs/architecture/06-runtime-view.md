@@ -56,6 +56,8 @@ Context validation belongs to the caller's `ToModel`, not to a global TTL. The e
 
 Read failures fall through to fresh loading: unreadable snapshots are evicted best-effort, canceled reads are not evicted. A failed load retains the painted model and reports a blocking failure only when no useful model exists. Equal rendered content does not repaint or rewrite merely because timestamp metadata changed. Persistence failure is logged after the fresh model is rendered; it does not undo the paint. The coordinator's version checks prevent older loads from replacing the current run's model/snapshot. Details and surface-specific interactive-state rules are in [UI snapshots](concepts/ui-snapshots.md).
 
+The Dashboard's fresh delegate calls one aggregate overview endpoint. Its five-minute server cache retains non-distribution surfaces, while [CachingDashboardQueryService](../../code/FinanceManager.Application/Dashboard/CachingDashboardQueryService.cs) revalidates asset type/account distributions on cache hits at the exact requested range bounds. Cache misses already calculate those distributions and do not repeat them. A distribution refresh failure propagates to the existing snapshot error path, retaining painted content; a successful empty distribution replaces the old content. The shared card renderer and browser request count are unchanged.
+
 ## 6.2 Investment account valuation and price retrieval
 
 The current model uses asset listings and price quotes. It replaces the old documentation's `StockPriceHttpClient → StockPriceController → StockPriceProvider → StockPriceRepository` chain, whose cited paths no longer exist.
