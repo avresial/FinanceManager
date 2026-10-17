@@ -10,12 +10,12 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Reposi
 /// <summary>
 /// Caches the cheap, high-frequency point-reads of an <see cref="IAccountEntryRepository{T}"/>
 /// (<see cref="GetYoungest"/>, <see cref="GetOldest"/>, <see cref="GetCount"/>,
-/// <see cref="GetPostingDates"/>, and date-boundary reads), keyed per account and tagged per owning user
+/// and <see cref="GetPostingDates"/>), keyed per account and tagged per owning user
 /// (<c>global:u{userId}</c>).
-/// Also caches relative page reads and range reads (<see cref="Get(int,DateTime,DateTime)"/>, <see cref="GetRange"/>) using
+/// Also caches range reads (<see cref="Get(int,DateTime,DateTime)"/>, <see cref="GetRange"/>) using
 /// calendar-month buckets, inflated to whole-month boundaries on every miss, within a rolling
-/// 12-month horizon. Relative pages use an account tag so they can be invalidated without another owner
-/// lookup. Any write clears that tag and busts the owner's cache through <see cref="ICacheInvalidator"/>,
+/// 12-month horizon. Date-boundary and relative page reads pass through with exact timestamps.
+/// Any write busts the owner's cache through <see cref="ICacheInvalidator"/>,
 /// including the derived dashboard tag (<c>dash:u{userId}</c>). See issues #455 and #456.
 /// </summary>
 public class CachedAccountEntryRepository<T>(
@@ -182,27 +182,20 @@ public class CachedAccountEntryRepository<T>(
             .ToList();
     }
 
-    // ----- Cached relative page reads -----
+    // ----- Pass-through reads (single-entry, relative page and batch queries) -----
 
-    public async Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) =>
-        (await cache.GetOrCreateAsync(
-            $"a{accountId}:{typeof(T).Name}:page:{date.Ticks}:{count}:{olderThenDate}",
-            _ => new ValueTask<List<T>>(inner.Get(accountId, date, count, olderThenDate)),
-            _pointReadOptions,
-            tags: [AccountTag(accountId)]))!;
-
-    // ----- Pass-through reads (single-entry and batch queries) -----
-
+    public Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) =>
+        inner.Get(accountId, date, count, olderThenDate);
     public Task<T?> Get(int accountId, int entryId) => inner.Get(accountId, entryId);
     public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
     public Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default) => inner.GetMostRecentByAccounts(accountIds, count, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
     public Task<T?> GetNextYounger(int accountId, int entryId) => inner.GetNextYounger(accountId, entryId);
     public Task<T?> GetNextYounger(int accountId, DateTime date) =>
-        GetCached(accountId, $"younger:{date.Ticks}", () => inner.GetNextYounger(accountId, date));
+        inner.GetNextYounger(accountId, date);
     public Task<T?> GetNextOlder(int accountId, int entryId) => inner.GetNextOlder(accountId, entryId);
     public Task<T?> GetNextOlder(int accountId, DateTime date) =>
-        GetCached(accountId, $"older:{date.Ticks}", () => inner.GetNextOlder(accountId, date));
+        inner.GetNextOlder(accountId, date);
     public Task<Dictionary<int, T>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextOlder(accountIds, date);
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
