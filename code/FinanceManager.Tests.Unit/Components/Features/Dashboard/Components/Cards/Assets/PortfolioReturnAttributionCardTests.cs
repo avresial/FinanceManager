@@ -1,4 +1,3 @@
-using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Models;
@@ -9,7 +8,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -303,11 +301,9 @@ public class PortfolioReturnAttributionCardTests
         });
         context.Services.AddSingleton(login.Object);
 
-        context.Services.AddSingleton(new AssetsPageCardsCacheService(
-            Mock.Of<ILocalStorageService>(),
-            new MemoryCache(new MemoryCacheOptions()),
+        context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(
             new AssetsHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }),
-            NullLogger<AssetsPageCardsCacheService>.Instance));
+            NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
 
         return context;
     }

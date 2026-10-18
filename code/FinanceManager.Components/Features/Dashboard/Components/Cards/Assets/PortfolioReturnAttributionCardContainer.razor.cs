@@ -26,7 +26,7 @@ public partial class PortfolioReturnAttributionCardContainer
     [Parameter] public EventCallback<bool> RefreshingChanged { get; set; }
 
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
-    [Inject] public required AssetsPageCardsCacheService AssetsCache { get; set; }
+    [Inject] public required AssetsPageCardsRequestCoordinator AssetsRequests { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<PortfolioReturnAttributionCardContainer> Logger { get; set; }
@@ -77,7 +77,7 @@ public partial class PortfolioReturnAttributionCardContainer
                 FetchAsync = async () =>
                 {
                     var source = await (forceRefresh || FetchReturns is null
-                        ? AssetsCache.GetFreshReturnsAsync(context) : FetchReturns(context));
+                        ? AssetsRequests.GetFreshReturnsAsync(context) : FetchReturns(context));
                     if (source.Attribution is null)
                         throw new InvalidOperationException("The portfolio attribution request failed.");
                     return PortfolioReturnAttributionCardModel.FromResult(source.Attribution);
