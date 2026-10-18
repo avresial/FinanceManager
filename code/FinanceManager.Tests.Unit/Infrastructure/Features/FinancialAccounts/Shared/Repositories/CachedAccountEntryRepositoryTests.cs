@@ -100,51 +100,64 @@ public class CachedAccountEntryRepositoryTests
         inner.Verify(r => r.GetPostingDates(_accountId), Times.Once);
     }
 
-    [Fact]
-    public async Task DateBoundaries_SecondCall_ServedFromCache()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DateBoundaries_RepeatedReads_PassThroughWithExactTimestamp(bool older)
     {
+        var date = _date.AddHours(12).AddTicks(123);
+        var adjacentDate = date.AddTicks(1);
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.GetNextOlder(_accountId, _date)).ReturnsAsync(Entry(1));
-        inner.Setup(r => r.GetNextYounger(_accountId, _date)).ReturnsAsync(Entry(2));
-        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+        inner.Setup(r => r.GetNextOlder(_accountId, date)).ReturnsAsync(Entry(1));
+        inner.Setup(r => r.GetNextYounger(_accountId, date)).ReturnsAsync(Entry(1));
+        inner.Setup(r => r.GetNextOlder(_accountId, adjacentDate)).ReturnsAsync(Entry(2));
+        inner.Setup(r => r.GetNextYounger(_accountId, adjacentDate)).ReturnsAsync(Entry(2));
+        var sut = CreateSut(inner.Object, Mock.Of<IAccountUserResolver>(MockBehavior.Strict),
+            Mock.Of<ICacheInvalidator>(MockBehavior.Strict), CreateCache());
 
-        await sut.GetNextOlder(_accountId, _date);
-        await sut.GetNextOlder(_accountId, _date);
-        await sut.GetNextYounger(_accountId, _date);
-        await sut.GetNextYounger(_accountId, _date);
+        Task<CurrencyAccountEntry?> Read(DateTime boundary) => older
+            ? sut.GetNextOlder(_accountId, boundary)
+            : sut.GetNextYounger(_accountId, boundary);
 
-        inner.Verify(r => r.GetNextOlder(_accountId, _date), Times.Once);
-        inner.Verify(r => r.GetNextYounger(_accountId, _date), Times.Once);
+        Assert.Equal(1, (await Read(date))!.EntryId);
+        Assert.Equal(1, (await Read(date))!.EntryId);
+        Assert.Equal(2, (await Read(adjacentDate))!.EntryId);
+
+        if (older)
+        {
+            inner.Verify(r => r.GetNextOlder(_accountId, date), Times.Exactly(2));
+            inner.Verify(r => r.GetNextOlder(_accountId, adjacentDate), Times.Once);
+        }
+        else
+        {
+            inner.Verify(r => r.GetNextYounger(_accountId, date), Times.Exactly(2));
+            inner.Verify(r => r.GetNextYounger(_accountId, adjacentDate), Times.Once);
+        }
+        inner.VerifyNoOtherCalls();
     }
 
-    [Fact]
-    public async Task EntryPage_SecondCall_ServedFromCache_InnerCalledOnce()
+    [Theory]
+    [InlineData(true, 25)]
+    [InlineData(true, 50)]
+    [InlineData(false, 25)]
+    public async Task EntryPage_RepeatedReads_PassThroughWithExactArguments(bool olderThenDate, int count)
     {
-        const int count = 50;
+        var date = _date.AddHours(12).AddTicks(123);
+        var adjacentDate = date.AddTicks(1);
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _date, count, true)).ReturnsAsync([Entry(2), Entry(1)]);
-        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+        inner.SetupSequence(r => r.Get(_accountId, date, count, olderThenDate))
+            .ReturnsAsync([Entry(2), Entry(1)])
+            .ReturnsAsync([Entry(3), Entry(2)]);
+        inner.Setup(r => r.Get(_accountId, adjacentDate, count, olderThenDate)).ReturnsAsync([Entry(4)]);
+        var sut = CreateSut(inner.Object, Mock.Of<IAccountUserResolver>(MockBehavior.Strict),
+            Mock.Of<ICacheInvalidator>(MockBehavior.Strict), CreateCache());
 
-        var first = await sut.Get(_accountId, _date, count, true);
-        var second = await sut.Get(_accountId, _date, count, true);
-
-        Assert.Equal([2, 1], first.Select(entry => entry.EntryId));
-        Assert.Equal([2, 1], second.Select(entry => entry.EntryId));
-        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Once);
-    }
-
-    [Fact]
-    public async Task EntryPage_DirectionAndPageSize_UseDifferentCacheKeys()
-    {
-        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.Get(_accountId, _date, 25, true)).ReturnsAsync([Entry(1)]);
-        inner.Setup(r => r.Get(_accountId, _date, 50, true)).ReturnsAsync([Entry(2)]);
-        inner.Setup(r => r.Get(_accountId, _date, 25, false)).ReturnsAsync([Entry(3)]);
-        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
-
-        Assert.Equal(1, Assert.Single(await sut.Get(_accountId, _date, 25, true)).EntryId);
-        Assert.Equal(2, Assert.Single(await sut.Get(_accountId, _date, 50, true)).EntryId);
-        Assert.Equal(3, Assert.Single(await sut.Get(_accountId, _date, 25, false)).EntryId);
+        Assert.Equal([2, 1], (await sut.Get(_accountId, date, count, olderThenDate)).Select(entry => entry.EntryId));
+        Assert.Equal([3, 2], (await sut.Get(_accountId, date, count, olderThenDate)).Select(entry => entry.EntryId));
+        Assert.Equal(4, Assert.Single(await sut.Get(_accountId, adjacentDate, count, olderThenDate)).EntryId);
+        inner.Verify(r => r.Get(_accountId, date, count, olderThenDate), Times.Exactly(2));
+        inner.Verify(r => r.Get(_accountId, adjacentDate, count, olderThenDate), Times.Once);
+        inner.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -292,54 +305,31 @@ public class CachedAccountEntryRepositoryTests
         inner.Verify(r => r.GetYoungest(_accountId), Times.Exactly(2));
     }
 
-    [Fact]
-    public async Task Update_BustsCachedEntryPage_NextReadHitsInnerAgain()
-    {
-        const int count = 50;
-        var cache = CreateCache();
-        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.SetupSequence(r => r.Get(_accountId, _date, count, true))
-            .ReturnsAsync([Entry(1, 100m)])
-            .ReturnsAsync([Entry(1, 175m)]);
-        inner.Setup(r => r.Update(It.IsAny<CurrencyAccountEntry>())).ReturnsAsync(true);
-        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), new CacheInvalidator(cache), cache);
-
-        var before = Assert.Single(await sut.Get(_accountId, _date, count, true));
-        await sut.Get(_accountId, _date, count, true);
-        await sut.Update(Entry(1, 175m));
-        var after = Assert.Single(await sut.Get(_accountId, _date, count, true));
-
-        Assert.Equal(100m, before.Value);
-        Assert.Equal(175m, after.Value);
-        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Exactly(2));
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task RecalculateValues_BustsCachedEntryPage_NextReadHitsInnerAgain(bool fromEntry)
+    public async Task RecalculateValues_BustsCachedPointReads_NextReadHitsInnerAgain(bool fromEntry)
     {
-        const int count = 50;
         const int entryId = 1;
         var cache = CreateCache();
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.SetupSequence(r => r.Get(_accountId, _date, count, true))
-            .ReturnsAsync([Entry(entryId, 100m)])
-            .ReturnsAsync([Entry(entryId, 175m)]);
+        inner.SetupSequence(r => r.GetYoungest(_accountId))
+            .ReturnsAsync(Entry(entryId, 100m))
+            .ReturnsAsync(Entry(entryId, 175m));
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), new CacheInvalidator(cache), cache);
 
-        var before = Assert.Single(await sut.Get(_accountId, _date, count, true));
-        await sut.Get(_accountId, _date, count, true);
+        var before = (await sut.GetYoungest(_accountId))!;
+        await sut.GetYoungest(_accountId);
 
         if (fromEntry)
             await sut.RecalculateValues(_accountId, entryId, TestContext.Current.CancellationToken);
         else
             await sut.RecalculateValues(_accountId, TestContext.Current.CancellationToken);
 
-        var after = Assert.Single(await sut.Get(_accountId, _date, count, true));
+        var after = (await sut.GetYoungest(_accountId))!;
 
         Assert.Equal(100m, before.Value);
         Assert.Equal(175m, after.Value);
-        inner.Verify(r => r.Get(_accountId, _date, count, true), Times.Exactly(2));
+        inner.Verify(r => r.GetYoungest(_accountId), Times.Exactly(2));
     }
 }
