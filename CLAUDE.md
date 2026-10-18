@@ -20,7 +20,7 @@ Always include the GitHub issue number being resolved in the commit message subj
 
 ### Branch naming
 
-Branch naming is **critical for the changelog to work**. Every changelog entry ends with `#<issue>` (see [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md)), and that number is sourced from the branch → commit → PR chain. If the branch doesn't carry the issue number, the link breaks and the entry can't be written correctly.
+Branch naming is **critical for the changelog to work**. Every changelog entry ends with `#<issue>` (see [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md)), and that number is sourced from the branch → commit → PR chain (and names the fragment file, `changelog/unreleased/<issue>-<slug>.md`). If the branch doesn't carry the issue number, the link breaks and the entry can't be written correctly.
 
 **Format**: `<issue-number>-<kebab-issue-title>`
 
@@ -38,7 +38,7 @@ Branch naming is **critical for the changelog to work**. Every changelog entry e
 
 **One issue per branch.** A branch must cover exactly one issue so the resulting commit, PR, and changelog entry all share a single `#<issue>` reference. If the work splits across multiple issues, split the branch.
 
-**No issue? Don't open the branch yet** — create the GitHub issue first so the number exists. Tiny, non-user-visible chores (CI tweaks, dependency bumps, doc typos) that won't get a changelog entry are the only acceptable exception; in that case use a short kebab-case description (`fix-ci-dotnet-test-mtp`) and skip the changelog edit.
+**No issue? Don't open the branch yet** — create the GitHub issue first so the number exists. Tiny, non-user-visible chores (CI tweaks, dependency bumps, doc typos) that won't get a changelog entry are the only acceptable exception; in that case use a short kebab-case description (`fix-ci-dotnet-test-mtp`) and skip the changelog fragment.
 
 ## Pull Requests
 
@@ -100,7 +100,7 @@ If after walking these checks the result is XL, **do not start coding**. Comment
 
 ## Changelog
 
-Every code change that has a user-visible effect must add an entry to `CHANGELOG.md` (Keep a Changelog format, CalVer `YY.M.D`). The rules — section headings, wording, issue references, and how to promote `[Unreleased]` — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Stage the changelog edit in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
+Every code change that has a user-visible effect must add a changelog fragment, `changelog/unreleased/<issue>-<slug>.md` (see [`changelog/README.md`](./changelog/README.md)). **Never edit `CHANGELOG.md` directly**: fragments accumulate until the developer asks an agent to compile them into a dated `YY.M.D` block. The rules — fragment format, section types, wording, and issue references — live in [`.claude/skills/changelog/SKILL.md`](./.claude/skills/changelog/SKILL.md). Validate with `dotnet run scripts/CompileChangelog.cs -- --check` and stage the fragment in the same commit as the code change. Pure refactors, test-only changes, CI tweaks, and dependency bumps without behavioural impact do not need a changelog entry.
 
 ## Agent Requirements
 

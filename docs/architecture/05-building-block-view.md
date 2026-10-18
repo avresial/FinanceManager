@@ -29,7 +29,8 @@ Additional repository areas:
 | [.github](../../.github) | CI/CD, labels, issue/PR templates, and Copilot instructions |
 | [.claude/skills](../../.claude/skills) | Repository agent workflows, including app usage, UI testing, and changelog instructions |
 | [resources](../../resources) | Checked-in non-code data, currently including currency-rate CSV input |
-| [scripts](../../scripts) | Repository utilities such as bank CSV encoding repair |
+| [scripts](../../scripts) | Repository utilities such as bank CSV encoding repair and the changelog fragment compiler |
+| [changelog](../../changelog/README.md) | Pending changelog fragments, compiled into `CHANGELOG.md` on request (CI only validates them) |
 | [ReadmeElements/Imgs](../../ReadmeElements/Imgs) | README visual assets |
 | [docs/architecture](README.md) | Architecture, detailed concepts, operations, quality evidence, and dated audits |
 | [README.md](../../README.md), [CHANGELOG.md](../../CHANGELOG.md), [CLAUDE.md](../../CLAUDE.md), [AGENTS.md](../../AGENTS.md) | Product entry point, release history, and governing contributor/agent instructions |
