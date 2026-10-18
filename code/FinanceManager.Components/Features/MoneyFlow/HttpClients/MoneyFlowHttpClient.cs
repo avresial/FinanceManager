@@ -90,6 +90,13 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         foreach (var r in results) yield return r;
     }
 
+    public async IAsyncEnumerable<SavingsRate> GetSavingsRate(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        var results = await httpClient.GetFromJsonAsync<List<SavingsRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetSavingsRate?userId={userId}&currencyId={currency.Id}&start={start:O}&end={end:O}");
+        if (results is null) throw new JsonException("The savings-rate response body was null.");
+        foreach (var rate in results) yield return rate;
+    }
+
     private static string AppendAccountIdsQuery(string endpoint, IReadOnlyCollection<int> accountIds)
     {
         if (accountIds.Count == 0) return endpoint;

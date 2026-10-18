@@ -15,7 +15,7 @@ namespace FinanceManager.Api.Features.MoneyFlow.Controllers;
 [ApiController]
 [Tags("Financial Analysis")]
 public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueService labelsValueService,
-    IInvestmentRateService investmentRateService, IBalanceService balanceService, ICurrencyRepository currencyRepository) : ControllerBase
+    IInvestmentRateService investmentRateService, ISavingsRateService savingsRateService, IBalanceService balanceService, ICurrencyRepository currencyRepository) : ControllerBase
 {
     [HttpGet("GetNetWorth/{userId:int}/{currencyId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
@@ -97,6 +97,13 @@ public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueS
     public async Task<IActionResult> GetInvestmentRate([FromQuery] int userId, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, [FromQuery] long? step = null, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
             ? Ok(await investmentRateService.GetInvestmentRate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end).ToListAsync(cancellationToken))
+            : Forbid();
+
+    [HttpGet("GetSavingsRate")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<SavingsRate>))]
+    public async Task<IActionResult> GetSavingsRate([FromQuery] int userId, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, CancellationToken cancellationToken = default) =>
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
+            ? Ok(await savingsRateService.GetSavingsRate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end).ToListAsync(cancellationToken))
             : Forbid();
 
 }

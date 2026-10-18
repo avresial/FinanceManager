@@ -27,6 +27,7 @@ public partial class Dashboard : ComponentBase
     [
         new(DashboardCards.NetWorth, DashboardCards.All.Single(card => card.Id == DashboardCards.NetWorth).Title, new(_full, _full)),
         new(DashboardCards.NetCashFlow, DashboardCards.All.Single(card => card.Id == DashboardCards.NetCashFlow).Title, new(_half, _full)),
+        new(DashboardCards.SavingsRate, DashboardCards.All.Single(card => card.Id == DashboardCards.SavingsRate).Title, new(_half, _half)),
         new(DashboardCards.CashFlowForecast, DashboardCards.All.Single(card => card.Id == DashboardCards.CashFlowForecast).Title, new(_third, _half)),
         new(DashboardCards.ClosingBalance, DashboardCards.All.Single(card => card.Id == DashboardCards.ClosingBalance).Title, new(_half, _full)),
         new(DashboardCards.Labels, DashboardCards.All.Single(card => card.Id == DashboardCards.Labels).Title, new(_third, _half)),

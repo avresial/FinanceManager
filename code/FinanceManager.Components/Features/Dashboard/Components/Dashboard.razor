@@ -58,6 +58,9 @@
                     <NetCashFlowOverviewCard Height="@DashboardCardGrid.CardHeight" StartDateTime="@DisplayStartDate"
                                              EndDateTime="@DisplayEndDate" Model="@NetCashFlowModel" />
                     break;
+                case DashboardCards.SavingsRate:
+                    <SavingsRateCard Height="@DashboardCardGrid.CardHeight" />
+                    break;
                 case DashboardCards.CashFlowForecast:
                     <CashFlowForecastCard Height="@DashboardCardGrid.CardHeight" />
                     break;

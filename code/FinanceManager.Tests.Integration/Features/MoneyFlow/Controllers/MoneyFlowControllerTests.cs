@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
@@ -45,7 +46,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
 #pragma warning disable CS0854
         var currencyRepoMock = new Mock<ICurrencyRepository>();
-        currencyRepoMock.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Range(0, 1).Select(_ => DefaultCurrency.USD));
+        currencyRepoMock.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>())).Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
 #pragma warning restore CS0854
 
         services.AddSingleton(currencyRepoMock.Object);
@@ -218,6 +219,21 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         Assert.NotNull(result);
         Assert.Equal((1 + days) * _valueChange, result.First().Value);
+    }
+
+    [Fact]
+    public async Task GetSavingsRate_ReturnsList()
+    {
+        await SeedWithTestCurrencyAccount();
+        Authorize("TestUser", 1, UserRole.User);
+        var start = _nowUtc.AddDays(-7);
+        var url = $"api/MoneyFlow/GetSavingsRate?userId=1&currencyId={DefaultCurrency.PLN.Id}&start={start:O}&end={_nowUtc:O}";
+
+        var result = await Client.GetFromJsonAsync<List<FinanceManager.Domain.MoneyFlow.Entities.SavingsRate>>(url, TestContext.Current.CancellationToken);
+
+        var rate = Assert.Single(result!);
+        Assert.Equal(8 * _valueChange, rate.Salary);
+        Assert.Equal(0m, rate.Spending);
     }
 
     [Fact]
@@ -600,6 +616,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         now => $"api/MoneyFlow/GetClosingBalance/2/{DefaultCurrency.USD.Id}/{now.AddDays(-7):O}/{now:O}",
         now => $"api/MoneyFlow/GetLabelsValue?userId=2&start={now.AddDays(-7):O}&end={now:O}",
         now => $"api/MoneyFlow/GetInvestmentRate?userId=2&currencyId={DefaultCurrency.USD.Id}&start={now.AddDays(-7):O}&end={now:O}",
+        now => $"api/MoneyFlow/GetSavingsRate?userId=2&currencyId={DefaultCurrency.PLN.Id}&start={now.AddDays(-7):O}&end={now:O}",
     };
 
     [Theory]

@@ -3,6 +3,7 @@ using FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
 using FinanceManager.Application.MoneyFlow.InvestmentRate;
 using FinanceManager.Application.MoneyFlow.LabelsValue;
 using FinanceManager.Application.MoneyFlow.NetWorth;
+using FinanceManager.Application.MoneyFlow.SavingsRate;
 using FinanceManager.Application.MoneyFlow.Spending;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
@@ -20,6 +21,7 @@ internal static class Registration
                 .AddScoped<ICashFlowForecastService, CashFlowForecastService>()
                 .AddScoped<ILabelsValueService, LabelsValueService>()
                 .AddScoped<IInvestmentRateService, InvestmentRateService>()
+                .AddScoped<ISavingsRateService, SavingsRateService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
                 .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()

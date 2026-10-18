@@ -1,0 +1,35 @@
+.savings-rate-card__chart {
+    width: 100%;
+    overflow: hidden;
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+}
+
+.savings-rate-card__chart-inner {
+    position: absolute;
+    inset: 0;
+}
+
+.savings-rate-card__chart ::deep .apexcharts-canvas {
+    background: transparent !important;
+}
+
+.savings-rate-card__chart ::deep .apexcharts-toolbar {
+    display: none !important;
+}
+
+.savings-rate-card__chart ::deep .apexcharts-bar-area {
+    cursor: pointer;
+}
+
+.savings-rate-card__month {
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font: inherit;
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+}
