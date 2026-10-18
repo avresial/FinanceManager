@@ -240,6 +240,7 @@ public class DashboardRefreshIndicatorTests
 
         AddCardStub<NetWorthTimeSeriesCard>(context, DashboardCards.NetWorth);
         AddCardStub<NetCashFlowOverviewCard>(context, DashboardCards.NetCashFlow);
+        AddCardStub<SavingsRateCard>(context, DashboardCards.SavingsRate);
         AddCardStub<CashFlowForecastCard>(context, DashboardCards.CashFlowForecast);
         AddCardStub<ClosingBalanceOverviewCard>(context, DashboardCards.ClosingBalance);
         AddCardStub<FinancialLabelsListCard>(context, DashboardCards.Labels);

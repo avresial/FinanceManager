@@ -146,6 +146,7 @@ screen a moment later. Splitting the request must not split the snapshot either.
 
 | Surface | Entry point |
 |---|---|
+| Savings rate card (12 monthly salary/spending values, scoped to user, display currency and current month) | [SavingsRateCard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Cards/SavingsRateCard.razor.cs) |
 | Dashboard overview | [Dashboard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Dashboard.razor.cs) |
 | Account transaction lists (currency, bond) | [AccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/AccountDetailsSnapshotStore.cs) |
 | Investment account trade list | [InvestmentAccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentAccountDetailsSnapshotStore.cs) |

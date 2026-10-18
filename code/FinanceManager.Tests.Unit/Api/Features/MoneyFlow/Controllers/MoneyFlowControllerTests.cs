@@ -21,6 +21,7 @@ public class MoneyFlowControllerTests
     private readonly Mock<INetWorthService> _mockNetWorthService;
     private readonly Mock<ILabelsValueService> _mockLabelsValueService;
     private readonly Mock<IInvestmentRateService> _mockInvestmentRateService;
+    private readonly Mock<ISavingsRateService> _mockSavingsRateService;
     private readonly Mock<IBalanceService> _mockBalanceService;
     private readonly Mock<ICurrencyRepository> _mockCurrencyRepository;
     private readonly MoneyFlowController _controller;
@@ -30,12 +31,13 @@ public class MoneyFlowControllerTests
         _mockNetWorthService = new Mock<INetWorthService>();
         _mockLabelsValueService = new Mock<ILabelsValueService>();
         _mockInvestmentRateService = new Mock<IInvestmentRateService>();
+        _mockSavingsRateService = new Mock<ISavingsRateService>();
         _mockBalanceService = new Mock<IBalanceService>();
         _mockCurrencyRepository = new Mock<ICurrencyRepository>();
         _mockCurrencyRepository.Setup(repo => repo.GetCurrencies(It.IsAny<CancellationToken>()))
             .Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
         _controller = new MoneyFlowController(_mockNetWorthService.Object, _mockLabelsValueService.Object,
-            _mockInvestmentRateService.Object, _mockBalanceService.Object, _mockCurrencyRepository.Object);
+            _mockInvestmentRateService.Object, _mockSavingsRateService.Object, _mockBalanceService.Object, _mockCurrencyRepository.Object);
 
         // Mock user identity
         var user = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, _testUserId.ToString())], "mock"));
@@ -44,6 +46,30 @@ public class MoneyFlowControllerTests
         {
             HttpContext = new DefaultHttpContext { User = user }
         };
+    }
+
+    [Fact]
+    public async Task GetSavingsRate_ReturnsRatesForAuthenticatedUser()
+    {
+        var start = new DateTime(2026, 1, 1);
+        var end = start.AddMonths(1);
+        var expected = new SavingsRate { Start = start, End = end, Salary = 1000m, Spending = 700m };
+        _mockSavingsRateService.Setup(x => x.GetSavingsRate(_testUserId, DefaultCurrency.PLN, start, end))
+            .Returns(new[] { expected }.ToAsyncEnumerable());
+
+        var result = await _controller.GetSavingsRate(_testUserId, DefaultCurrency.PLN.Id, start, end, TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Same(expected, Assert.IsType<List<SavingsRate>>(okResult.Value).Single());
+    }
+
+    [Fact]
+    public async Task GetSavingsRate_ForDifferentUser_ReturnsForbidden()
+    {
+        var result = await _controller.GetSavingsRate(_testUserId + 1, DefaultCurrency.PLN.Id, DateTime.Today, DateTime.Today, TestContext.Current.CancellationToken);
+
+        Assert.IsType<ForbidResult>(result);
+        _mockSavingsRateService.Verify(x => x.GetSavingsRate(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]

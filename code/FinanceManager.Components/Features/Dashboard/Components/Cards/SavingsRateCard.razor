@@ -1,0 +1,92 @@
+@using ApexCharts
+
+<MudCard Outlined Class="rounded-lg d-flex flex-column savings-rate-card" Style="@($"height:{Height};overflow:hidden;")">
+    <CardHeader Title="Savings rate"
+                InfoText="Share of salary kept: (salary − spending) / salary. Investment-classified outflows count as saved. Internal transfers count as spending unless labelled as Investment. No salary means no rate."
+                InfoAriaLabel="About savings rate card"
+                Subtitle="Salary kept after spending, including money invested." />
+    <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4 pt-1" Style="min-height:0;">
+        @if (_isLoading)
+        {
+            <MudText Typo="Typo.h3" Class="mb-1 text-muted">
+                <StringSpinner CharactersCount="6" />
+            </MudText>
+        }
+        else if (_hasError)
+        {
+            <MudText Class="mud-text-secondary" Typo="Typo.body2">Savings rate unavailable.</MudText>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-end gap-3 mb-2" style="row-gap:4px;">
+                @if (_currentMonthPercentage is decimal currentRate)
+                {
+                    <div class="d-flex align-baseline mr-auto">
+                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">@FormatRateNumber(currentRate)</MudText>
+                        <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary" Class="ml-1">%</MudText>
+                    </div>
+                }
+                else
+                {
+                    @* No salary in the period means no denominator — say so instead of showing a misleading rate. *@
+                    <div class="d-flex flex-column mr-auto">
+                        <MudText Class="mud-text-secondary" Typo="Typo.h5">No rate</MudText>
+                        <MudText Class="mud-text-secondary" Typo="Typo.caption">no salary this month</MudText>
+                    </div>
+                }
+
+            </div>
+
+            <div class="d-flex justify-space-between mb-1">
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">Monthly rate · last 12 months</MudText>
+                <MudText Class="mud-text-secondary" Typo="Typo.caption">avg @FormatAveragePercentage(_ytdAveragePercentage)</MudText>
+            </div>
+            @* The chart is laid out in an absolutely positioned inner box so ApexCharts' 100% height
+               resolves to the space left after the header and footer, instead of its 150px fallback
+               pushing the salary/spent/saved footer out of the card. *@
+            <div class="savings-rate-card__chart">
+                @if (_chartOptions is not null)
+                {
+                    <div class="savings-rate-card__chart-inner">
+                        <ApexChart TItem="MonthBar"
+                                   Options="@_chartOptions"
+                                   OnDataPointSelection="OnBarSelected"
+                                   @key="(_chartVersion, _selectedRateIndex)"
+                                   Height="@("100%")">
+                            <ApexPointSeries TItem="MonthBar"
+                                             Items="@_series"
+                                             Name="Rate"
+                                             SeriesType="SeriesType.Bar"
+                                             XValue="@(p => (object)p.Label)"
+                                             YValue="@(p => (decimal?)p.Percentage)"
+                                             PointColor="@(p => p.IsSelected ? _highlightColor : _mutedBarColor)" />
+                        </ApexChart>
+                    </div>
+                }
+            </div>
+
+            @* flex-grow:0 keeps the divider a thin line; MudDivider's default flex-grow:1 would stretch it vertically in this flex-column card. *@
+            <MudDivider Class="my-1" Style="flex-grow:0;" />
+            <select aria-label="Savings rate month" class="savings-rate-card__month" value="@_selectedRateIndex" @onchange="OnMonthChanged">
+                @for (var i = 0; i < MonthlySavingsRates.Count; i++)
+                {
+                    <option value="@i">@MonthlySavingsRates[i].Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</option>
+                }
+            </select>
+            <MudGrid Spacing="1">
+                <MudItem xs="4">
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">Salary</MudText>
+                    <MudText Typo="Typo.body2">@FormatAmount(SelectedMonthRate?.Salary ?? 0)</MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">Spent</MudText>
+                    <MudText Typo="Typo.body2">@FormatAmount(SelectedMonthRate?.Spending ?? 0)</MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudText Class="mud-text-secondary" Typo="Typo.caption">Saved</MudText>
+                    <MudText Typo="Typo.body2" Color="@(SelectedMonthRate?.Saved < 0 ? MudBlazor.Color.Error : MudBlazor.Color.Success)">@FormatChange(SelectedMonthRate?.Saved ?? 0)</MudText>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudCardContent>
+</MudCard>

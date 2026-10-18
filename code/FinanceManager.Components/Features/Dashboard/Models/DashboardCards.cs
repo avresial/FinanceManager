@@ -12,6 +12,7 @@ public static class DashboardCards
 {
     public const string NetWorth = "net-worth";
     public const string NetCashFlow = "net-cash-flow";
+    public const string SavingsRate = "savings-rate";
     public const string ClosingBalance = "closing-balance";
     public const string Liabilities = "liabilities";
     public const string Labels = "labels";
@@ -28,6 +29,7 @@ public static class DashboardCards
     [
         new(NetWorth, "Net worth"),
         new(NetCashFlow, "Net cash flow"),
+        new(SavingsRate, "Savings rate"),
         new(ClosingBalance, "Closing balance"),
         new(Liabilities, "Liabilities"),
         new(Labels, "Financial labels"),
