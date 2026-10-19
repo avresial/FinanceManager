@@ -1,40 +1,39 @@
 @using FinanceManager.Components.Shared.Helpers
 
 <div class="fm-dashboard-datepicker-container">
-    <MudPaper Outlined="true" Elevation="0" Class="rounded-pill fm-dashboard-datepicker-pill">
-        <MudMenu Open="_isMenuOpen"
-                 OpenChanged="OnMenuOpenChanged"
-                 Dense="true"
-                 AnchorOrigin="Origin.BottomRight"
-                 TransformOrigin="Origin.TopRight"
-                 Class="fm-dashboard-datepicker-menu"
-                 PopoverClass="fm-dashboard-datepicker-popover"
-                 aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
-            <ActivatorContent>
-                <MudButton StartIcon="@Icons.Material.Filled.CalendarMonth" EndIcon="@Icons.Material.Filled.ArrowDropDown"
-                           OnClick="@(() => OnMenuOpenChanged(!_isMenuOpen))" aria-label="@($"Date range: {CurrentDisplayLabel}")"
-                           aria-haspopup="menu" aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
-                    <span class="fm-range-label">@CurrentDisplayLabel</span>
-                    <span class="fm-range-label-compact">@CompactDisplayLabel</span>
-                </MudButton>
-            </ActivatorContent>
-            <ChildContent>
-                @foreach (var (key, label) in _presets)
-                {
-                    <MudMenuItem OnClick="@(() => SelectPreset(key))"
-                                 Icon="@(_selected == key ? Icons.Material.Filled.Check : null)">
-                        <span class="@(_selected == key ? "fm-dashboard-datepicker-option-selected" : null)">@label</span>
-                    </MudMenuItem>
-                }
-
-                <MudDivider />
-                <MudMenuItem OnClick="OpenCustomDateRangePicker"
-                             Icon="@(_selected == DateRangeHelper.CustomRangeKey ? Icons.Material.Filled.Check : Icons.Material.Filled.DateRange)">
-                    <span class="@(_selected == DateRangeHelper.CustomRangeKey ? "fm-dashboard-datepicker-option-selected" : null)">Custom range…</span>
+    <MudMenu Open="_isMenuOpen"
+             OpenChanged="OnMenuOpenChanged"
+             Dense="true"
+             AnchorOrigin="Origin.BottomRight"
+             TransformOrigin="Origin.TopRight"
+             Class="fm-dashboard-datepicker-menu"
+             PopoverClass="fm-dashboard-datepicker-popover"
+             aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
+        <ActivatorContent>
+            <MudButton StartIcon="@Icons.Material.Filled.CalendarMonth" EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                       Class="fm-dashboard-datepicker-trigger"
+                       OnClick="@(() => OnMenuOpenChanged(!_isMenuOpen))" aria-label="@($"Date range: {CurrentDisplayLabel}")"
+                       aria-haspopup="menu" aria-expanded="@_isMenuOpen.ToString().ToLowerInvariant()">
+                <span class="fm-range-label">@CurrentDisplayLabel</span>
+                <span class="fm-range-label-compact">@CompactDisplayLabel</span>
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            @foreach (var (key, label) in _presets)
+            {
+                <MudMenuItem OnClick="@(() => SelectPreset(key))"
+                             Icon="@(_selected == key ? Icons.Material.Filled.Check : null)">
+                    <span class="@(_selected == key ? "fm-dashboard-datepicker-option-selected" : null)">@label</span>
                 </MudMenuItem>
-            </ChildContent>
-        </MudMenu>
-    </MudPaper>
+            }
+
+            <MudDivider />
+            <MudMenuItem OnClick="OpenCustomDateRangePicker"
+                         Icon="@(_selected == DateRangeHelper.CustomRangeKey ? Icons.Material.Filled.Check : Icons.Material.Filled.DateRange)">
+                <span class="@(_selected == DateRangeHelper.CustomRangeKey ? "fm-dashboard-datepicker-option-selected" : null)">Custom range…</span>
+            </MudMenuItem>
+        </ChildContent>
+    </MudMenu>
 </div>
 
 @* Hidden picker opened programmatically by the Custom range option; the Dialog variant matches
