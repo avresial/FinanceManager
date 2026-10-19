@@ -17,7 +17,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 /// </summary>
 public partial class TransactionsPage : ComponentBase, IDisposable
 {
-    internal const int PageSize = 25;
+    public const int PageSize = 25;
     private const string _defaultRange = "3M";
 
     private readonly RefreshVersionGate _loadGate = new();
@@ -133,8 +133,10 @@ public partial class TransactionsPage : ComponentBase, IDisposable
                 _nextCursor = page.NextCursor;
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
+            // Cancelled by a newer load (or disposal), which now owns the loading state. An HttpClient
+            // timeout also surfaces as a cancellation but is a failure, so it falls through to the error path.
             return;
         }
         catch (Exception ex)

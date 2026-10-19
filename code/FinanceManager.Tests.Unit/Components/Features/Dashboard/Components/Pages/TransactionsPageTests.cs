@@ -224,6 +224,17 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
+    public async Task TimedOutFirstPage_ShowsErrorInsteadOfLoadingForever()
+    {
+        using var handler = new PageHandler((_, _) => Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout")));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transactions-error']")));
+        Assert.Empty(cut.FindAll("[data-testid='transactions-loading']"));
+    }
+
+    [Fact]
     public async Task FailedLoadMore_KeepsShownRows_AndRetriesTheSamePage()
     {
         var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
