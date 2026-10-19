@@ -30,6 +30,7 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.AssetListingId);
         builder.HasIndex(x => x.AccountId);
+        builder.HasIndex(x => new { x.AccountId, x.TradeDate, x.Id });
         builder.HasIndex(x => new { x.UserId, x.TradeDate });
         builder.HasIndex(x => new { x.UserId, x.AssetListingId });
     }
