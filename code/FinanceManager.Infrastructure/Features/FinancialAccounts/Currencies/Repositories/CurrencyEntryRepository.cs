@@ -555,6 +555,36 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetHistoryPage(
+        IReadOnlyCollection<int> accountIds,
+        DateTime startDate,
+        DateTime endDate,
+        int take,
+        DateTime? cursorPostingDate = null,
+        int? cursorId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (cursorPostingDate.HasValue != cursorId.HasValue)
+            throw new ArgumentException("Both cursor posting date and entry id must be supplied together.");
+        if (startDate > endDate)
+            throw new ArgumentException("Start date must be on or before end date.", nameof(startDate));
+        if (accountIds.Count == 0 || take <= 0) return [];
+
+        var query = context.CurrencyEntries.AsNoTracking()
+            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate);
+
+        if (cursorPostingDate is DateTime date && cursorId is int id)
+            query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));
+
+        return await query
+            .Include(e => e.Labels)
+            .ThenInclude(l => l.Classifications)
+            .OrderByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<CurrencyAccountEntry>> GetMostRecentByAccounts(
         IReadOnlyCollection<int> accountIds,
         int count,

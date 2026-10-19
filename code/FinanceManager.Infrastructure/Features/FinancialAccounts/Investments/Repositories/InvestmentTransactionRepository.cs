@@ -255,6 +255,36 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetHistoryPage(
+        IReadOnlyCollection<int> accountIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        int take,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (cursorTradeDate.HasValue != cursorId.HasValue)
+            throw new ArgumentException("Both cursor trade date and transaction id must be supplied together.");
+        if (startDate > endDate)
+            throw new ArgumentException("Start date must be on or before end date.", nameof(startDate));
+        if (accountIds.Count == 0 || take <= 0) return [];
+
+        var query = context.InvestmentTransactions.AsNoTracking()
+            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate >= startDate && x.TradeDate <= endDate);
+
+        if (cursorTradeDate is DateOnly date && cursorId is long id)
+            query = query.Where(x => x.TradeDate < date || (x.TradeDate == date && x.Id < id));
+
+        return await query
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.Asset)
+            .OrderByDescending(x => x.TradeDate)
+            .ThenByDescending(x => x.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
         int accountId,
         int pageSize,

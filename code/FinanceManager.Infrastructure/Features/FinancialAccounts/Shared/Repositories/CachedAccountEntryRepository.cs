@@ -188,6 +188,16 @@ public class CachedAccountEntryRepository<T>(
         inner.Get(accountId, date, count, olderThenDate);
     public Task<T?> Get(int accountId, int entryId) => inner.Get(accountId, entryId);
     public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
+    public Task<IReadOnlyList<T>> GetHistoryPage(
+        IReadOnlyCollection<int> accountIds,
+        DateTime startDate,
+        DateTime endDate,
+        int take,
+        DateTime? cursorPostingDate = null,
+        int? cursorId = null,
+        CancellationToken cancellationToken = default) =>
+        inner.GetHistoryPage(accountIds, startDate, endDate, take, cursorPostingDate, cursorId, cancellationToken);
+
     public Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default) => inner.GetMostRecentByAccounts(accountIds, count, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
     public Task<T?> GetNextYounger(int accountId, int entryId) => inner.GetNextYounger(accountId, entryId);
