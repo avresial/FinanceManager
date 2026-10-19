@@ -18,6 +18,27 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Layout;
 [Trait("Category", "Unit")]
 public class NavMenuTests
 {
+    [Fact]
+    public async Task TransactionsLink_PointsToTransactionsPage()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        context.Services.AddSingleton(Mock.Of<ILoginService>());
+        context.Services.AddSingleton(new AccountDataSynchronizationService());
+        context.Services.AddSingleton(new NavMenuStateCacheService(
+            Mock.Of<ILocalStorageService>(), new MemoryCache(new MemoryCacheOptions()),
+            Mock.Of<IFinancialAccountService>(), new AssetsHttpClient(new HttpClient()),
+            new LiabilitiesHttpClient(new HttpClient()), NullLogger<NavMenuStateCacheService>.Instance));
+
+        var cut = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, true));
+
+        var link = cut.Find("[data-testid='nav-transactions']");
+        Assert.Equal("Transactions", link.TextContent.Trim());
+        Assert.EndsWith("Transactions", link.GetAttribute("href"));
+    }
+
     [Theory]
     [InlineData(true, "FinanceManager")]
     [InlineData(false, "FM")]

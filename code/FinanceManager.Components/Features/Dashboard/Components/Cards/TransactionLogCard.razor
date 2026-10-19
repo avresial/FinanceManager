@@ -1,10 +1,17 @@
 @using FinanceManager.Domain.Dashboard.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 
-<MudCard Outlined Class="rounded-lg d-flex flex-column fm-txlog-card" Style="@($"height:{Height};")">
+<MudCard Outlined Class="rounded-lg d-flex flex-column fm-txlog-card fm-txlog-scope" Style="@($"height:{Height};")">
     <CardHeader Title="Transaction log"
                 InfoText="Your latest transactions from all accounts, newest first."
-                InfoAriaLabel="About transaction log card" />
+                InfoAriaLabel="About transaction log card">
+        <Actions>
+            <MudButton Href="/Transactions" Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                       aria-label="See all transactions">
+                View all
+            </MudButton>
+        </Actions>
+    </CardHeader>
     <MudDivider Class="flex-grow-0" />
 
     <ScrollFadeArea Class="mud-card-content flex-grow-1 overflow-y-auto py-0 px-2" Style="min-height:0;">
@@ -42,32 +49,12 @@
         }
         else if (_data.Count != 0)
         {
-            <MudList T="TransactionLogEntryDto" Dense ReadOnly DisablePadding>
+            <div class="fm-txlog-list py-1">
                 @foreach (var entry in _data)
                 {
-                    <MudListItem T="TransactionLogEntryDto" Class="fm-list-item">
-                        <div class="d-flex align-center fm-row">
-                            <MudAvatar Rounded Size="Size.Medium" Class="@($"fm-chip {(entry.ValueChange >= 0 ? "fm-tint-pos" : "fm-tint-neg")}")">
-                                <MudIcon Icon="@GetAccountTypeIcon(entry.AccountType)" Size="Size.Small" />
-                            </MudAvatar>
-                            <div class="flex-grow-1" style="min-width:0;">
-                                <div class="d-flex justify-space-between align-baseline gap-2">
-                                    <MudText Typo="Typo.body2" Class="fm-name text-truncate">
-                                        @(string.IsNullOrWhiteSpace(entry.Description) ? entry.AccountName : entry.Description)
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Class="@($"fm-amount {(entry.ValueChange >= 0 ? "fm-pos" : "fm-neg")}")">
-                                        @FormatAmount(entry.ValueChange)
-                                    </MudText>
-                                </div>
-                                <div class="d-flex justify-space-between align-center gap-2">
-                                    <MudText Typo="Typo.caption" Class="fm-muted text-truncate">@entry.AccountName</MudText>
-                                    <MudText Typo="Typo.caption" Class="fm-muted" Style="white-space:nowrap;">@DateFormatter.Format(entry.Date)</MudText>
-                                </div>
-                            </div>
-                        </div>
-                    </MudListItem>
+                    <TransactionLogRow Entry="entry" />
                 }
-            </MudList>
+            </div>
         }
         else
         {

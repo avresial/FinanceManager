@@ -1,0 +1,34 @@
+/* Same compact look as the account details toolbar (AccountHistoryToolbar.razor.css), reduced to the
+   date-range control. */
+.fm-tx-toolbar {
+    --fm-toolbar-control-height: 32px;
+}
+
+.fm-tx-toolbar ::deep .mud-button-root.mud-button-outlined-default {
+    border-color: var(--mud-palette-lines-inputs) !important;
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.fm-tx-toolbar ::deep .fm-range-button {
+    height: var(--fm-toolbar-control-height);
+    box-sizing: border-box;
+    text-transform: none;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    padding: 4px 0 4px 8px;
+    min-width: 0;
+}
+
+.fm-tx-toolbar ::deep .fm-range-button .mud-button-icon-end {
+    margin-left: 0;
+}
+
+.fm-tx-toolbar ::deep .fm-range-button .mud-icon-root {
+    font-size: 1.125rem;
+}
+
+/* The custom date-range picker is driven entirely by the date-range menu and opened
+   programmatically as a dialog; hide only its inline input so the menu item is the trigger. */
+.fm-custom-range-picker ::deep .mud-picker > .mud-input-control {
+    display: none;
+}

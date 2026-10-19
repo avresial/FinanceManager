@@ -1,13 +1,13 @@
-/* Styles for TransactionLogCard ("Transaction log"). Shipped as a plain
+/* Styles for the transaction log rows — TransactionLogCard and the Transactions page. Shipped as a plain
    (non-isolated) stylesheet and linked from index.html — like
    money-by-label-card.css — because these classes sit on MudBlazor components
    (MudText, MudAvatar), whose rendered elements don't carry this component's
    scoped-CSS attribute, so .razor.css isolation can't reach them. Everything is
-   nested under .fm-txlog-card to avoid collisions.
+   nested under .fm-txlog-scope to avoid collisions.
 
    The money green/red tokens mirror money-by-label-card.css and flip under
    prefers-color-scheme: dark, which is how this app flips theme. */
-.fm-txlog-card {
+.fm-txlog-scope {
     --fm-pos: #2E7D32;
     --fm-neg: #C62828;
     --fm-tint-pos: rgba(46, 125, 50, 0.15);
@@ -15,7 +15,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-    .fm-txlog-card {
+    .fm-txlog-scope {
         --fm-pos: #66BB6A;
         --fm-neg: #EF5350;
         --fm-tint-pos: rgba(102, 187, 106, 0.18);
@@ -24,62 +24,62 @@
 }
 
 /* Tabular figures keep amounts aligned across rows. */
-.fm-txlog-card .fm-amount {
+.fm-txlog-scope .fm-amount {
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
-.fm-txlog-card .fm-pos {
+.fm-txlog-scope .fm-pos {
     color: var(--fm-pos);
 }
 
-.fm-txlog-card .fm-neg {
+.fm-txlog-scope .fm-neg {
     color: var(--fm-neg);
 }
 
-.fm-txlog-card .fm-name {
+.fm-txlog-scope .fm-name {
     font-weight: 500;
 }
 
 /* Neutral muted text — the app's MudTheme paints Color.Secondary as a gold brand
    accent, so muted grey comes from the palette's text-secondary token instead. */
-.fm-txlog-card .fm-muted {
+.fm-txlog-scope .fm-muted {
     color: var(--mud-palette-text-secondary);
 }
 
 /* Row layout — leading chip gap mirrors the labels card density. */
-.fm-txlog-card .fm-row {
+.fm-txlog-scope .fm-row {
     gap: 12px;
     width: 100%;
 }
 
 /* Denser rows — trim the stock MudListItem vertical padding. */
-.fm-txlog-card .fm-list-item {
+.fm-txlog-scope .fm-list-item {
     padding-top: 3px;
     padding-bottom: 3px;
 }
 
 /* Leading icon chip sized to span the full two-line row. */
-.fm-txlog-card .fm-chip {
+.fm-txlog-scope .fm-chip {
     width: 40px;
     height: 40px;
     flex-shrink: 0;
 }
 
 /* Leading icon chip — tinted square behind a money-coloured icon. */
-.fm-txlog-card .fm-tint-pos {
+.fm-txlog-scope .fm-tint-pos {
     background-color: var(--fm-tint-pos);
     color: var(--fm-pos);
 }
 
-.fm-txlog-card .fm-tint-neg {
+.fm-txlog-scope .fm-tint-neg {
     background-color: var(--fm-tint-neg);
     color: var(--fm-neg);
 }
 
 /* Empty / error states — centred stack filling the card body. */
-.fm-txlog-card .fm-state {
+.fm-txlog-scope .fm-state {
     height: 100%;
     min-height: 180px;
     display: flex;
@@ -92,7 +92,7 @@
 }
 
 /* Soft circular backdrop behind the empty-state glyph. */
-.fm-txlog-card .fm-state-icon {
+.fm-txlog-scope .fm-state-icon {
     width: 64px;
     height: 64px;
     border-radius: 50%;
@@ -100,4 +100,44 @@
     align-items: center;
     justify-content: center;
     background-color: var(--mud-palette-action-default-hover);
+}
+
+/* The whole row is a link to the owning account: keep the text colours, drop the underline,
+   and give it the hover/focus feedback a list item has. */
+.fm-txlog-scope .fm-txlog-link {
+    display: block;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: var(--mud-default-borderradius);
+    color: inherit;
+    text-decoration: none;
+}
+
+.fm-txlog-scope .fm-txlog-link:hover,
+.fm-txlog-scope .fm-txlog-link:focus-visible {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* Day header on the Transactions page; sticks under the app bar while its day scrolls. */
+.fm-txlog-scope .fm-txlog-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 16px;
+    position: sticky;
+    top: var(--mud-appbar-height, 64px);
+    z-index: 1;
+    background-color: var(--mud-palette-surface);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.fm-txlog-scope .fm-txlog-day-rows {
+    padding: 4px 8px;
+}
+
+/* The toolbar row scrolls itself instead of pushing a phone-width page into horizontal overflow. */
+.fm-txlog-scope .fm-txlog-toolbar-row {
+    min-height: 40px;
+    overflow-x: auto;
 }
