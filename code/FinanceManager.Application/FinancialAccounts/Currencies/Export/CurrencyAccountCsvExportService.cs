@@ -28,14 +28,4 @@ public class CurrencyAccountCsvExportService(ICurrencyAccountExportService curre
         return writer.ToString();
     }
 
-    public string GetExportResults(IReadOnlyList<CurrencyAccountExportDto> entries)
-    {
-        using var writer = new StringWriter(CultureInfo.InvariantCulture);
-        using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.Context.RegisterClassMap<CurrencyAccountExportDtoMap>();
-        csv.WriteHeader<CurrencyAccountExportDto>();
-        csv.NextRecord();
-        csv.WriteRecords(entries);
-        return writer.ToString();
-    }
 }

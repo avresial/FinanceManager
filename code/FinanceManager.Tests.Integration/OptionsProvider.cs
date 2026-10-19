@@ -1,4 +1,3 @@
-using FinanceManager.Infrastructure;
 using Microsoft.Extensions.Configuration;
 
 namespace FinanceManager.Tests.Integration;
@@ -9,7 +8,7 @@ public sealed class OptionsProvider
 
     public OptionsProvider() => _configuration = GetConfigurationRoot();
 
-    public T Get<T>(string sectionName) where T : class, new() => _configuration.GetOptions<T>(sectionName);
+    public T Get<T>(string sectionName) where T : class, new() => _configuration.GetSection(sectionName).Get<T>() ?? new T();
 
     private static IConfigurationRoot GetConfigurationRoot()
         => new ConfigurationBuilder()

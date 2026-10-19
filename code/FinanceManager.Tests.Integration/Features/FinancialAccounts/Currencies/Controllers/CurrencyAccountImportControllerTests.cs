@@ -86,7 +86,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         ];
 
         // act
-        var result = await new CurrencyAccountImportHttpClient(Client).ImportCurrencyEntriesAsync(new(_testAccountId, entries));
+        var result = await ImportEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -126,7 +126,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         ];
 
         // act
-        var result = await new CurrencyAccountImportHttpClient(Client).ImportCurrencyEntriesAsync(new(_testAccountId, entries));
+        var result = await ImportEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -152,7 +152,6 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new CurrencyAccountImportHttpClient(Client);
         var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
@@ -163,7 +162,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         var dto = new CurrencyDataImportDto(_testAccountId, entries);
 
         // act
-        var result = await client.ImportCurrencyEntriesAsync(dto);
+        var result = await ImportEntriesAsync(dto);
 
         // assert
         Assert.NotNull(result);
@@ -181,7 +180,6 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new CurrencyAccountImportHttpClient(Client);
         var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
@@ -189,7 +187,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         List<CurrencyEntryImportRecordDto> entries = [new(conflictDate, conflictValue)];
 
         // act
-        var result = await client.ImportCurrencyEntriesAsync(new(_testAccountId, entries));
+        var result = await ImportEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -207,14 +205,13 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // arrange
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new CurrencyAccountImportHttpClient(Client);
         var conflictDate = _utcNow.Date.AddDays(-3).AddHours(12);
         var conflictValue = 25m;
         await SeedExistingEntryExactMatch(conflictDate, conflictValue);
         List<CurrencyEntryImportRecordDto> entries = [new(conflictDate, conflictValue), new(conflictDate, conflictValue)];
 
         // act
-        var result = await client.ImportCurrencyEntriesAsync(new(_testAccountId, entries));
+        var result = await ImportEntriesAsync(new(_testAccountId, entries));
 
         // assert
         Assert.NotNull(result);
@@ -238,7 +235,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         var importValue = 5m;
         await SeedExistingEntryExactMatch(existingDate, existingValue);
         var dto = new CurrencyDataImportDto(_testAccountId, [new(existingDate, importValue)]);
-        var importResult = await client.ImportCurrencyEntriesAsync(dto);
+        var importResult = await ImportEntriesAsync(dto);
         Assert.NotNull(importResult);
         var existingEntry = importResult.Conflicts[1].ExistingEntry;
         Assert.NotNull(existingEntry);
@@ -269,7 +266,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         var importValue = 5m;
         var importDescription = "Import description";
         await SeedExistingEntryExactMatch(existingDate, existingValue);
-        var importResult = await client.ImportCurrencyEntriesAsync(new(_testAccountId, [new(existingDate, importValue, Description: importDescription)]));
+        var importResult = await ImportEntriesAsync(new(_testAccountId, [new(existingDate, importValue, Description: importDescription)]));
         Assert.NotNull(importResult);
         var existingEntry = importResult.Conflicts[1].ExistingEntry;
         Assert.NotNull(existingEntry);
@@ -294,5 +291,13 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         _testDatabase?.Dispose();
         _testDatabase = null;
         GC.SuppressFinalize(this);
+    }
+
+    private async Task<ImportResult?> ImportEntriesAsync(CurrencyDataImportDto importDto)
+    {
+        using var response = await Client.PostAsJsonAsync(
+            "api/CurrencyAccountImport/ImportCurrencyEntries", importDto, TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ImportResult>(TestContext.Current.CancellationToken);
     }
 }

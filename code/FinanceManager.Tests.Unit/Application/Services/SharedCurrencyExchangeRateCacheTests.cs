@@ -53,14 +53,10 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         await sut.GetExchangeRateAsync(_usd, _eur, start.AddDays(1));
         _repository.Invocations.Clear();
 
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(_usd, _eur, start, start.AddDays(1));
+        var range = await sut.GetExchangeRateAsync(_usd, _eur, start, start.AddDays(1));
 
         Assert.Equal(2, range.Count);
-        Assert.All(range, rate =>
-        {
-            Assert.Equal(0.91m, rate.Value);
-            Assert.Equal(CurrencyExchangeRateSource.Stored, rate.Source);
-        });
+        Assert.All(range, rate => Assert.Equal(0.91m, rate.Value));
         _repository.VerifyNoOtherCalls();
         _provider.VerifyNoOtherCalls();
     }
@@ -74,10 +70,9 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         Assert.Equal(0.5m, await sut.GetExchangeRateAsync(_usd, _eur, date));
         _repository.Invocations.Clear();
 
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(_usd, _eur, date, date);
+        var range = await sut.GetExchangeRateAsync(_usd, _eur, date, date);
 
         Assert.Equal(0.5m, Assert.Single(range).Value);
-        Assert.Equal(CurrencyExchangeRateSource.Stored, range[0].Source);
         _repository.VerifyNoOtherCalls();
         _provider.VerifyNoOtherCalls();
     }
@@ -92,12 +87,12 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         _repository.Invocations.Clear();
         _provider.Invocations.Clear();
 
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(
+        var range = await sut.GetExchangeRateAsync(
             new Currency(_usd.Id, " usd ", "$"), new Currency(_eur.Id, "eur", "€"),
             start.AddDays(1).AddHours(19), start.AddHours(3));
 
         Assert.Equal([start, start.AddDays(1)], range.Select(rate => rate.Date));
-        Assert.All(range, rate => Assert.Equal(CurrencyExchangeRateSource.Provider, rate.Source));
+        Assert.All(range, rate => Assert.Equal(0.92m, rate.Value));
         _repository.VerifyNoOtherCalls();
         _provider.VerifyNoOtherCalls();
     }
@@ -139,14 +134,13 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         _repository.Invocations.Clear();
         _provider.Invocations.Clear();
 
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(_usd, _eur, start, start.AddDays(124));
+        var range = await sut.GetExchangeRateAsync(_usd, _eur, start, start.AddDays(124));
 
         Assert.Equal(125, range.Count);
         Assert.Equal(60, range.Count(rate => rate.Value == 0.94m));
         foreach (var i in new[] { 121, 123 })
         {
             Assert.Equal(0.92m, range[i].Value);
-            Assert.Equal(CurrencyExchangeRateSource.CarriedForward, range[i].Source);
         }
         _provider.Verify(x => x.GetExchangeRateAsync(_usd, _eur, start.AddDays(1), start.AddDays(119)), Times.Once);
         _provider.VerifyNoOtherCalls();
@@ -157,8 +151,9 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
 
         // Placeholders remain misses on the next request, so backfill continues.
         _provider.Invocations.Clear();
-        var refreshed = await sut.GetExchangeRateRangeWithProvenanceAsync(_usd, _eur, start, start.AddDays(124));
-        Assert.DoesNotContain(refreshed, rate => rate.Source == CurrencyExchangeRateSource.CarriedForward);
+        var refreshed = await sut.GetExchangeRateAsync(_usd, _eur, start, start.AddDays(124));
+        Assert.Equal(0.94m, refreshed[121].Value);
+        Assert.Equal(0.94m, refreshed[123].Value);
         _provider.Verify(x => x.GetExchangeRateAsync(_usd, _eur, start.AddDays(121), start.AddDays(123)), Times.Once);
         _provider.VerifyNoOtherCalls();
     }
@@ -172,11 +167,11 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
             .ReturnsAsync(new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound));
         var sut = CreateSut();
 
-        var point = await sut.GetExchangeRateWithSourceAsync(gbp, _eur, date);
-        Assert.Equal(CurrencyExchangeRateSource.DerivedViaUsd, point.Source);
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(gbp, _eur, date, date);
+        var point = await sut.GetExchangeRateResultAsync(gbp, _eur, date);
+        Assert.Equal(0.92m * 0.92m, point.Value);
+        var range = await sut.GetExchangeRateAsync(gbp, _eur, date, date);
+        Assert.Equal(0.94m, Assert.Single(range).Value);
 
-        Assert.Equal(CurrencyExchangeRateSource.Provider, Assert.Single(range).Source);
         Assert.Equal(0.94m, await sut.GetExchangeRateAsync(gbp, _eur, date));
         _provider.Verify(x => x.GetExchangeRateAsync(gbp, _eur, date, date), Times.Once);
     }
@@ -218,10 +213,9 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         var sut = CreateSut();
 
         Assert.Equal(1m, await sut.GetExchangeRateAsync(_usd, _usd, date));
-        var range = await sut.GetExchangeRateRangeWithProvenanceAsync(_usd, _usd, date, date);
+        var range = await sut.GetExchangeRateAsync(_usd, _usd, date, date);
 
-        Assert.Equal(CurrencyExchangeRateSource.SameCurrency, Assert.Single(range).Source);
-        Assert.Equal(1m, range[0].Value);
+        Assert.Equal(1m, Assert.Single(range).Value);
         _repository.VerifyNoOtherCalls();
         _provider.VerifyNoOtherCalls();
     }

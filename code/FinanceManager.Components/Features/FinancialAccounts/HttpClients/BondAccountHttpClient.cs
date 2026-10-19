@@ -36,13 +36,6 @@ public class BondAccountHttpClient(HttpClient httpClient)
         int minimumEntryCount = 100) =>
         GetAccountWithEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
-    public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
-    {
-        var encodedDate = Uri.EscapeDataString(date.ToString("O"));
-        var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}/entries?date={encodedDate}&count={count}&olderThenDate={olderThenDate.ToString().ToLowerInvariant()}");
-        return MapAccount(result);
-    }
-
     private static BondAccount? MapAccount(BondAccountDto? result)
     {
         if (result is null) return null;

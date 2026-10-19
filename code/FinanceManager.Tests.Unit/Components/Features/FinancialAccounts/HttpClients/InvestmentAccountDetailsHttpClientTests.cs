@@ -18,24 +18,6 @@ namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.HttpCl
 public class InvestmentAccountDetailsHttpClientTests
 {
     [Fact]
-    public async Task GetByAccountAsync_FailedRequest_Throws()
-    {
-        var client = new InvestmentTransactionHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
-
-        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetByAccountAsync(1));
-    }
-
-    [Theory]
-    [InlineData(HttpStatusCode.NoContent)]
-    [InlineData(HttpStatusCode.NotFound)]
-    public async Task GetByAccountAsync_AccountWithoutTrades_ReturnsEmptyList(HttpStatusCode statusCode)
-    {
-        var client = new InvestmentTransactionHttpClient(CreateHttpClient(new HttpResponseMessage(statusCode)));
-
-        Assert.Empty(await client.GetByAccountAsync(1));
-    }
-
-    [Fact]
     public async Task GetHistoryPageAsync_SendsCursorAndServerFilters()
     {
         var handler = new StubHandler(new HttpResponseMessage(HttpStatusCode.OK)

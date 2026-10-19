@@ -29,12 +29,6 @@ public class AssetsHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
-    {
-        var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>($"{httpClient.BaseAddress}api/Assets/GetAssetsTimeSeries/{userId}/{currency.Id}/{start:O}/{end:O}/{investmentType}");
-        return result ?? [];
-    }
-
     public async Task<MoneyWeightedReturnResult> GetMoneyWeightedReturn(
         int userId,
         Currency currency,
@@ -92,12 +86,6 @@ public class AssetsHttpClient(HttpClient httpClient)
         return await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
     }
 
-    public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
-    {
-        var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossAccountResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerAccount/{userId}/{currency.Id}/{asOfDate:O}");
-        return result ?? [];
-    }
-
     public async Task<UnrealizedGainLossAccountResult?> GetUnrealizedGainLossForAccount(
         int userId,
         int accountId,
@@ -113,12 +101,6 @@ public class AssetsHttpClient(HttpClient httpClient)
 
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
-    }
-
-    public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
-    {
-        var result = await httpClient.GetFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>($"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossPerInstrument/{userId}/{currency.Id}/{asOfDate:O}");
-        return result ?? [];
     }
 
     public async Task<FeeDragAnalysisResult?> GetFeeDragAnalysis(

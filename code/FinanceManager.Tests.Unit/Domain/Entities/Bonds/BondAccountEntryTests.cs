@@ -25,25 +25,6 @@ public class BondAccountEntryTests
     }
 
     [Fact]
-    public void GetCopy_ShouldReturnCorrectCopy()
-    {
-        // Arrange
-        var entry = new BondAccountEntry(1, 1, DateTime.Now, 100m, 10m, 1);
-
-        // Act
-        var copy = entry.GetCopy();
-
-        // Assert
-        Assert.NotSame(entry, copy);
-        Assert.Equal(entry.AccountId, copy.AccountId);
-        Assert.Equal(entry.EntryId, copy.EntryId);
-        Assert.Equal(entry.PostingDate, copy.PostingDate);
-        Assert.Equal(entry.Value, copy.Value);
-        Assert.Equal(entry.ValueChange, copy.ValueChange);
-        Assert.Equal(entry.BondDetailsId, copy.BondDetailsId);
-    }
-
-    [Fact]
     public void GetPrice_ShouldReturnCorrectValues()
     {
         // Arrange

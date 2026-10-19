@@ -505,11 +505,10 @@ public class StoredCurrencyExchangeRateSourceTests
         var source = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
         var service = new CurrencyExchangeService(source);
 
-        var results = await service.GetExchangeRateRangeWithProvenanceAsync(gbp, pln, date, date);
+        var results = await service.GetExchangeRateAsync(gbp, pln, date, date);
 
         var item = Assert.Single(results);
         Assert.Equal(5m, item.Value);
-        Assert.Equal(CurrencyExchangeRateSource.DerivedViaUsd, item.Source);
 
         // All DB reads in range mode used GetRange, never Get
         repository.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);

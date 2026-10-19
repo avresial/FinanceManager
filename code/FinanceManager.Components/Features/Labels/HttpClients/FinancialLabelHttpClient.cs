@@ -81,13 +81,6 @@ public class FinancialLabelHttpClient(HttpClient httpClient)
         }
     }
 
-    public async Task<List<FinancialLabel>> GetByAccountId(int accountId, CancellationToken cancellationToken = default)
-    {
-        var result = await httpClient.GetFromJsonAsync<List<FinancialLabel>>($"{httpClient.BaseAddress}api/FinancialLabel/get-by-account-id?accountId={accountId}", cancellationToken);
-
-        return result ?? [];
-    }
-
     public async Task<List<LabelSuggestion>> GetSuggestions(int sampleSize = 100, int maxSuggestions = 5, CancellationToken cancellationToken = default)
     {
         var result = await httpClient.GetFromJsonAsync<List<LabelSuggestion>>(

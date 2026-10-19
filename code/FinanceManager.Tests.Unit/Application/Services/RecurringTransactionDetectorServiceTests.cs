@@ -278,8 +278,7 @@ public class RecurringTransactionDetectorServiceTests
         Setup(account, []);
 
         var result = Assert.Single(await CreateService().GetRecurringCashFlows(
-            7,
-            TestContext.Current.CancellationToken));
+            7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
 
         Assert.Equal("Salary", result.Name);
         Assert.Equal(500m, result.MonthlyAmount);
@@ -304,8 +303,7 @@ public class RecurringTransactionDetectorServiceTests
             7,
             TestContext.Current.CancellationToken));
         var cashFlow = Assert.Single(await service.GetRecurringCashFlows(
-            7,
-            TestContext.Current.CancellationToken));
+            7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
 
         Assert.True(transaction.IsIncome);
         Assert.Equal(5_000m, transaction.MonthlyCost);
@@ -327,8 +325,7 @@ public class RecurringTransactionDetectorServiceTests
         _subscriptions.Invocations.Clear();
 
         var result = Assert.Single(await CreateService().GetRecurringCashFlows(
-            7,
-            TestContext.Current.CancellationToken));
+            7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
 
         Assert.Equal(-40m, result.OccurrenceAmount);
         _subscriptions.Verify(
@@ -354,8 +351,7 @@ public class RecurringTransactionDetectorServiceTests
         Setup(account, [subscription]);
 
         var result = Assert.Single(await CreateService().GetRecurringCashFlows(
-            7,
-            TestContext.Current.CancellationToken));
+            7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
 
         Assert.Equal("Saved rent name", subscription.Name);
         Assert.True(result.IsMuted);
@@ -392,7 +388,7 @@ public class RecurringTransactionDetectorServiceTests
         Setup([loan], []);
         var service = CreateService();
 
-        Assert.Empty(await service.GetRecurringCashFlows(7, TestContext.Current.CancellationToken));
+        Assert.Empty(await service.GetRecurringCashFlows(7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
         Assert.Single(await service.GetRecurringTransactions(7, TestContext.Current.CancellationToken));
     }
 

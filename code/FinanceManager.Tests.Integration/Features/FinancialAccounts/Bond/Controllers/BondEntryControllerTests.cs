@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Bond.Controllers;
@@ -74,10 +75,9 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         var bondDetailsId = 101;
         await SeedEntry(entryId, postingDate, value, valueChange, bondDetailsId);
         Authorize("user", _testUserId, UserRole.User);
-        var client = new BondEntryHttpClient(Client);
 
         // act
-        var result = await client.GetEntry(_testAccountId, entryId);
+        var result = await Client.GetFromJsonAsync<BondAccountEntry>($"api/BondEntry?accountId={_testAccountId}&entryId={entryId}", TestContext.Current.CancellationToken);
 
         // assert
         Assert.NotNull(result);
@@ -324,7 +324,7 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("user", _testUserId, UserRole.User);
         var client = new BondEntryHttpClient(Client);
 
-        var entry = await client.GetEntry(_testAccountId, entryId);
+        var entry = await Client.GetFromJsonAsync<BondAccountEntry>($"api/BondEntry?accountId={_testAccountId}&entryId={entryId}", TestContext.Current.CancellationToken);
         Assert.NotNull(entry);
 
         var updateEntry = new UpdateBondAccountEntry(
@@ -349,7 +349,6 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(404, dbEntry.BondDetailsId);
         Assert.Equal(300m, dbEntry.ValueChange);
     }
-
 
     public override void Dispose()
     {

@@ -17,9 +17,6 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? throw new JsonException("The closing-balance response body was null.");
     }
 
-    public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
-        GetInflow(userId, currency, start, end, []);
-
     public async Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
         string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetInflow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
@@ -37,9 +34,6 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? throw new JsonException("The net-cash-flow response body was null.");
     }
 
-    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
-        GetCapital(userId, currency, start, end, []);
-
     public async Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
         string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetCapital/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
@@ -47,20 +41,11 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
-    {
-        var result = await httpClient.GetFromJsonAsync<decimal?>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.Id}/{date:O}");
-        return result;
-    }
-
     public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end)
     {
         var result = await httpClient.GetFromJsonAsync<Dictionary<DateTime, decimal>>($"{httpClient.BaseAddress}api/MoneyFlow/GetNetWorth/{userId}/{currency.Id}/{start:O}/{end:O}");
         return result ?? [];
     }
-
-    public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end) =>
-        GetOutflow(userId, currency, start, end, []);
 
     public async Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {

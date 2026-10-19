@@ -88,7 +88,7 @@ public class CurrencyAccountImportServiceTests
         _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<bool>())).ReturnsAsync(true);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, domainEntries);
+        var result = await _service.ImportEntries(userId, accountId, domainEntries, CancellationToken.None);
 
         // Assert
         Assert.Equal(accountId, result.AccountId);
@@ -106,7 +106,7 @@ public class CurrencyAccountImportServiceTests
         var entries = Array.Empty<CurrencyEntryImport>();
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -124,7 +124,7 @@ public class CurrencyAccountImportServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.ImportEntries(userId, accountId, null!));
+            _service.ImportEntries(userId, accountId, null!, CancellationToken.None));
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class CurrencyAccountImportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.ImportEntries(userId, accountId, entries));
+            _service.ImportEntries(userId, accountId, entries, CancellationToken.None));
 
         Assert.Contains("Plan does not allow", exception.Message);
     }
@@ -253,7 +253,7 @@ public class CurrencyAccountImportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.ImportEntries(userId, accountId, entries));
+            _service.ImportEntries(userId, accountId, entries, CancellationToken.None));
 
         Assert.Contains("Account not found", exception.Message);
     }
@@ -272,7 +272,7 @@ public class CurrencyAccountImportServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.ImportEntries(userId, accountId, entries));
+            _service.ImportEntries(userId, accountId, entries, CancellationToken.None));
 
         Assert.Contains("access denied", exception.Message);
     }
@@ -304,7 +304,7 @@ public class CurrencyAccountImportServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(3, result.Imported);
@@ -335,7 +335,7 @@ public class CurrencyAccountImportServiceTests
             .Returns(new[] { existingEntry }.ToAsyncEnumerable());
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -367,7 +367,7 @@ public class CurrencyAccountImportServiceTests
             .Returns(new[] { existingEntry }.ToAsyncEnumerable());
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -394,7 +394,7 @@ public class CurrencyAccountImportServiceTests
             .Returns(new[] { existingEntry1, existingEntry2 }.ToAsyncEnumerable());
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -418,7 +418,7 @@ public class CurrencyAccountImportServiceTests
             .Returns(Array.Empty<CurrencyAccountEntry>().ToAsyncEnumerable());
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -447,7 +447,7 @@ public class CurrencyAccountImportServiceTests
             .ReturnsAsync(false);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);
@@ -477,7 +477,7 @@ public class CurrencyAccountImportServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(500, result.Imported);
@@ -506,7 +506,7 @@ public class CurrencyAccountImportServiceTests
             .Callback<IEnumerable<CurrencyAccountEntry>, bool>((batch, _) => batchSizes.Add(batch.Count()))
             .ReturnsAsync(true);
 
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         Assert.Equal(1_001, result.Imported);
         Assert.Equal(0, result.Failed);
@@ -538,7 +538,7 @@ public class CurrencyAccountImportServiceTests
             .ReturnsAsync(true);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(3, result.Imported);
@@ -574,6 +574,7 @@ public class CurrencyAccountImportServiceTests
             userId,
             accountId,
             entries,
+            CancellationToken.None,
             onProgress: (processed, imported, failed) =>
             {
                 progressUpdates.Add((processed, imported, failed));
@@ -618,6 +619,7 @@ public class CurrencyAccountImportServiceTests
             userId,
             accountId,
             entries,
+            CancellationToken.None,
             onConflicts: conflicts =>
             {
                 conflictBatches.Add(conflicts);
@@ -656,7 +658,7 @@ public class CurrencyAccountImportServiceTests
             .ReturnsAsync(false);
 
         // Act
-        var result = await _service.ImportEntries(userId, accountId, entries);
+        var result = await _service.ImportEntries(userId, accountId, entries, CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Imported);

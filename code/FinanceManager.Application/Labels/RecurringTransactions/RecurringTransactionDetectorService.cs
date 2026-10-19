@@ -126,11 +126,6 @@ public class RecurringTransactionDetectorService(
             .ToList();
     }
 
-    public Task<List<RecurringCashFlow>> GetRecurringCashFlows(
-        int userId,
-        CancellationToken cancellationToken = default) =>
-        GetRecurringCashFlows(userId, dateTimeProvider.TodayUtc, cancellationToken);
-
     public async Task<List<RecurringCashFlow>> GetRecurringCashFlows(
         int userId,
         DateTime asOfDate,

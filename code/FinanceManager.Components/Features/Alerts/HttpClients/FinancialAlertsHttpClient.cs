@@ -15,9 +15,6 @@ public sealed class FinancialAlertsHttpClient(HttpClient httpClient)
         return result ?? throw new InvalidDataException("Alert definitions response was empty.");
     }
 
-    public async Task<FinancialAlertDto?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
-        await httpClient.GetFromJsonAsync<FinancialAlertDto>($"{_endpoint}/{id}", cancellationToken);
-
     public async Task<FinancialAlertDto?> CreateAsync(
         CreateFinancialAlert command,
         CancellationToken cancellationToken = default)

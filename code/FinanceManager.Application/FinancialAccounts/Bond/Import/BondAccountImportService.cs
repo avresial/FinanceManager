@@ -18,12 +18,6 @@ public class BondAccountImportService(
     // independently committed batches and does not create an unbounded EF change tracker.
     private const int _persistenceBatchSize = 500;
 
-    public Task<BondImportResult> ImportEntries(
-        int userId,
-        int accountId,
-        IEnumerable<BondEntryImport> entries) =>
-        ImportEntries(userId, accountId, entries, CancellationToken.None);
-
     public async Task<BondImportResult> ImportEntries(
         int userId,
         int accountId,
@@ -188,9 +182,6 @@ public class BondAccountImportService(
 
         return new(accountId, imported, failed, errors, conflicts);
     }
-
-    public Task ApplyResolvedConflicts(IEnumerable<ResolvedBondImportConflict> resolvedConflicts) =>
-        ApplyResolvedConflicts(resolvedConflicts, CancellationToken.None);
 
     public async Task ApplyResolvedConflicts(
         IEnumerable<ResolvedBondImportConflict> resolvedConflicts,

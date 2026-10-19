@@ -120,7 +120,7 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
         await SeedEssentialSpendingAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new EssentialSpendingHttpClient(Client).GetEssentialSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-1), _nowUtc);
+        var result = await new EssentialSpendingHttpClient(Client).GetEssentialSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-1), _nowUtc, []);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(-50m, result.Single(x => x.DateTime == _nowUtc.AddDays(-1)).Value);

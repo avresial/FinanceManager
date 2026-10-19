@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
+using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
@@ -51,29 +51,6 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
     {
         foreach (var entry in entries)
             Add(entry, recalculateValues);
-    }
-
-    public virtual void UpdateEntry(T entry, bool recalculateValues = true)
-    {
-        var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
-        if (entryToUpdate is null) return;
-
-        entryToUpdate.Update(entry);
-        Entries.Remove(entryToUpdate);
-        var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
-
-        if (previousEntry is null)
-        {
-            Entries.Add(entryToUpdate);
-        }
-        else
-        {
-            var newIndex = Entries.IndexOf(previousEntry);
-            Entries.Insert(newIndex, entryToUpdate);
-        }
-
-        if (recalculateValues)
-            RecalculateEntryValues(Entries.IndexOf(entryToUpdate));
     }
 
     public virtual void Remove(int id)

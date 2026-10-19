@@ -23,13 +23,6 @@ internal sealed class CurrencyExchangeService(
         DateTime dateEnd,
         CancellationToken cancellationToken) => GetExchangeRateAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, cancellationToken);
 
-    public Task<List<(DateTime Date, decimal? Value, CurrencyExchangeRateSource Source)>> GetExchangeRateRangeWithProvenanceAsync(
-        Currency fromCurrency,
-        Currency toCurrency,
-        DateTime dateStart,
-        DateTime dateEnd) =>
-        GetExchangeRateRangeWithProvenanceAsyncCore(fromCurrency, toCurrency, dateStart, dateEnd, CancellationToken.None);
-
     private async Task<List<(DateTime Date, decimal? Value)>> GetExchangeRateAsyncCore(
         Currency fromCurrency,
         Currency toCurrency,
@@ -186,19 +179,6 @@ internal sealed class CurrencyExchangeService(
         Currency toCurrency,
         DateTime date) =>
         GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
-
-    Task<CurrencyExchangeRateResult> ICurrencyExchangeService.GetExchangeRateResultAsync(
-        Currency fromCurrency,
-        Currency toCurrency,
-        DateTime date,
-        CancellationToken cancellationToken) =>
-        GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, cancellationToken);
-
-    public Task<CurrencyExchangeRateResolution> GetExchangeRateWithSourceAsync(
-        Currency fromCurrency,
-        Currency toCurrency,
-        DateTime date) =>
-        GetExchangeRateWithSourceCoreAsync(fromCurrency, toCurrency, date, CancellationToken.None);
 
     private async Task<decimal?> GetExchangeRateCoreAsync(
         Currency fromCurrency,

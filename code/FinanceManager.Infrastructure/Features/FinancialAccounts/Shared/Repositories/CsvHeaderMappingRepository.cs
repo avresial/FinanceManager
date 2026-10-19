@@ -11,10 +11,6 @@ public class CsvHeaderMappingRepository(AppDbContext context) : ICsvHeaderMappin
     public Task<List<CsvHeaderMapping>> GetAllMappings() =>
         context.CsvHeaderMappings.ToListAsync();
 
-    public Task<CsvHeaderMapping?> GetMappingByHeader(string headerName, string fieldName) =>
-        context.CsvHeaderMappings.FirstOrDefaultAsync(m => m.HeaderName == headerName &&
-                                       m.FieldName == fieldName);
-
     public async Task SaveOrUpdateMappings(IEnumerable<CsvHeaderMapping> mappings)
     {
         foreach (var mapping in mappings)

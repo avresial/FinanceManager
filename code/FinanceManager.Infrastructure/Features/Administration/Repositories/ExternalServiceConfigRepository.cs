@@ -11,10 +11,6 @@ internal sealed class ExternalServiceConfigRepository(AppDbContext dbContext) : 
     public Task<List<ExternalServiceConfiguration>> GetAllAsync(CancellationToken ct = default) =>
         dbContext.ExternalServiceConfigurations.AsNoTracking().ToListAsync(ct);
 
-    public Task<ExternalServiceConfiguration?> GetByNameAsync(string serviceName, CancellationToken ct = default) =>
-        dbContext.ExternalServiceConfigurations.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.ServiceName == serviceName, ct);
-
     public async Task SaveAsync(ExternalServiceConfiguration config, CancellationToken ct = default)
     {
         var existing = await dbContext.ExternalServiceConfigurations.FindAsync([config.ServiceName], ct);

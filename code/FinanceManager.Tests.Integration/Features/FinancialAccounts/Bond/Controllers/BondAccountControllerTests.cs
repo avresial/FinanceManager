@@ -1,5 +1,6 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -11,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Bond.Controllers;
@@ -174,13 +176,13 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
     {
         await SeedAccountWithEntries();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new BondAccountHttpClient(Client);
 
-        var account = await client.GetAccountWithEntriesAsync(_testAccountId, DateTime.UtcNow.Date, 2);
+        var account = await Client.GetFromJsonAsync<BondAccountDto>($"api/BondAccount/{_testAccountId}/entries?date={Uri.EscapeDataString(DateTime.UtcNow.Date.ToString("O", System.Globalization.CultureInfo.InvariantCulture))}&count=2&olderThenDate=true", TestContext.Current.CancellationToken);
 
         Assert.NotNull(account);
-        Assert.Equal(2, account!.Entries.Count);
+        Assert.Equal(2, account!.Entries.Count());
         Assert.Equal(new[] { 3, 2 }, account.Entries.Select(x => x.EntryId));
+        Assert.NotNull(account.NextOlderEntries);
         Assert.True(account.NextOlderEntries.ContainsKey(101));
         Assert.Equal(1, account.NextOlderEntries[101].EntryId);
     }

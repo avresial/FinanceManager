@@ -132,9 +132,6 @@ public class EodhdClientTests
         public ValueTask<ExternalServiceConfiguration> GetServiceAsync(string serviceName, CancellationToken ct = default) =>
             ValueTask.FromResult(config);
 
-        public ValueTask<IReadOnlyList<ExternalServiceConfiguration>> GetAllServicesAsync(CancellationToken ct = default) =>
-            ValueTask.FromResult<IReadOnlyList<ExternalServiceConfiguration>>([config]);
-
         public Task SaveServiceAsync(ExternalServiceConfiguration cfg, CancellationToken ct = default) =>
             Task.CompletedTask;
     }

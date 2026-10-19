@@ -20,6 +20,4 @@ public interface IPasswordResetTokenRepository
     /// </summary>
     Task InvalidateActiveTokensForUser(int userId, DateTime usedAt);
 
-    /// <summary>Deletes tokens whose expiry is in the past. Intended for periodic cleanup.</summary>
-    Task<int> RemoveExpired(DateTime utcNow);
 }

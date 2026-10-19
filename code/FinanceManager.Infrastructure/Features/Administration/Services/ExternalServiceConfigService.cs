@@ -25,12 +25,6 @@ internal sealed class ExternalServiceConfigService(
             ?? BuildDefault(serviceName);
     }
 
-    public async ValueTask<IReadOnlyList<ExternalServiceConfiguration>> GetAllServicesAsync(CancellationToken ct = default)
-    {
-        await EnsureLoadedAsync(ct);
-        return _cache!.AsReadOnly();
-    }
-
     public async Task SaveServiceAsync(ExternalServiceConfiguration config, CancellationToken ct = default)
     {
         using var scope = scopeFactory.CreateScope();

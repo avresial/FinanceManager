@@ -71,8 +71,6 @@ internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepos
         if (accountToReturn is null) return null;
         return new InvestmentAccount(accountToReturn.UserId, accountToReturn.AccountId, accountToReturn.Name);
     }
-    public Task<int?> GetLastAccountId() =>
-        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Stock).MaxAsync(x => (int?)x.AccountId);
     public async Task<bool> Update(int accountId, string accountName)
     {
         var investmentAccount = await context.Accounts.FirstOrDefaultAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
