@@ -11,19 +11,6 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 public class InvestmentTransactionHttpClient(HttpClient httpClient)
 {
     /// <summary>
-    /// Trades on the account, newest first. An empty list means the account genuinely has no trades:
-    /// a failed request throws instead, so the snapshot-backed details page can keep the trades it
-    /// already painted rather than persisting "this account is empty". See docs/architecture/concepts/ui-snapshots.md.
-    /// </summary>
-    public async Task<IReadOnlyList<InvestmentTransactionDto>> GetByAccountAsync(int accountId)
-    {
-        using var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/GetByAccount/{accountId}");
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent) return [];
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>() ?? [];
-    }
-
-    /// <summary>
     /// Loads one bounded history page. The cursor and filters are sent back unchanged so the
     /// database can keep the ordering stable while the page appends older rows.
     /// </summary>
@@ -70,13 +57,6 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
             cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>(cancellationToken) ?? [];
-    }
-
-    public async Task<InvestmentTransactionDto?> GetAsync(long id)
-    {
-        using var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Get/{id}");
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>();
     }
 
     public async Task<InvestmentTransactionDto?> AddAsync(AddInvestmentTransactionRequest request)

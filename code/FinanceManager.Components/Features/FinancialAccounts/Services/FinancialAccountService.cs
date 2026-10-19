@@ -30,15 +30,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
     private sealed record TypedAvailableAccount(int AccountId, string AccountName, Type AccountType);
 
-
-    public async Task<bool> AccountExists(int id)
-    {
-        if ((await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
-        if ((await investmentAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
-        if ((await bondAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id)) return true;
-
-        return false;
-    }
     public async Task<bool> AccountExists<T>(int id)
     {
         if (typeof(T) == typeof(CurrencyAccount)) return (await currencyAccountHttpClient.GetAvailableAccountsAsync()).Any(x => x.AccountId == id);
@@ -146,29 +137,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         throw new NotSupportedException($"Account type {typeof(T)} not supported for getting initial transaction history.");
     }
 
-    public async Task<IEnumerable<T>> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
-    {
-        List<T> result = [];
-        IEnumerable<AvailableAccount> accounts = [];
-
-        if (typeof(T) == typeof(CurrencyAccount))
-            accounts = await currencyAccountHttpClient.GetAvailableAccountsAsync();
-        else if (typeof(T) == typeof(InvestmentAccount))
-            accounts = await investmentAccountHttpClient.GetAvailableAccountsAsync();
-        else if (typeof(T) == typeof(BondAccount))
-            accounts = await bondAccountHttpClient.GetAvailableAccountsAsync();
-        else
-            throw new NotSupportedException($"Account type {typeof(T)} not supported for getting start date.");
-
-        foreach (var account in accounts)
-        {
-            T? nextAccount = await GetAccount<T>(userId, account.AccountId, dateStart, dateEnd);
-            if (nextAccount is null) continue;
-            result.Add(nextAccount);
-        }
-
-        return result;
-    }
     public async Task<Dictionary<int, Type>> GetAvailableAccounts()
     {
         // Always hand back a fresh copy: the cached list is shared across all callers, so returning a shared
@@ -279,17 +247,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         throw new NotSupportedException($"Account {accountId} type not supported for getting start date.");
     }
-    public async Task<int?> GetLastAccountId()
-    {
-        List<AvailableAccount> accounts = [.. (await currencyAccountHttpClient.GetAvailableAccountsAsync())];
-        accounts.AddRange([.. (await investmentAccountHttpClient.GetAvailableAccountsAsync())]);
-        accounts.AddRange([.. (await bondAccountHttpClient.GetAvailableAccountsAsync())]);
-
-        if (accounts.Count == 0) return 0;
-
-        return accounts.Max(x => x.AccountId);
-    }
-
     public void InitializeMock() => logger.LogInformation("InitializeMock is called.");
     public async Task RemoveAccount(int id)
     {

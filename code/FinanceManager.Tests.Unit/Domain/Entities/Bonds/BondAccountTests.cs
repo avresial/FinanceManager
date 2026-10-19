@@ -26,26 +26,6 @@ public class BondAccountTests
     }
 
     [Fact]
-    public void UpdateEntry_ShouldUpdateExistingEntry()
-    {
-        // Arrange
-        var account = new BondAccount(1, 1, "Test Account", AccountLabel.Other);
-        var entry = new BondAccountEntry(1, 1, DateTime.Now, 100m, 10m, 1);
-        account.Add(entry);
-
-        var updatePayload = new BondAccountEntry(1, 1, DateTime.Now.AddDays(1), 200m, 20m, 2);
-
-        // Act
-        account.UpdateEntry(updatePayload);
-
-        // Assert
-        Assert.Single(account.Entries);
-        var result = account.Entries.First();
-        Assert.Equal(updatePayload.BondDetailsId, result.BondDetailsId);
-        Assert.Equal(updatePayload.ValueChange, result.ValueChange);
-    }
-
-    [Fact]
     public void Remove_ShouldRemoveEntry()
     {
         // Arrange

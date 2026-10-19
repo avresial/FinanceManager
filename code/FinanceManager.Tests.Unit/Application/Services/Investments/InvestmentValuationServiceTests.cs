@@ -659,10 +659,6 @@ public class InvestmentValuationServiceTests
     private void SetupTransactions(params InvestmentTransaction[] transactions)
     {
         _transactionRepository
-            .Setup(x => x.GetByAccounts(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(transactions);
-
-        _transactionRepository
             .Setup(x => x.GetHoldingsByAccountAsOf(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly asOf, CancellationToken _) =>
             {

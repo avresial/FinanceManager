@@ -84,44 +84,6 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         }
     }
 
-    public override void UpdateEntry(BondAccountEntry entry, bool recalculateValues = true)
-    {
-        var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
-        if (entryToUpdate is null) return;
-
-        var oldBondDetailsId = entryToUpdate.BondDetailsId;
-        entryToUpdate.Update(entry);
-        Entries.Remove(entryToUpdate);
-        var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
-
-        if (previousEntry is null)
-        {
-            Entries.Add(entryToUpdate);
-        }
-        else
-        {
-            var newIndex = Entries.IndexOf(previousEntry);
-            Entries.Insert(newIndex, entryToUpdate);
-        }
-
-        if (recalculateValues)
-        {
-            var index = Entries.IndexOf(entryToUpdate);
-            RecalculateEntriesForBond(entryToUpdate.BondDetailsId, index);
-
-            // If BondDetailsId changed, also recalculate the old bond's entries
-            if (oldBondDetailsId != entryToUpdate.BondDetailsId)
-            {
-                var oldBondEntries = Entries.Where(e => e.BondDetailsId == oldBondDetailsId).ToList();
-                if (oldBondEntries.Any())
-                {
-                    var oldBondStartIndex = Entries.IndexOf(oldBondEntries.First());
-                    RecalculateEntriesForBond(oldBondDetailsId, oldBondStartIndex);
-                }
-            }
-        }
-    }
-
     public override void Remove(int id)
     {
         var entry = Entries.FirstOrDefault(x => x.EntryId == id);

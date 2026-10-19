@@ -59,7 +59,7 @@ public class LocalStorageStateCacheServiceTests
         var localStorage = CreateLocalStorage(_supersededStorageKey, _currentStorageKey, _foreignStorageKey);
         var cache = CreateCache(localStorage, retainsOnlyLatestEntry: true);
 
-        await cache.GetOrRefreshAsync(_currentKey);
+        await cache.RefreshAsync(_currentKey);
 
         localStorage.Verify(
             s => s.RemoveItemsAsync(
@@ -79,7 +79,7 @@ public class LocalStorageStateCacheServiceTests
         var localStorage = CreateLocalStorage(otherUserStorageKey, otherCurrencyStorageKey, _currentStorageKey);
         var cache = CreateCache(localStorage, retainsOnlyLatestEntry: true);
 
-        await cache.GetOrRefreshAsync(_currentKey);
+        await cache.RefreshAsync(_currentKey);
 
         localStorage.Verify(
             s => s.RemoveItemsAsync(
@@ -94,7 +94,7 @@ public class LocalStorageStateCacheServiceTests
         var localStorage = CreateLocalStorage(_supersededStorageKey, _currentStorageKey);
         var cache = CreateCache(localStorage, retainsOnlyLatestEntry: false);
 
-        await cache.GetOrRefreshAsync(_currentKey);
+        await cache.RefreshAsync(_currentKey);
 
         localStorage.Verify(
             s => s.RemoveItemsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
@@ -107,7 +107,7 @@ public class LocalStorageStateCacheServiceTests
         var localStorage = CreateLocalStorage(_currentStorageKey);
         var cache = CreateCache(localStorage, retainsOnlyLatestEntry: true);
 
-        await cache.GetOrRefreshAsync(_currentKey);
+        await cache.RefreshAsync(_currentKey);
 
         localStorage.Verify(
             s => s.RemoveItemsAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()),
@@ -123,7 +123,7 @@ public class LocalStorageStateCacheServiceTests
             .ThrowsAsync(new InvalidOperationException("local storage unavailable"));
         var cache = CreateCache(localStorage, retainsOnlyLatestEntry: true);
 
-        var state = await cache.GetOrRefreshAsync(_currentKey);
+        var state = await cache.RefreshAsync(_currentKey);
 
         Assert.Equal(_currentKey, state.CacheKey);
         localStorage.Verify(

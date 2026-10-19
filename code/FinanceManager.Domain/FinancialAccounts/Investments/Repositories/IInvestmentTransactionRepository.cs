@@ -12,12 +12,6 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get all transactions belonging to any of the given accounts in a single query. Lets callers
-    /// value several accounts without a per-account round-trip on the shared scoped context.
-    /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetByAccounts(IReadOnlyCollection<int> accountIds, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Get the <paramref name="count"/> most recent transactions across the given accounts in a single
     /// bounded query, ordered by <see cref="InvestmentTransaction.TradeDate"/> descending then id descending.
     /// Enforces the limit at the database level so callers composing recent-activity views (e.g. the

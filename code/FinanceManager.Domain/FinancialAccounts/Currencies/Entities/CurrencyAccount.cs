@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 using FinanceManager.Domain.Identity.Entities;
 using System.Diagnostics;
@@ -63,7 +63,6 @@ public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
             Labels = entry.Labels
         };
 
-
         if (index == -1)
         {
             index = Entries.Count;
@@ -75,31 +74,6 @@ public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
             Entries.Insert(index, newEntry);
         }
 
-        if (recalculateValues)
-            RecalculateEntryValues(index);
-    }
-    public override void UpdateEntry(CurrencyAccountEntry entry, bool recalculateValues = true)
-    {
-        Entries ??= [];
-
-        var entryToUpdate = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
-        if (entryToUpdate is null) return;
-
-        entryToUpdate.Update(entry);
-        Entries.Remove(entryToUpdate);
-        var previousEntry = Entries.GetNextYounger(entryToUpdate.PostingDate).FirstOrDefault();
-
-        if (previousEntry is null)
-        {
-            Entries.Add(entryToUpdate);
-        }
-        else
-        {
-            var newIndex = Entries.IndexOf(previousEntry);
-            Entries.Insert(newIndex, entryToUpdate);
-        }
-
-        var index = Entries.IndexOf(entryToUpdate);
         if (recalculateValues)
             RecalculateEntryValues(index);
     }

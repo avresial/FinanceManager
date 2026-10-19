@@ -8,6 +8,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Bond.Controllers;
@@ -168,7 +169,7 @@ public class BondDetailsControllerTests(OptionsProvider optionsProvider) : Contr
         }, TestContext.Current.CancellationToken);
 
         // Act
-        var result = await client.GetByIssuer("Ministry of Finance", TestContext.Current.CancellationToken);
+        var result = await Client.GetFromJsonAsync<List<BondDetails>>($"api/BondDetails/by-issuer/{Uri.EscapeDataString("Ministry of Finance")}", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);

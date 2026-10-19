@@ -1,11 +1,10 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 public interface IAccountRepository<T>
 {
     Task<int> GetAccountsCount();
-    Task<int?> GetLastAccountId();
     IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
 
     /// <summary>

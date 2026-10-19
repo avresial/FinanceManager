@@ -10,9 +10,6 @@ public interface IMarketDataSymbolRepository
     /// <summary>Get all provider symbols mapped to the given listing.</summary>
     Task<IReadOnlyList<MarketDataSymbol>> GetByListing(long assetListingId, CancellationToken cancellationToken = default);
 
-    /// <summary>The preferred enabled symbol for a listing and provider (IsPrimary first, then any enabled).</summary>
-    Task<MarketDataSymbol?> GetPrimary(long assetListingId, MarketDataProvider provider, CancellationToken cancellationToken = default);
-
     /// <summary>Get the globally unique provider symbol mapping, or <c>null</c>.</summary>
     Task<MarketDataSymbol?> Get(MarketDataProvider provider, string symbol, CancellationToken cancellationToken = default);
 

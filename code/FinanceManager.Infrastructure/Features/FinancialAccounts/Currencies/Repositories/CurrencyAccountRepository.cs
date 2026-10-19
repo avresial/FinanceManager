@@ -15,8 +15,6 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
 
     public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().CountAsync();
 
-    public Task<int?> GetLastAccountId() =>
-        context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Currency).MaxAsync(x => (int?)x.AccountId);
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public Task<int?> Add(int userId, string accountName, AccountLabel accountLabel) =>
         Add(userId, accountName, accountLabel, 0);

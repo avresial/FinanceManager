@@ -19,14 +19,6 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     // do not create an unbounded EF change tracker or provider command batch.
     private const int _persistenceBatchSize = 500;
 
-    public Task<ImportResult> ImportEntries(
-        int userId,
-        int accountId,
-        IEnumerable<CurrencyEntryImport> entries,
-        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
-        Func<int, int, int, Task>? onProgress = null) =>
-        ImportEntries(userId, accountId, entries, CancellationToken.None, onConflicts, onProgress);
-
     public async Task<ImportResult> ImportEntries(
         int userId,
         int accountId,
@@ -225,9 +217,6 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         oldestInserted is null
             ? Task.CompletedTask
             : currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, CancellationToken.None);
-
-    public Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts) =>
-        ApplyResolvedConflicts(resolvedConflicts, CancellationToken.None);
 
     public async Task ApplyResolvedConflicts(
         IEnumerable<ResolvedImportConflict> resolvedConflicts,

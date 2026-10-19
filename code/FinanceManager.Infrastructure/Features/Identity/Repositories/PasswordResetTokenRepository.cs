@@ -54,16 +54,4 @@ public class PasswordResetTokenRepository(AppDbContext context) : IPasswordReset
         await context.SaveChangesAsync();
     }
 
-    public async Task<int> RemoveExpired(DateTime utcNow)
-    {
-        var expired = await context.PasswordResetTokens
-            .Where(x => x.ExpiresAt < utcNow)
-            .ToListAsync();
-
-        if (expired.Count == 0) return 0;
-
-        context.PasswordResetTokens.RemoveRange(expired);
-        await context.SaveChangesAsync();
-        return expired.Count;
-    }
 }

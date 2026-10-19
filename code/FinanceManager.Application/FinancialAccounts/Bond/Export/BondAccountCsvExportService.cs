@@ -28,14 +28,4 @@ public class BondAccountCsvExportService(IBondAccountExportService bondAccountEx
         return writer.ToString();
     }
 
-    public string GetExportResults(IReadOnlyList<BondAccountExportDto> entries)
-    {
-        using var writer = new StringWriter(CultureInfo.InvariantCulture);
-        using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.Context.RegisterClassMap<BondAccountExportDtoMap>();
-        csv.WriteHeader<BondAccountExportDto>();
-        csv.NextRecord();
-        csv.WriteRecords(entries);
-        return writer.ToString();
-    }
 }

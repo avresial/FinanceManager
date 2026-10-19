@@ -237,10 +237,5 @@ public class PasswordResetControllerTests : ControllerTests
             return Task.CompletedTask;
         }
 
-        public Task<int> RemoveExpired(DateTime utcNow)
-        {
-            var removed = _tokens.RemoveAll(t => t.ExpiresAt < utcNow);
-            return Task.FromResult(removed);
-        }
     }
 }

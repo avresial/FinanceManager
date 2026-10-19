@@ -275,30 +275,4 @@ public static class ServiceCollectionExtension
         return configuredProvider;
     }
 
-    public static void ApplyMigrations(this IServiceScope scope)
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
-
-        if (!dbContext.Database.IsRelational()) return;
-
-        var pendingMigrations = dbContext.Database.GetPendingMigrations();
-        if (pendingMigrations.Any())
-        {
-            logger.LogInformation("Applying pending migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("Migrations applied successfully.");
-        }
-        else
-        {
-            logger.LogInformation("No pending migrations found.");
-        }
-    }
-    public static T GetOptions<T>(this IConfiguration configuration, string sectionName) where T : class, new()
-    {
-        var section = configuration.GetSection(sectionName) ?? throw new ArgumentException($"Configuration section '{sectionName}' not found.");
-        var options = new T();
-        section.Bind(options);
-        return options;
-    }
 }

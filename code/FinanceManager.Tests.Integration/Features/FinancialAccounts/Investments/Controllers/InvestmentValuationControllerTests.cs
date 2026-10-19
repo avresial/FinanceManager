@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using System.Net;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investments.Controllers;
@@ -129,9 +130,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     {
         await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentValuationHttpClient(Client);
 
-        var value = await client.GetValueAsync(_testAccountId, _usdCurrencyId, _asOf);
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_testAccountId}/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
 
         Assert.Equal(300m, value); // 3 units * 100 USD
     }
@@ -182,7 +182,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
                 : CurrencyExchangeRateResult.Success(4m));
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
-        var point = await client.GetValueAsync(_testAccountId, 985, end);
+        var point = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_testAccountId}/985/{end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
         var series = await client.GetValueSeriesAsync(_testAccountId, 985, friday, end);
         var assets = new AssetsHttpClient(Client);
         var currency = new Currency(985, "PLN", "PLN");

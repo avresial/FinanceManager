@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 
@@ -15,5 +15,4 @@ public interface ICurrencyExchangeService
     /// request the current UTC date again; this method never retries that request itself.
     /// </summary>
     Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date);
-    Task<CurrencyExchangeRateResult> GetExchangeRateResultAsync(Currency fromCurrency, Currency toCurrency, DateTime date, CancellationToken cancellationToken);
 }

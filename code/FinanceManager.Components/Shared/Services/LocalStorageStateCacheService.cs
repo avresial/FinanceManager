@@ -64,36 +64,6 @@ public abstract class LocalStorageStateCacheService<TState, TRefreshContext, TCa
         }
     }
 
-    public async Task<TState> GetOrRefreshAsync(TRefreshContext refreshContext)
-    {
-        var cacheKey = GetCacheKey(refreshContext);
-        var cachedSnapshot = await GetCachedAsync(cacheKey);
-        if (cachedSnapshot is not null)
-            return cachedSnapshot;
-
-        var refreshLock = GetRefreshLock(cacheKey);
-        var memoryStateKey = BuildMemoryStateKey(cacheKey);
-
-        await refreshLock.WaitAsync();
-
-        try
-        {
-            cachedSnapshot = await GetCachedAsync(cacheKey);
-            if (cachedSnapshot is not null)
-                return cachedSnapshot;
-
-            var snapshot = await BuildStateAsync(refreshContext);
-            memoryCache.Set(memoryStateKey, snapshot, BuildStateMemoryOptions());
-            await localStorageService.SetItemAsync(BuildStorageKey(cacheKey), snapshot);
-            await PruneSupersededEntriesAsync(cacheKey);
-            return snapshot;
-        }
-        finally
-        {
-            refreshLock.Release();
-        }
-    }
-
     public async Task<TState> RefreshAsync(TRefreshContext refreshContext)
     {
         var cacheKey = GetCacheKey(refreshContext);

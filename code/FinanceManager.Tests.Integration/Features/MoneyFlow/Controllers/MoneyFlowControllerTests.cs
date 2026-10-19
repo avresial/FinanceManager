@@ -108,7 +108,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(_value, result);
@@ -133,7 +133,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
         int days = 7;
 
-        var result = await new MoneyFlowHttpClient(Client).GetInflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetInflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-days), _nowUtc, []);
 
         Assert.NotNull(result);
         Assert.All(result, x => Assert.Equal(_valueChange, x.Value));
@@ -173,7 +173,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedWithTestCurrencyAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new MoneyFlowHttpClient(Client).GetOutflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc);
+        var result = await new MoneyFlowHttpClient(Client).GetOutflow(1, DefaultCurrency.USD, _nowUtc.AddDays(-7), _nowUtc, []);
 
         Assert.NotNull(result);
         Assert.Equal(0, result.Sum(x => x.Value));
@@ -292,7 +292,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("TestUser", 1, UserRole.User);
 
         // Act
-        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         // Assert - Should aggregate all account types
         Assert.NotNull(result);
@@ -332,16 +332,15 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         }
 
         Authorize("TestUser", 1, UserRole.User);
-        var client = new MoneyFlowHttpClient(Client);
 
         // The first request through the test host pays for pipeline and EF query-plan JIT, which on a
         // cold CI runner alone can approach the budget below. Warm it up so the measurement reflects
         // the cost of the query over 500 entries, which is what this test is guarding.
-        await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         // Act - Measure performance
         var startTime = DateTime.UtcNow;
-        var result = await client.GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
         var duration = DateTime.UtcNow - startTime;
 
         // Assert
@@ -408,7 +407,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Authorize("EmptyUser", 999, UserRole.User);
 
         // Act
-        var result = await new MoneyFlowHttpClient(Client).GetNetWorth(999, DefaultCurrency.USD, _nowUtc);
+        var result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/999/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(result);
@@ -446,15 +445,15 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         // Act - Test at earliest entry date
         var firstDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var resultAtFirst = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, firstDate);
+        var resultAtFirst = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{firstDate:O}", TestContext.Current.CancellationToken);
 
         // Act - Test date between entries
         var middleDate = firstDate.AddMonths(6);
-        var resultAtMiddle = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, middleDate);
+        var resultAtMiddle = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{middleDate:O}", TestContext.Current.CancellationToken);
 
         // Act - Test at latest entry date
         var lastDate = firstDate.AddYears(1);
-        var resultAtLast = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, lastDate);
+        var resultAtLast = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{lastDate:O}", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(resultAtFirst);
@@ -500,7 +499,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var expected = new Dictionary<DateTime, decimal?>();
         for (DateTime date = rangeEnd; date >= rangeStart; date = date.AddDays(-1))
-            expected[date] = await client.GetNetWorth(1, DefaultCurrency.USD, date);
+            expected[date] = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{date:O}", TestContext.Current.CancellationToken);
 
         // Assert - same days, same values
         Assert.NotNull(rangeResult);
@@ -590,11 +589,11 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         // Act - User 1 gets their net worth
         Authorize("User1", 1, UserRole.User);
-        var user1Result = await new MoneyFlowHttpClient(Client).GetNetWorth(1, DefaultCurrency.USD, _nowUtc);
+        var user1Result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/1/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         // Act - User 2 gets their net worth
         Authorize("User2", 2, UserRole.User);
-        var user2Result = await new MoneyFlowHttpClient(Client).GetNetWorth(2, DefaultCurrency.USD, _nowUtc);
+        var user2Result = await Client.GetFromJsonAsync<decimal?>($"api/MoneyFlow/GetNetWorth/2/{DefaultCurrency.USD.Id}/{_nowUtc:O}", TestContext.Current.CancellationToken);
 
         // Assert - Each user should only see their own data
         Assert.NotNull(user1Result);
@@ -737,8 +736,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var client = new MoneyFlowHttpClient(Client);
         var netCashFlow = await client.GetNetCashFlow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
-        var inflow = await client.GetInflow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
-        var outflow = await client.GetOutflow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+        var inflow = await client.GetInflow(1, DefaultCurrency.USD, day0, day0.AddDays(2), []);
+        var outflow = await client.GetOutflow(1, DefaultCurrency.USD, day0, day0.AddDays(2), []);
 
         // Only the cash account contributes: +1000 in, −500 out, net +500. The 500 of investment
         // holdings value must NOT surface as an inflow, or money-flow double counts the cash outflow.

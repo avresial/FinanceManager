@@ -44,5 +44,4 @@ public class BondDetails
         CalculationMethods.AddRange(methodsWithBackRefs);
     }
 
-    public bool IsActiveAt(DateOnly date) => date >= StartEmissionDate && date <= EndEmissionDate;
 }

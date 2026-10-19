@@ -44,16 +44,4 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
         await context.SaveChangesAsync();
     }
 
-    public async Task<int> RemoveExpired(DateTime utcNow)
-    {
-        var expired = await context.RefreshTokens
-            .Where(x => x.AbsoluteExpiresAt < utcNow)
-            .ToListAsync();
-
-        if (expired.Count == 0) return 0;
-
-        context.RefreshTokens.RemoveRange(expired);
-        await context.SaveChangesAsync();
-        return expired.Count;
-    }
 }

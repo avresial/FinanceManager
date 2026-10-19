@@ -809,7 +809,7 @@ public class CurrencyExchangeServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetExchangeRateRangeWithProvenanceAsync_MarksResolvedValuesAndCarryForwardValues()
+    public async Task GetExchangeRateAsync_PreservesResolvedAndCarryForwardValues()
     {
         var fromCurrency = new Currency(1, "USD", "$");
         var toCurrency = new Currency(2, "EUR", "€");
@@ -833,7 +833,7 @@ public class CurrencyExchangeServiceTests : IDisposable
                     .ToList());
         var service = CreateService([provider.Object]);
 
-        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+        var result = await service.GetExchangeRateAsync(
             fromCurrency,
             toCurrency,
             dateStart,
@@ -841,15 +841,12 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         Assert.Equal(100, result.Count);
         Assert.Equal(0.92m, result[0].Value);
-        Assert.Equal(CurrencyExchangeRateSource.Stored, result[0].Source);
         Assert.Equal(0.915m, result[1].Value);
-        Assert.Equal(CurrencyExchangeRateSource.Provider, result[1].Source);
         Assert.Equal(0.915m, result[61].Value);
-        Assert.Equal(CurrencyExchangeRateSource.CarriedForward, result[61].Source);
     }
 
     [Fact]
-    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesUsdCrossSource()
+    public async Task GetExchangeRateAsync_UsesUsdCrossValues()
     {
         var fromCurrency = new Currency(1, "GBP", "£");
         var toCurrency = new Currency(2, "PLN", "zł");
@@ -876,7 +873,7 @@ public class CurrencyExchangeServiceTests : IDisposable
                         : new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotFound))]);
         var service = CreateService([provider.Object]);
 
-        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+        var result = await service.GetExchangeRateAsync(
             fromCurrency,
             toCurrency,
             date,
@@ -884,24 +881,23 @@ public class CurrencyExchangeServiceTests : IDisposable
 
         var entry = Assert.Single(result);
         Assert.Equal(5m, entry.Value);
-        Assert.Equal(CurrencyExchangeRateSource.DerivedViaUsd, entry.Source);
     }
 
     [Fact]
-    public async Task GetExchangeRateRangeWithProvenanceAsync_IdentifiesSameCurrencySource()
+    public async Task GetExchangeRateAsync_ReturnsOneForSameCurrency()
     {
         var currency = new Currency(1, "USD", "$");
         var dateStart = new DateTime(2024, 3, 15);
         var dateEnd = dateStart.AddDays(1);
         var service = CreateService([]);
 
-        var result = await service.GetExchangeRateRangeWithProvenanceAsync(
+        var result = await service.GetExchangeRateAsync(
             currency,
             currency,
             dateStart,
             dateEnd);
 
-        Assert.Equal([(dateStart, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency), (dateEnd, (decimal?)1m, CurrencyExchangeRateSource.SameCurrency)], result);
+        Assert.Equal([(dateStart, (decimal?)1m), (dateEnd, (decimal?)1m)], result);
         _exchangeRateRepositoryMock.Verify(
             x => x.GetRange(
                 It.IsAny<string>(),

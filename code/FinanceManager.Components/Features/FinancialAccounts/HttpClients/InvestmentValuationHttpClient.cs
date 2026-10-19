@@ -37,14 +37,6 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<Dictionary<long, decimal>>() ?? [];
     }
 
-    public async Task<decimal> GetValueAsync(int accountId, int currencyId, DateTime date)
-    {
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/Value/{accountId}/{currencyId}/{Iso(date)}");
-        if (!response.IsSuccessStatusCode) return 0m;
-        return await response.Content.ReadFromJsonAsync<decimal>();
-    }
-
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int accountId, int currencyId, DateTime start, DateTime end)
     {
         using var response = await httpClient.GetAsync(

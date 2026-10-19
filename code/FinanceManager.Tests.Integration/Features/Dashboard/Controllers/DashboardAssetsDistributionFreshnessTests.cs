@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
@@ -79,7 +80,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         var assets = new AssetsHttpClient(Client);
         var types = await assets.GetEndAssetsPerType(_userId, currency, _end);
         var accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
-        var value = await new InvestmentValuationHttpClient(Client).GetValueAsync(_accountId, _currencyId, _end);
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_accountId}/{_currencyId}/{_end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
         var refreshed = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
 
         Assert.Equal(3m * price, value);

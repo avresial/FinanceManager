@@ -15,13 +15,6 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
             .Where(x => x.AssetListingId == assetListingId)
             .ToListAsync(cancellationToken);
 
-    public Task<MarketDataSymbol?> GetPrimary(long assetListingId, MarketDataProvider provider, CancellationToken cancellationToken = default) =>
-        context.MarketDataSymbols.AsNoTracking()
-            .Where(x => x.AssetListingId == assetListingId && x.Provider == provider && x.IsEnabled)
-            .OrderByDescending(x => x.IsPrimary)
-            .ThenBy(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
     public Task<MarketDataSymbol?> Get(MarketDataProvider provider, string symbol, CancellationToken cancellationToken = default) =>
         context.MarketDataSymbols.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Provider == provider && x.Symbol == symbol, cancellationToken);

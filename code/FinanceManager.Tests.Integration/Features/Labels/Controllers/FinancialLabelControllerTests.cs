@@ -7,6 +7,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Labels.Controllers;
@@ -162,7 +163,7 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         // Add a label to verify it exists
 
         // GetByAccountId currently returns empty list because FinancialLabel.Entries collection was removed
-        var result = await new FinancialLabelHttpClient(Client).GetByAccountId(1, TestContext.Current.CancellationToken);
+        var result = await Client.GetFromJsonAsync<List<FinancialLabel>>("api/FinancialLabel/get-by-account-id?accountId=1", TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Single(result);

@@ -66,9 +66,6 @@ public class TwelveDataRegistrationTests
         public ValueTask<ExternalServiceConfiguration> GetServiceAsync(string serviceName, CancellationToken ct = default) =>
             ValueTask.FromResult(_config);
 
-        public ValueTask<IReadOnlyList<ExternalServiceConfiguration>> GetAllServicesAsync(CancellationToken ct = default) =>
-            ValueTask.FromResult<IReadOnlyList<ExternalServiceConfiguration>>([_config]);
-
         public Task SaveServiceAsync(ExternalServiceConfiguration config, CancellationToken ct = default) => Task.CompletedTask;
     }
 

@@ -17,11 +17,6 @@ public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, 
         }
     }
 
-    public BondAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange, BondDetailsId)
-    {
-        Labels = this.Labels,
-    };
-
     public decimal GetPriceAt(DateOnly date, BondDetails bondDetails)
     {
         if (date < DateOnly.FromDateTime(PostingDate))

@@ -55,27 +55,6 @@ public class FinancialAccountTests
         Assert.Equal(10, _financialAccount.Get(new(2000, 1, 1)).First().ValueChange);
     }
     [Fact]
-    public void UpdateData_ChangeDate()
-    {
-        // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 29), 30, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 2, new(2000, 1, 30), 40, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 3, new(2000, 1, 28), 20, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 4, new(2000, 1, 26), 10, 10));
-
-        // Act
-        var entryToChange = _financialAccount.Get(new(2000, 1, 30)).First();
-        FinancialEntryBase change = new(entryToChange.AccountId, entryToChange.EntryId, new(2000, 1, 27), entryToChange.Value, entryToChange.ValueChange);
-        _financialAccount.UpdateEntry(change, true);
-
-        // Assert
-        Assert.NotNull(_financialAccount.Entries);
-        Assert.Equal(40, _financialAccount.Entries.First().Value);
-        Assert.Equal(29, _financialAccount.Entries.First().PostingDate.Day);
-        Assert.Equal(10, _financialAccount.Entries.Last().Value);
-    }
-
-    [Fact]
     public void RemoveData_RecalculatesValues()
     {
         // Arrange
@@ -213,58 +192,6 @@ public class FinancialAccountTests
     }
 
     [Fact]
-    public void UpdateEntry_LastEntry_ShouldUpdateCorrectly()
-    {
-        // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Test");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 100, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 50, -50m));
-
-        // Act - Update last (newest) entry
-        var updatedEntry = new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, -30m);
-        account.UpdateEntry(updatedEntry);
-
-        // Assert
-        Assert.Equal(2, account.Entries.Count);
-        Assert.Equal(70m, account.Entries.First().Value); // 100 + (-30)
-        Assert.Equal(100m, account.Entries.Last().Value);
-    }
-
-    [Fact]
-    public void InterleavedOperations_ShouldMaintainCorrectValues()
-    {
-        // Arrange & Act - Mix of Add, Update, Remove
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Test");
-
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 3), 0, 50m));
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 5), 0, 25m));
-
-        // Insert in middle
-        account.Add(new FinancialEntryBase(1, 4, new DateTime(2023, 1, 2), 0, 30m));
-
-        // Update middle entry
-        account.UpdateEntry(new FinancialEntryBase(1, 4, new DateTime(2023, 1, 2), 0, 40m));
-
-        // Remove middle entry
-        account.Remove(2);
-
-        // Add at beginning
-        account.Add(new FinancialEntryBase(1, 5, new DateTime(2022, 12, 31), 0, 10m));
-
-        // Assert - Final state should be correct
-        Assert.Equal(4, account.Entries.Count);
-
-        // Chronological order: 2022-12-31, 2023-01-01, 2023-01-02, 2023-01-05
-        var sortedEntries = account.Entries.OrderBy(e => e.PostingDate).ToList();
-
-        Assert.Equal(10m, sortedEntries[0].Value); // 10
-        Assert.Equal(110m, sortedEntries[1].Value); // 10 + 100 
-        Assert.Equal(150m, sortedEntries[2].Value); // 10 + 100 + 40
-        Assert.Equal(175m, sortedEntries[3].Value); // 10 + 100 + 40 + 25
-    }
-
-    [Fact]
     public void BoundaryCondition_EmptyAccount_RecalculateShouldNotThrow()
     {
         // Arrange
@@ -368,31 +295,6 @@ public class FinancialAccountTests
     }
 
     [Fact]
-    public void UpdateEntry_ChangeDateToBeforeAllOthers_ShouldReorderAndRecalculate()
-    {
-        // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Reorder Test");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 5), 0, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 10), 0, 50m));
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 15), 0, 25m));
-
-        // Act - Update entry 3 to be before all others
-        account.UpdateEntry(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 1), 0, 25m));
-
-        // Assert
-        var orderedEntries = account.Entries.OrderByDescending(e => e.PostingDate).ToList();
-
-        // Entry 3 should now be last chronologically
-        Assert.Equal(3, orderedEntries[2].EntryId);
-        Assert.Equal(new DateTime(2023, 1, 1), orderedEntries[2].PostingDate);
-
-        // Values should be recalculated
-        Assert.Equal(175m, orderedEntries[0].Value); // 25 + 100 + 50
-        Assert.Equal(125m, orderedEntries[1].Value); // 25 + 100 
-        Assert.Equal(25m, orderedEntries[2].Value); // 25 
-    }
-
-    [Fact]
     public void RecalculateValues_WithNegativeValues_ShouldHandleCorrectly()
     {
         // Arrange
@@ -480,50 +382,4 @@ public class FinancialAccountTests
         Assert.Equal(100m, entries.Last().Value);
     }
 
-    [Theory]
-    [InlineData("CurrencyAccount")]
-    [InlineData("BondAccount")]
-    public void AllAccountTypes_UpdateAndRecalculate_ShouldWorkCorrectly(string accountType)
-    {
-        // Arrange
-        dynamic account = accountType switch
-        {
-            "CurrencyAccount" => new CurrencyAccount(1, 1, "Test", AccountLabel.Other),
-            "BondAccount" => new BondAccount(1, 1, "Test", AccountLabel.Other),
-            _ => throw new ArgumentException("Unknown account type")
-        };
-
-        dynamic entry1 = accountType switch
-        {
-            "CurrencyAccount" => new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m) { Labels = [] },
-            "BondAccount" => new BondAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m, 1),
-            _ => throw new ArgumentException("Unknown account type")
-        };
-
-        dynamic entry2 = accountType switch
-        {
-            "CurrencyAccount" => new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m) { Labels = [] },
-            "BondAccount" => new BondAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m, 1),
-            _ => throw new ArgumentException("Unknown account type")
-        };
-
-        account.Add(entry1);
-        account.Add(entry2);
-
-        // Act - Update second entry to have different value change
-        dynamic updatedEntry = accountType switch
-        {
-            "CurrencyAccount" => new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 75m) { Labels = [] },
-            "BondAccount" => new BondAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 75m, 1),
-            _ => throw new ArgumentException("Unknown account type")
-        };
-
-        account.UpdateEntry(updatedEntry);
-
-        // Assert
-        var entries = (IReadOnlyList<FinancialEntryBase>)account.Entries;
-        Assert.Equal(2, entries.Count);
-        Assert.Equal(175m, entries.First().Value); // 100 + 75
-        Assert.Equal(100m, entries.Last().Value);
-    }
 }

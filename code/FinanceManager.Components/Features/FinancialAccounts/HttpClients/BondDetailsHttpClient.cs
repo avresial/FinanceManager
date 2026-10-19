@@ -16,13 +16,6 @@ public class BondDetailsHttpClient(HttpClient httpClient, ILogger<BondDetailsHtt
         return result ?? [];
     }
 
-    public async Task<List<BondDetails>> GetByIssuer(string issuer, CancellationToken cancellationToken = default)
-    {
-        var encoded = Uri.EscapeDataString(issuer);
-        var result = await httpClient.GetFromJsonAsync<List<BondDetails>>($"{httpClient.BaseAddress}api/BondDetails/by-issuer/{encoded}", cancellationToken);
-        return result ?? [];
-    }
-
     public async Task<List<string>> GetIssuers(CancellationToken cancellationToken = default)
     {
         var result = await httpClient.GetFromJsonAsync<List<string>>($"{httpClient.BaseAddress}api/BondDetails/issuers", cancellationToken);

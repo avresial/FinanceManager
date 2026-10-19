@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 
@@ -40,71 +40,4 @@ public static class FinancialEntryBaseExtension
         return entries.GetNextOlder(date);
     }
 
-
-    public static List<FinancialEntryBase> GetEntriesMonthlyValue(this IEnumerable<FinancialEntryBase> entries)
-    {
-
-        List<FinancialEntryBase> orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
-        if (orderedEntries.Count == 0) return [];
-
-        var beginningDate = orderedEntries.First().PostingDate.Date;
-        var endDate = orderedEntries.Last().PostingDate.Date;
-
-        List<FinancialEntryBase> result = [];
-
-        DateTime stepDate = new(beginningDate.Year, beginningDate.Month, 1);
-
-        while (stepDate <= endDate)
-        {
-            var entriesForStepMonth = orderedEntries.Where(x => x.PostingDate.Year == stepDate.Year && x.PostingDate.Month == stepDate.Month);
-            if (entriesForStepMonth is null || !entriesForStepMonth.Any())
-            {
-                stepDate = stepDate.AddMonths(1);
-                continue;
-            }
-
-            int entryId = entriesForStepMonth.Last().EntryId;
-            int accountId = entriesForStepMonth.Last().AccountId;
-
-            FinancialEntryBase currencyAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
-                Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
-
-            result.Add(currencyAccountEntry);
-            stepDate = stepDate.AddMonths(1);
-        }
-
-        return result;
-    }
-    public static List<FinancialEntryBase> GetEntriesWeekly(this IEnumerable<FinancialEntryBase> entries)
-    {
-        List<FinancialEntryBase> result = [];
-
-        var orderedEntries = entries.OrderBy(x => x.PostingDate).ToList();
-        if (orderedEntries.Count == 0) return result;
-
-        var beginningDate = orderedEntries.First().PostingDate.Date;
-        var endDate = orderedEntries.Last().PostingDate.Date;
-
-        DateTime stepDate = new(beginningDate.Year, beginningDate.Month, 1);
-        stepDate = stepDate.AddDays(-(int)stepDate.DayOfWeek + 1);// might skip one day
-        while (stepDate <= endDate)
-        {
-            var entriesForStepMonth = orderedEntries.Where(x => x.PostingDate >= stepDate && x.PostingDate < stepDate.AddDays(7));
-
-            if (entriesForStepMonth is null || !entriesForStepMonth.Any())
-            {
-                stepDate = stepDate.AddDays(7);
-                continue;
-            }
-            int entryId = entriesForStepMonth.Last().EntryId;
-            int accountId = entriesForStepMonth.Last().AccountId;
-            FinancialEntryBase currencyAccountEntry = new(accountId, entryId, stepDate.Date, Math.Round(entriesForStepMonth.Average(x => x.Value), 2),
-                Math.Round(entriesForStepMonth.Sum(x => x.ValueChange), 2));
-
-            result.Add(currencyAccountEntry);
-            stepDate = stepDate.AddDays(7);
-        }
-
-        return result;
-    }
 }

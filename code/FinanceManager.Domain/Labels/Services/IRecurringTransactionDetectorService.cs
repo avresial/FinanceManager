@@ -7,7 +7,6 @@ namespace FinanceManager.Domain.Labels.Services;
 public interface IRecurringTransactionDetectorService
 {
     Task<List<RecurringTransactionResult>> GetRecurringTransactions(int userId, CancellationToken cancellationToken = default);
-    Task<List<RecurringCashFlow>> GetRecurringCashFlows(int userId, CancellationToken cancellationToken = default);
     Task<List<RecurringCashFlow>> GetRecurringCashFlows(
         int userId,
         DateTime asOfDate,

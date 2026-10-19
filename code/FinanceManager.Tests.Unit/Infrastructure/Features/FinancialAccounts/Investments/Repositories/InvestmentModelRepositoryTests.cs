@@ -238,9 +238,8 @@ public class InvestmentModelRepositoryTests
             Symbol = "CSPX.LSE"
         }, ct);
 
-        var primaryAv = await symbolRepo.GetPrimary(listing.Id, MarketDataProvider.AlphaVantage, ct);
-        Assert.NotNull(primaryAv);
-        Assert.Equal("CSPX.LON", primaryAv.Symbol);
+        var symbols = await symbolRepo.GetByListing(listing.Id, ct);
+        Assert.Contains(symbols, symbol => symbol.Provider == MarketDataProvider.AlphaVantage && symbol.IsPrimary && symbol.Symbol == "CSPX.LON");
 
         Assert.Equal(2, (await symbolRepo.GetByListing(listing.Id, ct)).Count);
     }
@@ -399,52 +398,6 @@ public class InvestmentModelRepositoryTests
         Assert.Equal(120m, metadata.UnitPrice);
         Assert.Equal("CSPX", metadata.AssetListing.Ticker);
         Assert.Equal(AssetType.ETF, metadata.AssetListing.Asset.Type);
-    }
-
-    [Fact]
-    public async Task GetByAccounts_ReturnsTransactionsForRequestedAccountsOnly()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        await using var ctx = CreateContext();
-        var assetRepo = new AssetRepository(ctx);
-        var listingRepo = new AssetListingRepository(ctx);
-        var txRepo = new InvestmentTransactionRepository(ctx);
-
-        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
-        var listing = await listingRepo.Add(new AssetListing
-        {
-            AssetId = asset.Id,
-            Ticker = "CSPX",
-            ExchangeMic = "XLON",
-            ExchangeName = "London Stock Exchange",
-            TradingCurrency = "USD"
-        }, ct);
-
-        InvestmentTransaction Make(int accountId, DateOnly tradeDate) => new()
-        {
-            UserId = 1,
-            AccountId = accountId,
-            AssetListingId = listing.Id,
-            Type = InvestmentTransactionType.Buy,
-            Quantity = 1m,
-            UnitPrice = 100m,
-            Currency = "USD",
-            TradeDate = tradeDate
-        };
-
-        await txRepo.Add(Make(10, new DateOnly(2026, 1, 10)), ct);
-        await txRepo.Add(Make(20, new DateOnly(2026, 1, 11)), ct);
-        await txRepo.Add(Make(30, new DateOnly(2026, 1, 12)), ct); // not requested
-
-        var result = await txRepo.GetByAccounts([10, 20], ct);
-
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, t => t.AccountId == 10);
-        Assert.Contains(result, t => t.AccountId == 20);
-        Assert.DoesNotContain(result, t => t.AccountId == 30);
-        Assert.NotNull(result[0].AssetListing); // AssetListing eagerly included for downstream pricing
-
-        Assert.Empty(await txRepo.GetByAccounts([], ct));
     }
 
     [Fact]

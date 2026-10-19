@@ -1,4 +1,4 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
@@ -10,6 +10,5 @@ public interface IFinancialAccountRepository
     public IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata = true) where T : BasicAccountInformation;
 
     public Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation;
-    public Task UpdateAccount<T>(T account) where T : BasicAccountInformation;
     public Task RemoveAccount(Type accountType, int id);
 }

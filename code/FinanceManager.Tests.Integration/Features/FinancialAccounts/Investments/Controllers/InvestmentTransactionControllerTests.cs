@@ -309,9 +309,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
         await SeedTransaction(InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 2, 10));
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
 
-        var transactions = await client.GetByAccountAsync(_testAccountId);
+        var transactions = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!;
 
         Assert.Equal(2, transactions.Count);
     }
@@ -321,9 +320,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
 
-        var transaction = Assert.Single(await client.GetByAccountAsync(_testAccountId));
+        var transaction = Assert.Single((await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!);
 
         Assert.Equal(AssetType.ETF, transaction.AssetType);
     }
@@ -359,7 +357,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
             .ReturnsAsync(321.45m);
 
-        var transactions = await new InvestmentTransactionHttpClient(Client).GetByAccountAsync(_testAccountId);
+        var transactions = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!;
 
         Assert.Equal(2, transactions.Count);
         Assert.All(transactions, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
@@ -374,9 +372,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
 
-        var result = await client.GetAsync(id);
+        var result = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{id}", TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(id, result!.Id);

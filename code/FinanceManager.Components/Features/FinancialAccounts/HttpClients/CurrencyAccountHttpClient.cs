@@ -41,13 +41,6 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         int minimumEntryCount = 100) =>
         GetAccountWithEntriesAsync(accountId, startDate, endDate, minimumEntryCount);
 
-    public async Task<CurrencyAccount?> GetAccountWithEntriesAsync(int accountId, DateTime date, int count, bool olderThenDate = true)
-    {
-        var encodedDate = Uri.EscapeDataString(date.ToString("O"));
-        var result = await httpClient.GetFromJsonAsync<CurrencyAccountDto>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}/entries?date={encodedDate}&count={count}&olderThenDate={olderThenDate.ToString().ToLowerInvariant()}");
-        return MapAccount(result);
-    }
-
     private static CurrencyAccount? MapAccount(CurrencyAccountDto? result)
     {
         if (result is null) return null;
