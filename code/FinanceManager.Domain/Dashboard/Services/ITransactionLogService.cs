@@ -9,4 +9,7 @@ public interface ITransactionLogService
     /// accounts regardless of account type, ordered newest first.
     /// </summary>
     Task<List<TransactionLogEntryDto>> GetLastTransactions(int userId, int count, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns an inclusive date-range page in dashboard order, with an exclusive continuation cursor.</summary>
+    Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
 }
