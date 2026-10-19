@@ -82,9 +82,11 @@
     to { width: 100%; }
 }
 
-/* ---- Body ---- */
+/* ---- Body ----
+   Grows into the remaining height so the footer stays on the card's bottom edge
+   in fixed-height layouts; on phones the card is auto-height and this collapses. */
 .ins-body {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     padding: 12px 16px 0;
@@ -137,10 +139,6 @@
     overflow-wrap: anywhere;
 }
 
-.ins-tags-body {
-    padding: 12px 0;
-}
-
 /* ---- Tags ---- */
 .ins-tags {
     display: flex;
@@ -168,7 +166,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: 53px;
     padding: 10px 12px 10px 16px;
+    margin-top: 12px;
     border-top: 1px solid var(--mud-palette-divider);
     flex-shrink: 0;
 }
