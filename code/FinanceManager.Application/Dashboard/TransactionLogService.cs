@@ -96,6 +96,120 @@ public class TransactionLogService(
             .Take(count)];
     }
 
+    public async Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
+    {
+        // Repositories persist posting dates in UTC; date-only trades share UTC midnight.
+        query = query with
+        {
+            Start = AsUtc(query.Start),
+            End = AsUtc(query.End),
+            Cursor = query.Cursor is TransactionLogCursor original ? original with { Date = AsUtc(original.Date) } : null
+        };
+        ArgumentOutOfRangeException.ThrowIfLessThan(query.PageSize, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(query.PageSize, 100);
+        if (query.Start > query.End)
+            throw new ArgumentException("Start must be on or before end.", nameof(query));
+        if (query.Cursor is TransactionLogCursor invalidCursor &&
+            (!Enum.IsDefined(invalidCursor.AccountType) || invalidCursor.EntryId <= 0))
+            throw new ArgumentException("Cursor must contain a supported account type and positive entry ID.", nameof(query));
+
+        var end = query.Cursor is TransactionLogCursor cursor && cursor.Date < query.End ? cursor.Date : query.End;
+        if (end < query.Start)
+            return new TransactionLogPage([], null);
+
+        var take = query.PageSize + 1;
+        List<TransactionLogEntryDto> result = [];
+        var currencyAccounts = await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        if (currencyAccounts.Count != 0)
+        {
+            var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var boundary = GetPageBoundary(query.Cursor, AccountType.Currency, int.MaxValue);
+            var entries = await currencyEntryRepository.GetHistoryPage(
+                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken);
+            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
+                e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
+                e.ValueChange, GetCurrencyDescription(e))));
+        }
+
+        var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        if (bondAccounts.Count != 0)
+        {
+            var names = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var boundary = GetPageBoundary(query.Cursor, AccountType.Bond, int.MaxValue);
+            var entries = await bondEntryRepository.GetHistoryPage(
+                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken);
+            var bondNames = await GetBondNames(entries, cancellationToken);
+            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
+                e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
+                e.ValueChange, bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond")));
+        }
+
+        // Investment dates represent midnight. A non-midnight start excludes that day's trades.
+        var startDate = DateOnly.FromDateTime(query.Start);
+        var endDate = DateOnly.FromDateTime(end);
+        if (query.Start.TimeOfDay != TimeSpan.Zero)
+        {
+            if (startDate == DateOnly.MaxValue)
+                return CreatePage(result, query.PageSize);
+            startDate = startDate.AddDays(1);
+        }
+        if (startDate <= endDate)
+        {
+            var accounts = await BufferAccounts(investmentAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+            if (accounts.Count != 0)
+            {
+                var names = accounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+                // An intraday cursor is later than every trade on that date, regardless of ID.
+                var boundary = query.Cursor is TransactionLogCursor stockCursor && stockCursor.Date.TimeOfDay == TimeSpan.Zero
+                    ? GetPageBoundary(stockCursor, AccountType.Stock, long.MaxValue)
+                    : default;
+                var transactions = await investmentTransactionRepository.GetHistoryPage(
+                    [.. names.Keys], startDate, endDate, take,
+                    boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken);
+                result.AddRange(transactions.Select(t => new TransactionLogEntryDto(
+                    t.AccountId, names[t.AccountId], AccountType.Stock, t.Id, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                    t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t))));
+            }
+        }
+
+        return CreatePage(result, query.PageSize);
+    }
+
+    private static DateTime AsUtc(DateTime date) => date.Kind == DateTimeKind.Unspecified
+        ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        : date.ToUniversalTime();
+
+    private static (DateTime? Date, long? Id) GetPageBoundary(TransactionLogCursor? cursor, AccountType type, long maximumId)
+    {
+        if (cursor is null)
+            return default;
+
+        // Later streams retain the equal date/ID row. Translate that inclusive ID to the
+        // repositories' exclusive boundary; IDs beyond a table's range need only the capped end date.
+        var includeEqualId = AccountTypeOrder(type) > AccountTypeOrder(cursor.AccountType);
+        if (cursor.EntryId > maximumId || (includeEqualId && cursor.EntryId == maximumId))
+            return default;
+        return (cursor.Date, cursor.EntryId + (includeEqualId ? 1 : 0));
+    }
+
+    private static int AccountTypeOrder(AccountType type) => type switch
+    {
+        AccountType.Currency => 0,
+        AccountType.Bond => 1,
+        AccountType.Stock => 2,
+        _ => throw new ArgumentOutOfRangeException(nameof(type))
+    };
+
+    private static TransactionLogPage CreatePage(List<TransactionLogEntryDto> entries, int pageSize)
+    {
+        var ordered = entries.OrderByDescending(e => e.Date).ThenByDescending(e => e.EntryId)
+            .ThenBy(e => AccountTypeOrder(e.AccountType)).Take(pageSize + 1).ToList();
+        TransactionLogCursor? next = ordered.Count > pageSize
+            ? new(ordered[pageSize - 1].Date, ordered[pageSize - 1].AccountType, ordered[pageSize - 1].EntryId)
+            : null;
+        return new TransactionLogPage([.. ordered.Take(pageSize)], next);
+    }
+
     // The account query must finish streaming before any entry query starts: relational
     // providers reject a second command while the previous reader is still open.
     private static async Task<List<AvailableAccount>> BufferAccounts(IAsyncEnumerable<AvailableAccount> accounts, CancellationToken cancellationToken)
