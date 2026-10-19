@@ -44,6 +44,28 @@ public class CachedAccountEntryRepositoryTests
     // -------------------------------------------------------------------------
 
     [Fact]
+    public async Task HistoryPage_RepeatedReads_PassThroughExactArgumentsAndCancellation()
+    {
+        int[] accounts = [7, 8];
+        var start = _date.AddHours(-1).AddTicks(123);
+        var end = _date.AddHours(1).AddTicks(456);
+        var cursor = _date.AddTicks(789);
+        var ct = TestContext.Current.CancellationToken;
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>(MockBehavior.Strict);
+        inner.SetupSequence(r => r.GetHistoryPage(accounts, start, end, 3, cursor, 5, ct))
+            .ReturnsAsync([Entry(4)])
+            .ReturnsAsync([Entry(3)]);
+        var sut = CreateSut(inner.Object, Mock.Of<IAccountUserResolver>(MockBehavior.Strict),
+            Mock.Of<ICacheInvalidator>(MockBehavior.Strict), CreateCache());
+
+        Assert.Equal(4, Assert.Single(await sut.GetHistoryPage(accounts, start, end, 3, cursor, 5, ct)).EntryId);
+        Assert.Equal(3, Assert.Single(await sut.GetHistoryPage(accounts, start, end, 3, cursor, 5, ct)).EntryId);
+
+        inner.Verify(r => r.GetHistoryPage(accounts, start, end, 3, cursor, 5, ct), Times.Exactly(2));
+        inner.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task GetYoungest_SecondCall_ServedFromCache_InnerCalledOnce()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();

@@ -17,7 +17,7 @@ namespace FinanceManager.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -776,6 +776,8 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("UserId", "AssetListingId");
 
                     b.HasIndex("UserId", "TradeDate");
+
+                    b.HasIndex("AccountId", "TradeDate", "Id");
 
                     b.ToTable("InvestmentTransactions");
                 });

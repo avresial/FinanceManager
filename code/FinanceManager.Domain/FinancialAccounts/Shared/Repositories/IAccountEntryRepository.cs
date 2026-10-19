@@ -27,6 +27,21 @@ public interface IAccountEntryRepository<T>
     /// may project the returned entities to the scalar fields needed by the recent-activity consumer.
     /// </summary>
     Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Returns at most <paramref name="take"/> entries across the supplied accounts within the inclusive
+    /// date range, ordered by posting date descending then entry id descending. The optional cursor
+    /// is an exclusive (posting date, entry id) boundary; both parts must be supplied together.
+    /// Callers request page size plus one when they need lookahead. Empty accounts or nonpositive take
+    /// return an empty list without querying; a reversed range is rejected.
+    /// </summary>
+    Task<IReadOnlyList<T>> GetHistoryPage(
+        IReadOnlyCollection<int> accountIds,
+        DateTime startDate,
+        DateTime endDate,
+        int take,
+        DateTime? cursorPostingDate = null,
+        int? cursorId = null,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, int entryId);
