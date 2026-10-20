@@ -74,20 +74,11 @@
                     <div class="ins-insight-title">@CurrentInsight!.Title</div>
                     <div class="ins-insight-msg" tabindex="0" role="region" aria-label="Insight message">@CurrentInsight!.Message</div>
                 </div>
-                @if (_insights.Count <= 1)
-                {
-                    <div class="ins-tags ins-tags-body">
-                        @foreach (var tag in GetTags(CurrentInsight!.Tags))
-                        {
-                            <span class="ins-tag">@tag</span>
-                        }
-                    </div>
-                }
             }
         </div>
 
-        @* ---- Footer: tags left + arrows right (carousel only) ---- *@
-        @if (!IsLoading && _insights.Count > 1)
+        @* ---- Footer pinned to the card bottom: tags left + arrows right (arrows in carousel mode only) ---- *@
+        @if (!IsLoading && !HasError && CurrentInsight is not null)
         {
             <div class="ins-foot">
                 <div class="ins-tags">
@@ -96,14 +87,17 @@
                         <span class="ins-tag">@tag</span>
                     }
                 </div>
-                <div class="ins-nav">
-                    <button class="ins-arrow" aria-label="Previous insight" @onclick="GoPrevious">
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:20px" />
-                    </button>
-                    <button class="ins-arrow" aria-label="Next insight" @onclick="GoNext">
-                        <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="font-size:20px" />
-                    </button>
-                </div>
+                @if (_insights.Count > 1)
+                {
+                    <div class="ins-nav">
+                        <button class="ins-arrow" aria-label="Previous insight" @onclick="GoPrevious">
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:20px" />
+                        </button>
+                        <button class="ins-arrow" aria-label="Next insight" @onclick="GoNext">
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Style="font-size:20px" />
+                        </button>
+                    </div>
+                }
             </div>
         }
 
