@@ -1,26 +1,63 @@
 /* Bound long custom ranges so the app bar leaves room for the page title. */
 .fm-dashboard-datepicker-container {
-    max-width: 100%;
-}
-
-.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-pill {
     display: inline-flex;
     max-width: 100%;
-    padding: 4px;
 }
 
 .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-menu {
     max-width: 100%;
 }
 
-.fm-dashboard-datepicker-container ::deep .mud-button-root {
+/* A quiet toolbar control: no filled surface at rest, a tonal surface and hairline
+   border only while hovered, focused or open. */
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger {
     max-width: 100%;
+    min-height: 36px;
+    padding: 4px 8px 4px 12px;
+    border: 1px solid transparent;
     border-radius: 9999px;
-    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
     text-transform: none;
+    transition: background-color 150ms ease, border-color 150ms ease;
 }
 
-.fm-dashboard-datepicker-container ::deep .mud-button-label {
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger:hover,
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger[aria-expanded="true"] {
+    background-color: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-lines-default);
+}
+
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+/* Icons sit in fixed, non-shrinking slots; only the date text ellipsizes. MudBlazor's
+   negative start margin on the icon is what clipped it inside the overflow-hidden label. */
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger .mud-button-label {
+    align-items: center;
+    min-width: 0;
+}
+
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger .mud-button-icon-start {
+    flex-shrink: 0;
+    margin-inline-start: 0;
+    margin-inline-end: 8px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger .mud-button-icon-end {
+    flex-shrink: 0;
+    margin-inline-start: 4px;
+    margin-inline-end: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fm-range-label,
+.fm-range-label-compact {
+    display: inline-block;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -49,22 +86,18 @@
         max-width: 148px;
     }
 
-    .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-pill {
-        padding: 0;
+    .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger {
+        padding: 4px 2px 4px 8px;
     }
 
-    .fm-dashboard-datepicker-container ::deep .mud-button-root {
-        padding: 4px 8px;
+    .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger .mud-button-icon-end {
+        margin-inline-start: 0;
     }
 
     /* The compact label shows the dates (#924), so the calendar icon is dropped to leave them room;
        the dropdown arrow never shrinks, so a label that is still too long ellipsizes instead. */
-    .fm-dashboard-datepicker-container ::deep .mud-button-icon-start {
+    .fm-dashboard-datepicker-container ::deep .fm-dashboard-datepicker-trigger .mud-button-icon-start {
         display: none;
-    }
-
-    .fm-dashboard-datepicker-container ::deep .mud-button-icon-end {
-        flex-shrink: 0;
     }
 }
 
@@ -78,6 +111,6 @@
     }
 
     .fm-range-label-compact {
-        display: inline;
+        display: inline-block;
     }
 }
