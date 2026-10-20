@@ -13,7 +13,6 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
@@ -50,12 +49,11 @@ public partial class SavingsRateCard : IDisposable
     internal bool IsLoading => _isLoading;
     internal IReadOnlyList<MonthBar> Series => _series;
 
-    private string SelectedMonthName =>
-        SelectedMonthRate?.Start.ToString("MMMM", CultureInfo.InvariantCulture) ?? "Month";
-
     private decimal? _currentMonthPercentage;
     private decimal? _ytdAveragePercentage;
     private int _selectedRateIndex;
+    private DateOnly? _selectedMonth;
+    private ApexChart<MonthBar>? _chart;
     private int _chartVersion;
     private List<MonthBar> _series = [];
     private ApexChartOptions<MonthBar>? _chartOptions;
@@ -80,7 +78,7 @@ public partial class SavingsRateCard : IDisposable
         var month = new DateOnly(asOf.Year, asOf.Month, 1);
         _isLoading = !_hasDisplayedModel;
         if (_scope is { } knownScope && (knownScope.Year != month.Year || knownScope.Month != month.Month))
-            ClearDisplayedModel();
+            ClearDisplayedModel(preserveSelection: true);
         StateHasChanged();
 
         try
@@ -100,7 +98,7 @@ public partial class SavingsRateCard : IDisposable
 
             if (_scope is { } current && (current.UserId != userId || current.Year != month.Year || current.Month != month.Month))
             {
-                ClearDisplayedModel();
+                ClearDisplayedModel(preserveSelection: current.UserId == userId);
                 StateHasChanged();
             }
 
@@ -113,7 +111,7 @@ public partial class SavingsRateCard : IDisposable
             var sameScope = _scope == scope && _hasDisplayedModel;
             if (_scope != scope)
             {
-                ClearDisplayedModel();
+                ClearDisplayedModel(preserveSelection: _scope is { } previous && previous.UserId == userId && previous.CurrencyId == currencyId);
                 StateHasChanged();
             }
             _scope = scope;
@@ -196,19 +194,17 @@ public partial class SavingsRateCard : IDisposable
 
     private Task ShowModel(SavingsRateCardModel model)
     {
-        var selectedMonth = SelectedMonthRate is { } selected
-            ? new DateOnly(selected.Start.Year, selected.Start.Month, 1)
-            : (DateOnly?)null;
         MonthlySavingsRates = [.. model.Months.Select(rate => new SavingsRate
         {
             Start = new DateTime(rate.Month.Year, rate.Month.Month, 1, 0, 0, 0, DateTimeKind.Utc),
             Salary = rate.Salary,
             Spending = rate.Spending,
         })];
-        _selectedRateIndex = selectedMonth is { } selectedDate
+        _selectedRateIndex = _selectedMonth is DateOnly selectedDate
             ? MonthlySavingsRates.FindIndex(rate => rate.Start.Year == selectedDate.Year && rate.Start.Month == selectedDate.Month)
             : -1;
         if (_selectedRateIndex < 0) _selectedRateIndex = MonthlySavingsRates.Count - 1;
+        _selectedMonth = SelectedMonthRate is { } selected ? DateOnly.FromDateTime(selected.Start) : null;
         _hasDisplayedModel = true;
         _isLoading = false;
         _hasError = false;
@@ -218,8 +214,9 @@ public partial class SavingsRateCard : IDisposable
         return Task.CompletedTask;
     }
 
-    private void ClearDisplayedModel()
+    private void ClearDisplayedModel(bool preserveSelection = false)
     {
+        if (!preserveSelection) _selectedMonth = null;
         MonthlySavingsRates = [];
         _selectedRateIndex = -1;
         _hasDisplayedModel = false;
@@ -281,10 +278,6 @@ public partial class SavingsRateCard : IDisposable
 
         _series = bars;
 
-        var labelColors = bars
-            .Select(b => b.IsSelected ? _highlightColor : _mutedLabelColor)
-            .ToArray();
-
         _chartOptions = new ApexChartOptions<MonthBar>
         {
             Chart = new Chart
@@ -320,11 +313,7 @@ public partial class SavingsRateCard : IDisposable
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new XAxisLabels
                 {
-                    Style = new AxisLabelStyle
-                    {
-                        FontSize = "11px",
-                        Colors = new ApexCharts.Color(labelColors),
-                    },
+                    Show = false,
                 },
                 Tooltip = new XAxisTooltip { Enabled = false },
             },
@@ -361,21 +350,21 @@ public partial class SavingsRateCard : IDisposable
         }
     }
 
-    private void OnMonthChanged(ChangeEventArgs args)
-    {
-        if (int.TryParse(args.Value?.ToString(), out var index) && SelectMonth(index)) BuildChart();
-    }
+    private Task OnBarSelected(SelectedData<MonthBar> selection) => ChooseMonth(selection.DataPointIndex);
 
-    private void OnBarSelected(SelectedData<MonthBar> selection)
+    private async Task ChooseMonth(int index)
     {
-        if (!SelectMonth(selection.DataPointIndex)) return;
-        BuildChart();
+        if (index == _selectedRateIndex || !SelectMonth(index)) return;
+        for (var i = 0; i < _series.Count; i++)
+            _series[i] = _series[i] with { IsSelected = i == index };
+        if (_chart is not null) await _chart.UpdateSeriesAsync(false);
     }
 
     internal bool SelectMonth(int index)
     {
         if (index < 0 || index >= MonthlySavingsRates.Count) return false;
         _selectedRateIndex = index;
+        _selectedMonth = DateOnly.FromDateTime(MonthlySavingsRates[index].Start);
         return true;
     }
 

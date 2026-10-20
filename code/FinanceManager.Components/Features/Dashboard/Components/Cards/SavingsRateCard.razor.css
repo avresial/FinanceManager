@@ -8,7 +8,7 @@
 
 .savings-rate-card__chart-inner {
     position: absolute;
-    inset: 0;
+    inset: 0 0 24px;
 }
 
 .savings-rate-card__chart ::deep .apexcharts-canvas {
@@ -23,13 +23,35 @@
     cursor: pointer;
 }
 
-.savings-rate-card__month {
-    color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-default);
+.savings-rate-card__months {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.savings-rate-card__month-label {
+    color: var(--mud-palette-text-secondary);
+    background: transparent;
+    border: 0;
     border-radius: 4px;
-    padding: 2px 4px;
+    padding: 4px 0;
     font: inherit;
-    font-size: 0.75rem;
-    margin-bottom: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.savings-rate-card__month-label[aria-pressed="true"] {
+    color: var(--mud-palette-text-primary);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+.savings-rate-card__month-label:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: -2px;
 }
