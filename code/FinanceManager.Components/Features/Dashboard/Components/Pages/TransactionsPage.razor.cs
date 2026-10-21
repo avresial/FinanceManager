@@ -1,8 +1,14 @@
 using FinanceManager.Components.Features.Dashboard.Components;
+using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -12,8 +18,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
 /// <summary>
 /// Every transaction of the user's accounts in one newest-first list, grouped by day. The list is read
-/// page by page through the transaction log cursor; changing the date range starts again from the newest
-/// entry of the new range.
+/// page by page through the transaction log cursor; changing the date range or the account filters starts
+/// again from the newest entry of the new selection.
 /// </summary>
 public partial class TransactionsPage : ComponentBase, IDisposable
 {
@@ -30,6 +36,9 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     private DateTime _rangeStart;
     private DateTime _rangeEnd;
 
+    private IReadOnlyList<TransactionLogAccountOption> _accounts = [];
+    private TransactionLogFilter _filter = TransactionLogFilter.None;
+
     private List<TransactionLogEntryDto> _entries = [];
     private List<IGrouping<DateTime, TransactionLogEntryDto>> _dayGroups = [];
     private TransactionLogCursor? _nextCursor;
@@ -41,6 +50,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     [Inject] public required ILogger<TransactionsPage> Logger { get; set; }
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,7 +59,10 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         if (_disposed) return;
 
         _userId = user?.UserId;
+        // The account list only feeds the filter options, so it must not delay (or fail) the first page.
+        var accountsTask = LoadAccountsAsync();
         await LoadAsync(reset: true);
+        await accountsTask;
     }
 
     public void Dispose()
@@ -73,6 +86,41 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         ApplyRange();
         return LoadAsync(reset: true);
     }
+
+    private Task OnFilterChanged(TransactionLogFilter filter)
+    {
+        _filter = filter;
+        return LoadAsync(reset: true);
+    }
+
+    private async Task LoadAccountsAsync()
+    {
+        try
+        {
+            var types = await FinancialAccountService.GetAvailableAccounts();
+            var names = await FinancialAccountService.GetAvailableAccountNames();
+            if (_disposed) return;
+
+            _accounts =
+            [
+                .. types.Select(account => (account.Key, Type: ToAccountType(account.Value)))
+                    .Where(account => account.Type.HasValue && names.ContainsKey(account.Key))
+                    .Select(account => new TransactionLogAccountOption(account.Key, names[account.Key], account.Type!.Value))
+            ];
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Without the list the account select stays disabled; the type chips and the log itself still work.
+            Logger.LogError(ex, "Failed to load the accounts for the transaction filters.");
+        }
+    }
+
+    private static AccountType? ToAccountType(Type accountType) =>
+        accountType == typeof(CurrencyAccount) ? AccountType.Currency
+        : accountType == typeof(BondAccount) ? AccountType.Bond
+        : accountType == typeof(InvestmentAccount) ? AccountType.Stock
+        : null;
 
     private void ApplyRange()
     {
@@ -123,7 +171,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         {
             TransactionLogPage? page = null;
             if (_userId is int userId)
-                page = await TransactionLogHttpClient.GetPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor), cts.Token);
+                page = await TransactionLogHttpClient.GetPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds), cts.Token);
             if (_disposed || !_loadGate.IsCurrent(version)) return;
 
             if (page is not null)
@@ -155,5 +203,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         StateHasChanged();
     }
 
-    private string EmptyRangeMessage => $"No transactions between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}.";
+    private string EmptyMessage => _filter.IsActive
+        ? $"No transactions match the selected filters between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Adjust the filters or pick a longer date range."
+        : $"No transactions between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Pick a longer date range to look further back.";
 }

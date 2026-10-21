@@ -39,6 +39,45 @@ public class TransactionLogHttpClientTests
     }
 
     [Fact]
+    public async Task GetPage_WithFilters_RepeatsAccountTypesAndAccountIds()
+    {
+        var start = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        string? rawQuery = null;
+        using var handler = new StubHandler(request =>
+        {
+            rawQuery = request.RequestUri!.Query;
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(new TransactionLogPage([], null)) };
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        var client = new TransactionLogHttpClient(http);
+
+        await client.GetPage(7, new(start, start.AddDays(2), 25, null,
+            [AccountType.Bond, AccountType.Stock], [4, 1234567]), TestContext.Current.CancellationToken);
+
+        var query = QueryHelpers.ParseQuery(rawQuery);
+        Assert.Equal(["Bond", "Stock"], query["accountTypes"].ToArray());
+        Assert.Equal(["4", "1234567"], query["accountIds"].ToArray());
+    }
+
+    [Fact]
+    public async Task GetPage_WithoutFilters_OmitsFilterParameters()
+    {
+        string? rawQuery = null;
+        using var handler = new StubHandler(request =>
+        {
+            rawQuery = request.RequestUri!.Query;
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(new TransactionLogPage([], null)) };
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        var client = new TransactionLogHttpClient(http);
+
+        await client.GetPage(7, new(DateTime.MinValue, DateTime.MaxValue, AccountTypes: [], AccountIds: []), TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("accountTypes", rawQuery);
+        Assert.DoesNotContain("accountIds", rawQuery);
+    }
+
+    [Fact]
     public async Task GetPage_FirstPageOmitsCursor_AndPropagatesHttpFailure()
     {
         using var handler = new StubHandler(request =>

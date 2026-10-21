@@ -355,6 +355,179 @@ public class TransactionLogServiceTests
             DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), 3, null, null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task GetPage_AccountTypeFilter_SkipsUnselectedStreamsEntirely()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Bond]),
+            TestContext.Current.CancellationToken);
+
+        Assert.All(page.Items, e => Assert.Equal(AccountType.Bond, e.AccountType));
+        Assert.Equal(2, page.Items.Count);
+        _currencyAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
+        _investmentAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
+        VerifyCurrencyEntryQueries(Times.Never());
+        VerifyInvestmentEntryQueries(Times.Never());
+        VerifyBondEntryQueries(Times.Once());
+    }
+
+    [Fact]
+    public async Task GetPage_MultipleAccountTypes_QueriesOnlyTheSelectedStreams()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Stock, AccountType.Currency]),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal([AccountType.Currency, AccountType.Currency, AccountType.Currency, AccountType.Currency, AccountType.Stock, AccountType.Stock],
+            page.Items.Select(e => e.AccountType).Order());
+        _bondAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
+        VerifyBondEntryQueries(Times.Never());
+    }
+
+    [Fact]
+    public async Task GetPage_EmptyFilters_BehaveLikeNoFilter()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [], AccountIds: []),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(8, page.Items.Count);
+        Assert.Equal(3, page.Items.Select(e => e.AccountType).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task GetPage_AccountIdFilter_RestrictsToThoseAccounts()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [11]),
+            TestContext.Current.CancellationToken);
+
+        Assert.All(page.Items, e => Assert.Equal(11, e.AccountId));
+        Assert.Equal(2, page.Items.Count);
+        _currencyEntryRepository.Verify(r => r.GetHistoryPage(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(11)),
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        // None of the other accounts is selected, so their streams never reach an entry query.
+        VerifyBondEntryQueries(Times.Never());
+        VerifyInvestmentEntryQueries(Times.Never());
+    }
+
+    [Fact]
+    public async Task GetPage_AccountIdFilter_IgnoresIdsOfOtherUsers()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [10, 999]),
+            TestContext.Current.CancellationToken);
+
+        Assert.All(page.Items, e => Assert.Equal(10, e.AccountId));
+        Assert.Equal(2, page.Items.Count);
+        _currencyEntryRepository.Verify(r => r.GetHistoryPage(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPage_OnlyForeignAccountIds_ReturnsEmptyPageWithoutEntryQueries()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [999, 1000]),
+            TestContext.Current.CancellationToken);
+
+        Assert.Empty(page.Items);
+        Assert.Null(page.NextCursor);
+        VerifyCurrencyEntryQueries(Times.Never());
+        VerifyBondEntryQueries(Times.Never());
+        VerifyInvestmentEntryQueries(Times.Never());
+        _bondDetailsRepository.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task GetPage_TypeAndAccountIdFilters_AreCombinedWithAnd()
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+
+        // Account 30 is an investment account, which the type filter excludes; account 20 is a bond account
+        // that the id filter excludes.
+        var page = await _service.GetPage(_userId,
+            new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Currency, AccountType.Bond], AccountIds: [10, 30]),
+            TestContext.Current.CancellationToken);
+
+        Assert.All(page.Items, e => Assert.Equal((10, AccountType.Currency), (e.AccountId, e.AccountType)));
+        Assert.Equal(2, page.Items.Count);
+        _investmentAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
+        VerifyBondEntryQueries(Times.Never());
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task GetPage_WithFilters_PagesWithoutGapsOrDuplicates(int pageSize)
+    {
+        var day = new DateTime(2024, 3, 5);
+        SetupAllStreams(day);
+        var unfiltered = (await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), 100), TestContext.Current.CancellationToken)).Items;
+        var expected = unfiltered.Where(e => e.AccountType != AccountType.Bond && e.AccountId != 11).ToList();
+        Assert.Equal(4, expected.Count);
+        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), pageSize,
+            AccountTypes: [AccountType.Currency, AccountType.Stock], AccountIds: [10, 30, 20, 999]);
+
+        List<TransactionLogEntryDto> actual = [];
+        var page = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
+        for (var i = 0; ; i++)
+        {
+            Assert.True(i < 20, "Cursor failed to advance.");
+            actual.AddRange(page.Items);
+            if (page.NextCursor is not TransactionLogCursor next)
+                break;
+            page = await _service.GetPage(_userId, query with { Cursor = next }, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(expected, actual);
+    }
+
+    // Two currency accounts (10, 11), one bond account (20) and one investment account (30), each with
+    // entries on the same two days so every filter has something to include and something to exclude.
+    private void SetupAllStreams(DateTime day)
+    {
+        SetupCurrencyAccount(10, "Bank", [
+            new(10, 1, day, 10, 1), new(10, 2, day.AddDays(-1), 10, 2),
+            new(11, 3, day, 10, 3), new(11, 4, day.AddDays(-1), 10, 4)]);
+        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(() => ToAsyncEnumerable([new AvailableAccount(10, "Bank"), new AvailableAccount(11, "Savings")]));
+        SetupBondAccount(20, "Bonds", [new(20, 1, day, 10, 1, 7), new(20, 2, day.AddDays(-1), 10, 2, 7)]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
+        SetupInvestmentAccount(30, "Broker", [
+            new() { Id = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
+            new() { Id = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)), Quantity = 1, UnitPrice = 2 }]);
+    }
+
+    private void VerifyCurrencyEntryQueries(Times times) =>
+        _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), times);
+
+    private void VerifyBondEntryQueries(Times times) =>
+        _bondEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), times);
+
+    private void VerifyInvestmentEntryQueries(Times times) =>
+        _investmentTransactionRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
+            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), times);
+
     [Theory]
     [InlineData(0)]
     [InlineData(101)]

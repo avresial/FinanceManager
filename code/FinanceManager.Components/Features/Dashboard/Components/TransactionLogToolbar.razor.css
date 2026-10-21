@@ -32,3 +32,31 @@
 .fm-custom-range-picker ::deep .mud-picker > .mud-input-control {
     display: none;
 }
+
+/* Account-type chips and the account select join the date-range control on the same row. They keep
+   their natural width (the row scrolls on a phone) and match the 32px height of the range button. */
+.fm-tx-toolbar ::deep .fm-txlog-type-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+}
+
+.fm-tx-toolbar ::deep .fm-txlog-type-chip {
+    margin: 0;
+    height: var(--fm-toolbar-control-height);
+    font-size: 0.75rem;
+}
+
+.fm-tx-toolbar ::deep .fm-txlog-account-select {
+    flex: 0 0 168px;
+    width: 168px;
+    margin-top: 0;
+}
+
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-slot,
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-select-input,
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-label {
+    font-size: 0.75rem;
+}

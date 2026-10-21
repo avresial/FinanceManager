@@ -82,12 +82,44 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
     [InlineData("start=not-a-date&end=2024-03-06")]
     [InlineData("end=2024-03-06")]
     [InlineData("start=2024-03-01")]
+    [InlineData("start=2024-03-01&end=2024-03-06&accountTypes=99")]
+    [InlineData("start=2024-03-01&end=2024-03-06&accountTypes=Currency&accountTypes=Savings")]
+    [InlineData("start=2024-03-01&end=2024-03-06&accountIds=0")]
+    [InlineData("start=2024-03-01&end=2024-03-06&accountIds=5&accountIds=-1")]
+    [InlineData("start=2024-03-01&end=2024-03-06&accountIds=abc")]
     public async Task Page_InvalidQuery_ReturnsBadRequest(string query)
     {
         Authorize("user", _testUserId, UserRole.User);
         var response = await Client.GetAsync($"api/TransactionLog/Page/{_testUserId}?{query}", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         _serviceMock.Verify(x => x.GetPage(It.IsAny<int>(), It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Page_WithMoreThan100AccountIds_ReturnsBadRequest()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var ids = string.Join('&', Enumerable.Range(1, 101).Select(id => $"accountIds={id}"));
+
+        var response = await Client.GetAsync($"api/TransactionLog/Page/{_testUserId}?start=2024-03-01&end=2024-03-06&{ids}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.Verify(x => x.GetPage(It.IsAny<int>(), It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Page_BindsRepeatedAccountTypesAndAccountIds()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/TransactionLog/Page/{_testUserId}?start=2024-03-01&end=2024-03-06&accountTypes=Bond&accountTypes=Stock&accountIds=4&accountIds=9",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _serviceMock.Verify(s => s.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+            q.AccountTypes!.SequenceEqual(new[] { AccountType.Bond, AccountType.Stock }) &&
+            q.AccountIds!.SequenceEqual(new[] { 4, 9 })), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
