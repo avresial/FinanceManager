@@ -1,0 +1,47 @@
+@using FinanceManager.Components.Shared.Helpers
+
+@* Toolbar of the Transactions page. Mirrors the date-range control of the account details toolbar
+   (same presets, same custom range picker) without its account-specific actions. The row scrolls
+   itself instead of overflowing on a phone, so filters added later (#976, #977) can join it. *@
+<div class="fm-tx-toolbar mb-4">
+    <div class="d-flex align-center fm-txlog-toolbar-row" style="gap: 8px;">
+        <MudMenu @ref="_rangeMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                 Style="flex-shrink: 0;">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                           EndIcon="@Icons.Material.Filled.KeyboardArrowDown" OnClick="ToggleRangeMenu"
+                           aria-label="@RangeButtonAccessibleText" title="@RangeButtonAccessibleText" aria-haspopup="menu"
+                           Class="fm-range-button">
+                    @RangeButtonText
+                </MudButton>
+            </ActivatorContent>
+            <ChildContent>
+                <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1" Style="display:block">Date range</MudText>
+                @foreach (var range in Ranges)
+                {
+                    <MudMenuItem OnClick="@(() => OnRangeSelected(range))">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small"
+                                     Style="@(SelectedRange == range ? "" : "visibility: hidden;")" />
+                            <MudText Typo="Typo.body2">@range</MudText>
+                        </MudStack>
+                    </MudMenuItem>
+                }
+                <MudDivider />
+                <MudMenuItem OnClick="OpenCustomDateRangePicker">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@(IsCustomRange ? Icons.Material.Filled.Check : Icons.Material.Filled.CalendarMonth)" Size="Size.Small" />
+                        <MudText Typo="Typo.body2">Custom range…</MudText>
+                    </MudStack>
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </div>
+
+    @* Hidden picker opened programmatically from the date-range menu; the Dialog variant avoids
+       the broken nested-popover behaviour of embedding the picker inside a MudMenu. *@
+    <div class="fm-custom-range-picker">
+        <MudDateRangePicker @ref="_customDateRangePicker" DateRange="CustomDateRange" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
+                            DateRangeChanged="OnCustomDateRangeChanged" PickerVariant="PickerVariant.Dialog" />
+    </div>
+</div>

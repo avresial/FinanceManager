@@ -1,0 +1,109 @@
+@page "/Transactions"
+@using FinanceManager.Components.Shared.Helpers
+
+<PageTitle>Transactions</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6 fm-txlog-scope">
+    <PageHeader Title="Transactions" />
+
+    <TransactionLogToolbar SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
+                           CustomDateRange="@_customRange" CustomDateRangeChanged="OnCustomRangeChanged" />
+
+    @if (_isLoading)
+    {
+        <div data-testid="transactions-loading" aria-busy="true" aria-label="Loading transactions">
+            @for (var day = 0; day < 2; day++)
+            {
+                <MudPaper Outlined Class="mb-3" Style="background-color: transparent;">
+                    <div class="fm-txlog-day-header" style="position: static;">
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="25%" />
+                    </div>
+                    <div class="fm-txlog-day-rows">
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            <div class="d-flex align-center fm-row py-1 px-2">
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="40px" Height="40px" Class="rounded" Style="flex-shrink:0;" />
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="d-flex justify-space-between align-center gap-2">
+                                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="45%" />
+                                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="20%" />
+                                    </div>
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    }
+    else if (_hasError)
+    {
+        <div class="fm-state" data-testid="transactions-error">
+            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
+            <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load transactions</MudText>
+            <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                Something went wrong fetching your transactions.
+            </MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       Class="mt-2" OnClick="Retry">Try again</MudButton>
+        </div>
+    }
+    else if (_entries.Count == 0)
+    {
+        <div class="fm-state" data-testid="transactions-empty">
+            <div class="fm-state-icon">
+                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Default" Size="Size.Large" />
+            </div>
+            <MudText Typo="Typo.subtitle1" Class="mt-2">No transactions found</MudText>
+            <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                @EmptyRangeMessage Pick a longer date range to look further back.
+            </MudText>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in _dayGroups)
+        {
+            <MudPaper Outlined Class="mb-3" Style="background-color: transparent;" data-testid="transactions-day">
+                <div class="fm-txlog-day-header">
+                    <div class="d-flex align-baseline gap-2">
+                        <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(group.Key)</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-muted">@DateFormatter.FormatWeekday(group.Key)</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Class="fm-muted">@group.Count() @(group.Count() == 1 ? "entry" : "entries")</MudText>
+                </div>
+                <div class="fm-txlog-day-rows">
+                    @foreach (var entry in group)
+                    {
+                        <TransactionLogRow @key="@($"{entry.AccountType}-{entry.EntryId}")" Entry="entry" ShowDate="false" />
+                    }
+                </div>
+            </MudPaper>
+        }
+
+        <div class="d-flex flex-column align-center py-2">
+            @if (_loadMoreFailed)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" Class="mb-1" data-testid="transactions-load-more-error">
+                    Couldn't load more transactions.
+                </MudText>
+            }
+            @if (_nextCursor is not null)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Disabled="_isLoadingMore"
+                           OnClick="LoadMore" data-testid="transactions-load-more">
+                    @if (_isLoadingMore)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                    }
+                    @(_loadMoreFailed ? "Try again" : "Load more")
+                </MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Class="fm-muted" data-testid="transactions-end">End of the selected range</MudText>
+            }
+        </div>
+    }
+</MudContainer>

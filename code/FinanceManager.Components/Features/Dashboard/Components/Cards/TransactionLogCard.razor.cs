@@ -88,16 +88,4 @@ public partial class TransactionLogCard : IDisposable
     }
 
     public void Dispose() => _disposed = true;
-
-    private static string GetAccountTypeIcon(AccountType accountType) => accountType switch
-    {
-        AccountType.Stock => Icons.Material.Filled.ShowChart,
-        AccountType.Bond => Icons.Material.Filled.Savings,
-        _ => Icons.Material.Filled.AccountBalanceWallet,
-    };
-
-    private static string FormatAmount(decimal value)
-    {
-        return MoneyFormatter.FormatSigned(value);
-    }
 }

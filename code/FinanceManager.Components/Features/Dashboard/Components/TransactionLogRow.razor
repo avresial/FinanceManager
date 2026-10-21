@@ -1,0 +1,29 @@
+@using FinanceManager.Components.Shared.Helpers
+
+@* One transaction of the transaction log: account-type chip, description (account name when empty),
+   signed amount and account name. Shared by the dashboard card and the Transactions page; the whole
+   row links to the owning account. Styles live in transaction-log-card.css under .fm-txlog-scope. *@
+<a class="fm-list-item fm-txlog-link" href="@Href">
+    <div class="d-flex align-center fm-row">
+        <MudAvatar Rounded Size="Size.Medium" Class="@($"fm-chip {(Entry.ValueChange >= 0 ? "fm-tint-pos" : "fm-tint-neg")}")">
+            <MudIcon Icon="@AccountTypeIcon" Size="Size.Small" />
+        </MudAvatar>
+        <div class="flex-grow-1" style="min-width:0;">
+            <div class="d-flex justify-space-between align-baseline gap-2">
+                <MudText Typo="Typo.body2" Class="fm-name text-truncate">
+                    @(string.IsNullOrWhiteSpace(Entry.Description) ? Entry.AccountName : Entry.Description)
+                </MudText>
+                <MudText Typo="Typo.body2" Class="@($"fm-amount {(Entry.ValueChange >= 0 ? "fm-pos" : "fm-neg")}")">
+                    @MoneyFormatter.FormatSigned(Entry.ValueChange)
+                </MudText>
+            </div>
+            <div class="d-flex justify-space-between align-center gap-2">
+                <MudText Typo="Typo.caption" Class="fm-muted text-truncate">@Entry.AccountName</MudText>
+                @if (ShowDate)
+                {
+                    <MudText Typo="Typo.caption" Class="fm-muted" Style="white-space:nowrap;">@DateFormatter.Format(Entry.Date)</MudText>
+                }
+            </div>
+        </div>
+    </div>
+</a>
