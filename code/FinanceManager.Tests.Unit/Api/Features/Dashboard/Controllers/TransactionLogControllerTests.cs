@@ -69,10 +69,92 @@ public class TransactionLogControllerTests
         _transactionLogService.Setup(s => s.GetPage(_testUserId, query, TestContext.Current.CancellationToken)).ReturnsAsync(page);
 
         var result = await _controller.Page(_testUserId, query.Start, query.End, 2,
-            cursor.Date, cursor.AccountType, cursor.EntryId, TestContext.Current.CancellationToken);
+            cursor.Date, cursor.AccountType, cursor.EntryId, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
         _transactionLogService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Page_WithFilters_PassesAccountTypesAndIdsToTheQuery()
+    {
+        var day = new DateTime(2024, 3, 5);
+        var page = new TransactionLogPage([], null);
+        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+                q.AccountTypes!.SequenceEqual(new[] { AccountType.Bond, AccountType.Stock }) &&
+                q.AccountIds!.SequenceEqual(new[] { 4, 9 })), TestContext.Current.CancellationToken))
+            .ReturnsAsync(page);
+
+        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
+            accountTypes: [AccountType.Bond, AccountType.Stock], accountIds: [4, 9],
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+        _transactionLogService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Page_WithoutFilters_PassesNoFilterToTheQuery()
+    {
+        var day = new DateTime(2024, 3, 5);
+        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+                q.AccountTypes == null && q.AccountIds == null), TestContext.Current.CancellationToken))
+            .ReturnsAsync(new TransactionLogPage([], null));
+
+        await _controller.Page(_testUserId, day.AddDays(-1), day, cancellationToken: TestContext.Current.CancellationToken);
+
+        _transactionLogService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task Page_WithMaximumNumberOfAccountIds_IsAccepted()
+    {
+        var day = new DateTime(2024, 3, 5);
+        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.IsAny<TransactionLogQuery>(), TestContext.Current.CancellationToken))
+            .ReturnsAsync(new TransactionLogPage([], null));
+
+        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
+            accountIds: [.. Enumerable.Range(1, 100)], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.IsType<OkObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Page_WithUndefinedAccountType_ReturnsValidationProblem()
+    {
+        var day = new DateTime(2024, 3, 5);
+
+        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
+            accountTypes: [AccountType.Currency, (AccountType)99], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        _transactionLogService.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-3)]
+    public async Task Page_WithNonPositiveAccountId_ReturnsValidationProblem(int accountId)
+    {
+        var day = new DateTime(2024, 3, 5);
+
+        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
+            accountIds: [5, accountId], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        _transactionLogService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Page_WithTooManyAccountIds_ReturnsValidationProblem()
+    {
+        var day = new DateTime(2024, 3, 5);
+
+        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
+            accountIds: [.. Enumerable.Range(1, 101)], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        _transactionLogService.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -93,7 +175,7 @@ public class TransactionLogControllerTests
     {
         var day = new DateTime(2024, 3, 5);
         var result = await _controller.Page(_testUserId, day, reversed ? day.AddDays(-1) : day, size,
-            date ? day : null, type ? AccountType.Currency : null, id ? 1 : null, TestContext.Current.CancellationToken);
+            date ? day : null, type ? AccountType.Currency : null, id ? 1 : null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
         _transactionLogService.VerifyNoOtherCalls();

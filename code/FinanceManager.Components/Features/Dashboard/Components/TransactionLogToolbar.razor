@@ -1,8 +1,10 @@
 @using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 
 @* Toolbar of the Transactions page. Mirrors the date-range control of the account details toolbar
-   (same presets, same custom range picker) without its account-specific actions. The row scrolls
-   itself instead of overflowing on a phone, so filters added later (#976, #977) can join it. *@
+   (same presets, same custom range picker) without its account-specific actions, followed by the
+   account-type chips and the account multi-select. The row scrolls itself instead of overflowing
+   on a phone, so filters added later (#977) can join it. *@
 <div class="fm-tx-toolbar mb-4">
     <div class="d-flex align-center fm-txlog-toolbar-row" style="gap: 8px;">
         <MudMenu @ref="_rangeMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
@@ -36,6 +38,30 @@
                 </MudMenuItem>
             </ChildContent>
         </MudMenu>
+
+        <MudChipSet T="AccountType" SelectionMode="SelectionMode.MultiSelection" CheckMark="true"
+                    SelectedValues="Filter.AccountTypes" SelectedValuesChanged="OnAccountTypesChanged"
+                    Class="fm-txlog-type-chips" data-testid="transactions-type-filter" aria-label="Account types">
+            @foreach (var (type, label) in _typeOptions)
+            {
+                <MudChip T="AccountType" Value="type" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="Color.Default" SelectedColor="Color.Primary" Class="fm-txlog-type-chip">
+                    @label
+                </MudChip>
+            }
+        </MudChipSet>
+
+        <MudSelect T="int" Label="Accounts" MultiSelection="true" Dense="true" Margin="Margin.Dense"
+                   Variant="Variant.Outlined" Clearable="true" Disabled="@(VisibleAccounts.Count == 0)"
+                   SelectedValues="Filter.AccountIds" SelectedValuesChanged="OnAccountIdsChanged"
+                   ToStringFunc="GetAccountName" MultiSelectionTextFunc="GetAccountsSummary"
+                   Class="fm-txlog-account-select" AnchorOrigin="Origin.BottomLeft"
+                   data-testid="transactions-account-filter">
+            @foreach (var account in VisibleAccounts)
+            {
+                <MudSelectItem T="int" Value="@account.AccountId">@account.AccountName</MudSelectItem>
+            }
+        </MudSelect>
     </div>
 
     @* Hidden picker opened programmatically from the date-range menu; the Dialog variant avoids

@@ -1,5 +1,7 @@
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
@@ -11,6 +13,13 @@ public partial class TransactionLogToolbar : ComponentBase
     /// <summary>Preset ranges offered by the dropdown: the same ones the account details pages use.</summary>
     public static readonly string[] Ranges = AccountHistoryToolbar.Ranges;
 
+    private static readonly (AccountType Type, string Label)[] _typeOptions =
+    [
+        (AccountType.Currency, "Cash"),
+        (AccountType.Bond, "Bonds"),
+        (AccountType.Stock, "Investments"),
+    ];
+
     private MudMenu? _rangeMenu;
     private MudDateRangePicker? _customDateRangePicker;
 
@@ -18,6 +27,17 @@ public partial class TransactionLogToolbar : ComponentBase
     [Parameter] public EventCallback<string> SelectedRangeChanged { get; set; }
     [Parameter] public DateRange? CustomDateRange { get; set; }
     [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
+
+    /// <summary>The user's accounts, offered by the account select.</summary>
+    [Parameter] public IReadOnlyList<TransactionLogAccountOption> Accounts { get; set; } = [];
+    [Parameter] public TransactionLogFilter Filter { get; set; } = TransactionLogFilter.None;
+    [Parameter] public EventCallback<TransactionLogFilter> FilterChanged { get; set; }
+
+    /// <summary>Accounts offered by the select: only those of the selected types, or all when no type is selected.</summary>
+    private IReadOnlyList<TransactionLogAccountOption> VisibleAccounts =>
+        [.. Accounts
+            .Where(account => Filter.AccountTypes.Count == 0 || Filter.AccountTypes.Contains(account.AccountType))
+            .OrderBy(account => account.AccountName, StringComparer.CurrentCultureIgnoreCase)];
 
     private bool IsCustomRange => SelectedRange == DateRangeHelper.CustomRangeKey;
 
@@ -62,4 +82,29 @@ public partial class TransactionLogToolbar : ComponentBase
             await _customDateRangePicker.CloseAsync(submit: true);
         await CustomDateRangeChanged.InvokeAsync(value);
     }
+
+    private string GetAccountName(int accountId) =>
+        Accounts.FirstOrDefault(account => account.AccountId == accountId)?.AccountName ?? string.Empty;
+
+    private static string GetAccountsSummary(IReadOnlyList<string> selectedNames) => selectedNames.Count switch
+    {
+        0 => string.Empty,
+        1 => selectedNames[0],
+        _ => $"{selectedNames.Count} accounts",
+    };
+
+    private async Task OnAccountTypesChanged(IReadOnlyCollection<AccountType>? selected)
+    {
+        var types = (selected ?? []).Distinct().Order().ToList();
+        // Narrowing the types hides accounts of the other types, so they stop being part of the filter.
+        var visibleIds = Accounts
+            .Where(account => types.Count == 0 || types.Contains(account.AccountType))
+            .Select(account => account.AccountId)
+            .ToHashSet();
+        var accountIds = Filter.AccountIds.Where(visibleIds.Contains).ToList();
+        await FilterChanged.InvokeAsync(new TransactionLogFilter(types, accountIds));
+    }
+
+    private async Task OnAccountIdsChanged(IEnumerable<int>? selected) =>
+        await FilterChanged.InvokeAsync(new TransactionLogFilter(Filter.AccountTypes, [.. (selected ?? []).Distinct()]));
 }

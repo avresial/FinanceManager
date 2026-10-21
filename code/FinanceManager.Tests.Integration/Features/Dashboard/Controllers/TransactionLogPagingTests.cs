@@ -36,6 +36,38 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
     public async Task Page_WalksOwnerHistoryThroughTypedClient_WithoutGapsOrDuplicates(int pageSize)
     {
         var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var client = new TransactionLogHttpClient(Client);
+        var expected = (await client.GetLastTransactions(641, 100)).Where(e => e.Date >= day).ToList();
+        Assert.Equal(7, expected.Count);
+        var query = new TransactionLogQuery(DateTime.SpecifyKind(day, DateTimeKind.Unspecified), day.AddDays(1), pageSize);
+        var page = await client.GetPage(641, query, ct);
+        Assert.Equal(expected.Take(pageSize), page.Items);
+        List<TransactionLogEntryDto> actual = [];
+        for (var i = 0; ; i++)
+        {
+            Assert.True(i < 10, "Cursor did not advance.");
+            actual.AddRange(page.Items);
+            if (page.NextCursor is not TransactionLogCursor cursor)
+                break;
+            Assert.Equal(DateTimeKind.Utc, cursor.Date.Kind);
+            page = await client.GetPage(641, query with { Cursor = cursor }, ct);
+        }
+
+        Assert.Equal(expected, actual);
+        Assert.All(actual, e => Assert.Contains(e.AccountId, new[] { 10, 11, 20, 30 }));
+        Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
+        var intraday = await client.GetPage(641, new(day.AddHours(1), day.AddDays(1)), ct);
+        Assert.Equal(3, Assert.Single(intraday.Items).EntryId);
+        var empty = await client.GetPage(641, new(day.AddYears(1), day.AddYears(2)), ct);
+        Assert.Empty(empty.Items);
+        Assert.Null(empty.NextCursor);
+    }
+
+    // Owner 641: currency accounts 10 and 11, bond account 20, investment account 30. User 999 owns
+    // accounts of every type (97, 98, 99) with entries on the same day, which must never show up.
+    private async Task<DateTime> SeedHistoryAsync(CancellationToken ct)
+    {
         var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
         var db = _database!.Context;
         db.Accounts.AddRange(
@@ -69,31 +101,84 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         Authorize("owner", 641, UserRole.User);
+        return day;
+    }
+
+    [Fact]
+    public async Task Page_FilteredByAccountType_ReturnsOnlyThatTypesOfTheOwner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
         var client = new TransactionLogHttpClient(Client);
-        var expected = (await client.GetLastTransactions(641, 100)).Where(e => e.Date >= day).ToList();
-        Assert.Equal(7, expected.Count);
-        var query = new TransactionLogQuery(DateTime.SpecifyKind(day, DateTimeKind.Unspecified), day.AddDays(1), pageSize);
-        var page = await client.GetPage(641, query, ct);
-        Assert.Equal(expected.Take(pageSize), page.Items);
+        var query = new TransactionLogQuery(day, day.AddDays(1), 100);
+
+        var bonds = await client.GetPage(641, query with { AccountTypes = [AccountType.Bond] }, ct);
+        var cashAndStock = await client.GetPage(641, query with { AccountTypes = [AccountType.Currency, AccountType.Stock] }, ct);
+
+        Assert.Equal([(AccountType.Bond, 20), (AccountType.Bond, 20)], bonds.Items.Select(e => (e.AccountType, e.AccountId)));
+        Assert.Equal(5, cashAndStock.Items.Count);
+        Assert.DoesNotContain(cashAndStock.Items, e => e.AccountType == AccountType.Bond);
+        Assert.All(cashAndStock.Items, e => Assert.Contains(e.AccountId, new[] { 10, 11, 30 }));
+    }
+
+    [Fact]
+    public async Task Page_FilteredByAccountIds_ReturnsOwnAccountsOnly_AndIgnoresForeignIds()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var client = new TransactionLogHttpClient(Client);
+        var query = new TransactionLogQuery(day, day.AddDays(1), 100);
+
+        var own = await client.GetPage(641, query with { AccountIds = [11, 30] }, ct);
+        var mixed = await client.GetPage(641, query with { AccountIds = [11, 99, 98, 97] }, ct);
+        var foreignOnly = await client.GetPage(641, query with { AccountIds = [99, 98, 97] }, ct);
+
+        Assert.Equal([11, 30, 30], own.Items.Select(e => e.AccountId).Order());
+        Assert.Equal(11, Assert.Single(mixed.Items).AccountId);
+        Assert.Empty(foreignOnly.Items);
+        Assert.Null(foreignOnly.NextCursor);
+    }
+
+    [Fact]
+    public async Task Page_TypeAndAccountIdFilters_AreCombinedWithAnd()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var client = new TransactionLogHttpClient(Client);
+
+        // 20 is a bond account (type excluded), 10 a currency account (selected), 30 an investment account (type excluded).
+        var page = await client.GetPage(641, new(day, day.AddDays(1), 100, AccountTypes: [AccountType.Currency], AccountIds: [10, 20, 30]), ct);
+
+        Assert.All(page.Items, e => Assert.Equal((AccountType.Currency, 10), (e.AccountType, e.AccountId)));
+        Assert.Equal(2, page.Items.Count);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Page_WithFilters_PagesWithoutGapsOrDuplicates(int pageSize)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var client = new TransactionLogHttpClient(Client);
+        var all = (await client.GetPage(641, new(day, day.AddDays(1), 100), ct)).Items;
+        var expected = all.Where(e => e.AccountType != AccountType.Bond && e.AccountId != 11).ToList();
+        Assert.Equal(4, expected.Count);
+        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize,
+            AccountTypes: [AccountType.Currency, AccountType.Stock], AccountIds: [10, 30, 99]);
+
         List<TransactionLogEntryDto> actual = [];
+        var page = await client.GetPage(641, query, ct);
         for (var i = 0; ; i++)
         {
             Assert.True(i < 10, "Cursor did not advance.");
             actual.AddRange(page.Items);
             if (page.NextCursor is not TransactionLogCursor cursor)
                 break;
-            Assert.Equal(DateTimeKind.Utc, cursor.Date.Kind);
             page = await client.GetPage(641, query with { Cursor = cursor }, ct);
         }
 
         Assert.Equal(expected, actual);
-        Assert.All(actual, e => Assert.Contains(e.AccountId, new[] { 10, 11, 20, 30 }));
-        Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
-        var intraday = await client.GetPage(641, new(day.AddHours(1), day.AddDays(1)), ct);
-        Assert.Equal(3, Assert.Single(intraday.Items).EntryId);
-        var empty = await client.GetPage(641, new(day.AddYears(1), day.AddYears(2)), ct);
-        Assert.Empty(empty.Items);
-        Assert.Null(empty.NextCursor);
     }
 
     public override void Dispose()

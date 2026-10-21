@@ -119,7 +119,9 @@ public class TransactionLogService(
 
         var take = query.PageSize + 1;
         List<TransactionLogEntryDto> result = [];
-        var currencyAccounts = await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        var currencyAccounts = IncludesStream(query, AccountType.Currency)
+            ? FilterAccounts(await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken), query)
+            : [];
         if (currencyAccounts.Count != 0)
         {
             var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
@@ -131,7 +133,9 @@ public class TransactionLogService(
                 e.ValueChange, GetCurrencyDescription(e))));
         }
 
-        var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+        var bondAccounts = IncludesStream(query, AccountType.Bond)
+            ? FilterAccounts(await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken), query)
+            : [];
         if (bondAccounts.Count != 0)
         {
             var names = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
@@ -153,9 +157,9 @@ public class TransactionLogService(
                 return CreatePage(result, query.PageSize);
             startDate = startDate.AddDays(1);
         }
-        if (startDate <= endDate)
+        if (startDate <= endDate && IncludesStream(query, AccountType.Stock))
         {
-            var accounts = await BufferAccounts(investmentAccountRepository.GetAvailableAccounts(userId), cancellationToken);
+            var accounts = FilterAccounts(await BufferAccounts(investmentAccountRepository.GetAvailableAccounts(userId), cancellationToken), query);
             if (accounts.Count != 0)
             {
                 var names = accounts.ToDictionary(a => a.AccountId, a => a.AccountName);
@@ -174,6 +178,14 @@ public class TransactionLogService(
 
         return CreatePage(result, query.PageSize);
     }
+
+    private static bool IncludesStream(TransactionLogQuery query, AccountType type) =>
+        query.AccountTypes is not { Count: > 0 } types || types.Contains(type);
+
+    // Intersecting with the user's own accounts (rather than querying the requested IDs directly)
+    // is what keeps foreign account IDs from ever reaching an entry query.
+    private static List<AvailableAccount> FilterAccounts(List<AvailableAccount> accounts, TransactionLogQuery query) =>
+        query.AccountIds is { Count: > 0 } ids ? [.. accounts.Where(a => ids.Contains(a.AccountId))] : accounts;
 
     private static DateTime AsUtc(DateTime date) => date.Kind == DateTimeKind.Unspecified
         ? DateTime.SpecifyKind(date, DateTimeKind.Utc)

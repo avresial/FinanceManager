@@ -18,6 +18,10 @@ public class TransactionLogHttpClient(HttpClient httpClient)
         var endpoint = $"api/TransactionLog/Page/{userId}?start={FormatDate(query.Start)}&end={FormatDate(query.End)}&pageSize={query.PageSize.ToString(CultureInfo.InvariantCulture)}";
         if (query.Cursor is TransactionLogCursor cursor)
             endpoint += $"&cursorDate={FormatDate(cursor.Date)}&cursorAccountType={cursor.AccountType}&cursorEntryId={cursor.EntryId.ToString(CultureInfo.InvariantCulture)}";
+        foreach (var type in query.AccountTypes ?? [])
+            endpoint += $"&accountTypes={Uri.EscapeDataString(type.ToString())}";
+        foreach (var accountId in query.AccountIds ?? [])
+            endpoint += $"&accountIds={accountId.ToString(CultureInfo.InvariantCulture)}";
         return await httpClient.GetFromJsonAsync<TransactionLogPage>(endpoint, cancellationToken)
             ?? new TransactionLogPage([], null);
     }

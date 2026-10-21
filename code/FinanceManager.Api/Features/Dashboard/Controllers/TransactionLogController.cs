@@ -15,6 +15,8 @@ namespace FinanceManager.Api.Features.Dashboard.Controllers;
 [Tags("Financial Analysis")]
 public class TransactionLogController(ITransactionLogService transactionLogService) : ControllerBase
 {
+    private const int _maxAccountIds = 100;
+
     /// <summary>
     /// Returns the user's most recent transactions across all of their accounts,
     /// regardless of account type, ordered newest first.
@@ -40,6 +42,7 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
         [FromQuery, BindRequired] DateTime start, [FromQuery, BindRequired] DateTime end,
         [FromQuery] int pageSize = 25, [FromQuery] DateTime? cursorDate = null,
         [FromQuery] AccountType? cursorAccountType = null, [FromQuery] long? cursorEntryId = null,
+        [FromQuery] AccountType[]? accountTypes = null, [FromQuery] int[]? accountIds = null,
         CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
@@ -56,10 +59,16 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
             ModelState.AddModelError(nameof(cursorAccountType), "Unsupported account type.");
         if (cursorEntryId is <= 0)
             ModelState.AddModelError(nameof(cursorEntryId), "Cursor entry ID must be positive.");
+        if (accountTypes is not null && accountTypes.Any(t => !Enum.IsDefined(t)))
+            ModelState.AddModelError(nameof(accountTypes), "Unsupported account type.");
+        if (accountIds is { Length: > _maxAccountIds })
+            ModelState.AddModelError(nameof(accountIds), $"At most {_maxAccountIds} account IDs are allowed.");
+        if (accountIds is not null && accountIds.Any(id => id <= 0))
+            ModelState.AddModelError(nameof(accountIds), "Account IDs must be positive.");
         if (!ModelState.IsValid)
             return ValidationProblem(statusCode: StatusCodes.Status400BadRequest, modelStateDictionary: ModelState);
 
         var cursor = hasCursor ? new TransactionLogCursor(cursorDate!.Value, cursorAccountType!.Value, cursorEntryId!.Value) : null;
-        return Ok(await transactionLogService.GetPage(userId, new TransactionLogQuery(start, end, pageSize, cursor), cancellationToken));
+        return Ok(await transactionLogService.GetPage(userId, new TransactionLogQuery(start, end, pageSize, cursor, accountTypes, accountIds), cancellationToken));
     }
 }
