@@ -51,7 +51,8 @@
                         <ApexChart TItem="MonthBar"
                                    Options="@_chartOptions"
                                    OnDataPointSelection="OnBarSelected"
-                                   @key="(_chartVersion, _selectedRateIndex)"
+                                   @key="_chartVersion"
+                                   @ref="_chart"
                                    Height="@("100%")">
                             <ApexPointSeries TItem="MonthBar"
                                              Items="@_series"
@@ -63,16 +64,21 @@
                         </ApexChart>
                     </div>
                 }
+                <div class="savings-rate-card__months" role="group" aria-label="Savings rate months">
+                    @for (var i = 0; i < MonthlySavingsRates.Count; i++)
+                    {
+                        var index = i;
+                        var month = MonthlySavingsRates[i].Start;
+                        <button type="button" class="savings-rate-card__month-label"
+                                aria-label="@month.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)"
+                                aria-pressed="@(index == _selectedRateIndex ? "true" : "false")"
+                                @onclick="() => ChooseMonth(index)">@_singleLetterMonths[month.Month - 1]</button>
+                    }
+                </div>
             </div>
 
             @* flex-grow:0 keeps the divider a thin line; MudDivider's default flex-grow:1 would stretch it vertically in this flex-column card. *@
             <MudDivider Class="my-1" Style="flex-grow:0;" />
-            <select aria-label="Savings rate month" class="savings-rate-card__month" value="@_selectedRateIndex" @onchange="OnMonthChanged">
-                @for (var i = 0; i < MonthlySavingsRates.Count; i++)
-                {
-                    <option value="@i">@MonthlySavingsRates[i].Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</option>
-                }
-            </select>
             <MudGrid Spacing="1">
                 <MudItem xs="4">
                     <MudText Class="mud-text-secondary" Typo="Typo.caption">Salary</MudText>

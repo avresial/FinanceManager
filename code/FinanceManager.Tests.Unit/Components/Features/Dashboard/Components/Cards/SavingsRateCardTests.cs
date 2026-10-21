@@ -414,8 +414,86 @@ public class SavingsRateCardTests
         Assert.Contains("Saved", card.Markup);
         Assert.Contains("Spent", card.Markup);
         Assert.Contains("About savings rate card", card.Markup);
-        card.Find("select[aria-label='Savings rate month']").Change("1");
+        await card.Find("button[aria-label='June 2026']").ClickAsync(new());
         Assert.Equal(7000m, card.Instance.SelectedMonthRate!.Spending);
+    }
+
+    [Fact]
+    public async Task MonthButtons_HaveAccessibleNamesAndExposeSelectedState()
+    {
+        await using var context = CreateContext(new SavingsRateHandler(_ => Response([
+            new SavingsRate { Salary = 100m, Spending = 25m },
+        ])));
+        var card = await RenderAndStartRefresh(context);
+
+        Assert.Empty(card.FindAll("select[aria-label='Savings rate month']"));
+        var buttons = card.FindAll("button.savings-rate-card__month-label");
+        Assert.Equal(12, buttons.Count);
+        Assert.Equal("July 2026", buttons[^1].GetAttribute("aria-label"));
+        Assert.Equal("true", buttons[^1].GetAttribute("aria-pressed"));
+        Assert.Equal("false", buttons[0].GetAttribute("aria-pressed"));
+        var chart = card.FindComponent<ApexChart<SavingsRateCard.MonthBar>>().Instance;
+
+        await buttons[0].ClickAsync(new());
+
+        Assert.Equal("August 2025", card.Instance.SelectedMonthRate!.Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal("true", card.FindAll("button.savings-rate-card__month-label")[0].GetAttribute("aria-pressed"));
+        Assert.Same(chart, card.FindComponent<ApexChart<SavingsRateCard.MonthBar>>().Instance);
+        Assert.Contains("Salary", card.Markup);
+        Assert.Contains("Spent", card.Markup);
+        Assert.Contains("Saved", card.Markup);
+    }
+
+    [Fact]
+    public async Task LatestMonthIsSelectedByDefault_AndMonthWithoutSalaryRemainsSelectableWithoutRate()
+    {
+        await using var context = CreateContext(new SavingsRateHandler((_, index) => Response(index == 11
+            ? [new SavingsRate { Salary = 100m, Spending = 25m }]
+            : [])));
+        var card = await RenderAndStartRefresh(context);
+
+        Assert.Same(card.Instance.MonthlySavingsRates[^1], card.Instance.SelectedMonthRate);
+        Assert.Null(card.Instance.MonthlySavingsRates[0].GetPercentage());
+        await card.Find("button[aria-label='August 2025']").ClickAsync(new());
+        Assert.Same(card.Instance.MonthlySavingsRates[0], card.Instance.SelectedMonthRate);
+        Assert.Null(card.Instance.SelectedMonthRate!.GetPercentage());
+        Assert.Null(card.Instance.Series[0].Percentage);
+        Assert.True(card.Instance.Series[0].IsSelected);
+    }
+
+    [Theory]
+    [InlineData("August 2025", "August 2026")]
+    [InlineData("June 2026", "June 2026")]
+    public async Task RollingMonthWindow_PreservesSelectionWhileAvailableAndSelectsLatestWhenExpired(
+        string selectedMonth, string expectedMonth)
+    {
+        var handler = new SavingsRateHandler(_ => Response([
+            new SavingsRate { Salary = 100m, Spending = 25m },
+        ]));
+        await using var context = CreateContext(handler);
+        var card = await RenderAndStartRefresh(context);
+        await card.Find($"button[aria-label='{selectedMonth}']").ClickAsync(new());
+        card.Instance.AsOfDate = new DateTime(2026, 8, 20, 13, 45, 30, DateTimeKind.Utc);
+
+        await card.InvokeAsync(() => card.Instance.LoadSavingsRatesAsync());
+
+        Assert.Equal(expectedMonth, card.Instance.SelectedMonthRate!.Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task ChartBarSelection_UpdatesMonthWithoutRemountingChart()
+    {
+        await using var context = CreateContext(new SavingsRateHandler(_ => Response([
+            new SavingsRate { Salary = 100m, Spending = 25m },
+        ])));
+        var card = await RenderAndStartRefresh(context);
+        var chart = card.FindComponent<ApexChart<SavingsRateCard.MonthBar>>().Instance;
+
+        await card.InvokeAsync(() => chart.OnDataPointSelection.InvokeAsync(
+            new SelectedData<SavingsRateCard.MonthBar> { DataPointIndex = 10 }));
+
+        Assert.Equal("June 2026", card.Instance.SelectedMonthRate!.Start.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Same(chart, card.FindComponent<ApexChart<SavingsRateCard.MonthBar>>().Instance);
     }
 
     [Fact]

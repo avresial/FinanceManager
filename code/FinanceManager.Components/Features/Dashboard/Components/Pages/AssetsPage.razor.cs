@@ -17,8 +17,14 @@ public partial class AssetsPage : ComponentBase
         new("diversification", "Diversification", new(6, 6)),
         new("fee-drag", "ETF fee drag", new(6, 6)),
     ];
+    // Cards that reload when the selected range changes and report it through RefreshingChanged.
+    private static readonly string[] _rangeDependentCards = ["assets-history", "assets-distribution", "portfolio-return", "return-attribution"];
     // Cards whose reload for the selected range is in flight; their frames show the refresh indicator.
     private readonly HashSet<string> _refreshingCards = [];
+    // Cards that still owe a reload for a range the user picked. Only those reloads show the indicator:
+    // the first load and background revalidation of a painted snapshot stay silent, and a cache miss
+    // shows the card's own loading state instead. #985
+    private readonly HashSet<string> _pendingRangeChangeCards = [];
 
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
@@ -38,6 +44,7 @@ public partial class AssetsPage : ComponentBase
     {
         StartDate = changed.Start;
         EndDate = changed.End;
+        _pendingRangeChangeCards.UnionWith(_rangeDependentCards);
         StateHasChanged();
     }
 
@@ -49,9 +56,19 @@ public partial class AssetsPage : ComponentBase
 
     private Task SetCardRefreshing(string cardId, bool refreshing)
     {
-        if (refreshing) _refreshingCards.Add(cardId);
-        else _refreshingCards.Remove(cardId);
-        StateHasChanged();
+        bool indicatorChanged;
+        if (refreshing)
+        {
+            indicatorChanged = _pendingRangeChangeCards.Contains(cardId) && _refreshingCards.Add(cardId);
+        }
+        else
+        {
+            // Cards report only their current reload finishing, so this settles the user's range change.
+            _pendingRangeChangeCards.Remove(cardId);
+            indicatorChanged = _refreshingCards.Remove(cardId);
+        }
+
+        if (indicatorChanged) StateHasChanged();
         return Task.CompletedTask;
     }
 }
