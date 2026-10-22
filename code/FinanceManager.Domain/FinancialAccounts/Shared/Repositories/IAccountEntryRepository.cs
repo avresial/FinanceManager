@@ -32,7 +32,9 @@ public interface IAccountEntryRepository<T>
     /// date range, ordered by posting date descending then entry id descending. The optional cursor
     /// is an exclusive (posting date, entry id) boundary; both parts must be supplied together.
     /// Callers request page size plus one when they need lookahead. Empty accounts or nonpositive take
-    /// return an empty list without querying; a reversed range is rejected.
+    /// return an empty list without querying; a reversed range is rejected. Nonblank search matches stream
+    /// text OR searchAccountIds within accountIds before paging. The caller derives searchAccountIds
+    /// from the authorized account names; they never widen the supplied account scope.
     /// </summary>
     Task<IReadOnlyList<T>> GetHistoryPage(
         IReadOnlyCollection<int> accountIds,
@@ -41,7 +43,9 @@ public interface IAccountEntryRepository<T>
         int take,
         DateTime? cursorPostingDate = null,
         int? cursorId = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, int entryId);

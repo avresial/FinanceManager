@@ -60,3 +60,11 @@
 .fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-label {
     font-size: 0.75rem;
 }
+
+.fm-tx-toolbar ::deep .fm-toolbar-search-button {
+    width: var(--fm-toolbar-control-height);
+    height: var(--fm-toolbar-control-height);
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: var(--mud-default-borderradius);
+    box-sizing: border-box;
+}

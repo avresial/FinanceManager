@@ -102,7 +102,8 @@ public interface IInvestmentTransactionRepository
     /// inclusive date range, ordered by trade date descending then id descending. The optional cursor
     /// is an exclusive (trade date, id) boundary; both parts must be supplied together. Callers request
     /// page size plus one for lookahead. Empty accounts or nonpositive take return an empty list without
-    /// querying; a reversed range is rejected. No single-account history filters are applied.
+    /// querying; a reversed range is rejected. Nonblank search matches ticker, instrument name, or the
+    /// caller's authorized name-matching searchAccountIds within accountIds before paging.
     /// </summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetHistoryPage(
         IReadOnlyCollection<int> accountIds,
@@ -111,7 +112,9 @@ public interface IInvestmentTransactionRepository
         int take,
         DateOnly? cursorTradeDate = null,
         long? cursorId = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null);
 
     public sealed record ValuationTradeInput(
         int AccountId,

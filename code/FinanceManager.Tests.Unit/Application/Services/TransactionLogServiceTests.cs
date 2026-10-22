@@ -331,7 +331,7 @@ public class TransactionLogServiceTests
         var pending = new TaskCompletionSource<IReadOnlyList<CurrencyAccountEntry>>();
         _currencyEntryRepository.Setup(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>()))
+            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
             .Callback(() => Assert.False(streamOpen.Value)).Returns(pending.Task);
         SetupBondAccount(20, "Bonds", []);
         SetupInvestmentAccount(30, "Broker", []);
@@ -346,13 +346,13 @@ public class TransactionLogServiceTests
         Assert.Null(result.NextCursor);
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>()), Times.Once);
+            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
         _bondEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>()), Times.Once);
+            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
         _investmentTransactionRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(30)),
-            DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), 3, null, null, It.IsAny<CancellationToken>()), Times.Once);
+            DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
     }
 
     [Fact]
@@ -414,7 +414,7 @@ public class TransactionLogServiceTests
         Assert.Equal(2, page.Items.Count);
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(11)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
         // None of the other accounts is selected, so their streams never reach an entry query.
         VerifyBondEntryQueries(Times.Never());
         VerifyInvestmentEntryQueries(Times.Never());
@@ -433,7 +433,7 @@ public class TransactionLogServiceTests
         Assert.Equal(2, page.Items.Count);
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
     }
 
     [Fact]
@@ -518,15 +518,15 @@ public class TransactionLogServiceTests
 
     private void VerifyCurrencyEntryQueries(Times times) =>
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), times);
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     private void VerifyBondEntryQueries(Times times) =>
         _bondEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), times);
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     private void VerifyInvestmentEntryQueries(Times times) =>
         _investmentTransactionRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
-            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), times);
+            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     [Theory]
     [InlineData(0)]
@@ -546,13 +546,50 @@ public class TransactionLogServiceTests
             new(DateTime.MinValue, DateTime.MaxValue, Cursor: new(DateTime.MinValue, (AccountType)99, 1)), TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData(AccountType.Currency, 10)]
+    [InlineData(AccountType.Bond, 20)]
+    [InlineData(AccountType.Stock, 30)]
+    public async Task GetPage_SearchIsTrimmedAndAccountMatchesStayInsideAuthorizedFilters(AccountType type, int accountId)
+    {
+        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        SetupCurrencyAccount(10, "MiXeD cash", []);
+        SetupBondAccount(20, "MiXeD bonds", []);
+        SetupInvestmentAccount(30, "MiXeD broker", []);
+        await _service.GetPage(_userId, new(day, day, AccountTypes: [type], AccountIds: [accountId, 999], Search: " mixed "), TestContext.Current.CancellationToken);
+        if (type == AccountType.Currency)
+            _currencyEntryRepository.Verify(r => r.GetHistoryPage(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 10 })), day, day, 26, null, null,
+                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 10 }))), Times.Once);
+        else if (type == AccountType.Bond)
+            _bondEntryRepository.Verify(r => r.GetHistoryPage(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 20 })), day, day, 26, null, null,
+                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 20 }))), Times.Once);
+        else
+            _investmentTransactionRepository.Verify(r => r.GetHistoryPage(
+                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 30 })), DateOnly.FromDateTime(day), DateOnly.FromDateTime(day), 26, null, null,
+                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 30 }))), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task GetPage_EmptySearchDoesNotRestrictAccountScope(string? search)
+    {
+        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        SetupCurrencyAccount(10, "Cash", []);
+        await _service.GetPage(_userId, new(day, day, Search: search), TestContext.Current.CancellationToken);
+        _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), day, day, 26, null, null,
+            TestContext.Current.CancellationToken, null, It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.Count == 0)), Times.Once);
+    }
+
     private void SetupCurrencyAccount(int accountId, string name, List<CurrencyAccountEntry> entries)
     {
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
         _currencyEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _) =>
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
@@ -568,8 +605,8 @@ public class TransactionLogServiceTests
         _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
         _bondEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _) =>
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
@@ -585,8 +622,8 @@ public class TransactionLogServiceTests
         _investmentAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
         _investmentTransactionRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
-            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateOnly start, DateOnly end, int take, DateOnly? date, long? id, CancellationToken _) =>
+            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, DateOnly start, DateOnly end, int take, DateOnly? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 transactions.Where(e => ids.Contains(e.AccountId) && e.TradeDate >= start && e.TradeDate <= end &&
                     (date == null || e.TradeDate < date || (e.TradeDate == date && e.Id < id)))
                 .OrderByDescending(e => e.TradeDate).ThenByDescending(e => e.Id).Take(take).ToList());

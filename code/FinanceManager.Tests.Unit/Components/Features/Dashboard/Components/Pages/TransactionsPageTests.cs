@@ -30,6 +30,27 @@ public sealed class TransactionsPageTests
     private static readonly DateTime _oct13 = new(2026, 10, 13, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public async Task SearchChangeResetsCursorAndKeepsAccountFilters()
+    {
+        using var handler = new PageHandler((count, _) => Respond(new TransactionLogPage([Entry(count == 3 ? 4 : 5, _oct15)], new(_oct15, AccountType.Currency, 5))));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txlog-link")));
+        var toolbar = cut.FindComponent<TransactionLogToolbar>();
+        Assert.Null(toolbar.Instance.SearchText);
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([AccountType.Currency], [10])));
+        cut.Find("[data-testid='transactions-load-more']").Click();
+        cut.WaitForAssertion(() => Assert.True(QueryHelpers.ParseQuery(handler.Requests.Last().Query).ContainsKey("cursorDate")));
+        await cut.InvokeAsync(() => toolbar.Instance.SearchTextChanged.InvokeAsync("mixed"));
+        var query = QueryHelpers.ParseQuery(handler.Requests.Last().Query);
+        Assert.Equal("mixed", query["search"].ToString());
+        Assert.Equal("Currency", query["accountTypes"].ToString());
+        Assert.Equal("10", query["accountIds"].ToString());
+        Assert.False(query.ContainsKey("cursorDate"));
+        Assert.Single(cut.FindAll("a.fm-txlog-link"));
+    }
+
+    [Fact]
     public async Task FirstPage_RendersRowsGroupedByDay_NewestFirst()
     {
         using var handler = new PageHandler((_, _) => Respond(new TransactionLogPage(
