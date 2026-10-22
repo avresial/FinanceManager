@@ -1,0 +1,773 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2360" height="1440" viewBox="0 0 2360 1440" role="img" aria-labelledby="title desc">
+  <title id="title">Transactions redesign, concept B: Insight feed</title>
+  <desc id="desc">Overview-first feed for the Transactions page: filter chips with removable active filters, a range overview card with daily net bars, day cards with the day net, account-coloured avatars, and a collapsed account line when one account is selected. Desktop, mobile, account picker sheet, and loading, empty, error and end-of-range states.</desc>
+  <style>text{font-family:Roboto,"Helvetica Neue",Helvetica,Arial,sans-serif}.n{font-variant-numeric:tabular-nums}</style>
+  <defs><symbol id="i-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol><symbol id="i-expand" viewBox="0 0 24 24"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol><symbol id="i-warning" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol><symbol id="i-trending_up" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></symbol><symbol id="i-trending_down" viewBox="0 0 24 24"><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6z"/></symbol><symbol id="i-bank" viewBox="0 0 24 24"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/></symbol><symbol id="i-description" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></symbol><symbol id="i-chevron_right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol><symbol id="i-box_on" viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol><symbol id="i-box_off" viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></symbol><symbol id="i-open" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></symbol><symbol id="i-card" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></symbol><symbol id="i-add" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol><symbol id="i-dashboard" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></symbol></defs>
+<rect x="0.0" y="0.0" width="2360.0" height="1440.0" fill="#ECEFF1"/>
+<text x="40.0" y="40.0" font-size="12" fill="#C17E00" font-weight="500" letter-spacing="1.4">FINANCE MANAGER / TRANSACTIONS REDESIGN · ISSUE #993 · CONCEPT B</text>
+<text x="40.0" y="78.0" font-size="30" fill="#263238" font-weight="500">Concept B: Insight feed</text>
+<text x="40.0" y="102.0" font-size="15" fill="#546E7A">Overview first, mobile first. Keeps today’s day cards; colour identifies the account, not the sign.</text>
+<rect x="1600.0" y="58.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1617.0" y="72.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B1</text>
+<text x="1644.0" y="72.0" font-size="13" fill="#546E7A">Component ID, see the component table</text>
+<rect x="1930.0" y="60.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="1954.1" y="71.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<text x="1988.3" y="72.0" font-size="13" fill="#546E7A">Needs data the endpoint does not return today</text>
+<text x="1600.0" y="98.0" font-size="12" fill="#78909C">Light theme shown; dark tokens in the notes panel. Sample values are illustrative.</text>
+<text x="40.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Desktop · 1440px · filter: types Cash and Investments</text>
+<clipPath id="c1"><rect x="40" y="140" width="1440" height="960" rx="12"/></clipPath>
+<g clip-path="url(#c1)"><g transform="translate(40 140)">
+<rect x="0.0" y="0.0" width="1440.0" height="960.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="240.0" height="2000.0" fill="#FFFFFF"/>
+<line x1="240.0" y1="0.0" x2="240.0" y2="2000.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="40.0" font-size="22" fill="#FFB300" font-weight="500">FinanceManager</text>
+<line x1="0.0" y1="64.0" x2="240.0" y2="64.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-dashboard" xlink:href="#i-dashboard" x="16.0" y="81.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="96.0" font-size="14" fill="#424242">Dashboard</text>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="16.0" y="121.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="136.0" font-size="14" fill="#424242">Assets</text>
+<use href="#i-trending_down" xlink:href="#i-trending_down" x="16.0" y="161.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="176.0" font-size="14" fill="#424242">Liabilities</text>
+<rect x="0.0" y="192.0" width="240.0" height="40.0" fill="#F2F2F2"/>
+<use href="#i-description" xlink:href="#i-description" x="16.0" y="201.0" width="20" height="20" fill="#FFB300"/>
+<text x="52.0" y="216.0" font-size="14" fill="#FFB300" font-weight="500">Transactions</text>
+<use href="#i-calendar" xlink:href="#i-calendar" x="16.0" y="241.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="256.0" font-size="14" fill="#424242">Subscriptions</text>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="16.0" y="281.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="296.0" font-size="14" fill="#424242">Cash flow forecast</text>
+<use href="#i-bell" xlink:href="#i-bell" x="16.0" y="321.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="336.0" font-size="14" fill="#424242">Alerts</text>
+<use href="#i-filter" xlink:href="#i-filter" x="16.0" y="361.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="376.0" font-size="14" fill="#424242">Automation</text>
+<line x1="0.0" y1="404.0" x2="240.0" y2="404.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="438.0" font-size="17" fill="#757575">Accounts</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="461.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="476.0" font-size="14" fill="#424242">Cash 1</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="501.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="516.0" font-size="14" fill="#424242">Loan 1</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="541.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="556.0" font-size="14" fill="#424242">Investments</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="581.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="596.0" font-size="14" fill="#424242">Bond 1</text>
+<use href="#i-add" xlink:href="#i-add" x="16.0" y="621.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="636.0" font-size="14" fill="#424242">Add</text>
+<text x="16.0" y="916.0" font-size="14" fill="#757575">Hello, Demo</text>
+<text x="16.0" y="936.0" font-size="12" fill="#757575">Lifetime Basic</text>
+<line x1="240.0" y1="64.0" x2="1440.0" y2="64.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="262.0" y="20.0" width="24" height="24" fill="#616161"/>
+<text x="300.0" y="41.0" font-size="20" fill="#424242">Transactions</text>
+<rect x="460.0" y="80.0" width="86.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-calendar" xlink:href="#i-calendar" x="472.0" y="87.0" width="18" height="18" fill="#757575"/>
+<text x="494.0" y="100.7" font-size="13" fill="#424242">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="516.5" y="87.0" width="18" height="18" fill="#757575"/>
+<rect x="554.5" y="80.0" width="193.0" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<text x="566.5" y="100.7" font-size="13" fill="#8D6200" font-weight="500">Type: Cash, Investments</text>
+<circle cx="726.4" cy="96.0" r="9" fill="#FFB300"/>
+<use href="#i-close" xlink:href="#i-close" x="720.4" y="90.0" width="12" height="12" fill="#FFFFFF"/>
+<rect x="755.4" y="80.0" width="92.4" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="767.4" y="100.7" font-size="13" fill="#424242">Account</text>
+<use href="#i-expand" xlink:href="#i-expand" x="817.8" y="87.0" width="18" height="18" fill="#757575"/>
+<rect x="855.8" y="80.0" width="85.8" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="867.8" y="87.0" width="18" height="18" fill="#757575"/>
+<text x="889.8" y="100.7" font-size="13" fill="#424242">Search</text>
+<text x="967.8" y="100.7" font-size="13" fill="#8D6200" font-weight="500">Clear all</text>
+<rect x="420.0" y="86.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="437.0" y="100.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B2</text>
+<rect x="460.0" y="128.0" width="760.0" height="200.0" fill="#FFFFFF" rx="8" stroke="#E0E0E0" stroke-width="1"/>
+<text x="476.0" y="154.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">LAST 3 MONTHS · 23 JUL – 22 OCT</text>
+<text x="476.0" y="184.0" font-size="12" fill="#757575">In</text>
+<text x="476.0" y="210.0" font-size="20" fill="#2E7D32" font-weight="500" class="n">+11,200.00</text>
+<text x="646.0" y="184.0" font-size="12" fill="#757575">Out</text>
+<text x="646.0" y="210.0" font-size="20" fill="#C62828" font-weight="500" class="n">−4,120.40</text>
+<text x="816.0" y="184.0" font-size="12" fill="#757575">Net</text>
+<text x="816.0" y="210.0" font-size="22" fill="#2E7D32" font-weight="500" class="n">+7,079.60</text>
+<text x="1204.0" y="184.0" font-size="12" fill="#757575" text-anchor="end">96 transactions</text>
+<line x1="476.0" y1="272.0" x2="1204.0" y2="272.0" stroke="#BDBDBD" stroke-width="1"/>
+<rect x="493.3" y="272.0" width="4.9" height="6.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="501.2" y="272.0" width="4.9" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="509.2" y="272.0" width="4.9" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="517.1" y="272.0" width="4.9" height="22.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="525.0" y="272.0" width="4.9" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="532.9" y="272.0" width="4.9" height="14.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="540.8" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="548.7" y="272.0" width="4.9" height="5.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="564.5" y="272.0" width="4.9" height="9.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="572.5" y="272.0" width="4.9" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="580.4" y="272.0" width="4.9" height="13.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="588.3" y="272.0" width="4.9" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="596.2" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="612.0" y="272.0" width="4.9" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="619.9" y="232.0" width="4.9" height="40.0" fill="#2E7D32" rx="1"/>
+<rect x="627.9" y="272.0" width="4.9" height="27.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="643.7" y="272.0" width="4.9" height="21.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="651.6" y="272.0" width="4.9" height="5.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="659.5" y="272.0" width="4.9" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="667.4" y="272.0" width="4.9" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="675.3" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="683.2" y="272.0" width="4.9" height="4.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="691.2" y="272.0" width="4.9" height="4.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="699.1" y="272.0" width="4.9" height="7.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="707.0" y="272.0" width="4.9" height="3.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="714.9" y="272.0" width="4.9" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="738.6" y="272.0" width="4.9" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="746.5" y="272.0" width="4.9" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="754.5" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="762.4" y="272.0" width="4.9" height="23.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="770.3" y="272.0" width="4.9" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="786.1" y="272.0" width="4.9" height="2.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="801.9" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="809.9" y="272.0" width="4.9" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="817.8" y="272.0" width="4.9" height="3.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="825.7" y="272.0" width="4.9" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="833.6" y="272.0" width="4.9" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="841.5" y="272.0" width="4.9" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="849.4" y="272.0" width="4.9" height="27.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="857.3" y="272.0" width="4.9" height="9.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="865.2" y="232.0" width="4.9" height="40.0" fill="#2E7D32" rx="1"/>
+<rect x="873.2" y="272.0" width="4.9" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="881.1" y="272.0" width="4.9" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="889.0" y="272.0" width="4.9" height="23.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="896.9" y="272.0" width="4.9" height="9.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="904.8" y="272.0" width="4.9" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="912.7" y="272.0" width="4.9" height="11.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="928.5" y="272.0" width="4.9" height="26.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="944.4" y="272.0" width="4.9" height="11.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="952.3" y="272.0" width="4.9" height="25.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="960.2" y="272.0" width="4.9" height="22.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="968.1" y="272.0" width="4.9" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="976.0" y="272.0" width="4.9" height="27.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="991.9" y="272.0" width="4.9" height="7.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="999.8" y="272.0" width="4.9" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1007.7" y="272.0" width="4.9" height="9.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1015.6" y="272.0" width="4.9" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1023.5" y="272.0" width="4.9" height="17.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1031.4" y="272.0" width="4.9" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1039.3" y="272.0" width="4.9" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1047.2" y="272.0" width="4.9" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1055.2" y="272.0" width="4.9" height="6.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1063.1" y="272.0" width="4.9" height="5.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1086.8" y="272.0" width="4.9" height="3.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1094.7" y="272.0" width="4.9" height="8.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1102.6" y="232.0" width="4.9" height="40.0" fill="#2E7D32" rx="1"/>
+<rect x="1118.5" y="272.0" width="4.9" height="12.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1126.4" y="272.0" width="4.9" height="23.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1134.3" y="272.0" width="4.9" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1150.1" y="272.0" width="4.9" height="14.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1158.0" y="272.0" width="4.9" height="2.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1165.9" y="272.0" width="4.9" height="28.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1173.9" y="272.0" width="4.9" height="10.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1181.8" y="272.0" width="4.9" height="7.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1189.7" y="272.0" width="4.9" height="27.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="1187.7" y="230.0" width="8.9" height="72.0" fill="none" rx="2" stroke="#FFB300" stroke-width="1.5"/>
+<rect x="1197.6" y="272.0" width="4.9" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<line x1="547.2" y1="302.0" x2="547.2" y2="306.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="550.2" y="316.0" font-size="11" fill="#757575">Aug</text>
+<line x1="792.5" y1="302.0" x2="792.5" y2="306.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="795.5" y="316.0" font-size="11" fill="#757575">Sep</text>
+<line x1="1029.9" y1="302.0" x2="1029.9" y2="306.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="1032.9" y="316.0" font-size="11" fill="#757575">Oct</text>
+<rect x="998.8" y="198.0" width="205.3" height="26.0" fill="#424242" rx="4"/>
+<text x="1010.8" y="215.0" font-size="11.5" fill="#FFFFFF">Wed 21 Oct · −230.00 · jump to day</text>
+<rect x="1060.6" y="172.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="1084.8" y="183.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<rect x="420.0" y="136.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="437.0" y="150.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B1</text>
+<rect x="460.0" y="344.0" width="760.0" height="156.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="476.0" y="371.0" font-size="14" fill="#424242" font-weight="500">22 Oct</text>
+<text x="525.8" y="371.0" font-size="12" fill="#757575">Thursday</text>
+<text x="1204.0" y="371.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<line x1="460.0" y1="388.0" x2="1220.0" y2="388.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="420.0" y="356.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="437.0" y="370.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B3</text>
+<rect x="476.0" y="398.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="406.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="413.0" font-size="14" fill="#424242" font-weight="500">Tram pass</text>
+<text x="524.0" y="431.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="413.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<rect x="420.0" y="406.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="437.0" y="420.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B4</text>
+<rect x="476.0" y="454.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="462.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="469.0" font-size="14" fill="#424242" font-weight="500">Starbucks</text>
+<text x="524.0" y="487.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="469.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<rect x="460.0" y="512.0" width="760.0" height="380.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="476.0" y="539.0" font-size="14" fill="#424242" font-weight="500">21 Oct</text>
+<text x="525.8" y="539.0" font-size="12" fill="#757575">Wednesday</text>
+<text x="1204.0" y="539.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−230.00</text>
+<line x1="460.0" y1="556.0" x2="1220.0" y2="556.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="476.0" y="566.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="574.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="581.0" font-size="14" fill="#424242" font-weight="500">Online course</text>
+<text x="524.0" y="599.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="581.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<rect x="476.0" y="622.0" width="36.0" height="36.0" fill="#DBEEEF" rx="8"/>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="484.1" y="630.1" width="19.8" height="19.8" fill="#00838F"/>
+<text x="524.0" y="637.0" font-size="14" fill="#424242" font-weight="500">VWCE buy</text>
+<text x="524.0" y="655.0" font-size="12" fill="#757575">Investments</text>
+<text x="1204.0" y="637.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+1,000.00</text>
+<rect x="476.0" y="678.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="686.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="693.0" font-size="14" fill="#424242" font-weight="500">Transfer to brokerage</text>
+<text x="524.0" y="711.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="693.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1,000.00</text>
+<rect x="476.0" y="734.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="742.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="749.0" font-size="14" fill="#424242" font-weight="500">Orlen fuel</text>
+<text x="524.0" y="767.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="749.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−11.00</text>
+<rect x="476.0" y="790.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="798.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="805.0" font-size="14" fill="#424242" font-weight="500">Carrefour</text>
+<text x="524.0" y="823.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="805.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−62.00</text>
+<rect x="476.0" y="846.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="854.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="861.0" font-size="14" fill="#424242" font-weight="500">Bolt</text>
+<text x="524.0" y="879.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="861.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−8.00</text>
+<rect x="460.0" y="904.0" width="760.0" height="268.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="476.0" y="931.0" font-size="14" fill="#424242" font-weight="500">20 Oct</text>
+<text x="525.8" y="931.0" font-size="12" fill="#757575">Tuesday</text>
+<text x="1204.0" y="931.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−53.00</text>
+<line x1="460.0" y1="948.0" x2="1220.0" y2="948.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="476.0" y="958.0" width="36.0" height="36.0" fill="#EFE0F3" rx="8"/>
+<use href="#i-bank" xlink:href="#i-bank" x="484.1" y="966.1" width="19.8" height="19.8" fill="#8E24AA"/>
+<text x="524.0" y="973.0" font-size="14" fill="#424242" font-weight="500">Loan instalment</text>
+<text x="524.0" y="991.0" font-size="12" fill="#757575">Loan 1</text>
+<text x="1204.0" y="973.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+250.00</text>
+<rect x="476.0" y="1014.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="1022.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="1029.0" font-size="14" fill="#424242" font-weight="500">Loan payment</text>
+<text x="524.0" y="1047.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="1029.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−250.00</text>
+<rect x="476.0" y="1070.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="1078.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="1085.0" font-size="14" fill="#424242" font-weight="500">Uber</text>
+<text x="524.0" y="1103.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="1085.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−43.00</text>
+<rect x="476.0" y="1126.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="484.1" y="1134.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="524.0" y="1141.0" font-size="14" fill="#424242" font-weight="500">Spotify</text>
+<text x="524.0" y="1159.0" font-size="12" fill="#757575">Cash 1</text>
+<text x="1204.0" y="1141.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+</g></g>
+<rect x="40.0" y="140.0" width="1440.0" height="960.0" fill="none" rx="12" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1520.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Mobile · 390px · filter: account Cash 1</text>
+<clipPath id="c2"><rect x="1520" y="140" width="390" height="844" rx="20"/></clipPath>
+<g clip-path="url(#c2)"><g transform="translate(1520 140)">
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="390.0" height="56.0" fill="#FFFFFF"/>
+<line x1="0.0" y1="56.0" x2="390.0" y2="56.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="16.0" y="16.0" width="24" height="24" fill="#616161"/>
+<text x="56.0" y="36.0" font-size="20" fill="#424242">Transactions</text>
+<rect x="16.0" y="68.0" width="86.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-calendar" xlink:href="#i-calendar" x="28.0" y="75.0" width="18" height="18" fill="#757575"/>
+<text x="50.0" y="88.7" font-size="13" fill="#424242">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="72.5" y="75.0" width="18" height="18" fill="#757575"/>
+<rect x="110.5" y="68.0" width="142.1" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<text x="122.5" y="88.7" font-size="13" fill="#8D6200" font-weight="500">Account: Cash 1</text>
+<circle cx="231.6" cy="84.0" r="9" fill="#FFB300"/>
+<use href="#i-close" xlink:href="#i-close" x="225.6" y="78.0" width="12" height="12" fill="#FFFFFF"/>
+<rect x="260.6" y="68.0" width="74.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="272.6" y="88.7" font-size="13" fill="#424242">Type</text>
+<use href="#i-expand" xlink:href="#i-expand" x="305.2" y="75.0" width="18" height="18" fill="#757575"/>
+<rect x="16.0" y="108.0" width="85.8" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="28.0" y="115.0" width="18" height="18" fill="#757575"/>
+<text x="50.0" y="128.7" font-size="13" fill="#424242">Search</text>
+<text x="124.0" y="128.7" font-size="13" fill="#8D6200" font-weight="500">Clear all</text>
+<text x="374.0" y="129.0" font-size="12" fill="#757575" text-anchor="end">58 results</text>
+<rect x="16.0" y="156.0" width="358.0" height="160.0" fill="#FFFFFF" rx="8" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="182.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">LAST 3 MONTHS · 23 JUL – 22 OCT</text>
+<text x="32.0" y="206.0" font-size="12" fill="#757575">In</text>
+<text x="32.0" y="226.0" font-size="16" fill="#2E7D32" font-weight="500" class="n">+11,200.00</text>
+<text x="140.7" y="206.0" font-size="12" fill="#757575">Out</text>
+<text x="140.7" y="226.0" font-size="16" fill="#C62828" font-weight="500" class="n">−4,120.40</text>
+<text x="249.3" y="206.0" font-size="12" fill="#757575">Net</text>
+<text x="249.3" y="226.0" font-size="16" fill="#2E7D32" font-weight="500" class="n">+7,079.60</text>
+<line x1="32.0" y1="270.0" x2="358.0" y2="270.0" stroke="#BDBDBD" stroke-width="1"/>
+<rect x="39.8" y="270.0" width="2.2" height="6.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="43.3" y="270.0" width="2.2" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="46.8" y="270.0" width="2.2" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="50.4" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="53.9" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="57.5" y="270.0" width="2.2" height="14.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="61.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="64.6" y="270.0" width="2.2" height="5.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="71.7" y="270.0" width="2.2" height="9.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="75.2" y="270.0" width="2.2" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="78.7" y="270.0" width="2.2" height="13.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="82.3" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="85.8" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="92.9" y="270.0" width="2.2" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="96.5" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="100.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="107.1" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="110.6" y="270.0" width="2.2" height="5.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="114.2" y="270.0" width="2.2" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="117.7" y="270.0" width="2.2" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="121.3" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="124.8" y="270.0" width="2.2" height="4.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="128.3" y="270.0" width="2.2" height="4.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="131.9" y="270.0" width="2.2" height="7.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="135.4" y="270.0" width="2.2" height="3.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="139.0" y="270.0" width="2.2" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="149.6" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="153.2" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="156.7" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="160.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="163.8" y="270.0" width="2.2" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="170.9" y="270.0" width="2.2" height="2.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="178.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="181.5" y="270.0" width="2.2" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="185.0" y="270.0" width="2.2" height="3.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="188.6" y="270.0" width="2.2" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="192.1" y="270.0" width="2.2" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="195.7" y="270.0" width="2.2" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="199.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="202.8" y="270.0" width="2.2" height="9.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="206.3" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="209.8" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="213.4" y="270.0" width="2.2" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="216.9" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="220.5" y="270.0" width="2.2" height="9.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="224.0" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="227.6" y="270.0" width="2.2" height="11.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="234.7" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="241.7" y="270.0" width="2.2" height="11.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="245.3" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="248.8" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="252.4" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="255.9" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="263.0" y="270.0" width="2.2" height="7.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="266.5" y="270.0" width="2.2" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="270.1" y="270.0" width="2.2" height="9.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="273.6" y="270.0" width="2.2" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="277.2" y="270.0" width="2.2" height="17.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="280.7" y="270.0" width="2.2" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="284.3" y="270.0" width="2.2" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="287.8" y="270.0" width="2.2" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="291.3" y="270.0" width="2.2" height="6.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="294.9" y="270.0" width="2.2" height="5.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="305.5" y="270.0" width="2.2" height="3.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="309.1" y="270.0" width="2.2" height="8.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="312.6" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="319.7" y="270.0" width="2.2" height="12.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="323.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="326.8" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="333.9" y="270.0" width="2.2" height="14.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="337.4" y="270.0" width="2.2" height="2.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="341.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="344.5" y="270.0" width="2.2" height="10.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="348.0" y="270.0" width="2.2" height="7.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="351.6" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="349.6" y="238.0" width="6.2" height="54.0" fill="none" rx="2" stroke="#FFB300" stroke-width="1.5"/>
+<rect x="355.1" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<line x1="63.9" y1="292.0" x2="63.9" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="66.9" y="306.0" font-size="11" fill="#757575">Aug</text>
+<line x1="173.7" y1="292.0" x2="173.7" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="176.7" y="306.0" font-size="11" fill="#757575">Sep</text>
+<line x1="280.0" y1="292.0" x2="280.0" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="283.0" y="306.0" font-size="11" fill="#757575">Oct</text>
+<rect x="16.0" y="330.0" width="358.0" height="136.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="355.0" font-size="14" fill="#424242" font-weight="500">22 Oct</text>
+<text x="81.8" y="355.0" font-size="12" fill="#757575">Thursday</text>
+<text x="358.0" y="355.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<line x1="16.0" y1="370.0" x2="374.0" y2="370.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="378.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="385.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="399.0" font-size="14" fill="#424242" font-weight="500">Tram pass</text>
+<text x="362.0" y="399.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<rect x="28.0" y="426.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="433.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="447.0" font-size="14" fill="#424242" font-weight="500">Starbucks</text>
+<text x="362.0" y="447.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<rect x="16.0" y="478.0" width="358.0" height="280.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="503.0" font-size="14" fill="#424242" font-weight="500">21 Oct</text>
+<text x="81.8" y="503.0" font-size="12" fill="#757575">Wednesday</text>
+<text x="358.0" y="503.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1,230.00</text>
+<line x1="16.0" y1="518.0" x2="374.0" y2="518.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="526.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="533.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="547.0" font-size="14" fill="#424242" font-weight="500">Online course</text>
+<text x="362.0" y="547.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<rect x="28.0" y="574.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="581.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="595.0" font-size="14" fill="#424242" font-weight="500">Transfer to brokerage</text>
+<text x="362.0" y="595.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1,000.00</text>
+<rect x="28.0" y="622.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="629.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="643.0" font-size="14" fill="#424242" font-weight="500">Orlen fuel</text>
+<text x="362.0" y="643.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−11.00</text>
+<rect x="28.0" y="670.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="677.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="691.0" font-size="14" fill="#424242" font-weight="500">Carrefour</text>
+<text x="362.0" y="691.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−62.00</text>
+<rect x="28.0" y="718.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="725.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="739.0" font-size="14" fill="#424242" font-weight="500">Bolt</text>
+<text x="362.0" y="739.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−8.00</text>
+<rect x="16.0" y="770.0" width="358.0" height="184.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="795.0" font-size="14" fill="#424242" font-weight="500">20 Oct</text>
+<text x="81.8" y="795.0" font-size="12" fill="#757575">Tuesday</text>
+<text x="358.0" y="795.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−303.00</text>
+<line x1="16.0" y1="810.0" x2="374.0" y2="810.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="818.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="825.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="839.0" font-size="14" fill="#424242" font-weight="500">Loan payment</text>
+<text x="362.0" y="839.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−250.00</text>
+<rect x="28.0" y="866.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="873.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="887.0" font-size="14" fill="#424242" font-weight="500">Uber</text>
+<text x="362.0" y="887.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−43.00</text>
+<rect x="28.0" y="914.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="921.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="935.0" font-size="14" fill="#424242" font-weight="500">Spotify</text>
+<text x="362.0" y="935.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+</g></g>
+<rect x="1520.0" y="140.0" width="390.0" height="844.0" fill="none" rx="20" stroke="#B0BEC5" stroke-width="1"/>
+<rect x="1483.0" y="214.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="228.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B2</text>
+<rect x="1483.0" y="300.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="314.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B1</text>
+<rect x="1483.0" y="480.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="494.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B3</text>
+<rect x="1483.0" y="524.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="538.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B5</text>
+<text x="1950.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Mobile · tapping the Account chip opens a picker</text>
+<clipPath id="c3"><rect x="1950" y="140" width="390" height="844" rx="20"/></clipPath>
+<g clip-path="url(#c3)"><g transform="translate(1950 140)">
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="390.0" height="56.0" fill="#FFFFFF"/>
+<line x1="0.0" y1="56.0" x2="390.0" y2="56.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="16.0" y="16.0" width="24" height="24" fill="#616161"/>
+<text x="56.0" y="36.0" font-size="20" fill="#424242">Transactions</text>
+<rect x="16.0" y="68.0" width="86.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-calendar" xlink:href="#i-calendar" x="28.0" y="75.0" width="18" height="18" fill="#757575"/>
+<text x="50.0" y="88.7" font-size="13" fill="#424242">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="72.5" y="75.0" width="18" height="18" fill="#757575"/>
+<rect x="110.5" y="68.0" width="142.1" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<text x="122.5" y="88.7" font-size="13" fill="#8D6200" font-weight="500">Account: Cash 1</text>
+<circle cx="231.6" cy="84.0" r="9" fill="#FFB300"/>
+<use href="#i-close" xlink:href="#i-close" x="225.6" y="78.0" width="12" height="12" fill="#FFFFFF"/>
+<rect x="260.6" y="68.0" width="74.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="272.6" y="88.7" font-size="13" fill="#424242">Type</text>
+<use href="#i-expand" xlink:href="#i-expand" x="305.2" y="75.0" width="18" height="18" fill="#757575"/>
+<rect x="16.0" y="108.0" width="85.8" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="28.0" y="115.0" width="18" height="18" fill="#757575"/>
+<text x="50.0" y="128.7" font-size="13" fill="#424242">Search</text>
+<text x="124.0" y="128.7" font-size="13" fill="#8D6200" font-weight="500">Clear all</text>
+<text x="374.0" y="129.0" font-size="12" fill="#757575" text-anchor="end">58 results</text>
+<rect x="16.0" y="156.0" width="358.0" height="160.0" fill="#FFFFFF" rx="8" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="182.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">LAST 3 MONTHS · 23 JUL – 22 OCT</text>
+<text x="32.0" y="206.0" font-size="12" fill="#757575">In</text>
+<text x="32.0" y="226.0" font-size="16" fill="#2E7D32" font-weight="500" class="n">+11,200.00</text>
+<text x="140.7" y="206.0" font-size="12" fill="#757575">Out</text>
+<text x="140.7" y="226.0" font-size="16" fill="#C62828" font-weight="500" class="n">−4,120.40</text>
+<text x="249.3" y="206.0" font-size="12" fill="#757575">Net</text>
+<text x="249.3" y="226.0" font-size="16" fill="#2E7D32" font-weight="500" class="n">+7,079.60</text>
+<line x1="32.0" y1="270.0" x2="358.0" y2="270.0" stroke="#BDBDBD" stroke-width="1"/>
+<rect x="39.8" y="270.0" width="2.2" height="6.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="43.3" y="270.0" width="2.2" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="46.8" y="270.0" width="2.2" height="13.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="50.4" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="53.9" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="57.5" y="270.0" width="2.2" height="14.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="61.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="64.6" y="270.0" width="2.2" height="5.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="71.7" y="270.0" width="2.2" height="9.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="75.2" y="270.0" width="2.2" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="78.7" y="270.0" width="2.2" height="13.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="82.3" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="85.8" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="92.9" y="270.0" width="2.2" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="96.5" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="100.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="107.1" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="110.6" y="270.0" width="2.2" height="5.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="114.2" y="270.0" width="2.2" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="117.7" y="270.0" width="2.2" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="121.3" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="124.8" y="270.0" width="2.2" height="4.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="128.3" y="270.0" width="2.2" height="4.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="131.9" y="270.0" width="2.2" height="7.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="135.4" y="270.0" width="2.2" height="3.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="139.0" y="270.0" width="2.2" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="149.6" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="153.2" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="156.7" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="160.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="163.8" y="270.0" width="2.2" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="170.9" y="270.0" width="2.2" height="2.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="178.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="181.5" y="270.0" width="2.2" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="185.0" y="270.0" width="2.2" height="3.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="188.6" y="270.0" width="2.2" height="14.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="192.1" y="270.0" width="2.2" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="195.7" y="270.0" width="2.2" height="3.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="199.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="202.8" y="270.0" width="2.2" height="9.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="206.3" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="209.8" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="213.4" y="270.0" width="2.2" height="3.5" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="216.9" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="220.5" y="270.0" width="2.2" height="9.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="224.0" y="270.0" width="2.2" height="5.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="227.6" y="270.0" width="2.2" height="11.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="234.7" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="241.7" y="270.0" width="2.2" height="11.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="245.3" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="248.8" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="252.4" y="270.0" width="2.2" height="5.3" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="255.9" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="263.0" y="270.0" width="2.2" height="7.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="266.5" y="270.0" width="2.2" height="6.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="270.1" y="270.0" width="2.2" height="9.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="273.6" y="270.0" width="2.2" height="13.2" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="277.2" y="270.0" width="2.2" height="17.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="280.7" y="270.0" width="2.2" height="6.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="284.3" y="270.0" width="2.2" height="4.6" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="287.8" y="270.0" width="2.2" height="4.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="291.3" y="270.0" width="2.2" height="6.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="294.9" y="270.0" width="2.2" height="5.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="305.5" y="270.0" width="2.2" height="3.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="309.1" y="270.0" width="2.2" height="8.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="312.6" y="240.0" width="2.2" height="30.0" fill="#2E7D32" rx="1"/>
+<rect x="319.7" y="270.0" width="2.2" height="12.7" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="323.2" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="326.8" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="333.9" y="270.0" width="2.2" height="14.4" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="337.4" y="270.0" width="2.2" height="2.8" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="341.0" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="344.5" y="270.0" width="2.2" height="10.1" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="348.0" y="270.0" width="2.2" height="7.9" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="351.6" y="270.0" width="2.2" height="20.0" fill="#C62828" rx="1" opacity="0.85"/>
+<rect x="349.6" y="238.0" width="6.2" height="54.0" fill="none" rx="2" stroke="#FFB300" stroke-width="1.5"/>
+<rect x="355.1" y="270.0" width="2.2" height="3.1" fill="#C62828" rx="1" opacity="0.85"/>
+<line x1="63.9" y1="292.0" x2="63.9" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="66.9" y="306.0" font-size="11" fill="#757575">Aug</text>
+<line x1="173.7" y1="292.0" x2="173.7" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="176.7" y="306.0" font-size="11" fill="#757575">Sep</text>
+<line x1="280.0" y1="292.0" x2="280.0" y2="296.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="283.0" y="306.0" font-size="11" fill="#757575">Oct</text>
+<rect x="16.0" y="330.0" width="358.0" height="136.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="355.0" font-size="14" fill="#424242" font-weight="500">22 Oct</text>
+<text x="81.8" y="355.0" font-size="12" fill="#757575">Thursday</text>
+<text x="358.0" y="355.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<line x1="16.0" y1="370.0" x2="374.0" y2="370.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="378.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="385.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="399.0" font-size="14" fill="#424242" font-weight="500">Tram pass</text>
+<text x="362.0" y="399.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<rect x="28.0" y="426.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="433.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="447.0" font-size="14" fill="#424242" font-weight="500">Starbucks</text>
+<text x="362.0" y="447.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<rect x="16.0" y="478.0" width="358.0" height="280.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<text x="32.0" y="503.0" font-size="14" fill="#424242" font-weight="500">21 Oct</text>
+<text x="81.8" y="503.0" font-size="12" fill="#757575">Wednesday</text>
+<text x="358.0" y="503.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1,230.00</text>
+<line x1="16.0" y1="518.0" x2="374.0" y2="518.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="526.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="35.2" y="533.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="72.0" y="547.0" font-size="14" fill="#424242" font-weight="500">Online course</text>
+<text x="362.0" y="547.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#000000" opacity="0.42"/>
+<rect x="0.0" y="316.0" width="390.0" height="548.0" fill="#FFFFFF" rx="16"/>
+<rect x="179.0" y="326.0" width="32.0" height="4.0" fill="#BDBDBD" rx="2"/>
+<text x="16.0" y="364.0" font-size="18" fill="#424242" font-weight="500">Accounts</text>
+<text x="374.0" y="364.0" font-size="13" fill="#8D6200" font-weight="500" text-anchor="end">Select all</text>
+<rect x="16.0" y="396.0" width="36.0" height="36.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="24.1" y="404.1" width="19.8" height="19.8" fill="#1E88E5"/>
+<text x="64.0" y="412.0" font-size="14" fill="#424242" font-weight="500">Cash 1</text>
+<text x="64.0" y="430.0" font-size="12" fill="#757575">Cash</text>
+<use href="#i-box_on" xlink:href="#i-box_on" x="348.0" y="403.0" width="22" height="22" fill="#FFB300"/>
+<line x1="16.0" y1="442.0" x2="374.0" y2="442.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="452.0" width="36.0" height="36.0" fill="#EFE0F3" rx="8"/>
+<use href="#i-bank" xlink:href="#i-bank" x="24.1" y="460.1" width="19.8" height="19.8" fill="#8E24AA"/>
+<text x="64.0" y="468.0" font-size="14" fill="#424242" font-weight="500">Loan 1</text>
+<text x="64.0" y="486.0" font-size="12" fill="#757575">Cash · loan</text>
+<use href="#i-box_off" xlink:href="#i-box_off" x="348.0" y="459.0" width="22" height="22" fill="#757575"/>
+<line x1="16.0" y1="498.0" x2="374.0" y2="498.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="508.0" width="36.0" height="36.0" fill="#DBEEEF" rx="8"/>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="24.1" y="516.1" width="19.8" height="19.8" fill="#00838F"/>
+<text x="64.0" y="524.0" font-size="14" fill="#424242" font-weight="500">Investments</text>
+<text x="64.0" y="542.0" font-size="12" fill="#757575">Investments</text>
+<use href="#i-box_off" xlink:href="#i-box_off" x="348.0" y="515.0" width="22" height="22" fill="#757575"/>
+<line x1="16.0" y1="554.0" x2="374.0" y2="554.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="564.0" width="36.0" height="36.0" fill="#EBE6E4" rx="8"/>
+<use href="#i-description" xlink:href="#i-description" x="24.1" y="572.1" width="19.8" height="19.8" fill="#6D4C41"/>
+<text x="64.0" y="580.0" font-size="14" fill="#424242" font-weight="500">Bond 1</text>
+<text x="64.0" y="598.0" font-size="12" fill="#757575">Bonds</text>
+<use href="#i-box_off" xlink:href="#i-box_off" x="348.0" y="571.0" width="22" height="22" fill="#757575"/>
+<line x1="16.0" y1="610.0" x2="374.0" y2="610.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="16.0" y="636.0" font-size="12" fill="#757575">Each account keeps one colour everywhere: picker,</text>
+<text x="16.0" y="654.0" font-size="12" fill="#757575">avatars and the overview tooltip.</text>
+<line x1="0.0" y1="756.0" x2="390.0" y2="756.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="16.0" y="772.0" width="358.0" height="44.0" fill="#FFB300" rx="4"/>
+<text x="126.0" y="799.0" font-size="14" fill="#212121" font-weight="500">Show 58 transactions</text>
+</g></g>
+<rect x="1950.0" y="140.0" width="390.0" height="844.0" fill="none" rx="20" stroke="#B0BEC5" stroke-width="1"/>
+<rect x="1913.0" y="536.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1930.0" y="550.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">B4</text>
+<text x="40.0" y="1136.0" font-size="12" fill="#C17E00" font-weight="500" letter-spacing="1.4">STATES</text>
+<text x="40.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Loading: card and feed skeletons, chips stay usable</text>
+<clipPath id="c4"><rect x="40" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c4)"><g transform="translate(40 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<rect x="12.0" y="12.0" width="321.0" height="104.0" fill="#FFFFFF" rx="8" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="24.0" y="26.0" width="150.0" height="8.0" fill="#E6E6E6" rx="4"/>
+<rect x="24.0" y="44.0" width="70.0" height="16.0" fill="#E6E6E6" rx="4"/>
+<rect x="124.0" y="44.0" width="70.0" height="16.0" fill="#E6E6E6" rx="4"/>
+<rect x="224.0" y="44.0" width="70.0" height="16.0" fill="#E6E6E6" rx="4"/>
+<rect x="24.0" y="92.0" width="4.0" height="6.0" fill="#E6E6E6" rx="1"/>
+<rect x="30.6" y="74.0" width="4.0" height="24.0" fill="#E6E6E6" rx="1"/>
+<rect x="37.2" y="75.0" width="4.0" height="23.0" fill="#E6E6E6" rx="1"/>
+<rect x="43.8" y="76.0" width="4.0" height="22.0" fill="#E6E6E6" rx="1"/>
+<rect x="50.4" y="77.0" width="4.0" height="21.0" fill="#E6E6E6" rx="1"/>
+<rect x="57.0" y="78.0" width="4.0" height="20.0" fill="#E6E6E6" rx="1"/>
+<rect x="63.6" y="79.0" width="4.0" height="19.0" fill="#E6E6E6" rx="1"/>
+<rect x="70.2" y="80.0" width="4.0" height="18.0" fill="#E6E6E6" rx="1"/>
+<rect x="76.8" y="81.0" width="4.0" height="17.0" fill="#E6E6E6" rx="1"/>
+<rect x="83.4" y="82.0" width="4.0" height="16.0" fill="#E6E6E6" rx="1"/>
+<rect x="90.0" y="83.0" width="4.0" height="15.0" fill="#E6E6E6" rx="1"/>
+<rect x="96.6" y="84.0" width="4.0" height="14.0" fill="#E6E6E6" rx="1"/>
+<rect x="103.2" y="85.0" width="4.0" height="13.0" fill="#E6E6E6" rx="1"/>
+<rect x="109.8" y="86.0" width="4.0" height="12.0" fill="#E6E6E6" rx="1"/>
+<rect x="116.4" y="87.0" width="4.0" height="11.0" fill="#E6E6E6" rx="1"/>
+<rect x="123.0" y="88.0" width="4.0" height="10.0" fill="#E6E6E6" rx="1"/>
+<rect x="129.6" y="89.0" width="4.0" height="9.0" fill="#E6E6E6" rx="1"/>
+<rect x="136.2" y="90.0" width="4.0" height="8.0" fill="#E6E6E6" rx="1"/>
+<rect x="142.8" y="91.0" width="4.0" height="7.0" fill="#E6E6E6" rx="1"/>
+<rect x="149.4" y="92.0" width="4.0" height="6.0" fill="#E6E6E6" rx="1"/>
+<rect x="156.0" y="74.0" width="4.0" height="24.0" fill="#E6E6E6" rx="1"/>
+<rect x="162.6" y="75.0" width="4.0" height="23.0" fill="#E6E6E6" rx="1"/>
+<rect x="169.2" y="76.0" width="4.0" height="22.0" fill="#E6E6E6" rx="1"/>
+<rect x="175.8" y="77.0" width="4.0" height="21.0" fill="#E6E6E6" rx="1"/>
+<rect x="182.4" y="78.0" width="4.0" height="20.0" fill="#E6E6E6" rx="1"/>
+<rect x="189.0" y="79.0" width="4.0" height="19.0" fill="#E6E6E6" rx="1"/>
+<rect x="195.6" y="80.0" width="4.0" height="18.0" fill="#E6E6E6" rx="1"/>
+<rect x="202.2" y="81.0" width="4.0" height="17.0" fill="#E6E6E6" rx="1"/>
+<rect x="208.8" y="82.0" width="4.0" height="16.0" fill="#E6E6E6" rx="1"/>
+<rect x="215.4" y="83.0" width="4.0" height="15.0" fill="#E6E6E6" rx="1"/>
+<rect x="222.0" y="84.0" width="4.0" height="14.0" fill="#E6E6E6" rx="1"/>
+<rect x="228.6" y="85.0" width="4.0" height="13.0" fill="#E6E6E6" rx="1"/>
+<rect x="235.2" y="86.0" width="4.0" height="12.0" fill="#E6E6E6" rx="1"/>
+<rect x="241.8" y="87.0" width="4.0" height="11.0" fill="#E6E6E6" rx="1"/>
+<rect x="248.4" y="88.0" width="4.0" height="10.0" fill="#E6E6E6" rx="1"/>
+<rect x="255.0" y="89.0" width="4.0" height="9.0" fill="#E6E6E6" rx="1"/>
+<rect x="261.6" y="90.0" width="4.0" height="8.0" fill="#E6E6E6" rx="1"/>
+<rect x="268.2" y="91.0" width="4.0" height="7.0" fill="#E6E6E6" rx="1"/>
+<rect x="274.8" y="92.0" width="4.0" height="6.0" fill="#E6E6E6" rx="1"/>
+<rect x="281.4" y="74.0" width="4.0" height="24.0" fill="#E6E6E6" rx="1"/>
+<rect x="288.0" y="75.0" width="4.0" height="23.0" fill="#E6E6E6" rx="1"/>
+<rect x="294.6" y="76.0" width="4.0" height="22.0" fill="#E6E6E6" rx="1"/>
+<rect x="301.2" y="77.0" width="4.0" height="21.0" fill="#E6E6E6" rx="1"/>
+<rect x="307.8" y="78.0" width="4.0" height="20.0" fill="#E6E6E6" rx="1"/>
+<rect x="314.4" y="79.0" width="4.0" height="19.0" fill="#E6E6E6" rx="1"/>
+<rect x="321.0" y="80.0" width="4.0" height="18.0" fill="#E6E6E6" rx="1"/>
+<rect x="12.0" y="128.0" width="321.0" height="120.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="142.0" width="80.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="275.0" y="142.0" width="44.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<line x1="12.0" y1="162.0" x2="333.0" y2="162.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="28.0" y="174.0" width="28.0" height="28.0" fill="#E6E6E6" rx="6"/>
+<rect x="66.0" y="180.0" width="120.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="275.0" y="180.0" width="44.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="28.0" y="212.0" width="28.0" height="28.0" fill="#E6E6E6" rx="6"/>
+<rect x="66.0" y="218.0" width="90.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="275.0" y="218.0" width="44.0" height="10.0" fill="#E6E6E6" rx="4"/>
+</g></g>
+<rect x="40.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="405.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Empty: zero overview, flat chart, clear filters</text>
+<clipPath id="c5"><rect x="405" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c5)"><g transform="translate(405 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<rect x="12.0" y="12.0" width="321.0" height="104.0" fill="#FFFFFF" rx="8" stroke="#E0E0E0" stroke-width="1"/>
+<text x="24.0" y="32.0" font-size="10" fill="#757575" font-weight="500" letter-spacing="0.8">LAST 3 MONTHS</text>
+<text x="24.0" y="52.0" font-size="11" fill="#757575">In</text>
+<text x="24.0" y="70.0" font-size="15" fill="#424242" font-weight="500" class="n">0.00</text>
+<text x="124.0" y="52.0" font-size="11" fill="#757575">Out</text>
+<text x="124.0" y="70.0" font-size="15" fill="#424242" font-weight="500" class="n">0.00</text>
+<text x="224.0" y="52.0" font-size="11" fill="#757575">Net</text>
+<text x="224.0" y="70.0" font-size="15" fill="#424242" font-weight="500" class="n">0.00</text>
+<line x1="24.0" y1="94.0" x2="321.0" y2="94.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="172.0" y="160.0" font-size="15" fill="#424242" font-weight="500" text-anchor="middle">No transactions for Cash 1</text>
+<text x="172.0" y="182.0" font-size="12" fill="#757575" text-anchor="middle">in the last 3 months</text>
+<rect x="130.0" y="200.0" width="84.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="148.2" y="220.7" font-size="13" fill="#424242" font-weight="500">Clear all</text>
+</g></g>
+<rect x="405.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="770.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Error: overview and feed replaced by one retry</text>
+<clipPath id="c6"><rect x="770" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c6)"><g transform="translate(770 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<use href="#i-warning" xlink:href="#i-warning" x="152.0" y="54.0" width="40" height="40" fill="#C62828"/>
+<text x="172.0" y="132.0" font-size="15" fill="#424242" font-weight="500" text-anchor="middle">Couldn’t load transactions</text>
+<text x="172.0" y="154.0" font-size="12" fill="#757575" text-anchor="middle">Something went wrong fetching your transactions.</text>
+<use href="#i-refresh" xlink:href="#i-refresh" x="133.4" y="179.0" width="18" height="18" fill="#8D6200"/>
+<text x="155.4" y="192.7" font-size="13" fill="#8D6200" font-weight="500">Try again</text>
+<text x="172.0" y="236.0" font-size="11" fill="#78909C" text-anchor="middle">Chips stay visible so the user can change the range.</text>
+</g></g>
+<rect x="770.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1135.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">End of range and next-page failure</text>
+<clipPath id="c7"><rect x="1135" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c7)"><g transform="translate(1135 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<rect x="12.0" y="-8.0" width="321.0" height="108.0" fill="#FFFFFF" rx="4" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="24.0" y="4.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="31.2" y="11.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="66.0" y="25.0" font-size="14" fill="#424242" font-weight="500">Carrefour</text>
+<text x="321.0" y="25.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−48.20</text>
+<rect x="24.0" y="54.0" width="32.0" height="32.0" fill="#DFEEFB" rx="8"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="31.2" y="61.2" width="17.6" height="17.6" fill="#1E88E5"/>
+<text x="66.0" y="75.0" font-size="14" fill="#424242" font-weight="500">Orlen fuel</text>
+<text x="321.0" y="75.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−120.00</text>
+<text x="172.0" y="128.0" font-size="12" fill="#757575" text-anchor="middle">That’s everything from 23 Jul – 22 Oct</text>
+<rect x="124.0" y="140.0" width="99.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-calendar" xlink:href="#i-calendar" x="136.0" y="147.0" width="18" height="18" fill="#757575"/>
+<text x="158.0" y="160.7" font-size="13" fill="#424242">Show 6M</text>
+<line x1="16.0" y1="186.0" x2="329.0" y2="186.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="210.0" font-size="12" fill="#C62828">Couldn’t load more transactions.</text>
+<rect x="229.0" y="194.0" width="100.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="251.4" y="214.7" font-size="13" fill="#424242" font-weight="500">Try again</text>
+<text x="16.0" y="234.0" font-size="11" fill="#757575">Same wording and button as today.</text>
+</g></g>
+<rect x="1135.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1520.0" y="1006.0" font-size="13" fill="#546E7A" font-weight="500">Notes · dark theme and legend</text>
+<clipPath id="c8"><rect x="1520" y="1020" width="820" height="410" rx="8"/></clipPath>
+<g clip-path="url(#c8)"><g transform="translate(1520 1020)">
+<rect x="0.0" y="0.0" width="820.0" height="410.0" fill="#FFFFFF"/>
+<text x="20.0" y="34.0" font-size="15" fill="#424242" font-weight="500">Dark theme tokens</text>
+<text x="20.0" y="62.0" font-size="12" fill="#757575" class="n">--mud-palette-background</text>
+<text x="300.0" y="62.0" font-size="12" fill="#424242" class="n">#212121 (Gray Darken4)</text>
+<text x="20.0" y="82.0" font-size="12" fill="#757575" class="n">--mud-palette-surface</text>
+<text x="300.0" y="82.0" font-size="12" fill="#424242" class="n">#424242 (Gray Darken3)</text>
+<text x="20.0" y="102.0" font-size="12" fill="#757575" class="n">--mud-palette-primary</text>
+<text x="300.0" y="102.0" font-size="12" fill="#424242" class="n">#FF8F00 (Amber Darken3)</text>
+<text x="20.0" y="122.0" font-size="12" fill="#757575" class="n">--fm-pos / --fm-neg</text>
+<text x="300.0" y="122.0" font-size="12" fill="#424242" class="n">#66BB6A / #EF5350 (bars use the same)</text>
+<text x="20.0" y="142.0" font-size="12" fill="#757575" class="n">Account colours (dark)</text>
+<text x="300.0" y="142.0" font-size="12" fill="#424242" class="n">#64B5F6 · #BA68C8 · #4DD0E1 · #A1887F</text>
+<text x="20.0" y="162.0" font-size="12" fill="#757575" class="n">Chart baseline / tooltip</text>
+<text x="300.0" y="162.0" font-size="12" fill="#424242" class="n">rgba(255,255,255,0.24) / #616161</text>
+<rect x="20.0" y="192.0" width="780.0" height="120.0" fill="#212121" rx="6"/>
+<text x="34.0" y="218.0" font-size="13" fill="#E0E0E0" font-weight="500">21 Oct</text>
+<text x="84.0" y="218.0" font-size="11" fill="#9E9E9E">Wednesday</text>
+<text x="786.0" y="218.0" font-size="13" fill="#EF5350" font-weight="500" text-anchor="end" class="n">−230.00</text>
+<line x1="20.0" y1="230.0" x2="800.0" y2="230.0" stroke="#333333" stroke-width="1"/>
+<rect x="34.0" y="240.0" width="30.0" height="30.0" fill="#304250" rx="7"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="40.0" y="246.0" width="18" height="18" fill="#64B5F6"/>
+<text x="76.0" y="254.0" font-size="13" fill="#E0E0E0" font-weight="500">Tram pass</text>
+<text x="76.0" y="269.0" font-size="11" fill="#9E9E9E">Cash 1</text>
+<text x="786.0" y="258.0" font-size="13" fill="#EF5350" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<rect x="34.0" y="278.0" width="30.0" height="30.0" fill="#2B484B" rx="7"/>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="40.0" y="284.0" width="18" height="18" fill="#4DD0E1"/>
+<text x="76.0" y="292.0" font-size="13" fill="#E0E0E0" font-weight="500">VWCE buy</text>
+<text x="76.0" y="307.0" font-size="11" fill="#9E9E9E">Investments</text>
+<text x="786.0" y="296.0" font-size="13" fill="#66BB6A" font-weight="500" text-anchor="end" class="n">+1,000.00</text>
+<text x="20.0" y="338.0" font-size="12" fill="#757575">Account colours come from a fixed eight-colour list indexed by a stable hash of AccountId (light: 600 shade,</text>
+<text x="20.0" y="356.0" font-size="12" fill="#757575">dark: 300 shade); avatar fill is the colour at 14 % (light) / 22 % (dark). Red and green are excluded so the</text>
+<text x="20.0" y="374.0" font-size="12" fill="#757575">amount keeps sole ownership of sign colour. Active chip: primary outline + 16 % primary tint.</text>
+</g></g>
+<rect x="1520.0" y="1020.0" width="820.0" height="410.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+</svg>
