@@ -31,6 +31,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     private int? _userId;
     private bool _disposed;
 
+    private string? _search;
     private string _selectedRange = _defaultRange;
     private DateRange? _customRange;
     private DateTime _rangeStart;
@@ -90,6 +91,12 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     private Task OnFilterChanged(TransactionLogFilter filter)
     {
         _filter = filter;
+        return LoadAsync(reset: true);
+    }
+
+    private Task OnSearchChanged(string? search)
+    {
+        _search = search;
         return LoadAsync(reset: true);
     }
 
@@ -171,7 +178,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         {
             TransactionLogPage? page = null;
             if (_userId is int userId)
-                page = await TransactionLogHttpClient.GetPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds), cts.Token);
+                page = await TransactionLogHttpClient.GetPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds, _search), cts.Token);
             if (_disposed || !_loadGate.IsCurrent(version)) return;
 
             if (page is not null)
@@ -203,7 +210,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         StateHasChanged();
     }
 
-    private string EmptyMessage => _filter.IsActive
+    private string EmptyMessage => _filter.IsActive || !string.IsNullOrWhiteSpace(_search)
         ? $"No transactions match the selected filters between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Adjust the filters or pick a longer date range."
         : $"No transactions between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Pick a longer date range to look further back.";
 }

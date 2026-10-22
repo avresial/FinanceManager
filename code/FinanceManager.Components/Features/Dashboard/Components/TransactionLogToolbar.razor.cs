@@ -20,6 +20,51 @@ public partial class TransactionLogToolbar : ComponentBase
         (AccountType.Stock, "Investments"),
     ];
 
+    private readonly string _searchPanelId = $"fm-txlog-search-{Guid.NewGuid():N}";
+    private MudTextField<string>? _searchField;
+    private MudIconButton? _searchButton;
+    private bool _isSearchExpanded;
+    private bool _focusSearchOnRender;
+    private bool _focusButtonOnRender;
+
+    [Parameter] public string? SearchText { get; set; }
+    [Parameter] public EventCallback<string?> SearchTextChanged { get; set; }
+
+    protected override void OnInitialized() => _isSearchExpanded = !string.IsNullOrWhiteSpace(SearchText);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusSearchOnRender && _searchField is not null)
+        {
+            _focusSearchOnRender = false;
+            await _searchField.FocusAsync();
+        }
+        if (_focusButtonOnRender && _searchButton is not null)
+        {
+            _focusButtonOnRender = false;
+            await _searchButton.FocusAsync();
+        }
+    }
+
+    private void ToggleSearch()
+    {
+        _isSearchExpanded = !_isSearchExpanded;
+        _focusSearchOnRender = _isSearchExpanded;
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape") return;
+        _isSearchExpanded = false;
+        _focusButtonOnRender = true;
+    }
+
+    private async Task OnSearchChanged(string? value)
+    {
+        SearchText = value;
+        await SearchTextChanged.InvokeAsync(value);
+    }
+
     private MudMenu? _rangeMenu;
     private MudDateRangePicker? _customDateRangePicker;
 

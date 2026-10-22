@@ -30,6 +30,21 @@ public class TransactionLogControllerTests
     }
 
     [Fact]
+    public async Task Page_PassesSearchAlongsideExistingFilters()
+    {
+        var day = new DateTime(2026, 10, 20);
+        var query = new TransactionLogQuery(day, day, AccountTypes: [AccountType.Currency], AccountIds: [10], Search: "Café & bond");
+        var page = new TransactionLogPage([], null);
+        _transactionLogService.Setup(x => x.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+            q.Search == query.Search && q.AccountTypes!.Contains(AccountType.Currency) && q.AccountIds!.Contains(10)),
+            TestContext.Current.CancellationToken)).ReturnsAsync(page);
+        var result = await _controller.Page(_testUserId, day, day, accountTypes: [AccountType.Currency], accountIds: [10],
+            search: query.Search, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+        _transactionLogService.VerifyAll();
+    }
+
+    [Fact]
     public async Task Get_ReturnsOk_ForAuthenticatedUser()
     {
         // Arrange

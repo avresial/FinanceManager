@@ -251,7 +251,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         int take,
         DateOnly? cursorTradeDate = null,
         long? cursorId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null)
     {
         if (cursorTradeDate.HasValue != cursorId.HasValue)
             throw new ArgumentException("Both cursor trade date and transaction id must be supplied together.");
@@ -261,6 +263,15 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
         var query = context.InvestmentTransactions.AsNoTracking()
             .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate >= startDate && x.TradeDate <= endDate);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            var matchedAccounts = searchAccountIds ?? [];
+            query = query.Where(x => matchedAccounts.Contains(x.AccountId) ||
+                x.AssetListing.Ticker.ToUpper().Contains(term) ||
+                x.AssetListing.Asset.Name.ToUpper().Contains(term));
+        }
 
         if (cursorTradeDate is DateOnly date && cursorId is long id)
             query = query.Where(x => x.TradeDate < date || (x.TradeDate == date && x.Id < id));

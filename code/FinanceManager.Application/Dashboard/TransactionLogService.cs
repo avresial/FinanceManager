@@ -103,6 +103,7 @@ public class TransactionLogService(
         {
             Start = AsUtc(query.Start),
             End = AsUtc(query.End),
+            Search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
             Cursor = query.Cursor is TransactionLogCursor original ? original with { Date = AsUtc(original.Date) } : null
         };
         ArgumentOutOfRangeException.ThrowIfLessThan(query.PageSize, 1);
@@ -127,7 +128,7 @@ public class TransactionLogService(
             var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
             var boundary = GetPageBoundary(query.Cursor, AccountType.Currency, int.MaxValue);
             var entries = await currencyEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken);
+                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
                 e.ValueChange, GetCurrencyDescription(e))));
@@ -141,7 +142,7 @@ public class TransactionLogService(
             var names = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
             var boundary = GetPageBoundary(query.Cursor, AccountType.Bond, int.MaxValue);
             var entries = await bondEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken);
+                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             var bondNames = await GetBondNames(entries, cancellationToken);
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
@@ -169,7 +170,7 @@ public class TransactionLogService(
                     : default;
                 var transactions = await investmentTransactionRepository.GetHistoryPage(
                     [.. names.Keys], startDate, endDate, take,
-                    boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken);
+                    boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
                 result.AddRange(transactions.Select(t => new TransactionLogEntryDto(
                     t.AccountId, names[t.AccountId], AccountType.Stock, t.Id, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                     t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t))));
@@ -178,6 +179,9 @@ public class TransactionLogService(
 
         return CreatePage(result, query.PageSize);
     }
+
+    private static IReadOnlyCollection<int> SearchAccountIds(Dictionary<int, string> accounts, string? search) =>
+        search is null ? [] : [.. accounts.Where(a => a.Value.Contains(search, StringComparison.OrdinalIgnoreCase)).Select(a => a.Key)];
 
     private static bool IncludesStream(TransactionLogQuery query, AccountType type) =>
         query.AccountTypes is not { Count: > 0 } types || types.Contains(type);

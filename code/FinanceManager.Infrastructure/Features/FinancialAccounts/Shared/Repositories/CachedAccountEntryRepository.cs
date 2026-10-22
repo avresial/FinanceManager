@@ -195,8 +195,10 @@ public class CachedAccountEntryRepository<T>(
         int take,
         DateTime? cursorPostingDate = null,
         int? cursorId = null,
-        CancellationToken cancellationToken = default) =>
-        inner.GetHistoryPage(accountIds, startDate, endDate, take, cursorPostingDate, cursorId, cancellationToken);
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null) =>
+        inner.GetHistoryPage(accountIds, startDate, endDate, take, cursorPostingDate, cursorId, cancellationToken, search, searchAccountIds);
 
     public Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default) => inner.GetMostRecentByAccounts(accountIds, count, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);

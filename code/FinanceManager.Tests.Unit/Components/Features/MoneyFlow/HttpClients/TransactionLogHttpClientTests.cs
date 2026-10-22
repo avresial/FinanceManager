@@ -11,6 +11,23 @@ namespace FinanceManager.Tests.Unit.Components.Features.MoneyFlow.HttpClients;
 [Trait("Category", "Unit")]
 public class TransactionLogHttpClientTests
 {
+    [Theory]
+    [InlineData("Café & bonds?+%_[]")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task GetPage_EncodesSearchOrOmitsBlankSearch(string? search)
+    {
+        using var handler = new StubHandler(request =>
+        {
+            var query = QueryHelpers.ParseQuery(request.RequestUri!.Query);
+            if (string.IsNullOrWhiteSpace(search)) Assert.False(query.ContainsKey("search"));
+            else Assert.Equal(search, query["search"].ToString());
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(new TransactionLogPage([], null)) };
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        await new TransactionLogHttpClient(http).GetPage(7, new(DateTime.MinValue, DateTime.MaxValue, Search: search), TestContext.Current.CancellationToken);
+    }
+
     [Fact]
     public async Task GetPage_EncodesRangeAndCompositeCursor_AndReadsPage()
     {

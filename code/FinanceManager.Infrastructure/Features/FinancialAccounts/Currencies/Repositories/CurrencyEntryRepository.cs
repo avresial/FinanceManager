@@ -562,7 +562,9 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         int take,
         DateTime? cursorPostingDate = null,
         int? cursorId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null)
     {
         if (cursorPostingDate.HasValue != cursorId.HasValue)
             throw new ArgumentException("Both cursor posting date and entry id must be supplied together.");
@@ -572,6 +574,15 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         var query = context.CurrencyEntries.AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            var matchedAccounts = searchAccountIds ?? [];
+            query = query.Where(e => matchedAccounts.Contains(e.AccountId) ||
+                (e.Description != null && e.Description.ToUpper().Contains(term)) ||
+                (e.ContractorDetails != null && e.ContractorDetails.ToUpper().Contains(term)));
+        }
 
         if (cursorPostingDate is DateTime date && cursorId is int id)
             query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));

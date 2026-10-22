@@ -22,6 +22,8 @@ public class TransactionLogHttpClient(HttpClient httpClient)
             endpoint += $"&accountTypes={Uri.EscapeDataString(type.ToString())}";
         foreach (var accountId in query.AccountIds ?? [])
             endpoint += $"&accountIds={accountId.ToString(CultureInfo.InvariantCulture)}";
+        if (!string.IsNullOrWhiteSpace(query.Search))
+            endpoint += $"&search={Uri.EscapeDataString(query.Search)}";
         return await httpClient.GetFromJsonAsync<TransactionLogPage>(endpoint, cancellationToken)
             ?? new TransactionLogPage([], null);
     }

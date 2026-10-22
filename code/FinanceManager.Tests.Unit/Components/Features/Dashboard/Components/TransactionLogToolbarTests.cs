@@ -168,6 +168,33 @@ public sealed class TransactionLogToolbarTests
         Assert.NotNull(cut.Find("input[data-testid='transactions-account-filter']").GetAttribute("disabled"));
     }
 
+    [Fact]
+    public async Task SearchPanelExpandsDebouncesAndHidesWithEscape()
+    {
+        await using var context = CreateContext();
+        string? search = null;
+        var cut = context.Render<TransactionLogToolbar>(p => p
+            .Add(x => x.SearchTextChanged, value => search = value));
+        Assert.False(cut.FindComponent<MudCollapse>().Instance.Expanded);
+        cut.Find("button[aria-label='Search transactions']").Click();
+        Assert.True(cut.FindComponent<MudCollapse>().Instance.Expanded);
+        var field = cut.FindComponents<MudTextField<string>>().Single(x => x.Instance.DebounceInterval == 150);
+        Assert.Equal(150, field.Instance.DebounceInterval);
+        await cut.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync("mixed"));
+        Assert.Equal("mixed", search);
+        await cut.InvokeAsync(() => field.Instance.OnKeyDown.InvokeAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" }));
+        Assert.False(cut.FindComponent<MudCollapse>().Instance.Expanded);
+        Assert.Equal("false", cut.Find("button[aria-label='Search transactions']").GetAttribute("aria-expanded"));
+    }
+
+    [Fact]
+    public async Task ExistingSearchIsExpandedOnFirstRender()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<TransactionLogToolbar>(p => p.Add(x => x.SearchText, "mixed"));
+        Assert.True(cut.FindComponent<MudCollapse>().Instance.Expanded);
+    }
+
     private static void OpenAccountSelect(IRenderedComponent<IComponent> cut) =>
         cut.Find(".fm-txlog-account-select").MouseDown();
 

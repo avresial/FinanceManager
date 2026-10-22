@@ -8,6 +8,7 @@
 
     <TransactionLogToolbar SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
                            CustomDateRange="@_customRange" CustomDateRangeChanged="OnCustomRangeChanged"
+                           SearchText="@_search" SearchTextChanged="OnSearchChanged"
                            Accounts="_accounts" Filter="_filter" FilterChanged="OnFilterChanged" />
 
     @if (_isLoading)

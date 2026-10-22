@@ -4,9 +4,16 @@
 @* Toolbar of the Transactions page. Mirrors the date-range control of the account details toolbar
    (same presets, same custom range picker) without its account-specific actions, followed by the
    account-type chips and the account multi-select. The row scrolls itself instead of overflowing
-   on a phone, so filters added later (#977) can join it. *@
+   on a phone, and keeps all filters available on narrow screens. *@
 <div class="fm-tx-toolbar mb-4">
     <div class="d-flex align-center fm-txlog-toolbar-row" style="gap: 8px;">
+        <MudIconButton @ref="_searchButton" Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
+                       Size="Size.Small" Color="@(_isSearchExpanded || !string.IsNullOrWhiteSpace(SearchText) ? Color.Primary : Color.Default)"
+                       OnClick="ToggleSearch" Class="fm-toolbar-search-button" Style="flex-shrink: 0;"
+                       aria-label="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
+                       title="@(_isSearchExpanded ? "Hide search" : "Search transactions")"
+                       aria-expanded="@(_isSearchExpanded ? "true" : "false")" aria-controls="@_searchPanelId" />
+
         <MudMenu @ref="_rangeMenu" Dense="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
                  Style="flex-shrink: 0;">
             <ActivatorContent>
@@ -63,6 +70,16 @@
             }
         </MudSelect>
     </div>
+
+    <MudCollapse Expanded="_isSearchExpanded">
+        <div id="@_searchPanelId" class="pt-2">
+            <MudTextField @ref="_searchField" T="string" Value="SearchText" ValueChanged="OnSearchChanged"
+                          Placeholder="Search accounts, descriptions, bonds, investments…" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate
+                          DebounceInterval="150" Clearable OnKeyDown="OnSearchKeyDown" FullWidth="true"
+                          aria-label="Search transactions" />
+        </div>
+    </MudCollapse>
 
     @* Hidden picker opened programmatically from the date-range menu; the Dialog variant avoids
        the broken nested-popover behaviour of embedding the picker inside a MudMenu. *@

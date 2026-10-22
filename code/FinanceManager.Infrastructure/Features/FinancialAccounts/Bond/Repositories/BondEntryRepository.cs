@@ -574,7 +574,9 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         int take,
         DateTime? cursorPostingDate = null,
         int? cursorId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? search = null,
+        IReadOnlyCollection<int>? searchAccountIds = null)
     {
         if (cursorPostingDate.HasValue != cursorId.HasValue)
             throw new ArgumentException("Both cursor posting date and entry id must be supplied together.");
@@ -584,6 +586,18 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         var query = context.BondEntries.AsNoTracking()
             .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            var matchedAccounts = searchAccountIds ?? [];
+            query = from entry in query
+                    join details in context.Bonds on entry.BondDetailsId equals details.Id into bonds
+                    from details in bonds.DefaultIfEmpty()
+                    where matchedAccounts.Contains(entry.AccountId) ||
+                        (details != null && details.Name != null && details.Name.ToUpper().Contains(term))
+                    select entry;
+        }
 
         if (cursorPostingDate is DateTime date && cursorId is int id)
             query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));

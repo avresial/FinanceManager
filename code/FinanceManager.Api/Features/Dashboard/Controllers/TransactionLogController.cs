@@ -43,6 +43,7 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
         [FromQuery] int pageSize = 25, [FromQuery] DateTime? cursorDate = null,
         [FromQuery] AccountType? cursorAccountType = null, [FromQuery] long? cursorEntryId = null,
         [FromQuery] AccountType[]? accountTypes = null, [FromQuery] int[]? accountIds = null,
+        [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
@@ -69,6 +70,6 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
             return ValidationProblem(statusCode: StatusCodes.Status400BadRequest, modelStateDictionary: ModelState);
 
         var cursor = hasCursor ? new TransactionLogCursor(cursorDate!.Value, cursorAccountType!.Value, cursorEntryId!.Value) : null;
-        return Ok(await transactionLogService.GetPage(userId, new TransactionLogQuery(start, end, pageSize, cursor, accountTypes, accountIds), cancellationToken));
+        return Ok(await transactionLogService.GetPage(userId, new TransactionLogQuery(start, end, pageSize, cursor, accountTypes, accountIds, search), cancellationToken));
     }
 }
