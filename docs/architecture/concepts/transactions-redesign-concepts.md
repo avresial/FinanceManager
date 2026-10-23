@@ -78,6 +78,47 @@ Master-detail for desktop power users. Filters live in a rail; a click inspects 
 
 At 1440px with the navigation drawer open, the desktop width splits into nav 240, rail 240, list 600 and panel 360. Closing either drawer gives the list its 880px.
 
+## Design-pattern cheatsheet
+
+These are UI and interaction patterns: ways to arrange information and support tasks. The comparisons below are expected tradeoffs of the proposals, not results from usability testing. No concept has been selected for implementation.
+
+### A: Ledger — scan and compare entries
+
+| Pattern | Where and why it is used | Tradeoff |
+| --- | --- | --- |
+| Dense tabular layout and alignment | A3 puts descriptions, accounts and amounts in predictable columns; A4 uses thin day dividers. Repeated positions make scanning many entries and comparing amounts easier. | More rows fit than in B's cards or C's two-line list, but long descriptions and labels have less room. Mobile needs a different row layout and hides labels. |
+| Visual hierarchy and proximity | A1 gives totals a compact summary; A3 limits content width and reserves sign colour for amounts. Related values stay closer together with less competing decoration. | More space remains for entries than with B1's chart, but A offers less help spotting trends and less account recognition than B4's avatars. |
+| Progressive disclosure | A2 keeps desktop filters visible, then puts secondary mobile controls in a bottom sheet. The filter count signals that hidden choices are active. | Protects mobile list space, but changing an account takes an extra open/close step; B's active chips expose the individual filters more directly. |
+| Continuous scrolling with status feedback | A5 loads more entries as the reader reaches the end; loaded/total counts and retry/end states explain progress. | Supports uninterrupted browsing, but returning to an exact position or reaching a footer is harder than with explicit pages. It needs loading announcements and deliberate focus/scroll handling in any future implementation. |
+
+### B: Insight feed — understand the range, then explore
+
+| Pattern | Where and why it is used | Tradeoff |
+| --- | --- | --- |
+| Overview first, details on demand | B1 starts with totals and daily net bars, then lets the reader select a day and inspect its entries. | Better than A or C for noticing unusual days at a glance; the chart takes space from rows and needs daily aggregates. Jumping to an unloaded day adds loading and navigation complexity. Clamped bars require exact tooltip values to avoid misleading comparisons. |
+| Grouping by common region | B3 encloses each day's entries in one card with its net in the header. The shared boundary makes day membership clear. | Easier to read as daily chunks than A's thin dividers, but card padding reduces desktop density. C's month hierarchy gives better orientation across long ranges. |
+| Recognition over recall and visible filter state | B4's stable account colours and icons help recognise recurring accounts; B2's filled chips, remove actions and Clear all show and reverse active choices. | Faster account recognition than A's neutral icons after colours become familiar. Eight colours can repeat, so names and icons must carry identity too. Wrapping chips can push entries down on mobile. |
+| Remove redundant context | B5 hides account captions when one account is already selected. | Reduces repetition in a single-account view, but the reader must notice the active account filter; C3 keeps that context beside every entry. |
+
+### C: Split view — inspect entries while retaining context
+
+| Pattern | Where and why it is used | Tradeoff |
+| --- | --- | --- |
+| Master-detail | C3 selects an entry and C4 shows its details beside the list, with keyboard movement between entries. | Better than A or B for inspecting several similar entries without repeatedly navigating away. Selection state, focus and detail loading add complexity; a row click no longer opens the account immediately. |
+| Faceted navigation | C1 keeps range, account and type choices together in a persistent rail, with per-account totals; C2 adds search and sort. | Better for repeatedly refining a query than reopening A's sheet or B's pickers, but the rail consumes width and requires grouped totals; amount sorting also changes the API cursor. |
+| Progressive disclosure across screen sizes | C4 reveals full metadata only after selection; C1/C4 become a drawer and sheet on smaller screens. | Keeps the list readable without placing every detail in each row. Mobile loses the simultaneous list/detail comparison that makes the desktop concept useful. |
+| Hierarchical grouping and secondary metadata | C5 groups months above days; C3 keeps account, label and time below the description. | Better orientation for long ranges and duplicate descriptions than A or B, but adds header/row height and needs monthly aggregates and labels. It is less suited to the quickest compact scan. |
+
+### Which one to choose
+
+| Main task | Prefer | Why it wins; what you give up |
+| --- | --- | --- |
+| Scan many entries or compare amounts on desktop | **A** | Highest density and direct account navigation. Gives up B's trend overview and C's inspection panel; mobile shows less metadata. |
+| Check spending patterns and browse days, especially on mobile | **B** | Strongest overview and account recognition, with familiar day cards. Gives up A's density and C's persistent filters/details; chart navigation costs more client work. |
+| Investigate similar entries and repeatedly refine a long-range query | **C** | Keeps details and filters available together on desktop. Requires the most API data and interaction work; at 1440px the open rail and panel leave only 600px for the list. Editing is outside the proposed C4 panel. |
+
+The [recommended mix](#recommended-mix) still fits an incremental improvement: borrow A's compact controls and browsing, C's metadata rows, and B's account cues without adopting the full chart or inspection workflow. Its first pass would omit labels, whole-range counts and the loan-specific icon; day nets derived from loaded rows remain partial at page boundaries. Keep the [mixing constraints](#mixing-guide) when combining patterns, especially C4's change to row-click behaviour.
+
 ## State coverage
 
 | State | A: Ledger | B: Insight feed | C: Split view |
