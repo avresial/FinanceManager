@@ -1,0 +1,612 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2360" height="1440" viewBox="0 0 2360 1440" role="img" aria-labelledby="title desc">
+  <title id="title">Transactions redesign, concept A: Ledger</title>
+  <desc id="desc">Dense ledger layout for the Transactions page: summary strip, inline 32px toolbar, single-line rows with account and label columns, thin sticky day dividers with day net, infinite scroll footer. Desktop, mobile, mobile filter sheet, and loading, empty, error and end-of-range states.</desc>
+  <style>text{font-family:Roboto,"Helvetica Neue",Helvetica,Arial,sans-serif}.n{font-variant-numeric:tabular-nums}</style>
+  <defs><symbol id="i-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol><symbol id="i-expand" viewBox="0 0 24 24"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol><symbol id="i-warning" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol><symbol id="i-trending_up" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></symbol><symbol id="i-trending_down" viewBox="0 0 24 24"><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12v6z"/></symbol><symbol id="i-bank" viewBox="0 0 24 24"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/></symbol><symbol id="i-description" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></symbol><symbol id="i-filter" viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></symbol><symbol id="i-sort" viewBox="0 0 24 24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z"/></symbol><symbol id="i-chevron_right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol><symbol id="i-box_on" viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol><symbol id="i-box_off" viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></symbol><symbol id="i-open" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></symbol><symbol id="i-card" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></symbol><symbol id="i-add" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol><symbol id="i-dashboard" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></symbol></defs>
+<rect x="0.0" y="0.0" width="2360.0" height="1440.0" fill="#ECEFF1"/>
+<text x="40.0" y="40.0" font-size="12" fill="#C17E00" font-weight="500" letter-spacing="1.4">FINANCE MANAGER / TRANSACTIONS REDESIGN · ISSUE #993 · CONCEPT A</text>
+<text x="40.0" y="78.0" font-size="30" fill="#263238" font-weight="500">Concept A: Ledger</text>
+<text x="40.0" y="102.0" font-size="15" fill="#546E7A">Dense and table-like, desktop first. Only the amount carries the sign colour.</text>
+<rect x="1600.0" y="58.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1617.0" y="72.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A1</text>
+<text x="1644.0" y="72.0" font-size="13" fill="#546E7A">Component ID, see the component table</text>
+<rect x="1930.0" y="60.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="1954.1" y="71.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<text x="1988.3" y="72.0" font-size="13" fill="#546E7A">Needs data the endpoint does not return today</text>
+<text x="1600.0" y="98.0" font-size="12" fill="#78909C">Light theme shown; dark tokens in the notes panel. Sample values are illustrative.</text>
+<text x="40.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Desktop · 1440px · filters: Cash + Bonds, accounts Cash 1 and Bond 1</text>
+<clipPath id="c1"><rect x="40" y="140" width="1440" height="960" rx="12"/></clipPath>
+<g clip-path="url(#c1)"><g transform="translate(40 140)">
+<rect x="0.0" y="0.0" width="1440.0" height="960.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="240.0" height="2000.0" fill="#FFFFFF"/>
+<line x1="240.0" y1="0.0" x2="240.0" y2="2000.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="40.0" font-size="22" fill="#FFB300" font-weight="500">FinanceManager</text>
+<line x1="0.0" y1="64.0" x2="240.0" y2="64.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-dashboard" xlink:href="#i-dashboard" x="16.0" y="81.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="96.0" font-size="14" fill="#424242">Dashboard</text>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="16.0" y="121.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="136.0" font-size="14" fill="#424242">Assets</text>
+<use href="#i-trending_down" xlink:href="#i-trending_down" x="16.0" y="161.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="176.0" font-size="14" fill="#424242">Liabilities</text>
+<rect x="0.0" y="192.0" width="240.0" height="40.0" fill="#F2F2F2"/>
+<use href="#i-description" xlink:href="#i-description" x="16.0" y="201.0" width="20" height="20" fill="#FFB300"/>
+<text x="52.0" y="216.0" font-size="14" fill="#FFB300" font-weight="500">Transactions</text>
+<use href="#i-calendar" xlink:href="#i-calendar" x="16.0" y="241.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="256.0" font-size="14" fill="#424242">Subscriptions</text>
+<use href="#i-trending_up" xlink:href="#i-trending_up" x="16.0" y="281.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="296.0" font-size="14" fill="#424242">Cash flow forecast</text>
+<use href="#i-bell" xlink:href="#i-bell" x="16.0" y="321.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="336.0" font-size="14" fill="#424242">Alerts</text>
+<use href="#i-filter" xlink:href="#i-filter" x="16.0" y="361.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="376.0" font-size="14" fill="#424242">Automation</text>
+<line x1="0.0" y1="404.0" x2="240.0" y2="404.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="438.0" font-size="17" fill="#757575">Accounts</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="461.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="476.0" font-size="14" fill="#424242">Cash 1</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="501.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="516.0" font-size="14" fill="#424242">Loan 1</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="541.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="556.0" font-size="14" fill="#424242">Investments</text>
+<use href="#i-card" xlink:href="#i-card" x="16.0" y="581.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="596.0" font-size="14" fill="#424242">Bond 1</text>
+<use href="#i-add" xlink:href="#i-add" x="16.0" y="621.0" width="20" height="20" fill="#616161"/>
+<text x="52.0" y="636.0" font-size="14" fill="#424242">Add</text>
+<text x="16.0" y="916.0" font-size="14" fill="#757575">Hello, Demo</text>
+<text x="16.0" y="936.0" font-size="12" fill="#757575">Lifetime Basic</text>
+<line x1="240.0" y1="64.0" x2="1440.0" y2="64.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="262.0" y="20.0" width="24" height="24" fill="#616161"/>
+<text x="300.0" y="41.0" font-size="20" fill="#424242">Transactions</text>
+<text x="360.0" y="100.0" font-size="13" fill="#757575" class="n">In</text>
+<text x="376.3" y="100.0" font-size="15" fill="#2E7D32" font-weight="500" class="n">+11,242.50</text>
+<text x="474.6" y="100.0" font-size="13" fill="#757575" class="n">Out</text>
+<text x="500.0" y="100.0" font-size="15" fill="#C62828" font-weight="500" class="n">−4,318.40</text>
+<text x="589.5" y="100.0" font-size="13" fill="#757575" class="n">Net</text>
+<text x="614.9" y="100.0" font-size="15" fill="#2E7D32" font-weight="500" class="n">+6,924.10</text>
+<text x="700.5" y="100.0" font-size="13" fill="#757575" class="n">·</text>
+<text x="714.4" y="100.0" font-size="13" fill="#757575" class="n">96 transactions</text>
+<rect x="816.5" y="88.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="840.7" y="99.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<text x="1320.0" y="100.0" font-size="13" fill="#757575" text-anchor="end">23 Jul – 22 Oct 2026</text>
+<rect x="318.0" y="86.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="335.0" y="100.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A1</text>
+<rect x="360.0" y="120.0" width="360.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="368.0" y="126.0" width="20" height="20" fill="#757575"/>
+<text x="394.0" y="140.7" font-size="13" fill="#9E9E9E">Search descriptions and accounts</text>
+<rect x="736.0" y="120.0" width="64.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="748.4" y="140.7" font-size="13" fill="#424242" font-weight="500">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="769.6" y="127.0" width="18" height="18" fill="#424242"/>
+<rect x="812.0" y="120.0" width="75.7" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-check" xlink:href="#i-check" x="824.0" y="127.0" width="18" height="18" fill="#8D6200"/>
+<text x="846.0" y="140.7" font-size="13" fill="#8D6200" font-weight="500">Cash</text>
+<rect x="895.7" y="120.0" width="82.8" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-check" xlink:href="#i-check" x="907.7" y="127.0" width="18" height="18" fill="#8D6200"/>
+<text x="929.7" y="140.7" font-size="13" fill="#8D6200" font-weight="500">Bonds</text>
+<rect x="986.5" y="120.0" width="94.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="998.5" y="140.7" font-size="13" fill="#424242">Investments</text>
+<rect x="1128.0" y="120.0" width="192.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="1140.0" y="140.7" font-size="13" fill="#424242">Cash 1, Bond 1</text>
+<use href="#i-expand" xlink:href="#i-expand" x="1292.0" y="126.0" width="20" height="20" fill="#757575"/>
+<rect x="318.0" y="126.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="335.0" y="140.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A2</text>
+<text x="376.0" y="186.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">DESCRIPTION</text>
+<text x="716.0" y="186.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">ACCOUNT</text>
+<text x="890.0" y="186.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">LABELS</text>
+<rect x="944.0" y="174.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="968.1" y="185.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<text x="1304.0" y="186.0" font-size="11" fill="#757575" font-weight="500" text-anchor="end" letter-spacing="0.8">AMOUNT</text>
+<line x1="360.0" y1="196.0" x2="1320.0" y2="196.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="318.0" y="206.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="335.0" y="220.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A3</text>
+<rect x="360.0" y="196.0" width="960.0" height="28.0" fill="#F5F5F5"/>
+<line x1="360.0" y1="224.0" x2="1320.0" y2="224.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="376.0" y="214.5" font-size="13" fill="#424242" font-weight="500">Thu 22 Oct</text>
+<text x="1304.0" y="214.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<text x="1256.4" y="214.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<rect x="318.0" y="200.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="335.0" y="214.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A4</text>
+<text x="376.0" y="247.0" font-size="14" fill="#424242">Tram pass</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="234.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="247.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="232.0" width="62.8" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="246.0" font-size="11" fill="#616161">Transport</text>
+<text x="1304.0" y="247.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<line x1="360.0" y1="260.0" x2="1320.0" y2="260.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="283.0" font-size="14" fill="#424242">Starbucks</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="270.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="283.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="268.0" width="64.4" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="282.0" font-size="11" fill="#616161">Eating out</text>
+<text x="1304.0" y="283.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<line x1="360.0" y1="296.0" x2="1320.0" y2="296.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="360.0" y="296.0" width="960.0" height="28.0" fill="#F5F5F5"/>
+<line x1="360.0" y1="324.0" x2="1320.0" y2="324.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="376.0" y="314.5" font-size="13" fill="#424242" font-weight="500">Wed 21 Oct</text>
+<text x="1304.0" y="314.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−196.50</text>
+<text x="1248.8" y="314.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<text x="376.0" y="347.0" font-size="14" fill="#424242">Online course</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="334.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="347.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="332.0" width="63.6" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="346.0" font-size="11" fill="#616161">Education</text>
+<text x="1304.0" y="347.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<line x1="360.0" y1="360.0" x2="1320.0" y2="360.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="383.0" font-size="14" fill="#424242">Coupon payment</text>
+<use href="#i-description" xlink:href="#i-description" x="716.0" y="370.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="383.0" font-size="13" fill="#757575">Bond 1</text>
+<rect x="890.0" y="368.0" width="52.9" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="382.0" font-size="11" fill="#616161">Interest</text>
+<text x="1304.0" y="383.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+42.50</text>
+<line x1="360.0" y1="396.0" x2="1320.0" y2="396.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="419.0" font-size="14" fill="#424242">Orlen fuel</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="406.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="419.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="404.0" width="37.1" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="418.0" font-size="11" fill="#616161">Fuel</text>
+<text x="1304.0" y="419.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−11.00</text>
+<line x1="360.0" y1="432.0" x2="1320.0" y2="432.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="360.0" y="432.0" width="960.0" height="36.0" fill="#F7F7F7"/>
+<use href="#i-chevron_right" xlink:href="#i-chevron_right" x="1233.2" y="441.0" width="18" height="18" fill="#9E9E9E"/>
+<text x="376.0" y="455.0" font-size="14" fill="#424242">Carrefour</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="442.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="455.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="440.0" width="61.8" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="454.0" font-size="11" fill="#616161">Groceries</text>
+<text x="1304.0" y="455.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−62.00</text>
+<line x1="360.0" y1="468.0" x2="1320.0" y2="468.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="491.0" font-size="14" fill="#424242">Online course</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="478.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="491.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="476.0" width="63.6" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="490.0" font-size="11" fill="#616161">Education</text>
+<text x="1304.0" y="491.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−9.00</text>
+<line x1="360.0" y1="504.0" x2="1320.0" y2="504.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="527.0" font-size="14" fill="#424242">Bolt</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="514.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="527.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="512.0" width="62.8" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="526.0" font-size="11" fill="#616161">Transport</text>
+<text x="1304.0" y="527.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−8.00</text>
+<line x1="360.0" y1="540.0" x2="1320.0" y2="540.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="360.0" y="540.0" width="960.0" height="28.0" fill="#F5F5F5"/>
+<line x1="360.0" y1="568.0" x2="1320.0" y2="568.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="376.0" y="558.5" font-size="13" fill="#424242" font-weight="500">Tue 20 Oct</text>
+<text x="1304.0" y="558.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−67.00</text>
+<text x="1256.4" y="558.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<text x="376.0" y="591.0" font-size="14" fill="#424242">Uber</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="578.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="591.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="576.0" width="62.8" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="590.0" font-size="11" fill="#616161">Transport</text>
+<text x="1304.0" y="591.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−43.00</text>
+<line x1="360.0" y1="604.0" x2="1320.0" y2="604.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="627.0" font-size="14" fill="#424242">Apteka pharmacy</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="614.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="627.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="612.0" width="46.5" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="626.0" font-size="11" fill="#616161">Health</text>
+<text x="1304.0" y="627.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1.00</text>
+<line x1="360.0" y1="640.0" x2="1320.0" y2="640.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="663.0" font-size="14" fill="#424242">Spotify</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="650.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="663.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="648.0" width="81.4" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="662.0" font-size="11" fill="#616161">Subscriptions</text>
+<text x="1304.0" y="663.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<line x1="360.0" y1="676.0" x2="1320.0" y2="676.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="699.0" font-size="14" fill="#424242">Flight ticket</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="686.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="699.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="684.0" width="46.6" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="698.0" font-size="11" fill="#616161">Travel</text>
+<text x="1304.0" y="699.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−13.00</text>
+<line x1="360.0" y1="712.0" x2="1320.0" y2="712.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="360.0" y="712.0" width="960.0" height="28.0" fill="#F5F5F5"/>
+<line x1="360.0" y1="740.0" x2="1320.0" y2="740.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="376.0" y="730.5" font-size="13" fill="#424242" font-weight="500">Mon 19 Oct</text>
+<text x="1304.0" y="730.5" font-size="13" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+5,031.00</text>
+<text x="1237.7" y="730.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<text x="376.0" y="763.0" font-size="14" fill="#424242">Salary</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="750.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="763.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="748.0" width="46.6" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="762.0" font-size="11" fill="#616161">Salary</text>
+<text x="1304.0" y="763.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+5,200.00</text>
+<line x1="360.0" y1="776.0" x2="1320.0" y2="776.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="799.0" font-size="14" fill="#424242">Pizza Hut</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="786.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="799.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="784.0" width="64.4" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="798.0" font-size="11" fill="#616161">Eating out</text>
+<text x="1304.0" y="799.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−89.00</text>
+<line x1="360.0" y1="812.0" x2="1320.0" y2="812.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="835.0" font-size="14" fill="#424242">Sphinx</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="822.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="835.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="820.0" width="64.4" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="834.0" font-size="11" fill="#616161">Eating out</text>
+<text x="1304.0" y="835.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−36.00</text>
+<line x1="360.0" y1="848.0" x2="1320.0" y2="848.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="376.0" y="871.0" font-size="14" fill="#424242">Orlen fuel</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="716.0" y="858.0" width="16" height="16" fill="#757575"/>
+<text x="738.0" y="871.0" font-size="13" fill="#757575">Cash 1</text>
+<rect x="890.0" y="856.0" width="37.1" height="20.0" fill="#EEEEEE" rx="10.0"/>
+<text x="898.0" y="870.0" font-size="11" fill="#616161">Fuel</text>
+<text x="1304.0" y="871.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−44.00</text>
+<line x1="360.0" y1="884.0" x2="1320.0" y2="884.0" stroke="#EEEEEE" stroke-width="1"/>
+<circle cx="748.0" cy="914" r="8" fill="none" stroke="#E0E0E0" stroke-width="2.5"/>
+<path d="M748.0 906 A8 8 0 0 1 756.0 914" fill="none" stroke="#FFB300" stroke-width="2.5" stroke-linecap="round"/>
+<text x="764.0" y="918.0" font-size="12" fill="#757575">Loading more · showing 25 of 96</text>
+<rect x="946.0" y="906.0" width="48.3" height="16.0" fill="#ECEFF1" rx="8" stroke="#37474F" stroke-width="0.8" stroke-dasharray="2 2"/>
+<text x="970.1" y="917.5" font-size="9.5" fill="#37474F" font-weight="500" text-anchor="middle">new API</text>
+<rect x="318.0" y="904.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="335.0" y="918.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A5</text>
+<text x="1336.0" y="232.0" font-size="11" fill="#78909C">Sticky while</text>
+<text x="1336.0" y="246.0" font-size="11" fill="#78909C">its day scrolls</text>
+</g></g>
+<rect x="40.0" y="140.0" width="1440.0" height="960.0" fill="none" rx="12" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1520.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Mobile · 390px</text>
+<clipPath id="c2"><rect x="1520" y="140" width="390" height="844" rx="20"/></clipPath>
+<g clip-path="url(#c2)"><g transform="translate(1520 140)">
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="390.0" height="56.0" fill="#FFFFFF"/>
+<line x1="0.0" y1="56.0" x2="390.0" y2="56.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="16.0" y="16.0" width="24" height="24" fill="#616161"/>
+<text x="56.0" y="36.0" font-size="20" fill="#424242">Transactions</text>
+<text x="16.0" y="86.0" font-size="12" fill="#757575" class="n">In</text>
+<text x="30.5" y="86.0" font-size="14" fill="#2E7D32" font-weight="500" class="n">+11,242.50</text>
+<text x="117.6" y="86.0" font-size="12" fill="#757575" class="n">Out</text>
+<text x="140.5" y="86.0" font-size="14" fill="#C62828" font-weight="500" class="n">−4,318.40</text>
+<text x="16.0" y="106.0" font-size="12" fill="#757575" class="n">Net</text>
+<text x="38.9" y="106.0" font-size="14" fill="#2E7D32" font-weight="500" class="n">+6,924.10</text>
+<text x="113.8" y="106.0" font-size="12" fill="#757575" class="n">· 96 transactions</text>
+<rect x="16.0" y="120.0" width="180.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="24.0" y="126.0" width="20" height="20" fill="#757575"/>
+<text x="50.0" y="140.7" font-size="13" fill="#9E9E9E">Search</text>
+<rect x="204.0" y="120.0" width="58.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="213.4" y="140.7" font-size="13" fill="#424242" font-weight="500">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="234.6" y="127.0" width="18" height="18" fill="#424242"/>
+<rect x="270.0" y="120.0" width="104.0" height="32.0" fill="#FFF4D6" rx="4" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-filter" xlink:href="#i-filter" x="282.0" y="127.0" width="18" height="18" fill="#8D6200"/>
+<text x="304.0" y="140.7" font-size="13" fill="#8D6200" font-weight="500">Filters (2)</text>
+<rect x="320.0" y="70.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="337.0" y="84.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A1</text>
+<rect x="0.0" y="168.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="196.0" x2="390.0" y2="196.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="186.5" font-size="13" fill="#424242" font-weight="500">Thu 22 Oct</text>
+<text x="374.0" y="186.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<text x="326.4" y="186.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="210.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="223.0" font-size="14" fill="#424242" class="n">Tram pass</text>
+<text x="115.8" y="223.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="223.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<line x1="0.0" y1="240.0" x2="390.0" y2="240.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="254.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="267.0" font-size="14" fill="#424242" class="n">Starbucks</text>
+<text x="112.0" y="267.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="267.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<line x1="0.0" y1="284.0" x2="390.0" y2="284.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="0.0" y="284.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="312.0" x2="390.0" y2="312.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="302.5" font-size="13" fill="#424242" font-weight="500">Wed 21 Oct</text>
+<text x="374.0" y="302.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−196.50</text>
+<text x="318.8" y="302.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="326.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="339.0" font-size="14" fill="#424242" class="n">Online course</text>
+<text x="132.3" y="339.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="339.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<line x1="0.0" y1="356.0" x2="390.0" y2="356.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-description" xlink:href="#i-description" x="16.0" y="370.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="383.0" font-size="14" fill="#424242" class="n">Coupon payment</text>
+<text x="152.1" y="383.0" font-size="12" fill="#757575">· Bond 1</text>
+<text x="374.0" y="383.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+42.50</text>
+<line x1="0.0" y1="400.0" x2="390.0" y2="400.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="414.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="427.0" font-size="14" fill="#424242" class="n">Orlen fuel</text>
+<text x="107.7" y="427.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="427.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−11.00</text>
+<line x1="0.0" y1="444.0" x2="390.0" y2="444.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="458.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="471.0" font-size="14" fill="#424242" class="n">Carrefour</text>
+<text x="106.8" y="471.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="471.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−62.00</text>
+<line x1="0.0" y1="488.0" x2="390.0" y2="488.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="502.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="515.0" font-size="14" fill="#424242" class="n">Online course</text>
+<text x="132.3" y="515.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="515.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−9.00</text>
+<line x1="0.0" y1="532.0" x2="390.0" y2="532.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="546.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="559.0" font-size="14" fill="#424242" class="n">Bolt</text>
+<text x="74.2" y="559.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="559.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−8.00</text>
+<line x1="0.0" y1="576.0" x2="390.0" y2="576.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="0.0" y="576.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="604.0" x2="390.0" y2="604.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="594.5" font-size="13" fill="#424242" font-weight="500">Tue 20 Oct</text>
+<text x="374.0" y="594.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−67.00</text>
+<text x="326.4" y="594.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="618.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="631.0" font-size="14" fill="#424242" class="n">Uber</text>
+<text x="78.3" y="631.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="631.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−43.00</text>
+<line x1="0.0" y1="648.0" x2="390.0" y2="648.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="662.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="675.0" font-size="14" fill="#424242" class="n">Apteka pharmacy</text>
+<text x="156.8" y="675.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="675.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−1.00</text>
+<line x1="0.0" y1="692.0" x2="390.0" y2="692.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="706.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="719.0" font-size="14" fill="#424242" class="n">Spotify</text>
+<text x="93.3" y="719.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="719.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<line x1="0.0" y1="736.0" x2="390.0" y2="736.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="750.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="763.0" font-size="14" fill="#424242" class="n">Flight ticket</text>
+<text x="122.9" y="763.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="763.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−13.00</text>
+<line x1="0.0" y1="780.0" x2="390.0" y2="780.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="0.0" y="780.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="808.0" x2="390.0" y2="808.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="798.5" font-size="13" fill="#424242" font-weight="500">Mon 19 Oct</text>
+<text x="374.0" y="798.5" font-size="13" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+5,031.00</text>
+<text x="307.7" y="798.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="822.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="835.0" font-size="14" fill="#424242" class="n">Salary</text>
+<text x="88.9" y="835.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="835.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+5,200.00</text>
+<line x1="0.0" y1="852.0" x2="390.0" y2="852.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="866.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="879.0" font-size="14" fill="#424242" class="n">Pizza Hut</text>
+<text x="108.7" y="879.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="879.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−89.00</text>
+<line x1="0.0" y1="896.0" x2="390.0" y2="896.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="910.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="923.0" font-size="14" fill="#424242" class="n">Sphinx</text>
+<text x="91.4" y="923.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="923.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−36.00</text>
+<line x1="0.0" y1="940.0" x2="390.0" y2="940.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="954.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="967.0" font-size="14" fill="#424242" class="n">Orlen fuel</text>
+<text x="107.7" y="967.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="967.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−44.00</text>
+<line x1="0.0" y1="984.0" x2="390.0" y2="984.0" stroke="#EEEEEE" stroke-width="1"/>
+</g></g>
+<rect x="1520.0" y="140.0" width="390.0" height="844.0" fill="none" rx="20" stroke="#B0BEC5" stroke-width="1"/>
+<rect x="1483.0" y="266.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="280.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A2</text>
+<rect x="1483.0" y="312.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="326.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A4</text>
+<rect x="1483.0" y="350.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1500.0" y="364.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A3</text>
+<text x="1950.0" y="126.0" font-size="13" fill="#546E7A" font-weight="500">Mobile · Filters (2) opens a bottom sheet</text>
+<clipPath id="c3"><rect x="1950" y="140" width="390" height="844" rx="20"/></clipPath>
+<g clip-path="url(#c3)"><g transform="translate(1950 140)">
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#FFFFFF"/>
+<rect x="0.0" y="0.0" width="390.0" height="56.0" fill="#FFFFFF"/>
+<line x1="0.0" y1="56.0" x2="390.0" y2="56.0" stroke="#E0E0E0" stroke-width="1"/>
+<use href="#i-menu" xlink:href="#i-menu" x="16.0" y="16.0" width="24" height="24" fill="#616161"/>
+<text x="56.0" y="36.0" font-size="20" fill="#424242">Transactions</text>
+<text x="16.0" y="86.0" font-size="12" fill="#757575" class="n">In</text>
+<text x="30.5" y="86.0" font-size="14" fill="#2E7D32" font-weight="500" class="n">+11,242.50</text>
+<text x="117.6" y="86.0" font-size="12" fill="#757575" class="n">Out</text>
+<text x="140.5" y="86.0" font-size="14" fill="#C62828" font-weight="500" class="n">−4,318.40</text>
+<text x="16.0" y="106.0" font-size="12" fill="#757575" class="n">Net</text>
+<text x="38.9" y="106.0" font-size="14" fill="#2E7D32" font-weight="500" class="n">+6,924.10</text>
+<text x="113.8" y="106.0" font-size="12" fill="#757575" class="n">· 96 transactions</text>
+<rect x="16.0" y="120.0" width="180.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="24.0" y="126.0" width="20" height="20" fill="#757575"/>
+<text x="50.0" y="140.7" font-size="13" fill="#9E9E9E">Search</text>
+<rect x="204.0" y="120.0" width="58.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="213.4" y="140.7" font-size="13" fill="#424242" font-weight="500">3M</text>
+<use href="#i-expand" xlink:href="#i-expand" x="234.6" y="127.0" width="18" height="18" fill="#424242"/>
+<rect x="270.0" y="120.0" width="104.0" height="32.0" fill="#FFF4D6" rx="4" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-filter" xlink:href="#i-filter" x="282.0" y="127.0" width="18" height="18" fill="#8D6200"/>
+<text x="304.0" y="140.7" font-size="13" fill="#8D6200" font-weight="500">Filters (2)</text>
+<rect x="0.0" y="168.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="196.0" x2="390.0" y2="196.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="186.5" font-size="13" fill="#424242" font-weight="500">Thu 22 Oct</text>
+<text x="374.0" y="186.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<text x="326.4" y="186.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="210.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="223.0" font-size="14" fill="#424242" class="n">Tram pass</text>
+<text x="115.8" y="223.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="223.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<line x1="0.0" y1="240.0" x2="390.0" y2="240.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="254.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="267.0" font-size="14" fill="#424242" class="n">Starbucks</text>
+<text x="112.0" y="267.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="267.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−3.00</text>
+<line x1="0.0" y1="284.0" x2="390.0" y2="284.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="0.0" y="284.0" width="390.0" height="28.0" fill="#F5F5F5"/>
+<line x1="0.0" y1="312.0" x2="390.0" y2="312.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="302.5" font-size="13" fill="#424242" font-weight="500">Wed 21 Oct</text>
+<text x="374.0" y="302.5" font-size="13" fill="#C62828" font-weight="500" text-anchor="end" class="n">−196.50</text>
+<text x="318.8" y="302.5" font-size="12" fill="#757575" text-anchor="end">net</text>
+<use href="#i-wallet" xlink:href="#i-wallet" x="16.0" y="326.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="339.0" font-size="14" fill="#424242" class="n">Online course</text>
+<text x="132.3" y="339.0" font-size="12" fill="#757575">· Cash 1</text>
+<text x="374.0" y="339.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−149.00</text>
+<line x1="0.0" y1="356.0" x2="390.0" y2="356.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-description" xlink:href="#i-description" x="16.0" y="370.0" width="16" height="16" fill="#757575"/>
+<text x="42.0" y="383.0" font-size="14" fill="#424242" class="n">Coupon payment</text>
+<text x="152.1" y="383.0" font-size="12" fill="#757575">· Bond 1</text>
+<text x="374.0" y="383.0" font-size="14" fill="#2E7D32" font-weight="500" text-anchor="end" class="n">+42.50</text>
+<line x1="0.0" y1="400.0" x2="390.0" y2="400.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="0.0" y="0.0" width="390.0" height="844.0" fill="#000000" opacity="0.42"/>
+<rect x="0.0" y="292.0" width="390.0" height="572.0" fill="#FFFFFF" rx="16"/>
+<rect x="179.0" y="302.0" width="32.0" height="4.0" fill="#BDBDBD" rx="2"/>
+<text x="16.0" y="340.0" font-size="18" fill="#424242" font-weight="500">Filters</text>
+<text x="374.0" y="340.0" font-size="13" fill="#8D6200" font-weight="500" text-anchor="end">Clear all</text>
+<text x="16.0" y="378.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">DATE RANGE</text>
+<rect x="16.0" y="390.0" width="42.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="28.0" y="410.7" font-size="13" fill="#424242">1M</text>
+<rect x="66.5" y="390.0" width="65.2" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-check" xlink:href="#i-check" x="78.5" y="397.0" width="18" height="18" fill="#8D6200"/>
+<text x="100.5" y="410.7" font-size="13" fill="#8D6200" font-weight="500">3M</text>
+<rect x="139.7" y="390.0" width="42.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="151.7" y="410.7" font-size="13" fill="#424242">6M</text>
+<rect x="190.1" y="390.0" width="39.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="202.1" y="410.7" font-size="13" fill="#424242">1Y</text>
+<rect x="237.7" y="390.0" width="100.5" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-calendar" xlink:href="#i-calendar" x="249.7" y="397.0" width="18" height="18" fill="#757575"/>
+<text x="271.7" y="410.7" font-size="13" fill="#424242">Custom…</text>
+<text x="16.0" y="450.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">ACCOUNT TYPES</text>
+<rect x="16.0" y="462.0" width="75.7" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-check" xlink:href="#i-check" x="28.0" y="469.0" width="18" height="18" fill="#8D6200"/>
+<text x="50.0" y="482.7" font-size="13" fill="#8D6200" font-weight="500">Cash</text>
+<rect x="99.7" y="462.0" width="82.8" height="32.0" fill="#FFF4D6" rx="16.0" stroke="#FFB300" stroke-width="1"/>
+<use href="#i-check" xlink:href="#i-check" x="111.7" y="469.0" width="18" height="18" fill="#8D6200"/>
+<text x="133.7" y="482.7" font-size="13" fill="#8D6200" font-weight="500">Bonds</text>
+<rect x="190.5" y="462.0" width="94.6" height="32.0" fill="#FFFFFF" rx="16.0" stroke="#BDBDBD" stroke-width="1"/>
+<text x="202.5" y="482.7" font-size="13" fill="#424242">Investments</text>
+<text x="16.0" y="522.0" font-size="11" fill="#757575" font-weight="500" letter-spacing="0.8">ACCOUNTS</text>
+<use href="#i-box_on" xlink:href="#i-box_on" x="14.0" y="545.0" width="22" height="22" fill="#FFB300"/>
+<use href="#i-wallet" xlink:href="#i-wallet" x="48.0" y="547.0" width="18" height="18" fill="#757575"/>
+<text x="74.0" y="561.0" font-size="14" fill="#424242">Cash 1</text>
+<text x="374.0" y="561.0" font-size="12" fill="#757575" text-anchor="end">Cash</text>
+<line x1="16.0" y1="578.0" x2="374.0" y2="578.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-box_off" xlink:href="#i-box_off" x="14.0" y="589.0" width="22" height="22" fill="#757575"/>
+<use href="#i-bank" xlink:href="#i-bank" x="48.0" y="591.0" width="18" height="18" fill="#757575"/>
+<text x="74.0" y="605.0" font-size="14" fill="#424242">Loan 1</text>
+<text x="374.0" y="605.0" font-size="12" fill="#757575" text-anchor="end">Cash · loan</text>
+<line x1="16.0" y1="622.0" x2="374.0" y2="622.0" stroke="#EEEEEE" stroke-width="1"/>
+<use href="#i-box_on" xlink:href="#i-box_on" x="14.0" y="633.0" width="22" height="22" fill="#FFB300"/>
+<use href="#i-description" xlink:href="#i-description" x="48.0" y="635.0" width="18" height="18" fill="#757575"/>
+<text x="74.0" y="649.0" font-size="14" fill="#424242">Bond 1</text>
+<text x="374.0" y="649.0" font-size="12" fill="#757575" text-anchor="end">Bonds</text>
+<line x1="16.0" y1="666.0" x2="374.0" y2="666.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="16.0" y="690.0" font-size="12" fill="#757575">Investments is hidden while its account type is off.</text>
+<line x1="0.0" y1="756.0" x2="390.0" y2="756.0" stroke="#E0E0E0" stroke-width="1"/>
+<rect x="16.0" y="772.0" width="358.0" height="44.0" fill="#FFB300" rx="4"/>
+<text x="126.0" y="799.0" font-size="14" fill="#212121" font-weight="500">Show 96 transactions</text>
+</g></g>
+<rect x="1950.0" y="140.0" width="390.0" height="844.0" fill="none" rx="20" stroke="#B0BEC5" stroke-width="1"/>
+<rect x="1913.0" y="472.0" width="34.0" height="20.0" fill="#37474F" rx="10"/>
+<text x="1930.0" y="486.0" font-size="11" fill="#FFFFFF" font-weight="700" text-anchor="middle">A2</text>
+<text x="40.0" y="1136.0" font-size="12" fill="#C17E00" font-weight="500" letter-spacing="1.4">STATES</text>
+<text x="40.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Loading: skeleton summary, toolbar stays interactive</text>
+<clipPath id="c4"><rect x="40" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c4)"><g transform="translate(40 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<rect x="16.0" y="18.0" width="230.0" height="12.0" fill="#E6E6E6" rx="4"/>
+<rect x="16.0" y="42.0" width="150.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<use href="#i-search" xlink:href="#i-search" x="24.0" y="48.0" width="20" height="20" fill="#757575"/>
+<text x="50.0" y="62.7" font-size="13" fill="#9E9E9E">Search</text>
+<rect x="176.0" y="46.0" width="40.0" height="24.0" fill="#E6E6E6" rx="4"/>
+<rect x="224.0" y="46.0" width="105.0" height="24.0" fill="#E6E6E6" rx="4"/>
+<rect x="0.0" y="88.0" width="345.0" height="24.0" fill="#F5F5F5"/>
+<rect x="16.0" y="96.0" width="70.0" height="8.0" fill="#E6E6E6" rx="4"/>
+<rect x="16.0" y="124.0" width="110.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="160.0" y="124.0" width="56.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="279.0" y="124.0" width="50.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<line x1="0.0" y1="146.0" x2="345.0" y2="146.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="158.0" width="102.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="160.0" y="158.0" width="56.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="279.0" y="158.0" width="50.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<line x1="0.0" y1="180.0" x2="345.0" y2="180.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="192.0" width="94.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="160.0" y="192.0" width="56.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="279.0" y="192.0" width="50.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<line x1="0.0" y1="214.0" x2="345.0" y2="214.0" stroke="#EEEEEE" stroke-width="1"/>
+<rect x="16.0" y="226.0" width="86.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="160.0" y="226.0" width="56.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<rect x="279.0" y="226.0" width="50.0" height="10.0" fill="#E6E6E6" rx="4"/>
+<line x1="0.0" y1="248.0" x2="345.0" y2="248.0" stroke="#EEEEEE" stroke-width="1"/>
+</g></g>
+<rect x="40.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="405.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Empty: zero totals, explain and offer to clear</text>
+<clipPath id="c5"><rect x="405" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c5)"><g transform="translate(405 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<text x="16.0" y="30.0" font-size="11" fill="#757575" class="n">In</text>
+<text x="28.7" y="30.0" font-size="12" fill="#424242" font-weight="500" class="n">0.00</text>
+<text x="62.9" y="30.0" font-size="11" fill="#757575" class="n">Out</text>
+<text x="83.3" y="30.0" font-size="12" fill="#424242" font-weight="500" class="n">0.00</text>
+<text x="117.5" y="30.0" font-size="11" fill="#757575" class="n">Net</text>
+<text x="137.9" y="30.0" font-size="12" fill="#424242" font-weight="500" class="n">0.00</text>
+<text x="172.1" y="30.0" font-size="11" fill="#757575" class="n">· 0 transactions</text>
+<circle cx="172.0" cy="86.0" r="30" fill="#F5F5F5"/>
+<use href="#i-inbox" xlink:href="#i-inbox" x="154.0" y="68.0" width="36" height="36" fill="#757575"/>
+<text x="172.0" y="150.0" font-size="15" fill="#424242" font-weight="500" text-anchor="middle">No transactions match</text>
+<text x="172.0" y="172.0" font-size="12" fill="#757575" text-anchor="middle">Nothing for “parking” in Cash 1, Bond 1 · 3M</text>
+<rect x="116.0" y="192.0" width="112.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="138.0" y="212.7" font-size="13" fill="#424242" font-weight="500">Clear filters</text>
+</g></g>
+<rect x="405.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="770.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">Error: summary blanked, retry in place</text>
+<clipPath id="c6"><rect x="770" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c6)"><g transform="translate(770 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<text x="16.0" y="30.0" font-size="11" fill="#757575" class="n">In</text>
+<text x="28.7" y="30.0" font-size="12" fill="#757575" class="n">—</text>
+<text x="46.9" y="30.0" font-size="11" fill="#757575" class="n">Out</text>
+<text x="67.3" y="30.0" font-size="12" fill="#757575" class="n">—</text>
+<text x="85.6" y="30.0" font-size="11" fill="#757575" class="n">Net</text>
+<text x="106.0" y="30.0" font-size="12" fill="#757575" class="n">—</text>
+<use href="#i-warning" xlink:href="#i-warning" x="152.0" y="62.0" width="40" height="40" fill="#C62828"/>
+<text x="172.0" y="140.0" font-size="15" fill="#424242" font-weight="500" text-anchor="middle">Couldn’t load transactions</text>
+<text x="172.0" y="162.0" font-size="12" fill="#757575" text-anchor="middle">Something went wrong fetching your transactions.</text>
+<use href="#i-refresh" xlink:href="#i-refresh" x="133.4" y="187.0" width="18" height="18" fill="#8D6200"/>
+<text x="155.4" y="200.7" font-size="13" fill="#8D6200" font-weight="500">Try again</text>
+</g></g>
+<rect x="770.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1135.0" y="1156.0" font-size="13" fill="#546E7A" font-weight="500">End of range and next-page failure</text>
+<clipPath id="c7"><rect x="1135" y="1170" width="345" height="260" rx="8"/></clipPath>
+<g clip-path="url(#c7)"><g transform="translate(1135 1170)">
+<rect x="0.0" y="0.0" width="345.0" height="260.0" fill="#FFFFFF"/>
+<text x="16.0" y="23.0" font-size="14" fill="#424242">Carrefour</text>
+<text x="329.0" y="23.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−48.20</text>
+<line x1="0.0" y1="36.0" x2="345.0" y2="36.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="16.0" y="59.0" font-size="14" fill="#424242">Orlen fuel</text>
+<text x="329.0" y="59.0" font-size="14" fill="#C62828" font-weight="500" text-anchor="end" class="n">−120.00</text>
+<line x1="0.0" y1="72.0" x2="345.0" y2="72.0" stroke="#EEEEEE" stroke-width="1"/>
+<text x="172.0" y="102.0" font-size="12" fill="#757575" text-anchor="middle">All 96 transactions loaded · range starts 23 Jul</text>
+<text x="132.5" y="134.7" font-size="13" fill="#8D6200" font-weight="500">Extend to 6M</text>
+<line x1="16.0" y1="168.0" x2="329.0" y2="168.0" stroke="#E0E0E0" stroke-width="1"/>
+<text x="16.0" y="192.0" font-size="11" fill="#78909C">If the next page fails, the sentinel becomes:</text>
+<text x="16.0" y="218.0" font-size="12" fill="#C62828">Couldn’t load more transactions.</text>
+<rect x="229.0" y="200.0" width="100.0" height="32.0" fill="#FFFFFF" rx="4" stroke="#BDBDBD" stroke-width="1"/>
+<text x="251.4" y="220.7" font-size="13" fill="#424242" font-weight="500">Try again</text>
+<text x="16.0" y="242.0" font-size="11" fill="#757575">Showing 25 of 96 stays visible.</text>
+</g></g>
+<rect x="1135.0" y="1170.0" width="345.0" height="260.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+<text x="1520.0" y="1006.0" font-size="13" fill="#546E7A" font-weight="500">Notes · dark theme and legend</text>
+<clipPath id="c8"><rect x="1520" y="1020" width="820" height="410" rx="8"/></clipPath>
+<g clip-path="url(#c8)"><g transform="translate(1520 1020)">
+<rect x="0.0" y="0.0" width="820.0" height="410.0" fill="#FFFFFF"/>
+<text x="20.0" y="34.0" font-size="15" fill="#424242" font-weight="500">Dark theme tokens</text>
+<text x="20.0" y="62.0" font-size="12" fill="#757575" class="n">--mud-palette-background</text>
+<text x="300.0" y="62.0" font-size="12" fill="#424242" class="n">#212121 (Gray Darken4)</text>
+<text x="20.0" y="82.0" font-size="12" fill="#757575" class="n">--mud-palette-surface</text>
+<text x="300.0" y="82.0" font-size="12" fill="#424242" class="n">#424242 (Gray Darken3)</text>
+<text x="20.0" y="102.0" font-size="12" fill="#757575" class="n">--mud-palette-primary</text>
+<text x="300.0" y="102.0" font-size="12" fill="#424242" class="n">#FF8F00 (Amber Darken3)</text>
+<text x="20.0" y="122.0" font-size="12" fill="#757575" class="n">--fm-pos / --fm-neg</text>
+<text x="300.0" y="122.0" font-size="12" fill="#424242" class="n">#66BB6A / #EF5350</text>
+<text x="20.0" y="142.0" font-size="12" fill="#757575" class="n">--mud-palette-lines-default</text>
+<text x="300.0" y="142.0" font-size="12" fill="#424242" class="n">rgba(255,255,255,0.12)</text>
+<text x="20.0" y="162.0" font-size="12" fill="#757575" class="n">--mud-palette-text-secondary</text>
+<text x="300.0" y="162.0" font-size="12" fill="#424242" class="n">rgba(255,255,255,0.50)</text>
+<rect x="20.0" y="192.0" width="780.0" height="120.0" fill="#212121" rx="6"/>
+<rect x="20.0" y="206.0" width="780.0" height="26.0" fill="#2C2C2C"/>
+<text x="34.0" y="224.0" font-size="12" fill="#E0E0E0" font-weight="500">Thu 22 Oct</text>
+<text x="786.0" y="224.0" font-size="12" fill="#EF5350" font-weight="500" text-anchor="end" class="n">−10.00</text>
+<text x="738.0" y="224.0" font-size="11" fill="#9E9E9E" text-anchor="end">net</text>
+<text x="34.0" y="254.0" font-size="13" fill="#E0E0E0">Tram pass</text>
+<text x="240.0" y="254.0" font-size="12" fill="#9E9E9E">Cash 1</text>
+<rect x="340.0" y="240.0" width="70.0" height="18.0" fill="#3A3A3A" rx="9"/>
+<text x="350.0" y="253.0" font-size="10" fill="#BDBDBD">Transport</text>
+<text x="786.0" y="254.0" font-size="13" fill="#EF5350" font-weight="500" text-anchor="end" class="n">−7.00</text>
+<line x1="20.0" y1="266.0" x2="800.0" y2="266.0" stroke="#333333" stroke-width="1"/>
+<text x="34.0" y="288.0" font-size="13" fill="#E0E0E0">Coupon payment</text>
+<text x="240.0" y="288.0" font-size="12" fill="#9E9E9E">Bond 1</text>
+<rect x="340.0" y="274.0" width="70.0" height="18.0" fill="#3A3A3A" rx="9"/>
+<text x="350.0" y="287.0" font-size="10" fill="#BDBDBD">Interest</text>
+<text x="786.0" y="288.0" font-size="13" fill="#66BB6A" font-weight="500" text-anchor="end" class="n">+42.50</text>
+<line x1="20.0" y1="300.0" x2="800.0" y2="300.0" stroke="#333333" stroke-width="1"/>
+<text x="20.0" y="338.0" font-size="12" fill="#757575">Day divider background: --mud-palette-background-gray (light) / rgba(255,255,255,0.05) (dark).</text>
+<text x="20.0" y="356.0" font-size="12" fill="#757575">Selected type chip: primary outline + 16 % primary tint; text on tint uses a darker amber for contrast.</text>
+<text x="20.0" y="374.0" font-size="12" fill="#757575">Row hover: --mud-palette-action-default-hover. Label chips: --mud-palette-gray-lighter / #3A3A3A.</text>
+</g></g>
+<rect x="1520.0" y="1020.0" width="820.0" height="410.0" fill="none" rx="8" stroke="#B0BEC5" stroke-width="1"/>
+</svg>
