@@ -60,7 +60,7 @@ public class InvestmentInstrumentDiscoveryControllerTests(OptionsProvider option
             .ReturnsAsync(new List<OpenFigiListing>
             {
                 new(Isin: null, Ticker: "CSPX", Name: "iShares Core S&P 500 UCITS ETF", ExchCode: "LN",
-                    Currency: "USD", Figi: "BBG001", ShareClassFigi: "BBGSC"),
+                    Figi: "BBG001", ShareClassFigi: "BBGSC", SecurityType: "ETP"),
             });
         _alphaVantageMock
             .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))

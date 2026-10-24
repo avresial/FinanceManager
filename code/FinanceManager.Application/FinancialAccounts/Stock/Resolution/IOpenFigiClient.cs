@@ -31,12 +31,21 @@ public interface IOpenFigiClient
 /// Share-class FIGI — the canonical identity key for the security across venues. OpenFIGI returns
 /// this on every mapping; the resolver keys identity and auto-resolution on it.
 /// </param>
+/// <param name="SecurityType">OpenFIGI <c>securityType</c>, e.g. <c>ETP</c> or <c>Common Stock</c>.</param>
+/// <param name="SecurityType2">OpenFIGI <c>securityType2</c>, e.g. <c>Mutual Fund</c>.</param>
+/// <param name="MarketSector">OpenFIGI <c>marketSector</c>, e.g. <c>Equity</c>.</param>
+/// <remarks>
+/// OpenFIGI's mapping response has no currency field, so no trading currency is carried here; the
+/// discovery service derives it from a correlated Alpha Vantage match or the venue's default.
+/// </remarks>
 public sealed record OpenFigiListing(
     string? Isin,
     string Ticker,
     string Name,
     string ExchCode,
-    string? Currency,
     string? Figi = null,
     string? CompositeFigi = null,
-    string? ShareClassFigi = null);
+    string? ShareClassFigi = null,
+    string? SecurityType = null,
+    string? SecurityType2 = null,
+    string? MarketSector = null);

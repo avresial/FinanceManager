@@ -32,20 +32,23 @@ public class OpenFigiClientTests
     [Fact]
     public async Task MapByTickerAsync_WithValidTickerAndExchange_ReturnsListings()
     {
-        // Arrange — OpenFIGI v3 wraps matches inside each job's "data" array. A ticker mapping returns
-        // FIGI identifiers (figi/compositeFigi/shareClassFigi) but never an "isin" field.
+        // Arrange — a realistic OpenFIGI v3 mapping payload: matches live inside each job's "data"
+        // array, use camelCase FIGI fields, and carry no currency field at all.
         var httpHandler = new MockHttpMessageHandler(response: """
             [
               {
                 "data": [
                   {
                     "figi": "BBG000B9XRY4",
-                    "ticker": "AAPL",
-                    "compositeFigi": "BBG000HKWL63",
-                    "shareClassFigi": "BBG001S5N8V8",
                     "name": "Apple Inc",
+                    "ticker": "AAPL",
                     "exchCode": "US",
-                    "currency": "USD"
+                    "compositeFIGI": "BBG000HKWL63",
+                    "shareClassFIGI": "BBG001S5N8V8",
+                    "securityType": "Common Stock",
+                    "securityType2": "Common Stock",
+                    "marketSector": "Equity",
+                    "securityDescription": "AAPL"
                   }
                 ]
               }
@@ -57,7 +60,7 @@ public class OpenFigiClientTests
         // Act
         var result = await client.MapByTickerAsync("AAPL", "US", TestContext.Current.CancellationToken);
 
-        // Assert — no ISIN on the ticker path; FIGIs are projected, with shareClassFigi as identity.
+        // Assert — no ISIN on the ticker path; FIGIs and security metadata are projected.
         Assert.Single(result);
         Assert.Null(result[0].Isin);
         Assert.Equal("BBG000B9XRY4", result[0].Figi);
@@ -66,7 +69,9 @@ public class OpenFigiClientTests
         Assert.Equal("AAPL", result[0].Ticker);
         Assert.Equal("Apple Inc", result[0].Name);
         Assert.Equal("US", result[0].ExchCode);
-        Assert.Equal("USD", result[0].Currency);
+        Assert.Equal("Common Stock", result[0].SecurityType);
+        Assert.Equal("Common Stock", result[0].SecurityType2);
+        Assert.Equal("Equity", result[0].MarketSector);
     }
 
     [Fact]
@@ -80,19 +85,23 @@ public class OpenFigiClientTests
                 "data": [
                   {
                     "figi": "BBG00B3T3HD3",
-                    "shareClassFigi": "BBG001S5W9D1",
+                    "shareClassFIGI": "BBG001S5W9D1",
                     "ticker": "CSPX",
                     "name": "iShares Core S&P 500 ETF",
                     "exchCode": "LN",
-                    "currency": "GBP"
+                    "securityType": "ETP",
+                    "securityType2": "Mutual Fund",
+                    "marketSector": "Equity"
                   },
                   {
                     "figi": "BBG00B3T3HF1",
-                    "shareClassFigi": "BBG001S5W9D1",
+                    "shareClassFIGI": "BBG001S5W9D1",
                     "ticker": "CSPX",
                     "name": "iShares Core S&P 500 ETF",
                     "exchCode": "SX",
-                    "currency": "EUR"
+                    "securityType": "ETP",
+                    "securityType2": "Mutual Fund",
+                    "marketSector": "Equity"
                   }
                 ]
               }

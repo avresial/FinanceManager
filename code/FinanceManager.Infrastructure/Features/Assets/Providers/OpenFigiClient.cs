@@ -111,10 +111,12 @@ internal sealed class OpenFigiClient(
                     Ticker: match.Ticker ?? string.Empty,
                     Name: match.Name ?? string.Empty,
                     ExchCode: match.ExchCode ?? string.Empty,
-                    Currency: match.Currency,
                     Figi: match.Figi,
                     CompositeFigi: match.CompositeFigi,
-                    ShareClassFigi: match.ShareClassFigi));
+                    ShareClassFigi: match.ShareClassFigi,
+                    SecurityType: match.SecurityType,
+                    SecurityType2: match.SecurityType2,
+                    MarketSector: match.MarketSector));
             }
         }
 
@@ -169,7 +171,13 @@ internal sealed class OpenFigiClient(
         [JsonPropertyName("exchCode")]
         public string? ExchCode { get; set; }
 
-        [JsonPropertyName("currency")]
-        public string? Currency { get; set; }
+        [JsonPropertyName("securityType")]
+        public string? SecurityType { get; set; }
+
+        [JsonPropertyName("securityType2")]
+        public string? SecurityType2 { get; set; }
+
+        [JsonPropertyName("marketSector")]
+        public string? MarketSector { get; set; }
     }
 }

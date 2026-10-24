@@ -3,6 +3,8 @@ using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -23,17 +25,34 @@ public class InstrumentImportServiceTests
         new(_avClientMock.Object, _assetRepositoryMock.Object, _listingRepositoryMock.Object,
             _symbolRepositoryMock.Object, _logger);
 
-    private static InstrumentDiscoveryResultDto Instrument(string securityType = "ETF") => new()
+    private static InstrumentDiscoveryResultDto Instrument(
+        string securityType = "ETF",
+        string? tradingCurrency = "USD",
+        string? providerSymbol = "CSPX.LON",
+        string? displayName = "iShares Core S&P 500 UCITS ETF",
+        string? ticker = "CSPX",
+        string? exchangeMic = "XLON",
+        IReadOnlyList<string>? warnings = null) => new()
+        {
+            Source = "Combined",
+            DisplayName = displayName!,
+            Ticker = ticker!,
+            ExchangeMic = exchangeMic,
+            ExchangeCode = "LN",
+            TradingCurrency = tradingCurrency,
+            SecurityType = securityType,
+            ShareClassFigi = "BBGSC",
+            ListingFigi = "BBG001",
+            ProviderSymbol = providerSymbol,
+            Warnings = warnings ?? []
+        };
+
+    private static StockPrice PositivePrice() => new()
     {
-        DisplayName = "iShares Core S&P 500 UCITS ETF",
-        Ticker = "CSPX",
-        ExchangeMic = "XLON",
-        ExchangeCode = "LN",
-        TradingCurrency = "USD",
-        SecurityType = securityType,
-        ShareClassFigi = "BBGSC",
-        ListingFigi = "BBG001",
-        ProviderSymbol = "CSPX.LON"
+        Isin = "CSPX.LON",
+        PricePerUnit = 100m,
+        Currency = new Currency(0, "USD", "USD"),
+        Date = DateTime.UtcNow
     };
 
     [Fact]
@@ -71,7 +90,7 @@ public class InstrumentImportServiceTests
         _symbolRepositoryMock.Setup(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MarketDataSymbol symbol, CancellationToken _) => { symbol.Id = 3; return symbol; });
         _avClientMock.Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<CancellationToken>()))
+            It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         var result = await CreateService().ImportAsync(new ImportInstrumentCommand(Instrument()), TestContext.Current.CancellationToken);
@@ -93,7 +112,7 @@ public class InstrumentImportServiceTests
         Assert.Equal("instrument_import_failed", exception.Code);
         _assetRepositoryMock.Verify(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Never);
         _avClientMock.Verify(x => x.GetDailySeries(
-            It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -114,5 +133,121 @@ public class InstrumentImportServiceTests
         Assert.False(result.CreatedAsset);
         Assert.False(result.CreatedListing);
         Assert.False(result.CreatedMarketDataSymbol);
+    }
+
+    [Theory]
+    [InlineData("ETF", true)]
+    [InlineData("ETP", true)]
+    [InlineData("Equity", true)]
+    [InlineData("Stock", true)]
+    [InlineData("Bond", false)]
+    [InlineData(null, false)]
+    public void CanImportForTransaction_ClassifiesSecurityType(string? securityType, bool expected)
+    {
+        var instrument = Instrument(securityType ?? string.Empty);
+
+        Assert.Equal(expected, CreateService().CanImportForTransaction(instrument));
+    }
+
+    [Fact]
+    public void CanImportForTransaction_WithInformationalWarnings_RemainsImportable()
+    {
+        var instrument = Instrument(warnings:
+        [
+            "The exchange mapping is ambiguous.",
+            "Identity was not confirmed by OpenFIGI; check the exchange and currency before saving.",
+            "Alpha Vantage quote currency differs from the listing trading currency."
+        ]);
+
+        Assert.True(CreateService().CanImportForTransaction(instrument));
+    }
+
+    [Theory]
+    [InlineData(null, "CSPX", "XLON", "USD", "CSPX.LON")]
+    [InlineData("Name", null, "XLON", "USD", "CSPX.LON")]
+    [InlineData("Name", "CSPX", null, "USD", "CSPX.LON")]
+    [InlineData("Name", "CSPX", "XLON", null, "CSPX.LON")]
+    [InlineData("Name", "CSPX", "XLON", "USD", null)]
+    public void CanImportForTransaction_WhenStructuralDataIsMissing_ReturnsFalse(
+        string? displayName, string? ticker, string? exchangeMic, string? tradingCurrency, string? providerSymbol)
+    {
+        var instrument = Instrument(
+            displayName: displayName,
+            ticker: ticker,
+            exchangeMic: exchangeMic,
+            tradingCurrency: tradingCurrency,
+            providerSymbol: providerSymbol);
+
+        Assert.False(CreateService().CanImportForTransaction(instrument));
+    }
+
+    [Theory]
+    [InlineData("The exchange mapping is ambiguous.")]
+    [InlineData("Identity was not confirmed by OpenFIGI; check the exchange and currency before saving.")]
+    [InlineData("Alpha Vantage quote currency differs from the listing trading currency.")]
+    public async Task ValidateForTransactionAsync_WithLegacyWarningText_DoesNotBlockValidInstrument(string warning)
+    {
+        _avClientMock.Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+            It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([PositivePrice()]);
+
+        var instrument = Instrument(warnings: [warning]);
+
+        await CreateService().ValidateForTransactionAsync(instrument, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task ValidateForTransactionAsync_WithAlphaVantageOnlyResult_AcceptsWhenDailySeriesHasPositivePrice()
+    {
+        _avClientMock.Setup(x => x.GetDailySeries("VWCE.DEX", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+            It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([PositivePrice()]);
+
+        var instrument = new InstrumentDiscoveryResultDto
+        {
+            Source = "AlphaVantage",
+            DisplayName = "Vanguard FTSE All-World UCITS ETF",
+            Ticker = "VWCE",
+            ExchangeMic = "XETR",
+            ExchangeCode = "XETRA",
+            ExchangeName = "Xetra",
+            TradingCurrency = "EUR",
+            SecurityType = "ETF",
+            ProviderSymbol = "VWCE.DEX",
+            Warnings = ["Identity was not confirmed by OpenFIGI; check the exchange and currency before saving."]
+        };
+
+        await CreateService().ValidateForTransactionAsync(instrument, TestContext.Current.CancellationToken);
+
+        _avClientMock.Verify(x => x.GetDailySeries("VWCE.DEX", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+            It.IsAny<Currency>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportValidatedAsync_DoesNotRevalidateProviderSymbolAndPersistsEnabledSymbol()
+    {
+        Asset? persistedAsset = null;
+        MarketDataSymbol? persistedSymbol = null;
+        _assetRepositoryMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _assetRepositoryMock.Setup(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Asset asset, CancellationToken _) => { asset.Id = 1; persistedAsset = asset; return asset; });
+        _listingRepositoryMock.Setup(x => x.Upsert(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssetListing listing, CancellationToken _) => { listing.Id = 2; return listing; });
+        _symbolRepositoryMock.Setup(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MarketDataSymbol symbol, CancellationToken _) => { symbol.Id = 3; persistedSymbol = symbol; return symbol; });
+        _avClientMock.Setup(x => x.GetDailySeries(
+                It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("ImportValidatedAsync must not call Alpha Vantage."));
+
+        var result = await CreateService().ImportValidatedAsync(Instrument("ETP"), TestContext.Current.CancellationToken);
+
+        Assert.True(result.CreatedMarketDataSymbol);
+        Assert.Equal(AssetType.ETF, persistedAsset?.Type);
+        Assert.NotNull(persistedSymbol);
+        Assert.True(persistedSymbol.IsEnabled);
+        Assert.NotNull(persistedSymbol.LastValidatedAt);
+        Assert.Null(persistedSymbol.LastError);
+        _avClientMock.Verify(x => x.GetDailySeries(
+            It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
