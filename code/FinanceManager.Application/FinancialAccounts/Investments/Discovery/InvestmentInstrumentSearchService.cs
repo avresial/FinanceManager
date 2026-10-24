@@ -8,6 +8,7 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 public sealed class InvestmentInstrumentSearchService(
     IAssetListingRepository listingRepository,
     IInvestmentInstrumentDiscoveryService discoveryService,
+    IInstrumentImportService importService,
     IMemoryCache cache) : IInvestmentInstrumentSearchService
 {
     private static readonly TimeSpan _resultTtl = TimeSpan.FromMinutes(15);
@@ -30,6 +31,10 @@ public sealed class InvestmentInstrumentSearchService(
         var externalResults = await discoveryService.SearchAsync(query, cancellationToken);
         foreach (var external in externalResults.OrderByDescending(x => x.ConfidenceScore))
         {
+            // Hide results that can never be saved: they only lead the user to an error on save.
+            if (!importService.CanImportForTransaction(external))
+                continue;
+
             if (localListings.Any(listing => MatchesExisting(listing, external)))
                 continue;
 

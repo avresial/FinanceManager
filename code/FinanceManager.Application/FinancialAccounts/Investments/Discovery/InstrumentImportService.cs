@@ -33,25 +33,29 @@ public sealed class InstrumentImportService(
     public async Task<ImportedInstrumentDto> ImportAsync(ImportInstrumentCommand command, CancellationToken ct = default)
     {
         ValidateImport(command.Instrument);
-        return await PersistAsync(command.Instrument, strict: false, ct);
+        return await PersistAsync(command.Instrument, symbolValidated: false, ct);
     }
 
     public async Task ValidateForTransactionAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
-        ValidateTransactionImport(instrument);
+        ThrowIfTransactionImportBlocked(instrument);
         await ValidateSymbolAsync(instrument, ct, strict: true);
     }
 
     public async Task<ImportedInstrumentDto> ImportValidatedAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
-        ValidateTransactionImport(instrument);
-        await ValidateSymbolAsync(instrument, ct, strict: true);
-        return await PersistAsync(instrument, strict: true, ct);
+        // The provider symbol was already validated by ValidateForTransactionAsync outside the
+        // database transaction; only re-run the cheap structural checks here.
+        ThrowIfTransactionImportBlocked(instrument);
+        return await PersistAsync(instrument, symbolValidated: true, ct);
     }
+
+    public bool CanImportForTransaction(InstrumentDiscoveryResultDto instrument) =>
+        GetTransactionImportBlocker(instrument) is null;
 
     private async Task<ImportedInstrumentDto> PersistAsync(
         InstrumentDiscoveryResultDto instrument,
-        bool strict,
+        bool symbolValidated,
         CancellationToken ct)
     {
         var warnings = ImportWarnings(instrument).ToList();
@@ -60,7 +64,7 @@ public sealed class InstrumentImportService(
         asset ??= await assetRepository.Upsert(new Asset
         {
             Name = instrument.DisplayName,
-            Type = ParseAssetType(instrument.SecurityType, defaultToStock: strict),
+            Type = ParseAssetType(instrument.SecurityType),
             Isin = instrument.Isin,
             ShareClassFigi = instrument.ShareClassFigi,
             CompositeFigi = instrument.CompositeFigi,
@@ -82,7 +86,7 @@ public sealed class InstrumentImportService(
         var createdSymbol = symbol is null && !string.IsNullOrWhiteSpace(instrument.ProviderSymbol);
         if (createdSymbol)
         {
-            var error = strict ? null : await ValidateSymbolAsync(instrument, ct);
+            var error = symbolValidated ? null : await ValidateSymbolAsync(instrument, ct);
             if (error is not null) warnings.Add(error);
             symbol = await symbolRepository.Upsert(new MarketDataSymbol
             {
@@ -217,38 +221,42 @@ public sealed class InstrumentImportService(
             throw new ArgumentException("Only stocks and ETFs can be imported.");
     }
 
-    private static void ValidateTransactionImport(InstrumentDiscoveryResultDto instrument)
+    // Structural blockers only. Informational discovery warnings (e.g. "identity was not confirmed
+    // by OpenFIGI") are shown to the user but must not block saving a result that has everything the
+    // import needs. Both validation and the search-time importability check read this one rule set so
+    // they cannot drift.
+    private static void ThrowIfTransactionImportBlocked(InstrumentDiscoveryResultDto instrument)
+    {
+        var blocker = GetTransactionImportBlocker(instrument);
+        if (blocker is not null)
+            throw blocker;
+    }
+
+    private static InstrumentImportException? GetTransactionImportBlocker(InstrumentDiscoveryResultDto instrument)
     {
         if (!HasRequiredImportData(instrument))
-            throw new InstrumentImportException(
+            return new InstrumentImportException(
                 "instrument_not_found",
                 "The selected instrument is missing a name, ticker, exchange, or trading currency.");
         if (string.IsNullOrWhiteSpace(instrument.ProviderSymbol))
-            throw new InstrumentImportException(
+            return new InstrumentImportException(
                 "market_data_symbol_invalid",
                 "The selected instrument has no usable market-data symbol. No asset or transaction was created.");
         if (ParseAssetType(instrument.SecurityType) is AssetType.Other)
-            throw new InstrumentImportException(
+            return new InstrumentImportException(
                 "instrument_import_failed",
                 "The selected instrument's asset type could not be determined; only stocks and ETFs can be added to an investment transaction.");
-
-        if (instrument.Warnings.Any(w =>
-                w.Contains("ambiguous", StringComparison.OrdinalIgnoreCase)
-                || w.Contains("not confirmed", StringComparison.OrdinalIgnoreCase)
-                || w.Contains("differs", StringComparison.OrdinalIgnoreCase)))
-            throw new InstrumentImportException(
-                "instrument_ambiguous",
-                "The selected instrument could not be resolved to a specific exchange and currency.");
+        return null;
     }
 
     private static bool HasRequiredImportData(InstrumentDiscoveryResultDto instrument) =>
         !string.IsNullOrWhiteSpace(instrument.DisplayName) && !string.IsNullOrWhiteSpace(instrument.Ticker)
         && !string.IsNullOrWhiteSpace(instrument.ExchangeMic) && !string.IsNullOrWhiteSpace(instrument.TradingCurrency);
 
-    private static AssetType ParseAssetType(string? securityType, bool defaultToStock = false) =>
-        securityType?.Contains("ETF", StringComparison.OrdinalIgnoreCase) == true ? AssetType.ETF
+    private static AssetType ParseAssetType(string? securityType) =>
+        securityType?.Contains("ETF", StringComparison.OrdinalIgnoreCase) == true
+        || securityType?.Contains("ETP", StringComparison.OrdinalIgnoreCase) == true ? AssetType.ETF
         : securityType?.Contains("Equity", StringComparison.OrdinalIgnoreCase) == true || securityType?.Contains("Stock", StringComparison.OrdinalIgnoreCase) == true ? AssetType.Stock
-        : defaultToStock && string.IsNullOrWhiteSpace(securityType) ? AssetType.Stock
         : AssetType.Other;
 }
 

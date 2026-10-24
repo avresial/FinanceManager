@@ -238,6 +238,15 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
+        // The provider symbol is validated once, before the transaction, and never re-validated inside it.
+        _alphaVantageClient.Verify(
+            x => x.GetDailySeries(
+                "CSPX.LON",
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<Currency>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -640,9 +649,9 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                     Ticker: "CSPX",
                     Name: "iShares Core S&P 500 UCITS ETF",
                     ExchCode: "LN",
-                    Currency: "USD",
                     Figi: "BBG001",
-                    ShareClassFigi: "BBGSC")
+                    ShareClassFigi: "BBGSC",
+                    SecurityType: "ETP")
             ]);
         _alphaVantageClient
             .Setup(x => x.SearchTicker("CSPX", It.IsAny<CancellationToken>()))

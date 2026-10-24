@@ -21,12 +21,22 @@
                         {
                             <MudText Typo="Typo.caption">ISIN: @option.Isin</MudText>
                         }
+                        @foreach (var warning in option.Warnings)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning">@warning</MudText>
+                        }
                     </MudStack>
                 </ItemTemplate>
             </MudAutocomplete>
             @if (_selectedInstrument?.Source == InstrumentOptionSource.External)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">This instrument will be added when the transaction is saved.</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.body2">This instrument will be added when the transaction is saved.</MudText>
+                    @foreach (var warning in _selectedInstrument.Warnings)
+                    {
+                        <MudText Typo="Typo.caption">@warning</MudText>
+                    }
+                </MudAlert>
             }
             @if (_error is not null)
             {
