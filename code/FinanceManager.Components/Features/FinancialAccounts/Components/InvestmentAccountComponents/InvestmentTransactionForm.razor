@@ -21,7 +21,7 @@
                         {
                             <MudText Typo="Typo.caption">ISIN: @option.Isin</MudText>
                         }
-                        @foreach (var warning in option.Warnings)
+                        @foreach (var warning in option.Warnings ?? [])
                         {
                             <MudText Typo="Typo.caption" Color="Color.Warning">@warning</MudText>
                         }
@@ -32,7 +32,7 @@
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
                     <MudText Typo="Typo.body2">This instrument will be added when the transaction is saved.</MudText>
-                    @foreach (var warning in _selectedInstrument.Warnings)
+                    @foreach (var warning in _selectedInstrument.Warnings ?? [])
                     {
                         <MudText Typo="Typo.caption">@warning</MudText>
                     }
