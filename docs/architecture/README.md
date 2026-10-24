@@ -36,7 +36,7 @@ Architecture review: sections 4, 9, 10 and 11. ADRs identify reconstructed ratio
 | Owner | Detailed documents |
 | --- | --- |
 | 7. Deployment | [Deployment](operations/deployment.md), [EF migrations](operations/migrations.md), [database recovery](operations/database-recovery.md) |
-| 8. Concepts | [Integrations](concepts/integrations.md), [UI snapshots](concepts/ui-snapshots.md), [PWA caching/offline/update behavior](concepts/pwa.md), [coding conventions](concepts/coding-conventions.md), [transaction automation mockup](concepts/mockups/transaction-automation-inline.svg) |
+| 8. Concepts | [Integrations](concepts/integrations.md), [UI snapshots](concepts/ui-snapshots.md), [PWA caching/offline/update behavior](concepts/pwa.md), [coding conventions](concepts/coding-conventions.md), [transaction automation mockup](concepts/mockups/transaction-automation-inline.svg), [Transactions page redesign concepts](concepts/transactions-redesign-concepts.md) |
 | 10. Quality | [Testing](quality/testing.md), [benchmark operation and interpretation](quality/benchmarks.md), [historical accessibility audit](audits/accessibility-audit.md), [historical performance audit](audits/performance-2026-09-05.md) |
 | 11. Risks/debt | [Historical backend cleanup audit](audits/backend-cleanup.md), [historical .NET upgrade assessment](audits/dotnet10-upgrade/assessment.md) and its preserved [CSV](audits/dotnet10-upgrade/assessment.csv)/[JSON](audits/dotnet10-upgrade/assessment.json) |
 
