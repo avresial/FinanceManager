@@ -34,7 +34,7 @@
                 {
                     <div class="fm-distribution-chart" data-testid="distribution-chart">
                         <ApexChart @key="_chartKey" @ref="_chart" TItem="DistributionSlice" Options="_chartOptions"
-                                   Width="@ChartSize" Height="@ChartSize"
+                                   Width="@_chartSize" Height="@_chartSize"
                                    OnDataPointEnter="OnSliceEnter" OnDataPointLeave="OnSliceLeave">
                             <ApexPointSeries TItem="DistributionSlice"
                                              Items="_slices"
