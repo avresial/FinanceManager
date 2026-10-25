@@ -1,3 +1,8 @@
+@using ApexCharts
+@using FinanceManager.Domain.MoneyFlow.Entities
+@using Color = MudBlazor.Color
+@using Size = MudBlazor.Size
+
 <MudCard Outlined Class="fm-phone-auto-height cash-flow-forecast-card rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="Cash flow forecast"
                 InfoText="Projected cash-account balances based on recurring income, expenses, and active subscriptions."
@@ -12,7 +17,7 @@
     </CardHeader>
     <MudDivider Class="flex-grow-0" />
 
-    <MudCardContent Class="flex-grow-1 overflow-y-auto py-3" Style="min-height:0;">
+    <MudCardContent Class="d-flex flex-column flex-grow-1 overflow-y-auto py-3" Style="min-height:0;">
         @if (_isLoading)
         {
             <MudStack Spacing="2">
@@ -33,17 +38,48 @@
         }
         else if (_model is not null)
         {
-            <MudStack Spacing="2">
+            <div class="cash-flow-forecast-card__content">
                 <MudText Class="mud-text-secondary" Typo="Typo.body2">
                     Current balance: <strong>@FormatMoney(_model.CurrentBalance)</strong>
                 </MudText>
+                @if (HasChartSeries && _chartOptions is not null)
+                {
+                    <div class="cash-flow-forecast-card__chart" role="img" aria-label="Actual balance for the last 30 days and projected balance for the next 90 days. Solid line: actual. Dashed line: forecast.">
+                        <div class="cash-flow-forecast-card__chart-inner">
+                            <ApexChart TItem="TimeSeriesModel" Options="_chartOptions" Height="@("100%")" @key="_chartVersion">
+                                <ApexPointSeries TItem="TimeSeriesModel" Items="@(_model.HistoricalPoints ?? [])"
+                                                 Name="Actual" SeriesType="SeriesType.Line"
+                                                 XValue="@(point => point.DateTime)" YValue="@(point => point.Value)"
+                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = "#888888" })" />
+                                <ApexPointSeries TItem="TimeSeriesModel" Items="_model.ForecastPoints"
+                                                 Name="Forecast" SeriesType="SeriesType.Line"
+                                                 XValue="@(point => point.DateTime)" YValue="@(point => point.Value)"
+                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = "#D98000" })" />
+                            </ApexChart>
+                        </div>
+                    </div>
+                }
+                @if (_model.LowestBalancePoint is TimeSeriesModel lowest && _model.HasForecastableActivity)
+                {
+                    <MudText Typo="Typo.caption" Color="@(lowest.Value < 0 ? Color.Warning : Color.Default)" Class="cash-flow-forecast-card__lowest">
+                        @if (lowest.Value < 0)
+                        {
+                            <span>Below zero · </span>
+                        }
+                        Lowest @FormatMoney(lowest.Value) · @lowest.DateTime.ToString("MMM d")
+                    </MudText>
+                }
                 <MudGrid Spacing="1">
                     @foreach (var horizon in _horizons)
                     {
                         <MudItem xs="4">
-                            <MudPaper Outlined Class="pa-2 text-center h-100">
+                            <MudPaper Outlined Class="pa-1 text-center h-100 cash-flow-forecast-card__tile">
                                 <MudText Class="mud-text-secondary" Typo="Typo.caption">@horizon days</MudText>
-                                <MudText Typo="Typo.body2" Class="font-weight-600">@FormatMoney(ValueAt(horizon))</MudText>
+                                <MudText Typo="Typo.body2" Class="font-weight-600">@MoneyFormatter.Format(ValueAt(horizon))</MudText>
+                                <MudText Typo="Typo.caption" Color="@(DeltaAt(horizon) > 0 ? Color.Success : DeltaAt(horizon) < 0 ? Color.Error : Color.Default)"
+                                         aria-label="@($"Change from today at {horizon} days: {MoneyFormatter.FormatSigned(DeltaAt(horizon), _model.Currency)}")">
+                                    @MoneyFormatter.FormatSigned(DeltaAt(horizon))
+                                </MudText>
                             </MudPaper>
                         </MudItem>
                     }
@@ -60,7 +96,7 @@
                         @ExpectedSummary
                     </MudText>
                 }
-            </MudStack>
+            </div>
         }
     </MudCardContent>
 </MudCard>

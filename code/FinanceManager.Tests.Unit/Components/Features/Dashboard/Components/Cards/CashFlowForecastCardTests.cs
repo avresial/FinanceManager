@@ -1,3 +1,4 @@
+using ApexCharts;
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Dashboard.Models;
@@ -23,7 +24,7 @@ public sealed class CashFlowForecastCardTests
     private static readonly DateTime _asOfDate = new(2026, 9, 28);
 
     [Fact]
-    public void RenderedModel_IgnoresForecastHistoryThatTheCardDoesNotShow()
+    public void RenderedModel_KeepsHistoryAndComputesHorizonDeltas()
     {
         var original = Forecast(100m);
         original.ForecastSeries[1].Value = 130m;
@@ -49,7 +50,107 @@ public sealed class CashFlowForecastCardTests
         Assert.Equal(190m, model.NinetyDayValue);
         Assert.Equal(1, model.ExpectedInflowCount);
         Assert.Equal(2, model.ExpectedOutflowCount);
-        Assert.Equal(model, CashFlowForecastCardModel.FromForecast(changedHistory, "PLN"));
+        Assert.Equal(30m, model.ThirtyDayDelta);
+        Assert.Equal(60m, model.SixtyDayDelta);
+        Assert.Equal(90m, model.NinetyDayDelta);
+        Assert.Empty(model.HistoricalPoints!);
+        Assert.Single(CashFlowForecastCardModel.FromForecast(changedHistory, "PLN").HistoricalPoints!);
+    }
+
+    [Theory]
+    [InlineData(25)]
+    [InlineData(-25)]
+    public void FromForecast_FindsLowestDailyBalanceIncludingLastDay(decimal minimum)
+    {
+        var forecast = Forecast(100m);
+        forecast.ForecastSeries.Add(new TimeSeriesModel(_asOfDate.AddDays(90), minimum));
+        forecast.ForecastSeries.Add(new TimeSeriesModel(_asOfDate.AddDays(91), -500m));
+        forecast.HistoricalSeries =
+        [
+            new TimeSeriesModel(_asOfDate.AddDays(-31), -900m),
+            new TimeSeriesModel(_asOfDate.AddDays(-30), 80m),
+            new TimeSeriesModel(_asOfDate, 100m),
+            new TimeSeriesModel(_asOfDate.AddDays(1), 90m)
+        ];
+
+        var model = CashFlowForecastCardModel.FromForecast(forecast, "PLN");
+
+        Assert.Equal(minimum, model.LowestBalancePoint!.Value);
+        Assert.Equal(_asOfDate.AddDays(90), model.LowestBalancePoint.DateTime);
+        Assert.Equal(2, model.HistoricalPoints!.Count);
+        Assert.DoesNotContain(model.ForecastPoints!, point => point.DateTime > _asOfDate.AddDays(90));
+    }
+
+    [Fact]
+    public void FromForecast_EmptySeriesHasNoMinimumOrDeltas()
+    {
+        var model = CashFlowForecastCardModel.FromForecast(new CashFlowForecast { AsOfDate = _asOfDate }, "PLN");
+
+        Assert.Empty(model.HistoricalPoints!);
+        Assert.Empty(model.ForecastPoints!);
+        Assert.Null(model.LowestBalancePoint);
+        Assert.Equal(0m, model.CurrentBalance);
+        Assert.Equal(0m, model.ThirtyDayDelta);
+        Assert.Equal(0m, model.SixtyDayDelta);
+        Assert.Equal(0m, model.NinetyDayDelta);
+    }
+
+    [Fact]
+    public async Task OlderSnapshotWithoutSeries_PaintsTotalsAndDerivedDeltasDuringRefreshFailure()
+    {
+        var snapshot = System.Text.Json.JsonSerializer.Deserialize<CashFlowForecastCardSnapshot>(
+            """{"UserId":7,"CurrencyId":0,"HorizonDays":90,"Model":{"Currency":"PLN","CurrentBalance":100,"ThirtyDayValue":130,"SixtyDayValue":60,"NinetyDayValue":100,"HasForecastableActivity":true,"ExpectedInflowCount":1,"ExpectedOutflowCount":2}}""");
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<CashFlowForecastCardSnapshot>(_key)).ReturnsAsync(snapshot);
+        var handler = new DeferredForecastHandler();
+        await using var context = CreateContext(snapshots, handler);
+
+        var cut = context.Render<CashFlowForecastCard>();
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), Xunit.TestContext.Current.CancellationToken);
+        handler.Fail();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("130.00", cut.Markup);
+            Assert.Contains(Money(100m), cut.Markup);
+            Assert.Contains("+30.00 PLN", cut.Markup);
+            Assert.Contains("-40.00 PLN", cut.Markup);
+            Assert.Empty(cut.FindAll(".cash-flow-forecast-card__chart"));
+            Assert.DoesNotContain("Couldn't load forecast", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task NegativeMinimum_ShowsWarningAndNoActivityHidesChart()
+    {
+        var forecast = Forecast(100m);
+        forecast.ForecastSeries[1].Value = -20m;
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<CashFlowForecastCardSnapshot>(_key)).ReturnsAsync(Snapshot(forecast));
+        var handler = new DeferredForecastHandler();
+        await using var context = CreateContext(snapshots, handler);
+        var cut = context.Render<CashFlowForecastCard>();
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), Xunit.TestContext.Current.CancellationToken);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("mud-warning-text", cut.Find(".cash-flow-forecast-card__lowest").ClassList);
+            Assert.Contains("Below zero", cut.Markup);
+            Assert.NotEmpty(cut.FindAll(".cash-flow-forecast-card__chart"));
+            var options = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance.Options;
+            Assert.Equal(4, options.Annotations.Xaxis.Count);
+            Assert.Equal(new[] { "Today", "30d", "60d", "90d" }, options.Annotations.Xaxis.SelectMany(marker => (List<string>)marker.Label.Text));
+            Assert.Equal("var(--mud-palette-warning)", Assert.Single(options.Annotations.Points).Marker.FillColor);
+            var series = cut.FindComponents<ApexPointSeries<TimeSeriesModel>>();
+            Assert.Equal(0, series[0].Instance.Stroke.DashSpace);
+            Assert.Equal(5, series[1].Instance.Stroke.DashSpace);
+        });
+        forecast.HasForecastableActivity = false;
+        handler.Complete(forecast);
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("No recurring activity", cut.Markup);
+            Assert.Empty(cut.FindAll(".cash-flow-forecast-card__chart"));
+        });
     }
 
     [Fact]
