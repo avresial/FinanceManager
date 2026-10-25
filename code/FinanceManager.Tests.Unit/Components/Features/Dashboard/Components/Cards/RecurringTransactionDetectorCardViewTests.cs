@@ -202,6 +202,22 @@ public sealed class RecurringTransactionDetectorCardViewTests
         Assert.Single(cut.FindAll("[data-testid=scroll-fade-area]"));
     }
 
+    [Fact]
+    public async Task ListView_ViewAllButtonLivesInCardHeader()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
+            .Add(x => x.Data, [Item("Rent", 1_000m)]));
+
+        // The "View all" control must live in the header action slot (top-right), not in the body.
+        var card = cut.Find("[data-testid=recurring-transactions-card]");
+        var header = card.QuerySelector("[data-testid=card-header]")!;
+        var viewAll = header.QuerySelector("a[href='/Subscriptions']")!;
+        Assert.Equal("View all", viewAll.TextContent.Trim());
+        Assert.Equal("See all recurring transactions", viewAll.GetAttribute("aria-label"));
+        Assert.Null(card.QuerySelector("[data-testid=scroll-fade-area] a[href='/Subscriptions']"));
+    }
+
     private static string? ProgressFor(IRenderedComponent<RecurringTransactionDetectorCardView> cut, string title) =>
         cut.FindAll("[title]").Single(element => element.GetAttribute("title") == title)
             .ParentElement!.ParentElement!.QuerySelector("[role=progressbar]")!.GetAttribute("aria-valuenow");

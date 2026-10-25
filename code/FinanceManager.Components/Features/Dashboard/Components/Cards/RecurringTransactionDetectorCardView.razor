@@ -4,6 +4,7 @@
     <CardHeader Title="@(SelectedItem?.Name ?? "Recurring transactions")"
                 InfoText="Transactions that repeat on a schedule, grouped by income and outgoing with monthly totals. Select one to see its entries."
                 InfoAriaLabel="About recurring transactions card"
+                StackedAside="true"
                 Leading="@(SelectedItem is null ? null : BackButton)"
                 Actions="@(SelectedItem is null ? ViewAllButton : null)">
         <SubtitleContent>
