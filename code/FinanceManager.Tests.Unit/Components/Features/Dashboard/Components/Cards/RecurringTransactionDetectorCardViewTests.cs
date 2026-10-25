@@ -212,7 +212,12 @@ public sealed class RecurringTransactionDetectorCardViewTests
         // The "View all" control must live in the header action slot (top-right), not in the body.
         var card = cut.Find("[data-testid=recurring-transactions-card]");
         var header = card.QuerySelector("[data-testid=card-header]")!;
-        var viewAll = header.QuerySelector("a[href='/Subscriptions']")!;
+        // Stacking the aside keeps the actions beside the title even on narrow cards.
+        Assert.Contains("fm-card-header--stacked-aside", header.ClassList);
+        // The link lives in the header action slot, not anywhere in the card body.
+        var viewAll = header
+            .QuerySelector(".fm-card-header-aside .fm-card-header-actions")!
+            .QuerySelector("a[href='/Subscriptions']")!;
         Assert.Equal("View all", viewAll.TextContent.Trim());
         Assert.Equal("See all recurring transactions", viewAll.GetAttribute("aria-label"));
         Assert.Null(card.QuerySelector("[data-testid=scroll-fade-area] a[href='/Subscriptions']"));
