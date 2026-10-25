@@ -222,13 +222,18 @@ public class DistributionOverviewCardViewTests
 
         cut.FindAll("[role=listitem]")[1].MouseEnter();
 
-        var rows = cut.FindAll("[data-testid=distribution-row]");
-        Assert.DoesNotContain("is-active", rows[0].ClassList);
-        Assert.Contains("is-active", rows[1].ClassList);
+        // Hover handlers also call into the chart's JS, so let their render settle before asserting.
+        cut.WaitForAssertion(() =>
+        {
+            var rows = cut.FindAll("[data-testid=distribution-row]");
+            Assert.DoesNotContain("is-active", rows[0].ClassList);
+            Assert.Contains("is-active", rows[1].ClassList);
+        }, TimeSpan.FromSeconds(3));
 
         cut.FindAll("[role=listitem]")[1].MouseLeave();
 
-        Assert.DoesNotContain(cut.FindAll("[data-testid=distribution-row]"), row => row.ClassList.Contains("is-active"));
+        cut.WaitForAssertion(() => Assert.DoesNotContain(cut.FindAll("[data-testid=distribution-row]"), row => row.ClassList.Contains("is-active")),
+            TimeSpan.FromSeconds(3));
     }
 
     [Fact]

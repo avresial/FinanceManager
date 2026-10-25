@@ -102,9 +102,11 @@ public partial class DistributionCardView
     private void ToggleOther() => _otherExpanded = !_otherExpanded;
 
     // Hovering a row selects its slice, which pops the slice out of the donut; leaving deselects it again.
+    // The row highlight renders before the chart's JS round trip so it never waits on the chart.
     private async Task OnRowEnterAsync(int index)
     {
         _activeIndex = index;
+        StateHasChanged();
         if (_selectedIndex == index) return;
         if (_selectedIndex is int previous) await ToggleSliceAsync(previous);
         _selectedIndex = index;
@@ -113,7 +115,11 @@ public partial class DistributionCardView
 
     private async Task OnRowLeaveAsync(int index)
     {
-        if (_activeIndex == index) _activeIndex = null;
+        if (_activeIndex == index)
+        {
+            _activeIndex = null;
+            StateHasChanged();
+        }
         if (_selectedIndex != index) return;
         _selectedIndex = null;
         await ToggleSliceAsync(index);
