@@ -80,7 +80,7 @@ internal class AssetsServiceInvestment(
         foreach (var account in accounts)
         {
             if (valuesByAccount.TryGetValue(account.AccountId, out var value) && value > 0)
-                yield return new NameValueResult(account.Name, value);
+                yield return new NameValueResult(account.Name, value) { AccountId = account.AccountId };
         }
     }
 

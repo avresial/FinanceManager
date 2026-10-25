@@ -1,0 +1,146 @@
+/* Donut beside a legend; stacked on phones (see the media query below). */
+.fm-distribution-body {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+    padding: 4px 12px 12px;
+    min-height: 0;
+}
+
+.fm-distribution-body--single {
+    height: auto;
+}
+
+.fm-distribution-body .fm-legend {
+    max-height: 100%;
+}
+
+.fm-distribution-chart {
+    position: relative;
+    flex: 0 0 190px;
+    width: 190px;
+    height: 190px;
+}
+
+.fm-distribution-chart ::deep .apexcharts-canvas {
+    background: transparent !important;
+}
+
+.fm-distribution-chart ::deep .apexcharts-toolbar {
+    display: none !important;
+}
+
+/* The total sits in the donut hole; the padding keeps long amounts inside the ring. */
+.fm-distribution-total {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 42px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.fm-distribution-total-value {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.fm-distribution-total-label {
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Rows reuse the shared legend styles; the proportion bar replaces the divider line. */
+.fm-distribution-row {
+    position: relative;
+    width: 100%;
+    padding: 5px 4px 10px;
+    border-bottom: none;
+    border-radius: 4px;
+}
+
+.fm-distribution-row--link,
+.fm-distribution-row--other {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.fm-distribution-row--other {
+    border: none;
+    background: none;
+    font: inherit;
+    text-align: left;
+}
+
+.fm-distribution-row.is-active,
+.fm-distribution-row--link:hover,
+.fm-distribution-row--other:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.fm-distribution-row--link:focus-visible,
+.fm-distribution-row--other:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: -2px;
+}
+
+.fm-distribution-bar {
+    position: absolute;
+    left: 22px;
+    right: 4px;
+    bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--mud-palette-action-disabled-background);
+    overflow: hidden;
+}
+
+.fm-distribution-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+}
+
+.fm-distribution-other-members {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 4px 6px 22px;
+}
+
+.fm-distribution-other-member {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fm-distribution-other-member .fm-legend-amt {
+    margin-left: auto;
+    font-size: 12px;
+}
+
+@media (max-width: 599.98px) {
+    .fm-distribution-body {
+        flex-direction: column;
+        align-items: stretch;
+        height: auto;
+    }
+
+    .fm-distribution-chart {
+        align-self: center;
+    }
+
+    .fm-distribution-body .fm-legend {
+        max-height: none;
+    }
+}

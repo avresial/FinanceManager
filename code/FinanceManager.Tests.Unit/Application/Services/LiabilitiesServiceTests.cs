@@ -37,8 +37,8 @@ public class LiabilitiesServiceTests
     public async Task GetEndLiabilitiesPerAccount_YieldsLiabilities_ForNegativeValueAccounts()
     {
         // Arrange
-        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -200, -200));
+        var account = new CurrencyAccount(1, 42, "loan", AccountLabel.Loan);
+        account.Add(new CurrencyAccountEntry(42, 1, DateTime.UtcNow, -200, -200));
 
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
         .Returns(new[] { account }.ToAsyncEnumerable());
@@ -51,6 +51,7 @@ public class LiabilitiesServiceTests
         Assert.Single(list);
         Assert.Equal("loan", list[0].Name);
         Assert.Equal(-200m, list[0].Value);
+        Assert.Equal(42, list[0].AccountId);
     }
 
     [Fact]

@@ -49,7 +49,8 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
             yield return new NameValueResult()
             {
                 Name = account.Name,
-                Value = entry.Value
+                Value = entry.Value,
+                AccountId = account.AccountId
             };
         }
     }
