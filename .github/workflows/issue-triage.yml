@@ -40,7 +40,16 @@ jobs:
           set -euo pipefail
           command -v opencode || { echo "::error::OpenCode CLI not found on PATH."; exit 1; }
           opencode --version
-          opencode models | grep -Fx "litellm/qwen3.8-27b"
+          # The LiteLLM models are discovered asynchronously, so a cold
+          # OpenCode service lists only built-in models at first.
+          for attempt in $(seq 1 12); do
+            opencode models | grep -Fxq "litellm/qwen3.8-27b" && break
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::Model litellm/qwen3.8-27b not listed by OpenCode."
+              exit 1
+            fi
+            sleep 5
+          done
           test -f /Users/a2485/.agents/skills/codebase-manage-issues/SKILL.md || { echo "::error::Missing codebase-manage-issues skill"; exit 1; }
 
       # All local models are served through the LiteLLM proxy, which needs
