@@ -54,16 +54,18 @@ public partial class DistributionCardView
 
     private void BuildSlices()
     {
-        _slices = DistributionSlices.Build(IsAccountView ? AccountData : TypeData);
-        _activeIndex = null;
+        var slices = DistributionSlices.Build(IsAccountView ? AccountData : TypeData);
 
         // Recreate the chart whenever the slices, their colours or the currency change, instead of patching
-        // a live chart: ApexCharts reads colours from the options only when it is created.
-        var key = string.Join('|', _slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}"))
+        // a live chart: ApexCharts reads colours from the options only when it is created. Unchanged input keeps
+        // the same list so a parent re-render does not push a series update into the chart.
+        var key = string.Join('|', slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}:{x.AccountId}:{x.Members.Count}"))
             + $"|{CurrencyShortName}";
         if (key == _chartKey) return;
 
+        _slices = slices;
         _chartKey = key;
+        _activeIndex = null;
         _selectedIndex = null;
         _otherExpanded = false;
         _chartOptions = new ApexChartOptions<DistributionSlice>
@@ -72,6 +74,8 @@ public partial class DistributionCardView
             {
                 Toolbar = new Toolbar { Show = false },
                 Background = "transparent",
+                // The chart is recreated on every view switch; animating each rebuild only delays the data.
+                Animations = new Animations { Enabled = false },
             },
             Legend = new Legend { Show = false },
             DataLabels = new DataLabels { Enabled = false },
@@ -128,7 +132,8 @@ public partial class DistributionCardView
     private async Task ToggleSliceAsync(int index)
     {
         if (_chart is not null && !IsSingleCategory)
-            await _chart.ToggleDataPointSelectionAsync(0, index);
+            // Pie and donut charts address each slice as its own series.
+            await _chart.ToggleDataPointSelectionAsync(index, null);
     }
 
     // Hovering a slice highlights its row only; the chart already shows its own hover state.

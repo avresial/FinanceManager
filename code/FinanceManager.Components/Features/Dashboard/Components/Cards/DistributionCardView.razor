@@ -29,6 +29,8 @@
         }
         else if (_slices.Count > 0)
         {
+            @* The container query switches to a stacked layout on narrow cards (a third of the desktop grid). *@
+            <div class="fm-distribution-container" style="@(HasError || IsSingleCategory ? "height:auto;" : null)">
             <div class="fm-distribution-body@(IsSingleCategory ? " fm-distribution-body--single" : "")" style="@(HasError ? "height:auto;min-height:100%;" : null)">
                 @if (!IsSingleCategory)
                 {
@@ -97,6 +99,7 @@
                         </div>
                     }
                 </div>
+            </div>
             </div>
         }
         else if (!HasError)
