@@ -22,6 +22,7 @@ public sealed class ImportedInstrumentDto
     public string Ticker { get; init; } = string.Empty;
     public string ExchangeName { get; init; } = string.Empty;
     public string TradingCurrency { get; init; } = string.Empty;
+    public IReadOnlyList<MarketDataSymbolResolution> ProviderResults { get; init; } = [];
     public bool CreatedAsset { get; init; }
     public bool CreatedListing { get; init; }
     public bool CreatedMarketDataSymbol { get; init; }

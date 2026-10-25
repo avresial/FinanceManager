@@ -1,5 +1,6 @@
 using FinanceManager.Application.Backfill.Currencies;
 using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Net;
@@ -17,7 +18,8 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Pr
 internal sealed class AlphaVantageFxClient(
     HttpClient httpClient,
     ILogger<AlphaVantageFxClient> logger,
-    IExternalServiceConfigService configService) : IFxDailySource
+    IExternalServiceConfigService configService,
+    AlphaVantageRequestBudget budget) : IFxDailySource
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -34,11 +36,13 @@ internal sealed class AlphaVantageFxClient(
 
         var config = await configService.GetServiceAsync("AlphaVantage", cancellationToken);
         var apiKey = config.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (!config.IsEnabled || string.IsNullOrWhiteSpace(apiKey))
         {
-            logger.LogWarning("Alpha Vantage API key is missing; cannot backfill FX pair {From}->{To}.", fromCurrency, toCurrency);
+            logger.LogWarning("Alpha Vantage is disabled or unconfigured; cannot backfill FX pair {From}->{To}.", fromCurrency, toCurrency);
             return FxDailyResult.Empty;
         }
+
+        if (!budget.TryConsume()) return FxDailyResult.RateLimited;
 
         var url = BuildUrl(
             $"function=FX_DAILY&from_symbol={Uri.EscapeDataString(fromCurrency)}&to_symbol={Uri.EscapeDataString(toCurrency)}&outputsize=compact&apikey={apiKey}",

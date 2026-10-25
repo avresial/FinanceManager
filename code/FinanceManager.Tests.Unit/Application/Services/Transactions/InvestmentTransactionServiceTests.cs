@@ -81,8 +81,8 @@ public class InvestmentTransactionServiceTests
         _searchService.Setup(x => x.ResolveExternalResultAsync("result", It.IsAny<CancellationToken>()))
             .ReturnsAsync(instrument);
         _importService.Setup(x => x.ValidateForTransactionAsync(instrument, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-        _importService.Setup(x => x.ImportValidatedAsync(instrument, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidatedInstrumentImport(instrument, []));
+        _importService.Setup(x => x.ImportValidatedAsync(It.Is<ValidatedInstrumentImport>(x => x.Instrument == instrument), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ImportedInstrumentDto { AssetListingId = 42, Ticker = "VWCE", TradingCurrency = "EUR" });
         _atomicOperation
             .Setup(x => x.ExecuteAsync(
@@ -114,7 +114,7 @@ public class InvestmentTransactionServiceTests
         Assert.Equal(7, result.Id);
         Assert.Equal(42, result.AssetListingId);
         _importService.Verify(x => x.ValidateForTransactionAsync(instrument, It.IsAny<CancellationToken>()), Times.Once);
-        _importService.Verify(x => x.ImportValidatedAsync(instrument, It.IsAny<CancellationToken>()), Times.Once);
+        _importService.Verify(x => x.ImportValidatedAsync(It.Is<ValidatedInstrumentImport>(x => x.Instrument == instrument), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private InvestmentTransactionService CreateService() => new(

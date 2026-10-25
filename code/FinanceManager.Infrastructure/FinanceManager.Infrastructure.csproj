@@ -10,6 +10,7 @@
 		<PackageReference Include="GitHub.Copilot.SDK" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
 		<PackageReference Include="OllamaSharp" Condition="'$(RuntimeIdentifier)' != 'browser-wasm'" />
 		<PackageReference Include="Microsoft.Extensions.Http" />
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />

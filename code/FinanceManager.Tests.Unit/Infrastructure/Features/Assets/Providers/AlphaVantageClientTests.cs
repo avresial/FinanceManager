@@ -31,7 +31,7 @@ public class AlphaVantageClientTests
             ApiKey = "test-key",
             IsEnabled = true,
         };
-        return new AlphaVantageClient(httpClient, logger, new StubExternalServiceConfigService(config));
+        return new AlphaVantageClient(httpClient, logger, new StubExternalServiceConfigService(config), new AlphaVantageRequestBudget());
     }
 
     [Fact]

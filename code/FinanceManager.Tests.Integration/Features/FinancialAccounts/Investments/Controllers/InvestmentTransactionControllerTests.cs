@@ -1,3 +1,4 @@
+using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Identity.Users;
@@ -15,6 +16,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using System.Net;
 using System.Net.Http.Json;
@@ -32,12 +34,14 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     private static readonly Mock<IOpenFigiClient> _openFigiClient = new();
     private static readonly Mock<IAlphaVantageClient> _alphaVantageClient = new();
     private TestDatabase? _testDatabase;
+    private static readonly Mock<IMarketDataSymbolResolver> _twelveDataResolver = new();
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         _priceProvider.Reset();
         _openFigiClient.Reset();
         _alphaVantageClient.Reset();
+        _twelveDataResolver.Reset();
 
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
@@ -53,6 +57,23 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         services.AddSingleton(_priceProvider.Object);
         services.AddSingleton(_openFigiClient.Object);
         services.AddSingleton(_alphaVantageClient.Object);
+        services.RemoveAll<IMarketDataSymbolResolver>();
+        var resolver = new Mock<IMarketDataSymbolResolver>();
+        resolver.SetupGet(x => x.Provider).Returns(MarketDataProvider.AlphaVantage);
+        resolver.SetupGet(x => x.Priority).Returns(100);
+        resolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InstrumentDiscoveryResultDto instrument, CancellationToken _) =>
+                new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "candidate", instrument.ProviderSymbol, instrument.ExchangeCode, instrument.TradingCurrency));
+        resolver.Setup(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>()))
+            .Returns(async (MarketDataSymbolResolution candidate, CancellationToken ct) =>
+                (await _alphaVantageClient.Object.GetDailySeries(candidate.Symbol!, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow,
+                    new Currency { ShortName = candidate.Currency! }, ct)).Any(x => x.PricePerUnit > 0));
+        services.AddSingleton(resolver.Object);
+        _twelveDataResolver.SetupGet(x => x.Provider).Returns(MarketDataProvider.TwelveData);
+        _twelveDataResolver.SetupGet(x => x.Priority).Returns(200);
+        _twelveDataResolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MarketDataSymbolResolution(MarketDataProvider.TwelveData, 200, "not found"));
+        services.AddSingleton(_twelveDataResolver.Object);
     }
 
     private async Task SeedAccount()
@@ -250,6 +271,50 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task Add_WithMultipleConfiguredProviders_PersistsSymbolsAndPreservesDisabledMappingOnReimport()
+    {
+        await SeedAccount();
+        SetupExternalInstrument();
+        _twelveDataResolver.SetupGet(x => x.Priority).Returns(50);
+        _twelveDataResolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MarketDataSymbolResolution(MarketDataProvider.TwelveData, 50, "candidate", "CSPX:LSE", "LSE", "USD"));
+        _twelveDataResolver.Setup(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        Authorize("testuser", _testUserId, UserRole.User);
+        var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
+            "api/InvestmentTransaction/SearchInstruments?q=CSPX", TestContext.Current.CancellationToken);
+        var request = new AddInvestmentTransactionRequest(_testAccountId, null, InvestmentTransactionType.Buy,
+            2m, 100m, "USD", new DateOnly(2026, 1, 1), ExternalInstrumentResultId: Assert.Single(options!).ResultId);
+        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        var symbols = await _testDatabase!.Context.MarketDataSymbols.OrderBy(x => x.Provider).ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, symbols.Count);
+        Assert.False(symbols[0].IsPrimary);
+        Assert.True(symbols[1].IsPrimary);
+        Assert.Equal("CSPX:LSE", symbols[1].Symbol);
+        Assert.Equal("LSE", symbols[1].ProviderExchangeCode);
+        Assert.Equal("USD", symbols[1].Currency);
+        Assert.All(symbols, x => { Assert.True(x.IsEnabled); Assert.NotNull(x.LastValidatedAt); Assert.Null(x.LastError); });
+        Assert.Single(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
+
+        symbols[0].IsEnabled = false;
+        symbols[0].LastValidatedAt = null;
+        symbols[0].LastError = "Previous provider validation failed";
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _testDatabase.Context.ChangeTracker.Clear();
+
+        var reimport = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        reimport.EnsureSuccessStatusCode();
+        _testDatabase.Context.ChangeTracker.Clear();
+        var retriedSymbol = await _testDatabase.Context.MarketDataSymbols.AsNoTracking()
+            .SingleAsync(x => x.Provider == MarketDataProvider.AlphaVantage, TestContext.Current.CancellationToken);
+        Assert.False(retriedSymbol.IsEnabled);
+        Assert.False(retriedSymbol.IsPrimary);
+        Assert.NotNull(retriedSymbol.LastValidatedAt);
+        Assert.Null(retriedSymbol.LastError);
+        Assert.Equal(2, await _testDatabase.Context.MarketDataSymbols.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task Add_WithInvalidExternalProviderResult_CreatesNoMasterData()
     {
         await SeedAccount();
@@ -282,7 +347,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("market_data_symbol_invalid", problem!["code"]?.ToString());
+        Assert.Equal("provider_unavailable", problem!["code"]?.ToString());
         Assert.Empty(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Empty(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Empty(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
