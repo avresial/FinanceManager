@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
@@ -23,15 +24,48 @@ public partial class RecurringTransactionDetectorCardView
     [Parameter] public EventCallback<RecurringTransactionResult> OnItemSelected { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
 
-    private double GetPercentage(decimal value)
+    private List<RecurringTransactionResult> _income = [];
+    private List<RecurringTransactionResult> _outgoing = [];
+    private readonly Dictionary<RecurringTransactionResult, MudButton> _rowButtons = [];
+    private MudIconButton? _backButton;
+    private RecurringTransactionResult? _previousSelection;
+    private RecurringTransactionResult? _returnFocusTo;
+    private bool _selectionChanged;
+    private decimal TotalMonthlyIncome => _income.Sum(item => Math.Abs(item.Value));
+    private decimal TotalMonthlyOutgoing => _outgoing.Sum(item => Math.Abs(item.Value));
+    private decimal NetMonthlyFlow => TotalMonthlyIncome - TotalMonthlyOutgoing;
+
+    protected override void OnParametersSet()
     {
-        if (Data.Count == 0) return 0;
-        var max = Data.Max(x => x.Value);
-        return max == 0 ? 0 : (double)(value / max * 100);
+        _selectionChanged = !ReferenceEquals(_previousSelection, SelectedItem);
+        _returnFocusTo = _previousSelection;
+        _previousSelection = SelectedItem;
+        _rowButtons.Clear();
+        _income = [.. Data.Where(item => item.IsIncome).OrderByDescending(item => Math.Abs(item.Value))];
+        _outgoing = [.. Data.Where(item => !item.IsIncome).OrderByDescending(item => Math.Abs(item.Value))];
     }
 
-    // Income carries an explicit "+", spend stays unsigned: the card already colours the direction.
-    private string FormatFlow(bool isIncome, decimal value) => isIncome
-        ? MoneyFormatter.FormatSigned(Math.Abs(value), Currency)
-        : MoneyFormatter.Format(Math.Abs(value), Currency);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_selectionChanged) return;
+        _selectionChanged = false;
+
+        if (SelectedItem is not null && _backButton is not null)
+        {
+            await _backButton.FocusAsync();
+        }
+        else if (_returnFocusTo is not null && _rowButtons.TryGetValue(_returnFocusTo, out var row))
+        {
+            await row.FocusAsync();
+        }
+    }
+
+    private static double GetPercentage(decimal value, List<RecurringTransactionResult> group)
+    {
+        var max = Math.Abs(group[0].Value);
+        return max == 0 ? 0 : (double)(Math.Abs(value) / max * 100);
+    }
+
+    private string FormatFlow(bool isIncome, decimal value) =>
+        MoneyFormatter.FormatSigned(isIncome ? Math.Abs(value) : -Math.Abs(value), Currency);
 }
