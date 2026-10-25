@@ -26,7 +26,7 @@ public sealed class RecurringTransactionDetectorCardViewTests
             .Add(x => x.Data, [rent, salary, groceries, bonus]));
 
         var card = cut.Find("[data-testid=recurring-transactions-card]");
-        Assert.Equal("Net +3,700.00 PLN/mo · 5,500.00 in · 1,800.00 out", card.QuerySelector("[data-testid=recurring-subtitle]")!.TextContent.Trim());
+        Assert.Equal("Net +3,700.00 PLN/mo · 5,500.00 PLN in · 1,800.00 PLN out", card.QuerySelector("[data-testid=recurring-subtitle]")!.TextContent.Trim());
 
         var income = card.QuerySelector("[data-testid=recurring-income-group]")!;
         Assert.Contains("Income", income.TextContent);
@@ -45,6 +45,18 @@ public sealed class RecurringTransactionDetectorCardViewTests
         Assert.Empty(card.QuerySelectorAll(".mud-warning-text, .mud-progress-linear-color-warning"));
         Assert.Contains("+5,000.00 PLN/mo", income.QuerySelector("button")!.TextContent);
         Assert.Contains("-1,500.00 PLN/mo", outgoing.QuerySelector("button")!.TextContent);
+    }
+
+    [Fact]
+    public async Task Overview_SubtitleShowsCustomCurrencyForIncomeAndOutgoingTotals()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
+            .Add(x => x.Currency, "EUR")
+            .Add(x => x.Data, [Item("Salary", 5_500m, isIncome: true), Item("Rent", 1_800m)]));
+
+        Assert.Equal("Net +3,700.00 EUR/mo · 5,500.00 EUR in · 1,800.00 EUR out",
+            cut.Find("[data-testid=recurring-subtitle]").TextContent.Trim());
     }
 
     [Theory]

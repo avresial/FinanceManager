@@ -20,7 +20,7 @@
                         @if (_income.Count > 0)
                         {
                             <span data-testid="recurring-net" class="@(NetMonthlyFlow > 0 ? "mud-success-text" : NetMonthlyFlow < 0 ? "mud-error-text" : null)">Net @MoneyFormatter.FormatSigned(NetMonthlyFlow, Currency)/mo</span>
-                            @($" · {MoneyFormatter.Format(TotalMonthlyIncome)} in · {MoneyFormatter.Format(TotalMonthlyOutgoing)} out")
+                            @($" · {MoneyFormatter.Format(TotalMonthlyIncome, Currency)} in · {MoneyFormatter.Format(TotalMonthlyOutgoing, Currency)} out")
                         }
                         else
                         {
