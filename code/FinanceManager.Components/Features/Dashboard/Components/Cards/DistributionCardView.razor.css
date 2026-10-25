@@ -19,9 +19,9 @@
 
 .fm-distribution-chart {
     position: relative;
-    flex: 0 0 190px;
-    width: 190px;
-    height: 190px;
+    flex: 0 0 160px;
+    width: 160px;
+    height: 160px;
 }
 
 .fm-distribution-chart ::deep .apexcharts-canvas {
@@ -40,17 +40,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0 42px;
+    padding: 0 28px;
     text-align: center;
     pointer-events: none;
 }
 
 .fm-distribution-total-value {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     line-height: 1.2;
     font-variant-numeric: tabular-nums;
-    overflow-wrap: anywhere;
+    /* Large totals break between the number and the currency, never inside the number. */
+    overflow-wrap: normal;
 }
 
 .fm-distribution-total-label {
@@ -154,5 +155,13 @@
     .fm-distribution-body .fm-legend {
         flex: 1 1 auto;
         min-height: 0;
+    }
+
+    /* The legend is full width here, so amount and share fit on one line; this keeps three rows
+       visible under the donut in the fixed-height desktop card. */
+    .fm-distribution-body .fm-legend-vals {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 6px;
     }
 }

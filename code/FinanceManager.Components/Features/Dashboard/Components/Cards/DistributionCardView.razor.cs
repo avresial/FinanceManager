@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
 public partial class DistributionCardView
 {
-    private const string _chartSize = "190";
+    private const string _chartSize = "160";
 
     private string _view = DistributionViewToggle.TypeView;
     private List<DistributionSlice> _slices = [];
