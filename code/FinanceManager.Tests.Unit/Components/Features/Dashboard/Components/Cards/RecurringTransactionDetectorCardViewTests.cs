@@ -23,7 +23,7 @@ public sealed class RecurringTransactionDetectorCardViewTests
         var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
             .Add(x => x.Currency, "PLN")
             .Add(x => x.TotalMonthlySpend, 999_999m)
-            .Add(x => x.Data, [rent, salary, groceries, bonus]));
+            .Add(x => x.Data, [groceries, bonus, rent, salary]));
 
         var card = cut.Find("[data-testid=recurring-transactions-card]");
         Assert.Equal("Net +3,700.00 PLN/mo · 5,500.00 PLN in · 1,800.00 PLN out", card.QuerySelector("[data-testid=recurring-subtitle]")!.TextContent.Trim());
