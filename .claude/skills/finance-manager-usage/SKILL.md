@@ -63,6 +63,9 @@ refresh-token cookie, like a regular login.
 
 ## Rendering and screenshotting the UI
 
+To screenshot pages, run `dotnet run scripts/Screenshot.cs -- <route>... --base-url <app>`: it uses the auto test login
+once and prints the PNG paths, so you do not need to write a browser driver.
+
 For booting the app in the cloud sandbox and driving it with the pre-installed Chromium (blocked CDNs,
 theme gotchas, viewport requirements), follow
 [`.claude/skills/ui-testing/SKILL.md`](../ui-testing/SKILL.md) — it uses the auto test login above as its
