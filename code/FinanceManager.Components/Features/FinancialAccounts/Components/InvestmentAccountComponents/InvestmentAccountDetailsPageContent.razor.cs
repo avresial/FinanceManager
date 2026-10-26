@@ -22,6 +22,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Invest
 public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsyncDisposable
 {
     [Parameter] public required int AccountId { get; set; }
+    [Parameter] public bool OpenAddEntry { get; set; }
 
     [Inject] public required InvestmentTransactionHttpClient TransactionHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient ValuationHttpClient { get; set; }
@@ -94,10 +95,20 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
 
     // Add/edit overlay state.
     private bool _formVisible;
+    private bool _addEntryOpenedFromUrl;
     private InvestmentTransactionDto? _editingTransaction;
+
+    // ?dialog=add-entry (AccountDetails) opens the add overlay once, so the state can be linked to and screenshotted.
+    private void OpenAddEntryFromUrl()
+    {
+        if (!OpenAddEntry || _addEntryOpenedFromUrl) return;
+        _addEntryOpenedFromUrl = true;
+        ShowAdd();
+    }
 
     protected override async Task OnParametersSetAsync()
     {
+        OpenAddEntryFromUrl();
         if (_loadedAccountId == AccountId) return;
         SetDateRangeForSelection();
         await LoadAsync(initialLoad: true);

@@ -11,6 +11,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -48,6 +49,38 @@ public sealed class TransactionsPageTests
         Assert.Equal("10", query["accountIds"].ToString());
         Assert.False(query.ContainsKey("cursorDate"));
         Assert.Single(cut.FindAll("a.fm-txlog-link"));
+    }
+
+    [Fact]
+    public async Task QueryString_PrefillsSearchAndRange()
+    {
+        using var handler = new PageHandler((_, _) => Respond(new TransactionLogPage([Entry(5, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?search=netflix&range=1m");
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txlog-link")));
+        var query = QueryHelpers.ParseQuery(Assert.Single(handler.Requests).Query);
+        Assert.Equal("netflix", query["search"].ToString());
+        var start = ParseDate(query["start"]!);
+        Assert.True(start > DateTime.UtcNow.AddMonths(-2), "range=1m starts one month back, not at the default three");
+        var toolbar = cut.FindComponent<TransactionLogToolbar>();
+        Assert.Equal("netflix", toolbar.Instance.SearchText);
+        Assert.Equal("1M", toolbar.Instance.SelectedRange);
+    }
+
+    [Fact]
+    public async Task QueryString_UnknownRange_KeepsTheDefault()
+    {
+        using var handler = new PageHandler((_, _) => Respond(new TransactionLogPage([Entry(5, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?range=forever");
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txlog-link")));
+        Assert.Equal("3M", cut.FindComponent<TransactionLogToolbar>().Instance.SelectedRange);
     }
 
     [Fact]

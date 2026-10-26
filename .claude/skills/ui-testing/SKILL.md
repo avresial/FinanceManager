@@ -51,6 +51,8 @@ Run it from the repository root. It signs in as guest once, opens each target in
 
 **Targets are feature ids** from [`docs/agents/features.json`](../../../docs/agents/features.json): `--list` prints them with a one-line description. Feature ids find accounts by name and open states that need clicks, such as the add-entry dialog (`account-add-entry`, `account-stock-add-trade`), so you never need an account id or a selector. Plain in-app routes (`Transactions`, `""` for the dashboard) work too.
 
+**UI state is addressable by URL**, so a route can open it directly: `AccountDetails/<id>?dialog=add-entry` opens the add-entry form; `Transactions?search=<text>&range=1M` pre-fills the Transactions page filters.
+
 ## 4. Look at the screenshots
 
 **Read every PNG the command printed** and actually look at it. A blank frame where content should be is a failure, not a pass. Check the changed component in both viewports and both themes.
