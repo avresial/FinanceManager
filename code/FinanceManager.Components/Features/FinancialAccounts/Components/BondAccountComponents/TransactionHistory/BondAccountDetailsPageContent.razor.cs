@@ -210,10 +210,16 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
         }
     }
 
-    // ?dialog=add-entry (AccountDetails) opens the add overlay once, so the state can be linked to and screenshotted.
+    // ?dialog=add-entry (AccountDetails) opens the add overlay once per visit, so the state can be linked to and
+    // screenshotted. Leaving the query resets the guard, so a later link with it opens the overlay again.
     private void OpenAddEntryFromUrl()
     {
-        if (!OpenAddEntry || _addEntryOpenedFromUrl) return;
+        if (!OpenAddEntry)
+        {
+            _addEntryOpenedFromUrl = false;
+            return;
+        }
+        if (_addEntryOpenedFromUrl) return;
         _addEntryOpenedFromUrl = true;
         _addEntryVisibility = true;
     }
