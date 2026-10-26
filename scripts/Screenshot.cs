@@ -2,21 +2,24 @@
 // develop-only auto test login, then navigates inside the running SPA (no WASM reboot per page).
 //
 // Usage (from the repository root, with the API already running — see .claude/skills/ui-testing):
-//   dotnet run scripts/Screenshot.cs -- Transactions AccountDetails/3
+//   dotnet run scripts/Screenshot.cs -- --list                       feature ids from docs/agents/features.json
+//   dotnet run scripts/Screenshot.cs -- transactions account-add-entry
 //   dotnet run scripts/Screenshot.cs -- Transactions --viewports mobile,desktop --theme both --out /tmp/shots
-// Targets are in-app routes ("" or "/" for the dashboard).
+// Targets are feature ids from the catalog or in-app routes ("" or "/" for the dashboard).
 // Options: --base-url <url>   app address (default: $FM_BASE_URL or http://localhost:5113)
 //          --viewports <list> mobile, desktop or WIDTHxHEIGHT, comma separated (default: mobile,desktop)
 //          --theme <t>        light, dark or both (default: light)
 //          --out <dir>        output directory (default: ./screenshots)
 //          --login <name>     guest or testuser (default: guest)
 //          --full-page        capture the whole scrollable page, not just the viewport
+//          --list             print the feature catalog and exit
 //          --install          download the Chromium build this Playwright version needs, then exit
 #:package Microsoft.Playwright@1.64.1
 // Playwright serializes its protocol with reflection, which file-based apps disable by default (they target AOT).
 #:property PublishAot=false
 
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
@@ -26,6 +29,7 @@ var theme = "light";
 var outDirectory = "screenshots";
 var login = "guest";
 var fullPage = false;
+var list = false;
 List<string> targets = [];
 
 for (var i = 0; i < args.Length; i++)
@@ -38,6 +42,7 @@ for (var i = 0; i < args.Length; i++)
         case "--out" when i + 1 < args.Length: outDirectory = args[++i]; break;
         case "--login" when i + 1 < args.Length: login = args[++i]; break;
         case "--full-page": fullPage = true; break;
+        case "--list": list = true; break;
         case "--install": return Microsoft.Playwright.Program.Main(["install", "chromium"]);
         case "--help" or "-h": return Usage(null);
         default:
@@ -47,8 +52,21 @@ for (var i = 0; i < args.Length; i++)
     }
 }
 
-if (targets.Count == 0) return Usage("Give at least one route, e.g. Transactions.");
+var catalog = LoadCatalog();
+if (list)
+{
+    foreach (var feature in catalog.Values)
+        Console.WriteLine($"{feature.Id,-26} /{feature.Route,-38} {feature.Description}");
+    return 0;
+}
+
+if (targets.Count == 0) return Usage("Give at least one feature id or route, e.g. transactions. See --list.");
 baseUrl = baseUrl.TrimEnd('/');
+
+// A target that is not a catalog id is a plain route.
+var features = targets
+    .Select(target => catalog.TryGetValue(target, out var feature) ? feature : new Feature(Slug(target), target.Trim('/'), "", null, null))
+    .ToList();
 
 List<(string Name, int Width, int Height)> viewports = [];
 foreach (var name in viewportNames.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -114,23 +132,40 @@ foreach (var colorScheme in themes)
             continue;
         }
 
-        foreach (var target in targets)
+        foreach (var feature in features)
         {
-            var route = target.Trim('/');
-            await page.EvaluateAsync("route => window.Blazor.navigateTo('/' + route)", route);
-            await page.WaitForURLAsync(url => new Uri(url).AbsolutePath.Trim('/').Equals(route.Split('?')[0], StringComparison.OrdinalIgnoreCase), new() { Timeout = 30000 });
-            await network.WaitForIdle();
+            try
+            {
+                var route = await ResolveRoute(page, feature.Route);
+                await page.EvaluateAsync("route => window.Blazor.navigateTo('/' + route)", route);
+                await page.WaitForURLAsync(url => new Uri(url).AbsolutePath.Trim('/').Equals(route.Split('?')[0], StringComparison.OrdinalIgnoreCase), new() { Timeout = 30000 });
+                await network.WaitForIdle();
+                if (feature.Ready is not null)
+                    await page.Locator(feature.Ready).First.WaitForAsync(new() { Timeout = 30000 });
 
-            var path = Path.GetFullPath(Path.Combine(outDirectory, $"{Slug(route)}-{viewport.Name}-{colorScheme}.png"));
-            await page.ScreenshotAsync(new() { Path = path, FullPage = fullPage });
-            var warning = await page.IsVisibleAsync("#blazor-error-ui") ? "  (warning: Blazor error bar is visible)" : "";
-            Console.WriteLine(path + warning);
+                foreach (var step in feature.Steps ?? [])
+                {
+                    if (step.Click is not null) await page.Locator(step.Click).First.ClickAsync(new() { Timeout = 30000 });
+                    if (step.WaitFor is not null) await page.Locator(step.WaitFor).First.WaitForAsync(new() { Timeout = 30000 });
+                    await network.WaitForIdle();
+                }
+
+                var path = Path.GetFullPath(Path.Combine(outDirectory, $"{feature.Id}-{viewport.Name}-{colorScheme}.png"));
+                await page.ScreenshotAsync(new() { Path = path, FullPage = fullPage });
+                var warning = await page.IsVisibleAsync("#blazor-error-ui") ? "  (warning: Blazor error bar is visible)" : "";
+                Console.WriteLine(path + warning);
+            }
+            catch (Exception exception) when (exception is PlaywrightException or TimeoutException or InvalidOperationException)
+            {
+                failures++;
+                Console.Error.WriteLine($"error: {feature.Id} ({viewport.Name}, {colorScheme}): {exception.Message.Split('\n')[0]}");
+            }
         }
     }
 }
 
 await browser.CloseAsync();
-Console.Error.WriteLine($"done in {stopwatch.Elapsed.TotalSeconds:0.0}s");
+Console.Error.WriteLine($"done in {stopwatch.Elapsed.TotalSeconds:0.0}s, {failures} failure(s)");
 return failures == 0 ? 0 : 1;
 
 async Task<bool> SignIn(IPage page, NetworkTracker network)
@@ -150,15 +185,60 @@ async Task<bool> SignIn(IPage page, NetworkTracker network)
     return true;
 }
 
+// Replaces {account:<name>} with the id of the account of that name, read from the nav menu links.
+async Task<string> ResolveRoute(IPage page, string route)
+{
+    var match = Regex.Match(route, @"\{account:([^}]+)\}");
+    if (!match.Success) return route;
+
+    const string script = """
+        name => [...document.querySelectorAll('a[href*="AccountDetails/"]')]
+            .filter(link => link.textContent.trim() === name)
+            .map(link => link.getAttribute('href').match(/AccountDetails\/(\d+)/)?.[1])
+            .find(id => id) ?? null
+        """;
+    var accountId = await page.EvaluateAsync<string?>(script, match.Groups[1].Value);
+    if (accountId is null)
+    {
+        // The nav drawer is closed on small viewports; open it to read the links, then close it again.
+        await page.Locator("header button").First.ClickAsync();
+        await page.Locator("a[href*='AccountDetails/']").First.WaitForAsync(new() { Timeout = 10000 });
+        accountId = await page.EvaluateAsync<string?>(script, match.Groups[1].Value);
+        await page.Keyboard.PressAsync("Escape");
+    }
+
+    return accountId is null
+        ? throw new InvalidOperationException($"No account named '{match.Groups[1].Value}' in the nav menu.")
+        : route.Replace(match.Value, accountId);
+}
+
+static Dictionary<string, Feature> LoadCatalog()
+{
+    // File-based apps know their own path, so the catalog is found from any working directory.
+    var scriptDirectory = AppContext.GetData("EntryPointFileDirectoryPath") as string ?? Directory.GetCurrentDirectory();
+    var path = Path.Combine(scriptDirectory, "..", "docs", "agents", "features.json");
+    if (!File.Exists(path)) return [];
+
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    return document.RootElement.GetProperty("features")
+        .Deserialize<List<Feature>>(options)!
+        .ToDictionary(feature => feature.Id, StringComparer.OrdinalIgnoreCase);
+}
+
 static string Slug(string route) =>
-    route.Length == 0 ? "dashboard" : Regex.Replace(route, "[^A-Za-z0-9]+", "-").Trim('-');
+    route.Trim('/').Length == 0 ? "dashboard" : Regex.Replace(route, "[^A-Za-z0-9]+", "-").Trim('-');
 
 static int Usage(string? error)
 {
     if (error is not null) Console.Error.WriteLine($"error: {error}");
-    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--full-page] [--install]");
+    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <feature-id|route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--full-page] [--list] [--install]");
     return error is null ? 0 : 1;
 }
+
+record Feature(string Id, string Route, string Description, string? Ready, List<Step>? Steps);
+
+record Step(string? Click, string? WaitFor);
 
 // Blazor pages keep loading data after navigation, so "ready" means no API request has been in flight
 // for a short quiet period.

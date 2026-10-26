@@ -5,7 +5,7 @@ description: Use this skill whenever a change touches the Blazor UI (any .razor/
 
 # Testing the UI on the guest account
 
-A green build and passing unit tests prove the markup compiles — they do **not** prove the page looks right. Any user-visible UI change must be verified by rendering the actual app and looking at a screenshot. The app is auth-gated, so the verified path is the built-in **guest / demo** account, which seeds demo accounts (Cash, Stock, Bond, Loan) in an in-memory database — no credentials, no external DB.
+A green build and passing unit tests prove the markup compiles — they do **not** prove the page looks right. Any user-visible UI change must be verified by rendering the actual app and looking at a screenshot. The app is auth-gated, so the verified path is the built-in **guest / demo** account, which seeds demo accounts (Cash 1, Loan 1, Investments, Bond 1) in an in-memory database — no credentials, no external DB.
 
 Follow the steps in order. Steps 1-2 start the app; skip them when the app is already running and you were given its address. **Step 3 takes every screenshot with one command — do not write a Playwright script for anything that command can do.**
 
@@ -42,13 +42,14 @@ curl -s --retry 20 --retry-all-errors --retry-delay 2 \
 ## 3. Take the screenshots
 
 ```bash
-dotnet run scripts/Screenshot.cs -- Transactions AccountDetails/1 CashFlowForecast Alerts \
+dotnet run scripts/Screenshot.cs -- --list          # feature ids: what each one shows and its route
+dotnet run scripts/Screenshot.cs -- transactions account-stock account-add-entry cash-flow-forecast alerts \
   --base-url http://localhost:$PORT --out /tmp/shots
 ```
 
 Run it from the repository root. It signs in as guest once, opens each target inside the running app, waits for the page to settle and prints one PNG path per target, viewport and theme (`/tmp/shots/<target>-<viewport>-<theme>.png`). Defaults: `--viewports mobile,desktop`, `--theme light` (`dark` or `both` for the dark theme). The first run compiles the script, which takes a few seconds; on a new machine run `dotnet run scripts/Screenshot.cs -- --install` once to download Chromium.
 
-**Targets are in-app routes**, as in the `@page` directives (`Transactions`, `CashFlowForecast`, `""` for the dashboard). Account details are `AccountDetails/<id>`; take the id from the nav menu links (`a[href*="AccountDetails/"]`). The command cannot click, so an open dialog needs the custom driver below.
+**Targets are feature ids** from [`docs/agents/features.json`](../../../docs/agents/features.json): `--list` prints them with a one-line description. Feature ids find accounts by name and open states that need clicks, such as the add-entry dialog (`account-add-entry`, `account-stock-add-trade`), so you never need an account id or a selector. Plain in-app routes (`Transactions`, `""` for the dashboard) work too.
 
 ## 4. Look at the screenshots
 
@@ -133,7 +134,7 @@ cd /tmp/pw-scratch && PORT=$PORT TARGET='AccountDetails/1' node ui-shot.mjs
 
 - Preferred trigger: **`/DevelopLogin/guest`** (optionally `/DevelopLogin/guest/{page}` to deep-link), the develop-only auto test login documented in `AGENTS.md`. It is disabled (404) in Production/Release.
 - Manual fallback: the **"Check out demo"** link/button on the landing and login pages. Equivalent to `POST /api/Login` with `{"userName":"guest","password":"GuestPassword"}`. Either way the JWT is stored under `localStorage["userSession"]`.
-- After login you land on the dashboard (`/`) unless you deep-linked. The left nav lists the seeded accounts: **Cash 1**, **Loan 1**, **Stock 1**, **Bond 1**. Other routes: `/Assets`, `/Liabilities`, account details open at `/AccountDetails/{id}`.
+- After login you land on the dashboard (`/`) unless you deep-linked. The left nav lists the seeded accounts: **Cash 1**, **Loan 1**, **Investments** (the stock/ETF account), **Bond 1**. Other routes: `/Assets`, `/Liabilities`, account details open at `/AccountDetails/{id}`.
 
 ## Gotchas (these will bite you)
 
