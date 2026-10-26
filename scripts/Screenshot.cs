@@ -137,9 +137,10 @@ foreach (var colorScheme in themes)
             try
             {
                 var route = await ResolveRoute(page, feature.Route);
-                await page.EvaluateAsync("route => window.Blazor.navigateTo('/' + route)", route);
+                // Clear the readiness mark first so the wait below cannot see the previous page's.
+                await page.EvaluateAsync("route => { delete document.documentElement.dataset.fmReady; window.Blazor.navigateTo('/' + route); }", route);
                 await page.WaitForURLAsync(url => new Uri(url).AbsolutePath.Trim('/').Equals(route.Split('?')[0], StringComparison.OrdinalIgnoreCase), new() { Timeout = 30000 });
-                await network.WaitForIdle();
+                await WaitForPage(page, network);
                 if (feature.Ready is not null)
                     await page.Locator(feature.Ready).First.WaitForAsync(new() { Timeout = 30000 });
 
@@ -181,8 +182,18 @@ async Task<bool> SignIn(IPage page, NetworkTracker network)
     }
 
     await signedIn;
-    await network.WaitForIdle();
+    await WaitForPage(page, network);
     return true;
+}
+
+// The app marks <html data-fm-ready="true"> once the routed page has settled (PageReadinessSignal). Builds from
+// before that signal fall back to watching the network.
+static async Task WaitForPage(IPage page, NetworkTracker network)
+{
+    if (await page.EvaluateAsync<bool>("() => typeof window.financeManager?.setPageBusy === 'function'"))
+        await page.Locator("html[data-fm-ready=true]").WaitForAsync(new() { State = WaitForSelectorState.Attached, Timeout = 30000 });
+    else
+        await network.WaitForIdle();
 }
 
 // Replaces {account:<name>} with the id of the account of that name, read from the nav menu links.
@@ -240,8 +251,8 @@ record Feature(string Id, string Route, string Description, string? Ready, List<
 
 record Step(string? Click, string? WaitFor);
 
-// Blazor pages keep loading data after navigation, so "ready" means no API request has been in flight
-// for a short quiet period.
+// Fallback readiness for builds without the page readiness signal, and after clicks (which do not navigate):
+// no request has been in flight for a short quiet period.
 sealed class NetworkTracker
 {
     private int _inFlight;

@@ -19,11 +19,14 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddBlazoredSessionStorage();
 
 builder.Services.AddTransient<TokenRefreshRedirectHandler>();
+builder.Services.AddTransient<PageActivityHandler>();
 builder.Services.AddScoped(sp =>
 {
     var handler = sp.GetRequiredService<TokenRefreshRedirectHandler>();
     handler.InnerHandler = new HttpClientHandler();
-    return new HttpClient(handler) { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+    var activityHandler = sp.GetRequiredService<PageActivityHandler>();
+    activityHandler.InnerHandler = handler;
+    return new HttpClient(activityHandler) { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
 });
 
 builder.Services.AddApplication().AddUIComponents();

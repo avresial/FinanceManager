@@ -107,7 +107,8 @@ async function run(label, width, height, colorScheme) {
   const page = await ctx.newPage();
   try {
     await page.goto(`${BASE}/DevelopLogin/guest/${TARGET}`, { waitUntil: 'networkidle', timeout: 120000 });
-    await page.waitForTimeout(12000);                      // WASM boot + guest seed + redirect to TARGET
+    // The app sets <html data-fm-ready="true"> once the routed page has no API request in flight.
+    await page.waitForSelector('html[data-fm-ready=true]', { state: 'attached', timeout: 60000 });
     console.log(label, 'url:', page.url());
     await page.screenshot({ path: `/tmp/ui-${label}.png` });
   } finally {
@@ -127,6 +128,8 @@ cd /tmp/pw-scratch && PORT=$PORT TARGET='AccountDetails/1' node ui-shot.mjs
 ```
 
 **Screenshot one component** with `page.locator('<selector>').screenshot({ path })`. It scrolls the element into view, including inside inner scroll containers: dashboard cards sit in a scrollable grid that `window.scrollTo` does not move, so a `clip` computed from `getBoundingClientRect()` after `window.scrollTo` comes out empty.
+
+**Wait for `html[data-fm-ready=true]`, never a fixed sleep.** The app removes the mark on every navigation and sets it again once the page's API requests have settled. After an in-SPA navigation of your own, wait for the mark to come back; after a click that does not navigate, wait for the element you expect instead.
 
 **Hover states** need a real pointer: `await locator.hover()` or `page.mouse.move(x, y)`. Dispatching synthetic `mouseenter` events does not trigger Blazor's handlers reliably.
 

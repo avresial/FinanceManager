@@ -56,3 +56,21 @@ window.financeManager.unobserveScrollFade = function (element) {
         delete element._fmScrollFadeObserver;
     }
 };
+
+// Page readiness for testing agents: <html data-fm-ready="true"> once the routed page has had no API request in
+// flight for a short quiet period and has painted. Driven by the PageReadinessSignal component.
+(function () {
+    const quietMilliseconds = 400;
+    let timer = null;
+
+    window.financeManager.setPageBusy = function (busy, navigated) {
+        if (busy || navigated) delete document.documentElement.dataset.fmReady;
+        clearTimeout(timer);
+        if (busy) return;
+        timer = setTimeout(() => requestAnimationFrame(() => {
+            document.documentElement.dataset.fmReady = 'true';
+        }), quietMilliseconds);
+    };
+
+    window.financeManager.isReady = () => document.documentElement.dataset.fmReady === 'true';
+})();
