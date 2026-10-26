@@ -21,7 +21,7 @@ Opening the URL logs you in immediately and redirects to the dashboard, or to `{
 
 | Login | Backing data | Use when |
 |---|---|---|
-| `guest` | Fresh in-memory sandbox seeded with demo accounts (Cash, Loan, Stock, Bond) — no real database touched | Cloud/sandbox testing, or any time you just need a populated UI (`UseInMemoryDatabase=true` works fine) |
+| `guest` | Fresh in-memory sandbox seeded with demo accounts (Cash 1, Loan 1, Investments, Bond 1) — no real database touched | Cloud/sandbox testing, or any time you just need a populated UI (`UseInMemoryDatabase=true` works fine) |
 | `testuser` | The seeded `testuser` account on the real develop database | Local testing with Aspire and a real database running |
 
 `testuser` requires the account to have been seeded, which happens automatically at startup when
@@ -62,6 +62,10 @@ Use the returned `accessToken` as an `Authorization: Bearer` header. `testuser` 
 refresh-token cookie, like a regular login.
 
 ## Rendering and screenshotting the UI
+
+To screenshot pages, run `dotnet run scripts/Screenshot.cs -- <feature-id|route>... --base-url <app>` (`--list` shows the
+feature ids from `docs/agents/features.json`): it uses the auto test login once and prints the PNG paths, so you do not
+need to write a browser driver.
 
 For booting the app in the cloud sandbox and driving it with the pre-installed Chromium (blocked CDNs,
 theme gotchas, viewport requirements), follow
