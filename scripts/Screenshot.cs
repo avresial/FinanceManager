@@ -12,6 +12,7 @@
 //          --out <dir>        output directory (default: ./screenshots)
 //          --login <name>     guest or testuser (default: guest)
 //          --full-page        capture the whole scrollable page, not just the viewport
+//          --click <selector> click this element (CSS, or a bare data-testid) before every screenshot; repeatable
 //          --list             print the feature catalog and exit
 //          --install          download the Chromium build this Playwright version needs, then exit
 #:package Microsoft.Playwright@1.64.1
@@ -30,6 +31,7 @@ var outDirectory = "screenshots";
 var login = "guest";
 var fullPage = false;
 var list = false;
+List<string> clicks = [];
 List<string> targets = [];
 
 for (var i = 0; i < args.Length; i++)
@@ -43,6 +45,7 @@ for (var i = 0; i < args.Length; i++)
         case "--login" when i + 1 < args.Length: login = args[++i]; break;
         case "--full-page": fullPage = true; break;
         case "--list": list = true; break;
+        case "--click" when i + 1 < args.Length: clicks.Add(args[++i]); break;
         case "--install": return Microsoft.Playwright.Program.Main(["install", "chromium"]);
         case "--help" or "-h": return Usage(null);
         default:
@@ -144,7 +147,7 @@ foreach (var colorScheme in themes)
                 if (feature.Ready is not null)
                     await page.Locator(feature.Ready).First.WaitForAsync(new() { Timeout = 30000 });
 
-                foreach (var step in feature.Steps ?? [])
+                foreach (var step in (feature.Steps ?? []).Concat(clicks.Select(selector => new Step(AsSelector(selector), null))))
                 {
                     if (step.Click is not null) await page.Locator(step.Click).First.ClickAsync(new() { Timeout = 30000 });
                     if (step.WaitFor is not null) await page.Locator(step.WaitFor).First.WaitForAsync(new() { Timeout = 30000 });
@@ -237,13 +240,17 @@ static Dictionary<string, Feature> LoadCatalog()
         .ToDictionary(feature => feature.Id, StringComparer.OrdinalIgnoreCase);
 }
 
+// A bare word is a data-testid; anything else is a CSS selector.
+static string AsSelector(string selector) =>
+    Regex.IsMatch(selector, "^[A-Za-z0-9_-]+$") ? $"[data-testid={selector}]" : selector;
+
 static string Slug(string route) =>
     route.Trim('/').Length == 0 ? "dashboard" : Regex.Replace(route, "[^A-Za-z0-9]+", "-").Trim('-');
 
 static int Usage(string? error)
 {
     if (error is not null) Console.Error.WriteLine($"error: {error}");
-    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <feature-id|route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--full-page] [--list] [--install]");
+    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <feature-id|route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--full-page] [--click selector] [--list] [--install]");
     return error is null ? 0 : 1;
 }
 

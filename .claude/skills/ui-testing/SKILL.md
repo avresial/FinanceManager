@@ -53,6 +53,8 @@ Run it from the repository root. It signs in as guest once, opens each target in
 
 **UI state is addressable by URL**, so a route can open it directly: `AccountDetails/<id>?dialog=add-entry` opens the add-entry form; `Transactions?search=<text>&range=1M` pre-fills the Transactions page filters.
 
+**Prefer tools over shell?** `scripts/AgentBrowserMcp.cs` is a local MCP server with `list_features` and `screenshot` tools that wrap the same command. OpenCode loads it from `opencode.json`; run `dotnet build scripts/AgentBrowserMcp.cs` once first so it starts within the client's timeout. `--click <data-testid>` clicks an element before each screenshot.
+
 ## 4. Look at the screenshots
 
 **Read every PNG the command printed** and actually look at it. A blank frame where content should be is a failure, not a pass. Check the changed component in both viewports and both themes.
