@@ -47,7 +47,7 @@ dotnet run scripts/Screenshot.cs -- transactions account-stock account-add-entry
   --base-url http://localhost:$PORT --out /tmp/shots
 ```
 
-Run it from the repository root. It signs in as guest once, opens each target inside the running app, waits for the page to settle and prints one PNG path per target, viewport and theme (`/tmp/shots/<target>-<viewport>-<theme>.png`). Defaults: `--viewports mobile,desktop`, `--theme light` (`dark` or `both` for the dark theme). The first run compiles the script, which takes a few seconds; on a new machine run `dotnet run scripts/Screenshot.cs -- --install` once to download Chromium.
+Run it from the repository root; it writes nothing into the repository (the build goes to the .NET cache, the PNGs to `--out`). It signs in as guest once, opens each target inside the running app, waits for the page to settle and prints one PNG path per target, viewport and theme (`/tmp/shots/<target>-<viewport>-<theme>.png`). Defaults: `--viewports mobile,desktop`, `--theme light` (`dark` or `both` for the dark theme). The first run compiles the script, which takes a few seconds; on a new machine run `dotnet run scripts/Screenshot.cs -- --install` once to download Chromium.
 
 **Targets are feature ids** from [`docs/agents/features.json`](../../../docs/agents/features.json): `--list` prints them with a one-line description. Feature ids find accounts by name and open states that need clicks, such as the add-entry dialog (`account-add-entry`, `account-stock-add-trade`), so you never need an account id or a selector. Plain in-app routes (`Transactions`, `""` for the dashboard) work too.
 

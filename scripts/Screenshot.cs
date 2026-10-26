@@ -152,6 +152,7 @@ foreach (var colorScheme in themes)
                 }
 
                 var path = Path.GetFullPath(Path.Combine(outDirectory, $"{feature.Id}-{viewport.Name}-{colorScheme}.png"));
+                await WaitForAnimations(page);
                 await page.ScreenshotAsync(new() { Path = path, FullPage = fullPage });
                 var warning = await page.IsVisibleAsync("#blazor-error-ui") ? "  (warning: Blazor error bar is visible)" : "";
                 Console.WriteLine(path + warning);
@@ -194,6 +195,18 @@ static async Task WaitForPage(IPage page, NetworkTracker network)
         await page.Locator("html[data-fm-ready=true]").WaitForAsync(new() { State = WaitForSelectorState.Attached, Timeout = 30000 });
     else
         await network.WaitForIdle();
+}
+
+// MudBlazor dialogs still scale in after they are attached, even with reduced motion, so a screenshot taken
+// right away catches them half open.
+static async Task WaitForAnimations(IPage page)
+{
+    const string script = """
+        () => Promise.all(document.getAnimations()
+            .filter(animation => animation.playState === 'running')
+            .map(animation => animation.finished.catch(() => null)))
+        """;
+    await page.EvaluateAsync(script);
 }
 
 // Replaces {account:<name>} with the id of the account of that name, read from the nav menu links.
