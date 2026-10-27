@@ -70,7 +70,7 @@ internal class AssetsServiceCurrency(IFinancialAccountRepository financialAccoun
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, asOfDate.AddMinutes(-1), asOfDate).Where(x => x.ContainsAssets))
-            yield return new(account.Name, account.Entries.First().Value);
+            yield return new(account.Name, account.Entries.First().Value) { AccountId = account.AccountId };
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)

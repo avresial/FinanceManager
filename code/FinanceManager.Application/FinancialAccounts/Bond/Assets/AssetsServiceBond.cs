@@ -82,7 +82,7 @@ public class AssetsServiceBond(
                 value += latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
             }
 
-            yield return new(account.Name, value);
+            yield return new(account.Name, value) { AccountId = account.AccountId };
         }
     }
 

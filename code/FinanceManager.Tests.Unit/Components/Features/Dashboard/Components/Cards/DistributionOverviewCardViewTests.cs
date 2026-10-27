@@ -3,6 +3,7 @@ using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +38,7 @@ public class DistributionOverviewCardViewTests
 
         AssertSummary(cut);
         AssertSingleCategoryFigure(cut);
-        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class DistributionOverviewCardViewTests
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
-        Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
         Assert.Empty(cut.FindAll("[class*=legend--single]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
@@ -59,7 +60,7 @@ public class DistributionOverviewCardViewTests
 
         AssertSummary(cut);
         AssertSingleCategoryFigure(cut);
-        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class DistributionOverviewCardViewTests
         await using var context = CreateContext();
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
 
-        Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
         Assert.Empty(cut.FindAll("[class*=legend--single]"));
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
     }
@@ -87,7 +88,6 @@ public class DistributionOverviewCardViewTests
         cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
 
         AssertSingleCategoryFigure(cut);
-        Assert.Matches("100[.,]00", cut.Find(".fm-card-total").TextContent);
         Assert.Single(cut.FindAll(".fm-legend-row"));
         Assert.Contains("Main wallet", cut.Find(".fm-legend-name").TextContent);
         Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
@@ -97,7 +97,7 @@ public class DistributionOverviewCardViewTests
         if (typeTotal == 0)
             Assert.Contains("No data", cut.Markup);
         else
-            Assert.Matches("75[.,]00", cut.Find(".fm-card-total").TextContent);
+            Assert.Matches("75[.,]00", cut.Find("[data-testid=distribution-legend]").TextContent);
     }
 
     [Fact]
@@ -140,18 +140,100 @@ public class DistributionOverviewCardViewTests
         {
             Assert.Contains("No data", cut.Markup);
             Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+            Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
         }
     }
 
     [Fact]
-    public async Task AssetsAndLiabilities_PlaceToggleBeforeTotal()
+    public async Task AssetsAndLiabilities_HeaderHoldsToggle_AndSpinnerOnlyWhileLoading()
     {
         await using var context = CreateContext();
-        var assets = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
-        var liabilities = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _single));
+        var assets = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
+        var liabilities = context.Render<LiabilitiesDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
+        var loading = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.IsLoading, true));
 
-        AssertActionsPrecedeFigure(assets);
-        AssertActionsPrecedeFigure(liabilities);
+        AssertHeaderHasOnlyToggle(assets);
+        AssertHeaderHasOnlyToggle(liabilities);
+        AssertActionsPrecedeFigure(loading);
+    }
+
+    [Fact]
+    public async Task TwoCategories_ShowTotalInDonutCentre_AndProportionBars()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
+
+        Assert.Matches("100[.,]00", cut.Find("[data-testid=distribution-chart] [data-testid=distribution-total]").TextContent);
+        var bars = cut.FindAll(".fm-distribution-bar-fill");
+        Assert.Equal(2, bars.Count);
+        Assert.Contains("width:75%", bars[0].GetAttribute("style"));
+        Assert.Contains("width:25%", bars[1].GetAttribute("style"));
+        Assert.NotEqual(BarColor(bars[0]), BarColor(bars[1]));
+    }
+
+    [Fact]
+    public async Task AccountView_LinksRowsWithAccountIds_AndKeepsOldSnapshotRowsPlain()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Loan", 75m) { AccountId = 3 }, new("Mortgage", 25m) { AccountId = 4 }])
+            .Add(x => x.AccountData, [new("Car loan", 75m) { AccountId = 7 }, new("Old snapshot row", 25m)]));
+
+        // Type rows never link, even when the data happens to carry ids.
+        Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
+
+        // Switching views replaces the chart, so the new rows arrive after the click's render completes.
+        var link = cut.WaitForElement("a[data-testid=distribution-row]", TimeSpan.FromSeconds(3));
+        Assert.Single(cut.FindAll("a[data-testid=distribution-row]"));
+        Assert.Equal("/AccountDetails/7", link.GetAttribute("href"));
+        Assert.Contains("Car loan", link.TextContent);
+        Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+    }
+
+    [Fact]
+    public async Task ManyItems_GroupTailIntoExpandableOther()
+    {
+        await using var context = CreateContext();
+        List<NameValueResult> data = [.. Enumerable.Range(1, 8).Select(i => new NameValueResult($"Item {i}", i))];
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, data));
+
+        var rows = cut.FindAll("[data-testid=distribution-row]");
+        Assert.Equal(6, rows.Count);
+        var other = cut.Find("button[data-testid=distribution-row]");
+        Assert.Contains("Other", other.TextContent);
+        Assert.Equal("false", other.GetAttribute("aria-expanded"));
+        Assert.Empty(cut.FindAll("[data-testid=distribution-other-members]"));
+
+        other.Click();
+
+        var members = cut.Find("[data-testid=distribution-other-members]");
+        Assert.Contains("Item 1", members.TextContent);
+        Assert.Contains("Item 3", members.TextContent);
+        Assert.Equal("true", cut.Find("button[data-testid=distribution-row]").GetAttribute("aria-expanded"));
+    }
+
+    [Fact]
+    public async Task HoveringRow_HighlightsIt_UntilMouseLeaves()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p.Add(x => x.TypeData, _two));
+
+        cut.FindAll("[role=listitem]")[1].MouseEnter();
+
+        // Hover handlers also call into the chart's JS, so let their render settle before asserting.
+        cut.WaitForAssertion(() =>
+        {
+            var rows = cut.FindAll("[data-testid=distribution-row]");
+            Assert.DoesNotContain("is-active", rows[0].ClassList);
+            Assert.Contains("is-active", rows[1].ClassList);
+        }, TimeSpan.FromSeconds(3));
+
+        cut.FindAll("[role=listitem]")[1].MouseLeave();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain(cut.FindAll("[data-testid=distribution-row]"), row => row.ClassList.Contains("is-active")),
+            TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -174,12 +256,12 @@ public class DistributionOverviewCardViewTests
         AssertSingleCategoryFigure(cut);
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
-        Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
         Assert.Empty(cut.FindAll("[class*=legend--single]"));
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
         AssertSingleCategoryFigure(cut);
-        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
     }
 
     private static void AssertSingleCategoryFigure(IRenderedComponent<IComponent> cut)
@@ -189,6 +271,7 @@ public class DistributionOverviewCardViewTests
         Assert.Matches("100[.,]00", legend.TextContent);
         Assert.Contains("100.0%", legend.TextContent.Replace(",", "."));
         Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
     }
 
     private static void AssertSummary(IRenderedComponent<IComponent> cut)
@@ -207,6 +290,16 @@ public class DistributionOverviewCardViewTests
         Assert.Contains("fm-card-header-actions", asideItems[0].ClassList);
         Assert.Contains("fm-card-header-figure", asideItems[1].ClassList);
     }
+
+    private static void AssertHeaderHasOnlyToggle(IRenderedComponent<IComponent> cut)
+    {
+        Assert.Contains("fm-card-header--stacked-aside", cut.Find("[data-testid=card-header]").ClassList);
+        var asideItem = Assert.Single(cut.FindAll(".fm-card-header-aside > div"));
+        Assert.Contains("fm-card-header-actions", asideItem.ClassList);
+    }
+
+    private static string BarColor(AngleSharp.Dom.IElement bar) =>
+        bar.GetAttribute("style")!.Split("background:")[1];
 
     private static void AssertPhoneAutoHeight(IRenderedComponent<IComponent> cut, string height)
     {
