@@ -77,6 +77,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<DashboardCardVisibilityService>()
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<ISnapshotRefreshCoordinator, SnapshotRefreshCoordinator>()
+                .AddScoped<PageActivityTracker>()
                 .AddScoped<AccountDetailsSnapshotStore>()
                 .AddScoped<InvestmentAccountDetailsSnapshotStore>()
                 .AddScoped<AccountChartSnapshotStore>()

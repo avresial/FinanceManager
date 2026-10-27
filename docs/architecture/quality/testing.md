@@ -25,11 +25,24 @@ CI runs integration tests with `UseInMemoryDatabase=true`. For local POSIX shell
 | Unit | Controllers, domain calculations, application services, browser services and source contracts in [unit tests](../../../code/FinanceManager.Tests.Unit) | Mocks/direct construction do not prove full hosted behavior |
 | API integration | Real middleware, authentication and endpoint composition through [FinanceManagerApiTestApp](../../../code/FinanceManager.Tests.Integration/FinanceManagerApiTestApp.cs) | Most host scenarios use EF InMemory, which does not model relational translation or transactions |
 | Relational integration | [SQLite recalculation tests](../../../code/FinanceManager.Tests.Integration/Repositories/SqliteRecalculateValuesTests.cs) and provider-specific tests under [integration tests](../../../code/FinanceManager.Tests.Integration) | SQLite cannot establish PostgreSQL/SQL Server parity; Docker/database prerequisites depend on the individual fixture |
-| Architecture | [LayerDependencyTests](../../../code/FinanceManager.Tests.Architecture/LayerDependencyTests.cs) and [ControllerCoverageTests](../../../code/FinanceManager.Tests.Architecture/ControllerCoverageTests.cs) | Assembly constraints and controller-test naming checks do not prove every feature boundary or security property |
-| Browser/manual | [UI testing instructions](../../../.claude/skills/ui-testing/SKILL.md), [usage instructions](../../../.claude/skills/finance-manager-usage/SKILL.md), [accessibility audit](../audits/accessibility-audit.md) | No complete automated browser E2E suite or accessibility conformance result is established |
+| Architecture | [LayerDependencyTests](../../../code/FinanceManager.Tests.Architecture/LayerDependencyTests.cs), [ControllerCoverageTests](../../../code/FinanceManager.Tests.Architecture/ControllerCoverageTests.cs) and [FeatureCatalogTests](../../../code/FinanceManager.Tests.Architecture/FeatureCatalogTests.cs) | Assembly constraints, controller-test naming and catalog coverage checks do not prove every feature boundary or security property |
+| Browser/manual | [UI testing instructions](../../../.claude/skills/ui-testing/SKILL.md), [usage instructions](../../../.claude/skills/finance-manager-usage/SKILL.md), [agent navigation tooling](#agent-navigation-tooling), [accessibility audit](../audits/accessibility-audit.md) | No complete automated browser E2E suite or accessibility conformance result is established; screenshots still need a human or vision-model review |
 | Performance | [Benchmark harness](benchmarks.md) validates responses before measuring server work | Excludes network/TLS, real production DB behavior and concurrent browser workloads |
 
 Tests are not co-located with production code. Files end in `Tests.cs`; feature/layer folders carry the test responsibility. Shared host/controller setup is in [ControllerTests](../../../code/FinanceManager.Tests.Integration/Shared/ControllerTests.cs), [TestDatabase](../../../code/FinanceManager.Tests.Integration/TestDatabase.cs), and [OptionsProvider](../../../code/FinanceManager.Tests.Integration/OptionsProvider.cs).
+
+## Agent navigation tooling
+
+Testing agents, including small local models, reach a feature and screenshot it without writing a browser driver:
+
+| Piece | Contract |
+| --- | --- |
+| [Screenshot command](../../../scripts/Screenshot.cs) | `dotnet run scripts/Screenshot.cs -- <feature-id\|route>... --base-url <app>` signs in once through the develop-only auto test login, navigates inside the SPA with `Blazor.navigateTo` and prints the PNG paths. It needs a running API in a development-like environment. |
+| [Feature catalog](../../agents/features.json) | Feature id, route, description and optional ready selector or click steps. `{account:<name>}` resolves an account id from the nav menu. [FeatureCatalogTests](../../../code/FinanceManager.Tests.Architecture/FeatureCatalogTests.cs) require every `@page` template to be listed or explicitly excluded. |
+| Page readiness signal | [PageActivityHandler](../../../code/FinanceManager.Components/Shared/Services/PageActivityHandler.cs) counts in-flight requests of the app `HttpClient` in [PageActivityTracker](../../../code/FinanceManager.Components/Shared/Services/PageActivityTracker.cs); [PageReadinessSignal](../../../code/FinanceManager.Components/Shared/Components/PageReadinessSignal.razor) sets `<html data-fm-ready="true">` after a short quiet period and removes it on navigation. It signals "no API request in flight", not that every component has finished rendering or that the data is correct. |
+| URL-addressable state | `AccountDetails/<id>?dialog=add-entry` opens the add-entry form; `Transactions?search=&range=` pre-fills the Transactions page filters. These are one-way: the URL sets the initial state and is not updated afterwards. |
+
+The [issue #1010 benchmark](https://github.com/avresial/FinanceManager/issues/1010) drove a small local model (Ornith via OpenCode) through the same five-screen task after each step. Agents follow the most concrete recipe in a skill, so the UI testing skill makes the command step 3 and keeps a hand-written driver as an appendix. A local MCP server wrapping the command was also tried and removed: it did not beat the plain command.
 
 ## Isolation and failure modes
 

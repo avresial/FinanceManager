@@ -12,8 +12,8 @@ Instructions for AI agents working on FinanceManager.
   that signs you in as `guest` or `testuser` without the landing page or login form: read
   [`.claude/skills/finance-manager-usage/SKILL.md`](./.claude/skills/finance-manager-usage/SKILL.md).
   Never walk the landing page → login form → "Check out demo" sequence when testing.
-- **Rendering/screenshotting UI changes** in the cloud sandbox: read
-  [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md).
+- **Reaching and screenshotting a feature**: run `dotnet run scripts/Screenshot.cs -- <feature-id|route>... --base-url <app>`
+  against a running API (`--list` prints the feature catalog, `docs/agents/features.json`); boot steps and gotchas are in [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md).
 
 ## Issue lifecycle after opening a PR
 
