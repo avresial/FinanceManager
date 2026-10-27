@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 
 public sealed class InstrumentImportService(
-    IAlphaVantageClient alphaVantageClient,
+    MarketDataSymbolResolutionService symbolResolutionService,
     IAssetRepository assetRepository,
     IAssetListingRepository listingRepository,
     IMarketDataSymbolRepository symbolRepository,
@@ -33,21 +33,26 @@ public sealed class InstrumentImportService(
     public async Task<ImportedInstrumentDto> ImportAsync(ImportInstrumentCommand command, CancellationToken ct = default)
     {
         ValidateImport(command.Instrument);
-        return await PersistAsync(command.Instrument, symbolValidated: false, ct);
+        var results = await symbolResolutionService.ResolveAsync(command.Instrument, ct);
+        return await PersistAsync(command.Instrument, results, ct);
     }
 
-    public async Task ValidateForTransactionAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
+    public async Task<ValidatedInstrumentImport> ValidateForTransactionAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
         ThrowIfTransactionImportBlocked(instrument);
-        await ValidateSymbolAsync(instrument, ct, strict: true);
+        var results = await symbolResolutionService.ResolveAsync(instrument, ct);
+        if (!results.Any(x => x.Status == "resolved"))
+            throw new InstrumentImportException(
+                results.Any(x => x.Status == "provider unavailable") ? "provider_unavailable" : "market_data_symbol_invalid",
+                "No configured provider could validate the selected instrument. No asset or transaction was created.");
+        return new(instrument, results);
     }
 
-    public async Task<ImportedInstrumentDto> ImportValidatedAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
+    public async Task<ImportedInstrumentDto> ImportValidatedAsync(ValidatedInstrumentImport validated, CancellationToken ct = default)
     {
-        // The provider symbol was already validated by ValidateForTransactionAsync outside the
-        // database transaction; only re-run the cheap structural checks here.
-        ThrowIfTransactionImportBlocked(instrument);
-        return await PersistAsync(instrument, symbolValidated: true, ct);
+        // All network work completed before the caller entered its database transaction.
+        ThrowIfTransactionImportBlocked(validated.Instrument);
+        return await PersistAsync(validated.Instrument, validated.ProviderResults, ct);
     }
 
     public bool CanImportForTransaction(InstrumentDiscoveryResultDto instrument) =>
@@ -55,7 +60,7 @@ public sealed class InstrumentImportService(
 
     private async Task<ImportedInstrumentDto> PersistAsync(
         InstrumentDiscoveryResultDto instrument,
-        bool symbolValidated,
+        IReadOnlyList<MarketDataSymbolResolution> providerResults,
         CancellationToken ct)
     {
         var warnings = ImportWarnings(instrument).ToList();
@@ -71,37 +76,79 @@ public sealed class InstrumentImportService(
             BaseCurrency = instrument.TradingCurrency!.ToUpperInvariant()
         }, ct);
 
+        var metadata = providerResults.FirstOrDefault(x => x.Status == "resolved");
+        var enriched = false;
+        if (string.IsNullOrWhiteSpace(asset.Name) && !string.IsNullOrWhiteSpace(metadata?.Name))
+        { asset.Name = metadata.Name; enriched = true; }
+        if (asset.Type == AssetType.Other && ParseAssetType(metadata?.SecurityType) is var resolvedType && resolvedType != AssetType.Other)
+        { asset.Type = resolvedType; enriched = true; }
+        if (enriched) await assetRepository.Update(asset, ct);
+
         var createdListing = listing is null;
         listing ??= await listingRepository.Upsert(new AssetListing
         {
             AssetId = asset.Id,
             Ticker = instrument.Ticker.Trim().ToUpperInvariant(),
             ExchangeMic = instrument.ExchangeMic!,
-            ExchangeName = instrument.ExchangeName ?? instrument.ExchangeMic!,
+            ExchangeName = instrument.ExchangeName ?? metadata?.ExchangeName ?? instrument.ExchangeMic!,
             TradingCurrency = instrument.TradingCurrency!.ToUpperInvariant(),
             ListingFigi = instrument.ListingFigi,
             PriceMultiplier = InstrumentCurrencyUnits.IsMinor(instrument.TradingCurrency) ? 0.01m : 1m
         }, ct);
 
-        var createdSymbol = symbol is null && !string.IsNullOrWhiteSpace(instrument.ProviderSymbol);
-        if (createdSymbol)
+        if (string.IsNullOrWhiteSpace(listing.ExchangeName) && !string.IsNullOrWhiteSpace(metadata?.ExchangeName))
         {
-            var error = symbolValidated ? null : await ValidateSymbolAsync(instrument, ct);
-            if (error is not null) warnings.Add(error);
-            symbol = await symbolRepository.Upsert(new MarketDataSymbol
-            {
-                AssetListingId = listing.Id,
-                Provider = MarketDataProvider.AlphaVantage,
-                Symbol = instrument.ProviderSymbol!,
-                ProviderExchangeCode = instrument.ExchangeCode,
-                Currency = instrument.TradingCurrency,
-                IsPrimary = true,
-                IsEnabled = error is null,
-                LastValidatedAt = error is null ? DateTimeOffset.UtcNow : null,
-                LastError = error
-            }, ct);
+            listing.ExchangeName = metadata.ExchangeName;
+            await listingRepository.Update(listing, ct);
         }
 
+        var createdSymbol = false;
+        var existingSymbols = await symbolRepository.GetByListing(listing.Id, ct);
+        var resolved = providerResults.Where(x => x.Status == "resolved").OrderBy(x => x.Priority).ToArray();
+        var primaryAssigned = existingSymbols.Any(x => x.IsPrimary && x.IsEnabled);
+        foreach (var result in providerResults.OrderBy(x => x.Priority))
+        {
+            if (result.Error is not null) warnings.Add($"{result.Provider}: {result.Error}");
+            if (string.IsNullOrWhiteSpace(result.Symbol)) continue;
+            var existing = existingSymbols.FirstOrDefault(x => x.Provider == result.Provider && string.Equals(x.Symbol, result.Symbol, StringComparison.OrdinalIgnoreCase))
+                ?? await symbolRepository.Get(result.Provider, result.Symbol, ct);
+            if (existing is not null && existing.AssetListingId != listing.Id)
+            {
+                warnings.Add($"{result.Provider}: symbol already belongs to another listing; mapping was not changed.");
+                continue;
+            }
+            if (existing is not null)
+            {
+                // Preserve curated symbols/currency and enabled settings while refreshing diagnostics.
+                if (result.Status == "resolved")
+                {
+                    existing.LastValidatedAt = DateTimeOffset.UtcNow;
+                    if (!primaryAssigned && existing.IsEnabled) existing.IsPrimary = true;
+                }
+                existing.LastError = result.Error;
+                primaryAssigned |= existing.IsPrimary && existing.IsEnabled;
+                await symbolRepository.Update(existing, ct);
+                symbol ??= existing;
+                continue;
+            }
+            var saved = await symbolRepository.Upsert(new MarketDataSymbol
+            {
+                AssetListingId = listing.Id,
+                Provider = result.Provider,
+                Symbol = result.Symbol,
+                ProviderExchangeCode = result.ExchangeCode,
+                Currency = result.Currency,
+                IsPrimary = result.Status == "resolved" && !primaryAssigned,
+                IsEnabled = result.Status == "resolved",
+                LastValidatedAt = result.Status == "resolved" ? DateTimeOffset.UtcNow : null,
+                LastError = result.Error
+            }, ct);
+            if (saved.IsPrimary && saved.IsEnabled) primaryAssigned = true;
+            symbol ??= saved;
+            createdSymbol = true;
+        }
+
+        logger.LogInformation("Imported listing {ListingId} with {ResolvedCount} validated provider mappings", listing.Id, resolved.Length);
         return new ImportedInstrumentDto
         {
             AssetId = asset.Id,
@@ -113,6 +160,7 @@ public sealed class InstrumentImportService(
             CreatedAsset = createdAsset,
             CreatedListing = createdListing,
             CreatedMarketDataSymbol = createdSymbol,
+            ProviderResults = providerResults,
             Warnings = warnings
         };
     }
@@ -166,47 +214,6 @@ public sealed class InstrumentImportService(
         return (asset, listing, symbol);
     }
 
-    private async Task<string?> ValidateSymbolAsync(
-        InstrumentDiscoveryResultDto instrument,
-        CancellationToken ct,
-        bool strict = false)
-    {
-        try
-        {
-            var prices = await alphaVantageClient.GetDailySeries(instrument.ProviderSymbol!, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow,
-                new Currency { ShortName = instrument.TradingCurrency! }, ct);
-            if (prices.Any(x => x.PricePerUnit > 0)) return null;
-            if (strict)
-                throw new InstrumentImportException(
-                    "market_data_symbol_invalid",
-                    "Alpha Vantage could not validate the selected market-data symbol. No asset or transaction was created.");
-
-            return "Alpha Vantage returned no positive recent price; the symbol was saved disabled.";
-        }
-        catch (InstrumentImportException) when (strict)
-        {
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);
-            logger.LogDebug(ex, "Alpha Vantage validation cancelled for {Symbol}", sanitizedSymbol);
-            throw;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            var sanitizedSymbol = instrument.ProviderSymbol?.Replace("\r", string.Empty).Replace("\n", string.Empty);
-            logger.LogWarning(ex, "Alpha Vantage validation failed for {Symbol}", sanitizedSymbol);
-            if (strict)
-                throw new InstrumentImportException(
-                    "provider_unavailable",
-                    "Alpha Vantage could not validate the selected market-data symbol. No asset or transaction was created.",
-                    ex);
-
-            return "Alpha Vantage validation failed; the symbol was saved disabled.";
-        }
-    }
-
     private static IReadOnlyList<string> ImportWarnings(InstrumentDiscoveryResultDto instrument) =>
         [.. instrument.Warnings,
             .. (HasRequiredImportData(instrument) ? [] : new[] { "Name, ticker, exchange MIC, and trading currency must be confirmed before import." }),
@@ -238,10 +245,6 @@ public sealed class InstrumentImportService(
             return new InstrumentImportException(
                 "instrument_not_found",
                 "The selected instrument is missing a name, ticker, exchange, or trading currency.");
-        if (string.IsNullOrWhiteSpace(instrument.ProviderSymbol))
-            return new InstrumentImportException(
-                "market_data_symbol_invalid",
-                "The selected instrument has no usable market-data symbol. No asset or transaction was created.");
         if (ParseAssetType(instrument.SecurityType) is AssetType.Other)
             return new InstrumentImportException(
                 "instrument_import_failed",

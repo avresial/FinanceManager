@@ -91,6 +91,8 @@ public class MarketDataSymbolRepository(AppDbContext context) : IMarketDataSymbo
         existing.Currency = symbol.Currency;
         existing.IsPrimary = symbol.IsPrimary;
         existing.IsEnabled = symbol.IsEnabled;
+        existing.LastValidatedAt = symbol.LastValidatedAt;
+        existing.LastError = symbol.LastError;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return true;

@@ -21,8 +21,11 @@ public class InstrumentImportServiceTests
     private readonly ILogger<InstrumentImportService> _logger =
         LoggerFactory.Create(_ => { }).CreateLogger<InstrumentImportService>();
 
+    public InstrumentImportServiceTests() =>
+        _symbolRepositoryMock.Setup(x => x.GetByListing(It.IsAny<long>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
     private InstrumentImportService CreateService() =>
-        new(_avClientMock.Object, _assetRepositoryMock.Object, _listingRepositoryMock.Object,
+        new(new MarketDataSymbolResolutionService([new TestResolver(_avClientMock.Object)]), _assetRepositoryMock.Object, _listingRepositoryMock.Object,
             _symbolRepositoryMock.Object, _logger);
 
     private static InstrumentDiscoveryResultDto Instrument(
@@ -96,7 +99,7 @@ public class InstrumentImportServiceTests
         var result = await CreateService().ImportAsync(new ImportInstrumentCommand(Instrument()), TestContext.Current.CancellationToken);
 
         Assert.True(result.CreatedMarketDataSymbol);
-        Assert.Contains(result.Warnings, warning => warning.Contains("saved disabled", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Warnings, warning => warning.Contains("No positive recent price", StringComparison.OrdinalIgnoreCase));
         _symbolRepositoryMock.Verify(x => x.Upsert(It.Is<MarketDataSymbol>(symbol => !symbol.IsEnabled && symbol.LastError != null),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -107,7 +110,7 @@ public class InstrumentImportServiceTests
         var instrument = Instrument("Bond");
 
         var exception = await Assert.ThrowsAsync<InstrumentImportException>(() =>
-            CreateService().ImportValidatedAsync(instrument, TestContext.Current.CancellationToken));
+            CreateService().ImportValidatedAsync(new(instrument, []), TestContext.Current.CancellationToken));
 
         Assert.Equal("instrument_import_failed", exception.Code);
         _assetRepositoryMock.Verify(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -167,7 +170,6 @@ public class InstrumentImportServiceTests
     [InlineData("Name", null, "XLON", "USD", "CSPX.LON")]
     [InlineData("Name", "CSPX", null, "USD", "CSPX.LON")]
     [InlineData("Name", "CSPX", "XLON", null, "CSPX.LON")]
-    [InlineData("Name", "CSPX", "XLON", "USD", null)]
     public void CanImportForTransaction_WhenStructuralDataIsMissing_ReturnsFalse(
         string? displayName, string? ticker, string? exchangeMic, string? tradingCurrency, string? providerSymbol)
     {
@@ -239,7 +241,7 @@ public class InstrumentImportServiceTests
                 It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("ImportValidatedAsync must not call Alpha Vantage."));
 
-        var result = await CreateService().ImportValidatedAsync(Instrument("ETP"), TestContext.Current.CancellationToken);
+        var result = await CreateService().ImportValidatedAsync(new(Instrument("ETP"), [new(MarketDataProvider.AlphaVantage, 100, "resolved", "CSPX.LON", "LON", "USD")]), TestContext.Current.CancellationToken);
 
         Assert.True(result.CreatedMarketDataSymbol);
         Assert.Equal(AssetType.ETF, persistedAsset?.Type);
@@ -249,5 +251,76 @@ public class InstrumentImportServiceTests
         Assert.Null(persistedSymbol.LastError);
         _avClientMock.Verify(x => x.GetDailySeries(
             It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+    [Fact]
+    public async Task ImportAsync_WithoutAlphaVantageSymbol_CreatesOtherProviderAndKeepsAdministratorValues()
+    {
+        var asset = new Asset { Id = 1, Name = "Administrator name", Type = AssetType.ETF };
+        var listing = new AssetListing { Id = 2, AssetId = 1, Ticker = "CSPX", ExchangeMic = "XLON", ExchangeName = "Curated exchange", TradingCurrency = "USD" };
+        _assetRepositoryMock.Setup(x => x.GetByShareClassFigi("BBGSC", It.IsAny<CancellationToken>())).ReturnsAsync(asset);
+        _listingRepositoryMock.Setup(x => x.GetByAsset(1, It.IsAny<CancellationToken>())).ReturnsAsync([listing]);
+        _symbolRepositoryMock.Setup(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MarketDataSymbol symbol, CancellationToken _) => symbol);
+        var resolver = new Mock<IMarketDataSymbolResolver>();
+        resolver.SetupGet(x => x.Provider).Returns(MarketDataProvider.TwelveData);
+        resolver.SetupGet(x => x.Priority).Returns(200);
+        resolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MarketDataSymbolResolution(MarketDataProvider.TwelveData, 200, "candidate", "CSPX:LSE", "LSE", "USD", "Provider name", "Stock", "London"));
+        resolver.Setup(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var service = new InstrumentImportService(new([resolver.Object]), _assetRepositoryMock.Object,
+            _listingRepositoryMock.Object, _symbolRepositoryMock.Object, _logger);
+        var instrument = Instrument(providerSymbol: null);
+        Assert.True(service.CanImportForTransaction(instrument));
+        var validated = await service.ValidateForTransactionAsync(instrument, TestContext.Current.CancellationToken);
+        var result = await service.ImportValidatedAsync(validated, TestContext.Current.CancellationToken);
+        Assert.True(result.CreatedMarketDataSymbol);
+        Assert.Equal("resolved", Assert.Single(result.ProviderResults).Status);
+        Assert.Equal("Administrator name", asset.Name);
+        Assert.Equal(AssetType.ETF, asset.Type);
+        Assert.Equal("Curated exchange", listing.ExchangeName);
+        _symbolRepositoryMock.Verify(x => x.Upsert(It.Is<MarketDataSymbol>(x => x.Provider == MarketDataProvider.TwelveData && x.IsEnabled && x.IsPrimary && x.LastValidatedAt != null), It.IsAny<CancellationToken>()), Times.Once);
+        resolver.Verify(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()), Times.Once);
+        resolver.Verify(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Earlier validation failed")]
+    [InlineData(null)]
+    public async Task ImportValidatedAsync_UpdatesDiagnosticsAndPreservesDisabledMappings(string? previousError)
+    {
+        var asset = new Asset { Id = 1, Name = "Existing asset", ShareClassFigi = "BBGSC", Type = AssetType.ETF };
+        var listing = new AssetListing { Id = 2, AssetId = 1, Ticker = "CSPX", ExchangeMic = "XLON", ExchangeName = "London", TradingCurrency = "USD" };
+        var symbol = new MarketDataSymbol
+        {
+            Id = 3,
+            AssetListingId = 2,
+            Provider = MarketDataProvider.TwelveData,
+            Symbol = "CSPX:LSE",
+            IsEnabled = false,
+            LastError = previousError
+        };
+        _assetRepositoryMock.Setup(x => x.GetByShareClassFigi("BBGSC", It.IsAny<CancellationToken>())).ReturnsAsync(asset);
+        _listingRepositoryMock.Setup(x => x.GetByAsset(1, It.IsAny<CancellationToken>())).ReturnsAsync([listing]);
+        _symbolRepositoryMock.Setup(x => x.GetByListing(2, It.IsAny<CancellationToken>())).ReturnsAsync([symbol]);
+        var validated = new ValidatedInstrumentImport(Instrument(providerSymbol: null),
+            [new(MarketDataProvider.TwelveData, 200, "resolved", "CSPX:LSE", "LSE", "USD")]);
+        await CreateService().ImportValidatedAsync(validated, TestContext.Current.CancellationToken);
+        Assert.False(symbol.IsEnabled);
+        Assert.False(symbol.IsPrimary);
+        Assert.NotNull(symbol.LastValidatedAt);
+        Assert.Null(symbol.LastError);
+        _symbolRepositoryMock.Verify(x => x.Update(symbol, It.IsAny<CancellationToken>()), Times.Once);
+        _symbolRepositoryMock.Verify(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private sealed class TestResolver(IAlphaVantageClient client) : IMarketDataSymbolResolver
+    {
+        public MarketDataProvider Provider => MarketDataProvider.AlphaVantage;
+        public int Priority => 100;
+        public Task<MarketDataSymbolResolution> ResolveAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default) =>
+            Task.FromResult(new MarketDataSymbolResolution(Provider, Priority, "candidate", instrument.ProviderSymbol, instrument.ExchangeCode, instrument.TradingCurrency));
+        public async Task<bool> ValidateAsync(MarketDataSymbolResolution candidate, CancellationToken ct = default) =>
+            (await client.GetDailySeries(candidate.Symbol!, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow,
+                new Currency { ShortName = candidate.Currency! }, ct)).Any(x => x.PricePerUnit > 0);
     }
 }

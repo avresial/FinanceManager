@@ -40,6 +40,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private DateRange? _customDateRange;
 
     private bool _addEntryVisibility;
+    private bool _addEntryOpenedFromUrl;
 
     private string? _searchText;
     private AccountHistoryToolbar.TxFilter? _activeFilter;
@@ -66,6 +67,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
 
     [Parameter] public required int AccountId { get; set; }
     [Parameter] public int? HighlightedEntryId { get; set; }
+    [Parameter] public bool OpenAddEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -208,8 +210,23 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         }
     }
 
+    // ?dialog=add-entry (AccountDetails) opens the add overlay once per visit, so the state can be linked to and
+    // screenshotted. Leaving the query resets the guard, so a later link with it opens the overlay again.
+    private void OpenAddEntryFromUrl()
+    {
+        if (!OpenAddEntry)
+        {
+            _addEntryOpenedFromUrl = false;
+            return;
+        }
+        if (_addEntryOpenedFromUrl) return;
+        _addEntryOpenedFromUrl = true;
+        _addEntryVisibility = true;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
+        OpenAddEntryFromUrl();
         try
         {
             if (Account is not null && Account.AccountId == AccountId && _highlightedEntryId == HighlightedEntryId) return;

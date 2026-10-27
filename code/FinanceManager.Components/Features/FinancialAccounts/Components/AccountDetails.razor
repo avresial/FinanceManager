@@ -8,15 +8,15 @@
     <div class="container-fluid px-0" @ref="MyElementReference">
         @if (AccountDescriptor?.Kind == FinancialAccountKind.Currency)
         {
-            <CurrencyAccountDetailsPageContent AccountId="@AccountId" HighlightedEntryId="@EntryId" />
+            <CurrencyAccountDetailsPageContent AccountId="@AccountId" HighlightedEntryId="@EntryId" OpenAddEntry="@OpensAddEntry" />
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
         {
-            <InvestmentAccountDetailsPageContent AccountId="@AccountId" />
+            <InvestmentAccountDetailsPageContent AccountId="@AccountId" OpenAddEntry="@OpensAddEntry" />
         }
         else if (AccountDescriptor?.Kind == FinancialAccountKind.Bond)
         {
-            <BondAccountDetailsPageContent AccountId="@AccountId" />
+            <BondAccountDetailsPageContent AccountId="@AccountId" OpenAddEntry="@OpensAddEntry" />
         }
         else
         {

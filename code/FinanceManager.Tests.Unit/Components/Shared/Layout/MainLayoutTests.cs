@@ -1,5 +1,6 @@
 using Bunit;
 using FinanceManager.Components.Shared.Layout;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -23,6 +24,7 @@ public class MainLayoutTests
         context.Services.AddSingleton(Mock.Of<ILoginService>());
         context.Services.AddSingleton(Mock.Of<IUserService>());
         context.Services.AddSingleton(Mock.Of<ISettingsService>());
+        context.Services.AddSingleton(new PageActivityTracker());
         context.ComponentFactories.AddStub<NavMenu>();
         var viewport = new Mock<IBrowserViewportService>();
         viewport.Setup(v => v.SubscribeAsync(It.IsAny<Guid>(),

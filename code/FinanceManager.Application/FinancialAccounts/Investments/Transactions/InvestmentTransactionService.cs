@@ -31,6 +31,7 @@ public sealed class InvestmentTransactionService(
 
         var external = !string.IsNullOrWhiteSpace(request.ExternalInstrumentResultId);
         InstrumentDiscoveryResultDto? instrument = null;
+        ValidatedInstrumentImport? validated = null;
         if (external)
         {
             instrument = await instrumentSearchService.ResolveExternalResultAsync(
@@ -43,7 +44,7 @@ public sealed class InvestmentTransactionService(
             try
             {
                 // Provider validation is deliberately completed before the database transaction starts.
-                await instrumentImportService.ValidateForTransactionAsync(instrument, cancellationToken);
+                validated = await instrumentImportService.ValidateForTransactionAsync(instrument, cancellationToken);
             }
             catch (InstrumentImportException ex)
             {
@@ -78,7 +79,7 @@ public sealed class InvestmentTransactionService(
                     ImportedInstrumentDto imported;
                     try
                     {
-                        imported = await instrumentImportService.ImportValidatedAsync(instrument, transactionCancellationToken);
+                        imported = await instrumentImportService.ImportValidatedAsync(validated!, transactionCancellationToken);
                     }
                     catch (InstrumentImportException ex)
                     {
@@ -164,7 +165,7 @@ public sealed class InvestmentTransactionService(
     }
 
     private static string GetExternalGateKey(InstrumentDiscoveryResultDto instrument) =>
-        $"{MarketDataProvider.AlphaVantage}:{instrument.ProviderSymbol!.Trim().ToUpperInvariant()}";
+        $"{instrument.Ticker.Trim().ToUpperInvariant()}:{instrument.ExchangeMic}:{instrument.TradingCurrency}";
 
     private static void ValidateRequest(AddInvestmentTransactionRequest request)
     {
