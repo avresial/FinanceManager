@@ -15,7 +15,8 @@ namespace FinanceManager.Infrastructure.Features.Assets.Providers;
 internal sealed class AlphaVantageClient(
     HttpClient httpClient,
     ILogger<AlphaVantageClient> logger,
-    IExternalServiceConfigService configService) : IAlphaVantageClient, IStockPriceSource
+    IExternalServiceConfigService configService,
+    AlphaVantageRequestBudget budget) : IAlphaVantageClient, IStockPriceSource
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -32,9 +33,9 @@ internal sealed class AlphaVantageClient(
 
         var config = await configService.GetServiceAsync("AlphaVantage", ct);
         var apiKey = config.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (!config.IsEnabled || string.IsNullOrWhiteSpace(apiKey) || !budget.TryConsume())
         {
-            logger.LogWarning("Stock API key is missing.");
+            logger.LogWarning("Alpha Vantage is disabled, unconfigured, or its request budget is exhausted.");
             return [];
         }
 
@@ -100,9 +101,9 @@ internal sealed class AlphaVantageClient(
 
         var config = await configService.GetServiceAsync("AlphaVantage", ct);
         var apiKey = config.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (!config.IsEnabled || string.IsNullOrWhiteSpace(apiKey) || !budget.TryConsume())
         {
-            logger.LogWarning("Stock API key is missing.");
+            logger.LogWarning("Alpha Vantage is disabled, unconfigured, or its request budget is exhausted.");
             return [];
         }
 
