@@ -91,6 +91,7 @@ internal static class Registration
                 .AddScoped<IFeeDragService, FeeDragService>()
                 .AddScoped<IInvestmentInstrumentDiscoveryService, InvestmentInstrumentDiscoveryService>()
                 .AddScoped<IInvestmentInstrumentSearchService, InvestmentInstrumentSearchService>()
+                .AddScoped<MarketDataSymbolResolutionService>()
                 .AddScoped<IInstrumentImportService, InstrumentImportService>()
                 .AddScoped<IInvestmentTransactionService, InvestmentTransactionService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()

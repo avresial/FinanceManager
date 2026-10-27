@@ -100,7 +100,7 @@
 
         @* Add entry split button — plus icon + Import / Export / Manage in the dropdown *@
         <MudButtonGroup Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Style="flex-shrink: 0;">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnAddEntry" aria-label="Add entry" title="Add entry" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" OnClick="OnAddEntry" aria-label="Add entry" title="Add entry" data-testid="account-add-entry" />
             <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" AnchorOrigin="Origin.BottomRight"
                      TransformOrigin="Origin.TopRight" Dense Style="align-self: auto;" class="p-0"
                      aria-label="More account actions">

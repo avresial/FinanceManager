@@ -92,7 +92,7 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
     }
 
     <MudOverlay Visible="@_addEntryVisibility" DarkBackground="true" ZIndex="1150">
-        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-label="Add entry">
             <AddCurrencyEntry CurrencyAccount=Account ActionCompleted="HideAddOverlay" />
         </MudPaper>
     </MudOverlay>

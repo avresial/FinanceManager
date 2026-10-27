@@ -1,0 +1,49 @@
+@using Microsoft.JSInterop
+@implements IDisposable
+
+@code {
+    // Marks <html data-fm-ready="true"> once the routed page has no API request in flight, so agents and
+    // scripts/Screenshot.cs can wait for a settled page instead of sleeping. The quiet-period debounce lives in
+    // finance-manager.js (financeManager.setPageBusy).
+    [Inject] public required PageActivityTracker Tracker { get; set; }
+    [Inject] public required NavigationManager Navigation { get; set; }
+    [Inject] public required IJSRuntime JsRuntime { get; set; }
+
+    private bool _rendered;
+
+    protected override void OnInitialized()
+    {
+        Tracker.Changed += OnActivityChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _rendered = true;
+        await Report(navigated: true);
+    }
+
+    private void OnActivityChanged() => _ = Report(navigated: false);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = Report(navigated: true);
+
+    private async Task Report(bool navigated)
+    {
+        if (!_rendered) return;
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("financeManager.setPageBusy", !Tracker.IsIdle, navigated);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The app is shutting down; there is no page left to mark.
+        }
+    }
+
+    public void Dispose()
+    {
+        Tracker.Changed -= OnActivityChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

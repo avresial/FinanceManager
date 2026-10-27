@@ -48,6 +48,12 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     private bool _hasError;
     private bool _loadMoreFailed;
 
+    /// <summary><c>?search=</c> pre-fills the text search, so a filtered view can be linked to directly.</summary>
+    [SupplyParameterFromQuery(Name = "search")] public string? Search { get; set; }
+
+    /// <summary><c>?range=</c> picks one of the toolbar's preset ranges (e.g. 1M, YTD); anything else keeps the default.</summary>
+    [SupplyParameterFromQuery(Name = "range")] public string? Range { get; set; }
+
     [Inject] public required ILogger<TransactionsPage> Logger { get; set; }
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -55,6 +61,9 @@ public partial class TransactionsPage : ComponentBase, IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(Search)) _search = Search.Trim();
+        if (TransactionLogToolbar.Ranges.FirstOrDefault(range => range.Equals(Range, StringComparison.OrdinalIgnoreCase)) is string preset)
+            _selectedRange = preset;
         ApplyRange();
         var user = await LoginService.GetLoggedUser();
         if (_disposed) return;

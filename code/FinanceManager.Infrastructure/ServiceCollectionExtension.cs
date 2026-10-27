@@ -1,4 +1,5 @@
 using FinanceManager.Application.Backfill.Currencies;
+using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Insights.Generation;
@@ -67,11 +68,17 @@ public static class ServiceCollectionExtension
     public static IServiceCollection AddInfrastructureApi(this IServiceCollection services)
     {
         services.AddSingleton<IExternalServiceConfigService, ExternalServiceConfigService>();
-        services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>();
+        // Quota-counted requests must not acquire hidden retry attempts from ServiceDefaults.
+#pragma warning disable EXTEXP0001 // Framework opt-out API is experimental; scoped to provider registration.
+        services.AddSingleton<AlphaVantageRequestBudget>();
+        services.AddHttpClient<IAlphaVantageClient, AlphaVantageClient>(client => client.Timeout = TimeSpan.FromSeconds(30)).RemoveAllResilienceHandlers();
+        services.AddHttpClient<IMarketDataSymbolResolver, AlphaVantageSymbolResolver>(client => client.Timeout = TimeSpan.FromSeconds(30)).RemoveAllResilienceHandlers();
+        services.AddHttpClient<IMarketDataSymbolResolver, TwelveDataSymbolResolver>(client => client.Timeout = TimeSpan.FromSeconds(30)).RemoveAllResilienceHandlers();
+        services.AddHttpClient<IMarketDataSymbolResolver, EodhdSymbolResolver>(client => client.Timeout = TimeSpan.FromSeconds(30)).RemoveAllResilienceHandlers();
         services.AddHttpClient<EodhdClient>();
         services.AddSingleton<TwelveDataCreditBudget>();
         services.AddHttpClient<TwelveDataClient>((sp, client) =>
-            client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<TwelveDataOptions>>().Value.RequestTimeoutSeconds));
+            client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<TwelveDataOptions>>().Value.RequestTimeoutSeconds)).RemoveAllResilienceHandlers();
         // Daily-price fetches use each provider's configured priority and provider-specific symbol.
         services.AddScoped<IStockPriceSource>(sp => new FallbackStockPriceSource(
             [
@@ -90,13 +97,14 @@ public static class ServiceCollectionExtension
         services.AddHttpClient<ICurrencyExchangeRateProvider, EcbCurrencyExchangeRateProvider>(client =>
             client.Timeout = TimeSpan.FromSeconds(15));
         services.AddHttpClient<ICurrencyExchangeRateProvider, FawazAhmedCurrencyApiClient>();
-        services.AddHttpClient<AlphaVantageFxClient>();
+        services.AddHttpClient<AlphaVantageFxClient>(client => client.Timeout = TimeSpan.FromSeconds(30)).RemoveAllResilienceHandlers();
         services.AddScoped<IFxDailySource>(sp => new FallbackFxDailySource(
         [
             sp.GetRequiredService<AlphaVantageFxClient>(),
             sp.GetRequiredService<TwelveDataClient>()
         ],
             sp.GetRequiredService<ILogger<FallbackFxDailySource>>()));
+#pragma warning restore EXTEXP0001
         services.AddHttpClient<IInflationIndexProvider, EurostatInflationIndexProvider>(client =>
             client.BaseAddress = new Uri("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/"));
 

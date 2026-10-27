@@ -1,84 +1,12 @@
-@using ApexCharts
-@using FinanceManager.Components.Shared.Components
-@using FinanceManager.Domain.MoneyFlow.Entities
-@using FinanceManager.Domain.Shared.Charting
-
-<MudCard Outlined Class="fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
-    <CardHeader Title="Assets distribution" StackedAside="true"
-                InfoText="How your total assets split across asset types or wallets."
-                InfoAriaLabel="About assets distribution card">
-        <KeyFigure>
-            @if (IsLoading)
-            {
-                <StringSpinner CharactersCount="4" />
-            }
-            else if (TotalAssets != 0)
-            {
-                <span class="fm-card-total">@MoneyFormatter.Format(TotalAssets, CurrencyShortName)</span>
-            }
-        </KeyFigure>
-        <Actions>
-            <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
-        </Actions>
-    </CardHeader>
-
-    @if (HasError)
-    {
-        <MudAlert Severity="Severity.Error" Dense="true">Could not load assets distribution.
-            <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
-        </MudAlert>
-    }
-    <MudPaper Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
-        @if (IsLoading)
-        {
-            <div style="width:100%;height:100%">
-                <ChartSpinner MaxHeight=@Height />
-            </div>
-        }
-        else if (ActiveData.Any() && TotalAssets > 0)
-        {
-            <div class="fm-pie-body" style="@(HasError ? "height:auto;min-height:100%;" : IsSingleCategory ? "height:auto;" : null)">
-                @if (!IsSingleCategory)
-                {
-                    <div class="fm-chart-wrap">
-                        <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
-                            <ApexPointSeries TItem="NameValueResult"
-                                             Items="ActiveData"
-                                             Name="Assets"
-                                             SeriesType="SeriesType.Pie"
-                                             XValue="e => e.Name"
-                                             YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
-                                             OrderByDescending="@(e => e.Y)" />
-                        </ApexChart>
-                    </div>
-                }
-                <div class="fm-legend@(IsSingleCategory ? " fm-legend--single" : "")" data-testid="distribution-legend">
-                    @{
-                        var sorted = ActiveData.OrderByDescending(x => x.Value).ToList();
-                        var colors = ColorsProvider.GetColors();
-                        for (int i = 0; i < sorted.Count; i++)
-                        {
-                            var item = sorted[i];
-                            var color = colors[i % colors.Count];
-                            var pct = TotalAssets == 0 ? 0m : Math.Round(item.Value / TotalAssets * 100m, 1);
-                            <div class="fm-legend-row">
-                                <span class="fm-legend-dot" style="background: @color"></span>
-                                <span class="fm-legend-name">@item.Name</span>
-                                <span class="fm-legend-vals">
-                                    <span class="fm-legend-amt">@MoneyFormatter.Format(item.Value, CurrencyShortName)</span>
-                                    <span class="fm-legend-pct">@pct.ToString("0.0")%</span>
-                                </span>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        }
-        else if (!HasError)
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-            </div>
-        }
-    </MudPaper>
-</MudCard>
+<DistributionCardView Title="Assets distribution"
+                      InfoText="How your total assets split across asset types or wallets."
+                      InfoAriaLabel="About assets distribution card"
+                      SeriesName="Assets"
+                      ErrorText="Could not load assets distribution."
+                      Height="@Height"
+                      HasError="HasError"
+                      IsLoading="IsLoading"
+                      OnRetry="OnRetry"
+                      CurrencyShortName="@CurrencyShortName"
+                      TypeData="TypeData"
+                      AccountData="WalletData" />

@@ -148,7 +148,7 @@ public class InvestmentInstrumentSearchServiceTests
             .ReturnsAsync([.. unknownVenues, xetra]);
 
         var importService = new InstrumentImportService(
-            Mock.Of<IAlphaVantageClient>(),
+            new MarketDataSymbolResolutionService([]),
             Mock.Of<IAssetRepository>(),
             Mock.Of<IAssetListingRepository>(),
             Mock.Of<IMarketDataSymbolRepository>(),

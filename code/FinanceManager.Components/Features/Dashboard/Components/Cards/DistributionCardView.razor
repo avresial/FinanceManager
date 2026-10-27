@@ -1,0 +1,132 @@
+@using ApexCharts
+@using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Shared.Components
+
+@* Shared body of the Assets and Liabilities distribution cards: a donut with the total in its centre,
+   linked to a legend with proportion bars. Each card keeps its own data loading and snapshots. *@
+<MudCard Outlined Class="fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
+    <CardHeader Title="@Title" StackedAside="true"
+                InfoText="@InfoText"
+                InfoAriaLabel="@InfoAriaLabel"
+                KeyFigure="@(IsLoading ? LoadingFigure : null)">
+        <Actions>
+            <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
+        </Actions>
+    </CardHeader>
+
+    @if (HasError)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">@ErrorText
+            <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
+        </MudAlert>
+    }
+    <MudPaper Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
+        @if (IsLoading)
+        {
+            <div style="width:100%;height:100%">
+                <ChartSpinner MaxHeight=@Height />
+            </div>
+        }
+        else if (_slices.Count > 0)
+        {
+            @* The container query switches to a stacked layout on narrow cards (a third of the desktop grid). *@
+            <div class="fm-distribution-container" style="@(HasError || IsSingleCategory ? "height:auto;" : null)">
+            <div class="fm-distribution-body@(IsSingleCategory ? " fm-distribution-body--single" : "")" style="@(HasError ? "height:auto;min-height:100%;" : null)">
+                @if (!IsSingleCategory)
+                {
+                    <div class="fm-distribution-chart" data-testid="distribution-chart">
+                        <ApexChart @key="_chartKey" @ref="_chart" TItem="DistributionSlice" Options="_chartOptions"
+                                   Width="@_chartSize" Height="@_chartSize"
+                                   OnDataPointEnter="OnSliceEnter" OnDataPointLeave="OnSliceLeave">
+                            <ApexPointSeries TItem="DistributionSlice"
+                                             Items="_slices"
+                                             Name="@SeriesName"
+                                             SeriesType="SeriesType.Donut"
+                                             XValue="slice => slice.Name"
+                                             YValue="@(slice => Math.Round(slice.Value, 2))" />
+                        </ApexChart>
+                        <div class="fm-distribution-total" data-testid="distribution-total" aria-hidden="true">
+                            <span class="fm-distribution-total-value">@MoneyFormatter.Format(Total, CurrencyShortName)</span>
+                            <span class="fm-distribution-total-label">Total</span>
+                        </div>
+                    </div>
+                }
+                <div class="fm-legend@(IsSingleCategory ? " fm-legend--single" : "")" data-testid="distribution-legend"
+                     aria-label="@($"{Title}, total {MoneyFormatter.Format(Total, CurrencyShortName)}")" role="list">
+                    @for (var i = 0; i < _slices.Count; i++)
+                    {
+                        var index = i;
+                        var slice = _slices[index];
+                        var rowClass = $"fm-legend-row fm-distribution-row{(_activeIndex == index ? " is-active" : "")}";
+                        var href = LinkHref(slice);
+                        <div role="listitem" @key="slice.Name"
+                             @onmouseenter="() => OnRowEnterAsync(index)"
+                             @onmouseleave="() => OnRowLeaveAsync(index)">
+                            @if (href is not null)
+                            {
+                                <a class="@($"{rowClass} fm-distribution-row--link")" href="@href" data-testid="distribution-row"
+                                   aria-label="@($"Open {slice.Name}, {MoneyFormatter.Format(slice.Value, CurrencyShortName)}, {slice.Percent:0.0}%")"
+                                   @onfocus="() => OnRowEnterAsync(index)" @onblur="() => OnRowLeaveAsync(index)">
+                                    @RowContent(slice)
+                                </a>
+                            }
+                            else if (slice.IsOther)
+                            {
+                                <button type="button" class="@($"{rowClass} fm-distribution-row--other")" data-testid="distribution-row"
+                                        aria-expanded="@(_otherExpanded ? "true" : "false")" title="@string.Join(", ", slice.Members.Select(x => x.Name))"
+                                        @onclick="ToggleOther">
+                                    @RowContent(slice)
+                                </button>
+                                @if (_otherExpanded)
+                                {
+                                    <div class="fm-distribution-other-members" data-testid="distribution-other-members">
+                                        @foreach (var member in slice.Members)
+                                        {
+                                            <div class="fm-distribution-other-member">
+                                                <span class="fm-legend-name" title="@member.Name">@member.Name</span>
+                                                <span class="fm-legend-amt">@MoneyFormatter.Format(member.Value, CurrencyShortName)</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="@rowClass" data-testid="distribution-row">
+                                    @RowContent(slice)
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            </div>
+        }
+        else if (!HasError)
+        {
+            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
+                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
+            </div>
+        }
+    </MudPaper>
+</MudCard>
+
+@code {
+    private RenderFragment LoadingFigure => @<StringSpinner CharactersCount="4" />;
+
+    private RenderFragment RowContent(DistributionSlice slice) =>
+        @<text>
+            <span class="fm-legend-dot" style="@($"background:{slice.Color}")"></span>
+            <span class="fm-legend-name" title="@slice.Name">@slice.Name</span>
+            <span class="fm-legend-vals">
+                <span class="fm-legend-amt">@MoneyFormatter.Format(slice.Value, CurrencyShortName)</span>
+                <span class="fm-legend-pct">@slice.Percent.ToString("0.0")%</span>
+            </span>
+            @if (!IsSingleCategory)
+            {
+                <span class="fm-distribution-bar" aria-hidden="true">
+                    <span class="fm-distribution-bar-fill" style="@BarStyle(slice)"></span>
+                </span>
+            }
+        </text>;
+}
