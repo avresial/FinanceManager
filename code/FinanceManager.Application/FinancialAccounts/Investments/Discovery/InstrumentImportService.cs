@@ -256,7 +256,7 @@ public sealed class InstrumentImportService(
         !string.IsNullOrWhiteSpace(instrument.DisplayName) && !string.IsNullOrWhiteSpace(instrument.Ticker)
         && !string.IsNullOrWhiteSpace(instrument.ExchangeMic) && !string.IsNullOrWhiteSpace(instrument.TradingCurrency);
 
-    private static AssetType ParseAssetType(string? securityType) =>
+    internal static AssetType ParseAssetType(string? securityType) =>
         securityType?.Contains("ETF", StringComparison.OrdinalIgnoreCase) == true
         || securityType?.Contains("ETP", StringComparison.OrdinalIgnoreCase) == true ? AssetType.ETF
         : securityType?.Contains("Equity", StringComparison.OrdinalIgnoreCase) == true || securityType?.Contains("Stock", StringComparison.OrdinalIgnoreCase) == true ? AssetType.Stock

@@ -1,0 +1,41 @@
+@using FinanceManager.Domain.Assets.Dtos
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="4">
+        <MudTextField T="string" @bind-Value="Listing.Ticker" @bind-Value:after="NotifyChanged" Label="Ticker" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudTextField T="string" @bind-Value="Listing.ExchangeMic" @bind-Value:after="NotifyChanged" Label="Exchange MIC" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudTextField T="string" @bind-Value="Listing.ExchangeName" Label="Exchange name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudSelect T="string" @bind-Value="Listing.TradingCurrency" @bind-Value:after="NotifyChanged" Label="Trading currency" Variant="Variant.Outlined" Margin="Margin.Dense">
+            @foreach (var currency in Currencies)
+            {
+                <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudNumericField T="decimal" @bind-Value="Listing.PriceMultiplier" Label="Price multiplier" Step="0.01m" Min="0.0000001m"
+                         Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="0.01 for GBX→GBP" />
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudTextField T="string" @bind-Value="Listing.ListingFigi" @bind-Value:after="NotifyChanged" Label="Listing FIGI" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudSwitch T="bool" @bind-Value="Listing.IsPrimaryListing" Label="Primary listing" Color="Color.Primary" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudSwitch T="bool" @bind-Value="Listing.IsActive" Label="Active" Color="Color.Primary" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired] public required AssetListingDto Listing { get; set; }
+    [Parameter] public IEnumerable<string> Currencies { get; set; } = [];
+    [Parameter] public EventCallback Changed { get; set; }
+    private Task NotifyChanged() => Changed.InvokeAsync();
+}

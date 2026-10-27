@@ -15,4 +15,7 @@ public interface IInvestmentInstrumentDiscoveryService
     /// Alpha Vantage for the provider price symbol.
     /// </summary>
     Task<IReadOnlyList<InstrumentDiscoveryResultDto>> SearchAsync(string query, CancellationToken ct = default);
+
+    /// <summary>Discover every venue for a confirmed ISIN or share-class FIGI.</summary>
+    Task<IReadOnlyList<InstrumentDiscoveryResultDto>> DiscoverListingsAsync(string? isin, string? shareClassFigi, CancellationToken ct = default);
 }

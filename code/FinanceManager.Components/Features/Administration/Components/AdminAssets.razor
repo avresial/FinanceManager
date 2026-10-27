@@ -26,7 +26,6 @@
                       Class="admin-search flex-grow-1" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="Admin/AddAsset"
                    StartIcon="@Icons.Material.Filled.Add">Add asset</MudButton>
-        <FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.InstrumentImport Imported="@(_ => ReloadAssetsAsync())" />
     </div>
 
     @if (_pagedElements.Any())

@@ -57,6 +57,25 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
     private async Task<IReadOnlyList<InstrumentDiscoveryResultDto>> SearchByIsinAsync(string isin, CancellationToken ct)
     {
         var listings = await SafeOpenFigi(() => openFigiClient.MapByIsinAsync(isin, ct), nameof(SearchByIsinAsync));
+        return await BuildListingsAsync(listings, isin, ct);
+    }
+
+    public async Task<IReadOnlyList<InstrumentDiscoveryResultDto>> DiscoverListingsAsync(string? isin, string? shareClassFigi, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(isin) && string.IsNullOrWhiteSpace(shareClassFigi))
+            return [];
+
+        var listings = !string.IsNullOrWhiteSpace(shareClassFigi)
+            ? await SafeOpenFigi(() => openFigiClient.MapByShareClassFigiAsync(shareClassFigi.Trim(), ct), nameof(DiscoverListingsAsync))
+            : await SafeOpenFigi(() => openFigiClient.MapByIsinAsync(isin!.Trim().ToUpperInvariant(), ct), nameof(DiscoverListingsAsync));
+        if (!string.IsNullOrWhiteSpace(shareClassFigi))
+            listings = listings.Where(x => string.Equals(x.ShareClassFigi, shareClassFigi.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+
+        return await BuildListingsAsync(listings, string.IsNullOrWhiteSpace(isin) ? null : isin.Trim().ToUpperInvariant(), ct);
+    }
+
+    private async Task<IReadOnlyList<InstrumentDiscoveryResultDto>> BuildListingsAsync(IReadOnlyList<OpenFigiListing> listings, string? isin, CancellationToken ct)
+    {
         if (listings.Count == 0)
             return [];
 

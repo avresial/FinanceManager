@@ -713,4 +713,23 @@ public class InvestmentInstrumentDiscoveryServiceTests
 
         _openFigiClientMock.Verify(x => x.MapByTickerAsync("CSPX", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+    [Fact]
+    public async Task DiscoverListings_ByShareClass_ReturnsAllVenueTickersWithoutInventingIsin()
+    {
+        _openFigiClientMock.Setup(x => x.MapByShareClassFigiAsync("BBGSC", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new(null, "VWRA", "Vanguard ETF", "LN", Figi: "BBGL1", ShareClassFigi: "BBGSC"),
+                new(null, "VWCE", "Vanguard ETF", "GY", Figi: "BBGL2", ShareClassFigi: "BBGSC"),
+                new(null, "OTHER", "Different share class", "GY", Figi: "BBGL3", ShareClassFigi: "OTHER")]);
+        _avClientMock.Setup(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        var results = await CreateService().DiscoverListingsAsync(null, "BBGSC", TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, x => x.Ticker == "VWRA" && x.ExchangeMic == "XLON");
+        Assert.Contains(results, x => x.Ticker == "VWCE" && x.ExchangeMic == "XETR");
+        Assert.All(results, x => Assert.Null(x.Isin));
+        _openFigiClientMock.Verify(x => x.MapByIsinAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
 }
