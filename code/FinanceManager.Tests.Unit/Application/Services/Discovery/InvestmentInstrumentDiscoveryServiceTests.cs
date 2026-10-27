@@ -732,4 +732,55 @@ public class InvestmentInstrumentDiscoveryServiceTests
         _openFigiClientMock.Verify(x => x.MapByIsinAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task DiscoverListings_CachesCompleteLookup_AndDoesNotCallProvidersTwice()
+    {
+        _openFigiClientMock.Setup(x => x.MapByIsinAsync("IE00BK5BQT80", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(null, "VWCE", "Vanguard ETF", "GY", Figi: "BBGL2", ShareClassFigi: "BBGSC")]);
+        _avClientMock.Setup(x => x.SearchTicker("VWCE", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new() { Symbol = "VWCE.DEX", Name = "Vanguard ETF", Type = "ETF", Region = "XETRA", Currency = "EUR", MatchScore = 1m }]);
+        var service = CreateService();
+
+        await service.DiscoverListingsAsync("IE00BK5BQT80", null, TestContext.Current.CancellationToken);
+        var results = await service.DiscoverListingsAsync(" ie00bk5bqt80 ", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal("VWCE.DEX", Assert.Single(results).ProviderSymbol);
+        _openFigiClientMock.Verify(x => x.MapByIsinAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _avClientMock.Verify(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DiscoverListings_WhenAlphaVantageFails_DoesNotCacheOpenFigiOnlyResults()
+    {
+        _openFigiClientMock.Setup(x => x.MapByShareClassFigiAsync("BBGSC", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new(null, "VWCE", "Vanguard ETF", "GY", Figi: "BBGL2", ShareClassFigi: "BBGSC")]);
+        _avClientMock.SetupSequence(x => x.SearchTicker("VWCE", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Alpha Vantage unavailable"))
+            .ReturnsAsync([new() { Symbol = "VWCE.DEX", Name = "Vanguard ETF", Type = "ETF", Region = "XETRA", Currency = "EUR", MatchScore = 1m }]);
+        var service = CreateService();
+
+        var degraded = await service.DiscoverListingsAsync(null, "BBGSC", TestContext.Current.CancellationToken);
+        var recovered = await service.DiscoverListingsAsync(null, "BBGSC", TestContext.Current.CancellationToken);
+
+        Assert.Null(Assert.Single(degraded).ProviderSymbol);
+        Assert.Equal("VWCE.DEX", Assert.Single(recovered).ProviderSymbol);
+        _avClientMock.Verify(x => x.SearchTicker("VWCE", It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task DiscoverListings_WhenOpenFigiFails_DoesNotCacheEmptyResult()
+    {
+        _openFigiClientMock.SetupSequence(x => x.MapByShareClassFigiAsync("BBGSC", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("OpenFIGI unavailable"))
+            .ReturnsAsync([new(null, "VWCE", "Vanguard ETF", "GY", Figi: "BBGL2", ShareClassFigi: "BBGSC")]);
+        _avClientMock.Setup(x => x.SearchTicker(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var service = CreateService();
+
+        var failed = await service.DiscoverListingsAsync(null, "BBGSC", TestContext.Current.CancellationToken);
+        var recovered = await service.DiscoverListingsAsync(null, "BBGSC", TestContext.Current.CancellationToken);
+
+        Assert.Empty(failed);
+        Assert.Equal("VWCE", Assert.Single(recovered).Ticker);
+    }
+
 }
