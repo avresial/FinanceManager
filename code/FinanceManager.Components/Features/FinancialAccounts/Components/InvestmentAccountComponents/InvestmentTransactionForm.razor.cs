@@ -174,6 +174,8 @@ public partial class InvestmentTransactionForm : ComponentBase
         }
 
         _lastSearchReturnedEmpty = false;
+        // A price loaded for the previous instrument must not carry over to one without a quote.
+        _formUnitPrice = 0m;
         _formCurrency = !string.IsNullOrWhiteSpace(dto.TradingCurrency)
             ? dto.TradingCurrency
             : GetDefaultCurrencyCode();
@@ -192,7 +194,6 @@ public partial class InvestmentTransactionForm : ComponentBase
         else
         {
             _formListingId = 0;
-            _formUnitPrice = 0m;
             _noPriceAvailable = true;
         }
     }

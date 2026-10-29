@@ -2,6 +2,7 @@ using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Domain.Assets.Discovery;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -125,6 +126,57 @@ public class InvestmentTransactionFormTests
         Assert.Contains(
             snackbar.ShownSnackbars,
             s => s.Message == "Added. Automatic prices aren't available yet; an administrator has been notified.");
+    }
+
+    [Fact]
+    public async Task SelectingListingWithoutCurrency_AfterPricedListing_ResetsUnitPrice()
+    {
+        var priced = new InvestmentInstrumentOptionDto
+        {
+            ResultId = "listing:1",
+            Source = InstrumentOptionSource.Existing,
+            AssetListingId = 1,
+            Ticker = "CSPX",
+            DisplayName = "iShares Core S&P 500",
+            ExchangeName = "London Stock Exchange",
+            ExchangeMic = "XLON",
+            TradingCurrency = "USD"
+        };
+        var withoutCurrency = new InvestmentInstrumentOptionDto
+        {
+            ResultId = "listing:2",
+            Source = InstrumentOptionSource.Existing,
+            AssetListingId = 2,
+            Ticker = "VWRA",
+            DisplayName = "Vanguard FTSE All-World",
+            ExchangeName = "London Stock Exchange",
+            ExchangeMic = "XLON",
+            TradingCurrency = string.Empty
+        };
+
+        var handler = new StubHttpHandler(request => Task.FromResult(
+            request.RequestUri!.AbsolutePath.EndsWith("/ListingPrice/1", StringComparison.Ordinal)
+                ? JsonResponse(new ListingPriceDto(321.45m, "USD"))
+                : JsonResponse(Array.Empty<InvestmentInstrumentOptionDto>())));
+
+        await using var context = CreateBunitContext(handler);
+        context.Render<MudPopoverProvider>();
+        var cut = context.Render<InvestmentTransactionForm>(p => p
+            .Add(x => x.AccountId, 10)
+            .Add(x => x.Visible, true));
+        var autocomplete = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>();
+        // The field formats with the current culture, so parse it back the same way.
+        decimal UnitPrice() => decimal.Parse(
+            cut.FindComponents<MudNumericField<decimal>>()
+                .Single(f => f.Instance.Label == "Unit price")
+                .Find("input").GetAttribute("value")!,
+            System.Globalization.CultureInfo.CurrentCulture);
+
+        await cut.InvokeAsync(() => autocomplete.Instance.SelectOptionAsync(priced));
+        cut.WaitForAssertion(() => Assert.Equal(321.45m, UnitPrice()));
+
+        await cut.InvokeAsync(() => autocomplete.Instance.SelectOptionAsync(withoutCurrency));
+        cut.WaitForAssertion(() => Assert.Equal(0m, UnitPrice()));
     }
 
     [Fact]

@@ -156,12 +156,10 @@ public sealed class InstrumentImportService(
 
         if (resolved.Length == 0 && !existingSymbols.Any(x => x.IsEnabled))
         {
+            // Only the generated id is logged; ticker, venue and currency come from user-selected search results.
             logger.LogWarning(
-                "Catalog listing {ListingId} ({Ticker}, MIC: {ExchangeMic}, Currency: {TradingCurrency}) was saved without an enabled price symbol and needs administrator review.",
-                listing.Id,
-                listing.Ticker,
-                listing.ExchangeMic ?? "unknown",
-                listing.TradingCurrency ?? "unknown");
+                "Catalog listing {ListingId} was saved without an enabled price symbol and needs administrator review.",
+                listing.Id);
         }
         else
         {
