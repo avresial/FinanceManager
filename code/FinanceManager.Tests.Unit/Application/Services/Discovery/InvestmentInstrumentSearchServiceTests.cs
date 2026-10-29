@@ -1,5 +1,4 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
@@ -32,7 +31,8 @@ public class InvestmentInstrumentSearchServiceTests
             ExchangeName = "London Stock Exchange",
             TradingCurrency = "USD",
             ListingFigi = "BBG001",
-            Asset = new Asset { Name = "iShares Core S&P 500 UCITS ETF", Isin = "IE00B5BMR087" }
+            Asset = new Asset { Name = "iShares Core S&P 500 UCITS ETF", Isin = "IE00B5BMR087" },
+            MarketDataSymbols = [new MarketDataSymbol { Provider = MarketDataProvider.AlphaVantage, Symbol = "CSPX.LON", IsEnabled = true }]
         };
         var duplicate = new InstrumentDiscoveryResultDto
         {
@@ -65,6 +65,7 @@ public class InvestmentInstrumentSearchServiceTests
 
         Assert.Equal(2, results.Count);
         Assert.Equal(InstrumentOptionSource.Existing, results[0].Source);
+        Assert.Empty(results[0].Warnings);
         Assert.Equal(InstrumentOptionSource.External, results[1].Source);
         Assert.Equal("XETR", results[1].ExchangeMic);
         Assert.NotEmpty(results[1].ResultId);
@@ -78,10 +79,11 @@ public class InvestmentInstrumentSearchServiceTests
         var notImportable = new InstrumentDiscoveryResultDto
         {
             Ticker = "VWCE",
-            DisplayName = "Vanguard FTSE All-World UCITS ETF",
+            DisplayName = "Corporate Bond",
             ExchangeMic = "XETR",
             ExchangeName = "Xetra",
             TradingCurrency = "EUR",
+            SecurityType = "Bond",
             ConfidenceScore = 1m
         };
         var importable = new InstrumentDiscoveryResultDto
@@ -113,11 +115,10 @@ public class InvestmentInstrumentSearchServiceTests
     }
 
     [Fact]
-    public async Task SearchAsync_WithPlainVwceQuery_OffersOnlyTheImportableXetraResult()
+    public async Task SearchAsync_WithPlainVwceQuery_RanksCompleteXetraFirstAndShowsGapWarningsOnIncompleteVenues()
     {
-        // Mirrors the plain "VWCE" discovery output: the German composite resolves to Xetra with an
-        // Alpha Vantage symbol, while the other German venue codes have no MIC/currency/symbol. The
-        // real import rules must hide the latter because they can never be saved.
+        // Complete Xetra result ranks ahead of incomplete OpenFIGI regional venue results, while
+        // incomplete venues remain selectable with clear gap warnings in the dropdown (#999).
         var xetra = new InstrumentDiscoveryResultDto
         {
             Source = "Combined",
@@ -158,10 +159,57 @@ public class InvestmentInstrumentSearchServiceTests
 
         var results = await service.SearchAsync("VWCE", 20, TestContext.Current.CancellationToken);
 
-        var result = Assert.Single(results);
-        Assert.Equal(InstrumentOptionSource.External, result.Source);
-        Assert.Equal("XETR", result.ExchangeMic);
-        Assert.Equal("EUR", result.TradingCurrency);
-        Assert.Equal("VWCE.DEX", result.ExternalInstrument?.ProviderSymbol);
+        Assert.Equal(5, results.Count);
+        Assert.Equal("XETR", results[0].ExchangeMic);
+        Assert.Equal("EUR", results[0].TradingCurrency);
+        Assert.Empty(results[0].Warnings);
+
+        Assert.All(results.Skip(1), incomplete =>
+        {
+            Assert.Null(incomplete.ExchangeMic);
+            Assert.Equal(string.Empty, incomplete.TradingCurrency);
+            Assert.Contains(incomplete.Warnings, w => w.Contains("venue", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(incomplete.Warnings, w => w.Contains("currency", StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithIncompleteExistingListing_SurfacesGapWarningsAndDeduplicatesMatchingExternalResult()
+    {
+        var incompleteLocal = new AssetListing
+        {
+            Id = 99,
+            Ticker = "VWCE",
+            ExchangeMic = null,
+            ExchangeName = "GF",
+            TradingCurrency = null,
+            ListingFigi = "BBG000GF001",
+            Asset = new Asset { Id = 50, Name = "VANG FTSE AW USDA", Type = AssetType.Other },
+            MarketDataSymbols = []
+        };
+        var matchingExternal = new InstrumentDiscoveryResultDto
+        {
+            Source = "OpenFIGI",
+            DisplayName = "VANG FTSE AW USDA",
+            Ticker = "VWCE",
+            ExchangeCode = "GF",
+            ListingFigi = "BBG000GF001",
+            ConfidenceScore = 0.7m
+        };
+
+        _listingRepository.Setup(x => x.SearchAsync("VWCE", 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([incompleteLocal]);
+        _discoveryService.Setup(x => x.SearchAsync("VWCE", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([matchingExternal]);
+        _importService.Setup(x => x.CanImportForTransaction(It.IsAny<InstrumentDiscoveryResultDto>())).Returns(true);
+
+        var results = await CreateService().SearchAsync("VWCE", 20, TestContext.Current.CancellationToken);
+
+        var option = Assert.Single(results);
+        Assert.Equal(InstrumentOptionSource.Existing, option.Source);
+        Assert.Equal(99, option.AssetListingId);
+        Assert.Contains(option.Warnings, w => w.Contains("venue", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(option.Warnings, w => w.Contains("currency", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(option.Warnings, w => w.Contains("Automatic prices", StringComparison.OrdinalIgnoreCase));
     }
 }

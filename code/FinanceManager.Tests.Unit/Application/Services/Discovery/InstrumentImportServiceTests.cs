@@ -29,7 +29,7 @@ public class InstrumentImportServiceTests
             _symbolRepositoryMock.Object, _logger);
 
     private static InstrumentDiscoveryResultDto Instrument(
-        string securityType = "ETF",
+        string? securityType = "ETF",
         string? tradingCurrency = "USD",
         string? providerSymbol = "CSPX.LON",
         string? displayName = "iShares Core S&P 500 UCITS ETF",
@@ -105,7 +105,7 @@ public class InstrumentImportServiceTests
     }
 
     [Fact]
-    public async Task ImportValidatedAsync_WhenSecurityTypeIsUnknown_RejectsBeforePersistence()
+    public async Task ImportValidatedAsync_WhenSecurityTypeIsExplicitlyUnsupported_RejectsBeforePersistence()
     {
         var instrument = Instrument("Bond");
 
@@ -143,11 +143,14 @@ public class InstrumentImportServiceTests
     [InlineData("ETP", true)]
     [InlineData("Equity", true)]
     [InlineData("Stock", true)]
+    [InlineData(null, true)]
+    [InlineData("", true)]
     [InlineData("Bond", false)]
-    [InlineData(null, false)]
+    [InlineData("Corporate Debt", false)]
+    [InlineData("Option", false)]
     public void CanImportForTransaction_ClassifiesSecurityType(string? securityType, bool expected)
     {
-        var instrument = Instrument(securityType ?? string.Empty);
+        var instrument = Instrument(securityType);
 
         Assert.Equal(expected, CreateService().CanImportForTransaction(instrument));
     }
@@ -166,21 +169,140 @@ public class InstrumentImportServiceTests
     }
 
     [Theory]
-    [InlineData(null, "CSPX", "XLON", "USD", "CSPX.LON")]
-    [InlineData("Name", null, "XLON", "USD", "CSPX.LON")]
-    [InlineData("Name", "CSPX", null, "USD", "CSPX.LON")]
-    [InlineData("Name", "CSPX", "XLON", null, "CSPX.LON")]
-    public void CanImportForTransaction_WhenStructuralDataIsMissing_ReturnsFalse(
-        string? displayName, string? ticker, string? exchangeMic, string? tradingCurrency, string? providerSymbol)
+    [InlineData(null, "CSPX")]
+    [InlineData("   ", "CSPX")]
+    [InlineData("Name", null)]
+    [InlineData("Name", "   ")]
+    public void CanImportForTransaction_WhenCoreIdentityIsMissing_ReturnsFalse(
+        string? displayName, string? ticker)
+    {
+        var instrument = Instrument(displayName: displayName, ticker: ticker);
+
+        Assert.False(CreateService().CanImportForTransaction(instrument));
+    }
+
+    [Theory]
+    [InlineData(null, "USD", "CSPX.LON")]
+    [InlineData("XLON", null, "CSPX.LON")]
+    [InlineData("XLON", "USD", null)]
+    [InlineData(null, null, null)]
+    public void CanImportForTransaction_WhenOptionalVenueCurrencyOrSymbolIsMissing_ReturnsTrue(
+        string? exchangeMic, string? tradingCurrency, string? providerSymbol)
     {
         var instrument = Instrument(
-            displayName: displayName,
-            ticker: ticker,
             exchangeMic: exchangeMic,
             tradingCurrency: tradingCurrency,
             providerSymbol: providerSymbol);
 
-        Assert.False(CreateService().CanImportForTransaction(instrument));
+        Assert.True(CreateService().CanImportForTransaction(instrument));
+    }
+
+    [Fact]
+    public async Task ValidateAndImportForTransaction_WhenAllProvidersFail_SavesAssetAndListingWithoutSymbols()
+    {
+        Asset? persistedAsset = null;
+        AssetListing? persistedListing = null;
+        _assetRepositoryMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _assetRepositoryMock.Setup(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Asset asset, CancellationToken _) => { asset.Id = 10; persistedAsset = asset; return asset; });
+        _listingRepositoryMock.Setup(x => x.Upsert(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssetListing listing, CancellationToken _) => { listing.Id = 20; persistedListing = listing; return listing; });
+        _avClientMock.Setup(x => x.GetDailySeries("CSPX.LON", It.IsAny<DateTime>(), It.IsAny<DateTime>(),
+                It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Alpha Vantage unavailable"));
+
+        var service = CreateService();
+        var validated = await service.ValidateForTransactionAsync(Instrument(), TestContext.Current.CancellationToken);
+        var imported = await service.ImportValidatedAsync(validated, TestContext.Current.CancellationToken);
+
+        Assert.Equal(10, imported.AssetId);
+        Assert.Equal(20, imported.AssetListingId);
+        Assert.Null(imported.MarketDataSymbolId);
+        Assert.True(imported.CreatedAsset);
+        Assert.True(imported.CreatedListing);
+        Assert.False(imported.CreatedMarketDataSymbol);
+        Assert.NotNull(persistedAsset);
+        Assert.NotNull(persistedListing);
+        _symbolRepositoryMock.Verify(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ImportValidatedAsync_WhenVenueCurrencyAndSecurityTypeAreUnknown_SavesIncompleteAssetAndListing()
+    {
+        Asset? persistedAsset = null;
+        AssetListing? persistedListing = null;
+        _assetRepositoryMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _assetRepositoryMock.Setup(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Asset asset, CancellationToken _) => { asset.Id = 11; persistedAsset = asset; return asset; });
+        _listingRepositoryMock.Setup(x => x.Upsert(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssetListing listing, CancellationToken _) => { listing.Id = 21; persistedListing = listing; return listing; });
+
+        var incomplete = new InstrumentDiscoveryResultDto
+        {
+            Source = "OpenFIGI",
+            DisplayName = "VANG FTSE AW USDA",
+            Ticker = "VWCE",
+            ExchangeMic = null,
+            ExchangeCode = "GF",
+            TradingCurrency = null,
+            SecurityType = null,
+            ListingFigi = "BBG000GF001"
+        };
+
+        var validated = new ValidatedInstrumentImport(
+            incomplete,
+            [new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "not_found", null, null, null, Error: "Symbol not found.")]);
+        var imported = await CreateService().ImportValidatedAsync(validated, TestContext.Current.CancellationToken);
+
+        Assert.Equal(11, imported.AssetId);
+        Assert.Equal(21, imported.AssetListingId);
+        Assert.Null(imported.MarketDataSymbolId);
+        Assert.False(imported.CreatedMarketDataSymbol);
+        Assert.Equal(string.Empty, imported.TradingCurrency);
+        Assert.NotNull(persistedAsset);
+        Assert.Equal(AssetType.Other, persistedAsset.Type);
+        Assert.Null(persistedAsset.BaseCurrency);
+        Assert.NotNull(persistedListing);
+        Assert.Null(persistedListing.ExchangeMic);
+        Assert.Null(persistedListing.TradingCurrency);
+        Assert.Equal("GF", persistedListing.ExchangeName);
+        Assert.Equal(1m, persistedListing.PriceMultiplier);
+        Assert.True(persistedListing.IsIncomplete);
+        _symbolRepositoryMock.Verify(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ImportValidatedAsync_WhenOneProviderFailsAndAnotherResolves_PersistsOnlyResolvedSymbol()
+    {
+        _assetRepositoryMock.Setup(x => x.GetAll(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _assetRepositoryMock.Setup(x => x.Upsert(It.IsAny<Asset>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Asset asset, CancellationToken _) => { asset.Id = 12; return asset; });
+        _listingRepositoryMock.Setup(x => x.Upsert(It.IsAny<AssetListing>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssetListing listing, CancellationToken _) => { listing.Id = 22; return listing; });
+        _symbolRepositoryMock.Setup(x => x.Upsert(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MarketDataSymbol symbol, CancellationToken _) => { symbol.Id = 32; return symbol; });
+
+        var validated = new ValidatedInstrumentImport(
+            Instrument(providerSymbol: "CSPX.LON"),
+            [
+                new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "unavailable", "CSPX.LON", "LON", "USD", Error: "Quota exceeded"),
+                new MarketDataSymbolResolution(MarketDataProvider.TwelveData, 200, "resolved", "CSPX:LSE", "LSE", "USD")
+            ]);
+
+        var imported = await CreateService().ImportValidatedAsync(validated, TestContext.Current.CancellationToken);
+
+        Assert.True(imported.CreatedMarketDataSymbol);
+        Assert.Equal(32, imported.MarketDataSymbolId);
+        _symbolRepositoryMock.Verify(
+            x => x.Upsert(
+                It.Is<MarketDataSymbol>(s => s.Provider == MarketDataProvider.TwelveData && s.Symbol == "CSPX:LSE" && s.IsEnabled && s.IsPrimary),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _symbolRepositoryMock.Verify(
+            x => x.Upsert(
+                It.Is<MarketDataSymbol>(s => s.Provider == MarketDataProvider.AlphaVantage),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Theory]
@@ -252,6 +374,7 @@ public class InstrumentImportServiceTests
         _avClientMock.Verify(x => x.GetDailySeries(
             It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
     [Fact]
     public async Task ImportAsync_WithoutAlphaVantageSymbol_CreatesOtherProviderAndKeepsAdministratorValues()
     {

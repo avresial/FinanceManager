@@ -1,7 +1,9 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Domain.Assets.Discovery;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -10,6 +12,9 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Invest
 
 public partial class InvestmentTransactionForm : ComponentBase
 {
+    private const string _unpricedInstrumentAddedMessage =
+        "Added. Automatic prices aren't available yet; an administrator has been notified.";
+
     [Parameter] public int AccountId { get; set; }
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
@@ -17,6 +22,8 @@ public partial class InvestmentTransactionForm : ComponentBase
     [Parameter] public EventCallback OnSaved { get; set; }
 
     [Inject] public required InvestmentTransactionHttpClient TransactionHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required ILogger<InvestmentTransactionForm> Logger { get; set; }
 
@@ -37,21 +44,65 @@ public partial class InvestmentTransactionForm : ComponentBase
     private bool _isPriceLoading;
     private bool _noPriceAvailable;
     private string? _error;
+    private string _lastSearchQuery = string.Empty;
+    private bool _lastSearchReturnedEmpty;
+    private List<string> _availableCurrencies = BuildDefaultCurrencyCodes();
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (Visible && (!_wasVisible || _initializedTransactionId != Transaction?.Id))
-            ResetForm();
+        {
+            await EnsureCurrenciesLoadedAsync();
+            await ResetFormAsync();
+        }
 
         _wasVisible = Visible;
     }
 
-    private void ResetForm()
+    private async Task EnsureCurrenciesLoadedAsync()
+    {
+        try
+        {
+            var fetched = await CurrencyHttpClient.GetAll();
+            if (fetched.Count > 0)
+            {
+                _availableCurrencies = fetched
+                    .Select(c => c.ShortName)
+                    .Where(code => !string.IsNullOrWhiteSpace(code))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(code => code, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falling back to default currency list for InvestmentTransactionForm");
+        }
+    }
+
+    private async Task ResetFormAsync()
     {
         _priceRequestVersion++;
         _isPriceLoading = false;
         _initializedTransactionId = Transaction?.Id;
         _editingId = Transaction?.Id;
+        _lastSearchQuery = string.Empty;
+        _lastSearchReturnedEmpty = false;
+        var listingTradingCurrency = Transaction?.Currency ?? string.Empty;
+        if (Transaction is not null)
+        {
+            try
+            {
+                var listing = await TransactionHttpClient.GetListingAsync(Transaction.AssetListingId);
+                if (listing is not null)
+                    listingTradingCurrency = listing.Currency;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not load listing {ListingId} while initializing edit form", Transaction.AssetListingId);
+            }
+        }
+
         _selectedInstrument = Transaction is null ? null : new InvestmentInstrumentOptionDto
         {
             ResultId = $"listing:{Transaction.AssetListingId}",
@@ -60,13 +111,19 @@ public partial class InvestmentTransactionForm : ComponentBase
             Ticker = Transaction.Ticker,
             DisplayName = Transaction.Ticker,
             ExchangeName = Transaction.ExchangeName,
-            TradingCurrency = Transaction.Currency
+            TradingCurrency = listingTradingCurrency
         };
         _formListingId = Transaction?.AssetListingId ?? 0;
         _formType = Transaction?.Type ?? InvestmentTransactionType.Buy;
         _formQuantity = Transaction?.Quantity ?? 1m;
         _formUnitPrice = Transaction?.UnitPrice ?? 0m;
         _formCurrency = Transaction?.Currency ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(_formCurrency)
+            && !_availableCurrencies.Contains(_formCurrency, StringComparer.OrdinalIgnoreCase))
+        {
+            _availableCurrencies = [.. _availableCurrencies, _formCurrency];
+        }
+
         _formTradeDate = Transaction?.TradeDate.ToDateTime(TimeOnly.MinValue) ?? DateTime.Today;
         _formFee = Transaction?.Fee;
         _formNotes = Transaction?.Notes;
@@ -80,10 +137,26 @@ public partial class InvestmentTransactionForm : ComponentBase
     private bool IsUnsupportedExternalEdit => _editingId is not null
         && _selectedInstrument?.Source == InstrumentOptionSource.External;
 
+    private bool RequiresManualCurrencySelection => _selectedInstrument is not null
+        && string.IsNullOrWhiteSpace(_selectedInstrument.TradingCurrency);
+
+    private bool ShowUnrecognizedInputWarning => _selectedInstrument is null
+        && _lastSearchReturnedEmpty
+        && !string.IsNullOrWhiteSpace(_lastSearchQuery);
+
     private bool CanSave => !_isPriceLoading && !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
         && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task CloseAsync() => await VisibleChanged.InvokeAsync(false);
+
+    private void OnInstrumentTextChanged(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _lastSearchQuery = string.Empty;
+            _lastSearchReturnedEmpty = false;
+        }
+    }
 
     private async Task OnInstrumentSelectedAsync(InvestmentInstrumentOptionDto? dto)
     {
@@ -100,7 +173,17 @@ public partial class InvestmentTransactionForm : ComponentBase
             return;
         }
 
-        _formCurrency = dto.TradingCurrency;
+        _lastSearchReturnedEmpty = false;
+        _formCurrency = !string.IsNullOrWhiteSpace(dto.TradingCurrency)
+            ? dto.TradingCurrency
+            : GetDefaultCurrencyCode();
+
+        if (!string.IsNullOrWhiteSpace(_formCurrency)
+            && !_availableCurrencies.Contains(_formCurrency, StringComparer.OrdinalIgnoreCase))
+        {
+            _availableCurrencies = [.. _availableCurrencies, _formCurrency];
+        }
+
         if (dto.AssetListingId is long listingId)
         {
             _formListingId = listingId;
@@ -117,7 +200,8 @@ public partial class InvestmentTransactionForm : ComponentBase
     private async Task OnTradeDateChangedAsync(DateTime? value)
     {
         _formTradeDate = value;
-        await RefreshFormPriceAsync();
+        if (_selectedInstrument?.AssetListingId is > 0)
+            await RefreshFormPriceAsync();
     }
 
     private async Task RefreshFormPriceAsync()
@@ -128,6 +212,12 @@ public partial class InvestmentTransactionForm : ComponentBase
         if (_selectedInstrument?.AssetListingId is not long listingId || _formTradeDate is not DateTime tradeDate)
         {
             _formUnitPrice = 0m;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_selectedInstrument.TradingCurrency))
+        {
+            _noPriceAvailable = true;
             return;
         }
 
@@ -162,17 +252,29 @@ public partial class InvestmentTransactionForm : ComponentBase
 
     private async Task<IEnumerable<InvestmentInstrumentOptionDto>> SearchInstrumentsAsync(string value, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(value)) return [];
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _lastSearchQuery = string.Empty;
+            _lastSearchReturnedEmpty = false;
+            return [];
+        }
+
+        var trimmed = value.Trim();
         try
         {
-            var results = await TransactionHttpClient.SearchInstrumentsAsync(value, cancellationToken: cancellationToken);
-            return _editingId is null
+            var results = await TransactionHttpClient.SearchInstrumentsAsync(trimmed, cancellationToken: cancellationToken);
+            var filtered = (_editingId is null
                 ? results
-                : results.Where(x => x.Source == InstrumentOptionSource.Existing);
+                : results.Where(x => x.Source == InstrumentOptionSource.Existing)).ToList();
+            _lastSearchQuery = trimmed;
+            _lastSearchReturnedEmpty = filtered.Count == 0;
+            return filtered;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", value);
+            Logger.LogError(ex, "Failed to search instrument listings for '{Query}'", trimmed);
+            _lastSearchQuery = trimmed;
+            _lastSearchReturnedEmpty = true;
             return [];
         }
     }
@@ -192,10 +294,22 @@ public partial class InvestmentTransactionForm : ComponentBase
         try
         {
             var tradeDate = DateOnly.FromDateTime(_formTradeDate!.Value);
-            var ok = _editingId is long id
-                ? await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes))
-                : await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
+            if (_editingId is long id)
+            {
+                var updated = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
+                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes));
+                if (!updated)
+                {
+                    _error = "Could not save the transaction.";
+                    Snackbar.Add(_error, Severity.Error);
+                    return;
+                }
+
+                Snackbar.Add("Transaction updated.", Severity.Success);
+            }
+            else
+            {
+                var added = await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
                     AccountId,
                     _selectedInstrument?.Source == InstrumentOptionSource.Existing ? _formListingId : null,
                     _formType,
@@ -205,17 +319,27 @@ public partial class InvestmentTransactionForm : ComponentBase
                     tradeDate,
                     _formFee,
                     _formNotes,
-                    _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null)) is not null;
+                    _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null));
+                if (added is null)
+                {
+                    _error = "Could not save the transaction.";
+                    Snackbar.Add(_error, Severity.Error);
+                    return;
+                }
 
-            if (!ok)
-            {
-                _error = "Could not save the transaction.";
-                Snackbar.Add(_error, Severity.Error);
-                return;
+                if (!added.AutomaticPricesAvailable)
+                    Snackbar.Add(_unpricedInstrumentAddedMessage, Severity.Info);
+                else
+                    Snackbar.Add("Transaction added.", Severity.Success);
             }
 
-            Snackbar.Add(_editingId is null ? "Transaction added." : "Transaction updated.", Severity.Success);
             await OnSaved.InvokeAsync();
+        }
+        catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
+        {
+            Logger.LogWarning(ex, "Rejected investment transaction save for account {AccountId}", AccountId);
+            _error = ex.Message;
+            Snackbar.Add(_error, Severity.Error);
         }
         catch (Exception ex)
         {
@@ -227,6 +351,42 @@ public partial class InvestmentTransactionForm : ComponentBase
         {
             _saving = false;
         }
+    }
+
+    private string GetDefaultCurrencyCode()
+    {
+        var preferred = SettingsService.GetCurrency()?.ShortName;
+        if (!string.IsNullOrWhiteSpace(preferred))
+            return preferred;
+
+        return _availableCurrencies.FirstOrDefault() ?? DefaultCurrency.USD.ShortName;
+    }
+
+    private static List<string> BuildDefaultCurrencyCodes() =>
+        new[] { DefaultCurrency.PLN.ShortName, DefaultCurrency.USD.ShortName }
+            .Concat(DefaultCurrency.CommonCurrencies.Select(c => c.ShortName))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(code => code, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    internal static string FormatInstrumentSubtitle(InvestmentInstrumentOptionDto option)
+    {
+        var hasName = !string.IsNullOrWhiteSpace(option.ExchangeName);
+        var hasMic = !string.IsNullOrWhiteSpace(option.ExchangeMic);
+        var venue = (hasName, hasMic) switch
+        {
+            (true, true) when !string.Equals(option.ExchangeName, option.ExchangeMic, StringComparison.OrdinalIgnoreCase) =>
+                $"{option.ExchangeName} ({option.ExchangeMic})",
+            (true, _) => option.ExchangeName,
+            (false, true) => option.ExchangeMic!,
+            _ => "Unknown venue"
+        };
+
+        var currency = !string.IsNullOrWhiteSpace(option.TradingCurrency)
+            ? option.TradingCurrency
+            : "Unknown currency";
+
+        return $"{venue} · {currency} · {GetSourceLabel(option.Source)}";
     }
 
     private static string GetSourceLabel(InstrumentOptionSource source) =>

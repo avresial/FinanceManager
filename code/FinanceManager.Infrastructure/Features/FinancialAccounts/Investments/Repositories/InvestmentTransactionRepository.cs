@@ -11,12 +11,16 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         context.InvestmentTransactions
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId)
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
@@ -31,6 +35,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId && transactionIds.Contains(x.Id))
             .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
@@ -208,7 +214,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 x.Quantity,
                 x.UnitPrice,
                 x.Fee,
-                x.Currency,
+                x.AssetListing.TradingCurrency != null && x.AssetListing.TradingCurrency != ""
+                    ? x.AssetListing.TradingCurrency
+                    : x.Currency,
                 (decimal?)x.AssetListing.PriceMultiplier))
             .ToListAsync(cancellationToken);
     }
@@ -232,6 +240,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => latestIds.Contains(x.Id))
             .OrderBy(x => x.AssetListingId)
             .ToListAsync(cancellationToken);
@@ -279,6 +289,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await query
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .OrderByDescending(x => x.TradeDate)
             .ThenByDescending(x => x.Id)
             .Take(take)
@@ -301,6 +313,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         var query = context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
+            .Include(x => x.AssetListing)
+            .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId);
 
         if (cursorTradeDate.HasValue && cursorId.HasValue)

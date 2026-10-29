@@ -31,6 +31,17 @@ public sealed class TwelveDataSymbolResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_WhenMicOrCurrencyIsMissing_ReturnsNotFoundWithoutConsumingCredit()
+    {
+        var handler = new Handler();
+        var sut = Create(handler, options: Options.Create(new TwelveDataOptions { DailyCreditLimit = 1 }));
+
+        Assert.Equal("not found", (await sut.ResolveAsync(Instrument(mic: null, currency: "GBP"), TestContext.Current.CancellationToken)).Status);
+        Assert.Equal("not found", (await sut.ResolveAsync(Instrument(mic: "XLON", currency: null), TestContext.Current.CancellationToken)).Status);
+        Assert.Empty(handler.RequestUris);
+    }
+
+    [Fact]
     public async Task ResolveAsync_HandlesMissingKeyHttpErrorAndExhaustedBudget()
     {
         Assert.Equal("provider unavailable", (await Create(new Handler("{}"), apiKey: "").ResolveAsync(Instrument(), TestContext.Current.CancellationToken)).Status);

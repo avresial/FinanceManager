@@ -9,6 +9,7 @@
             <MudAutocomplete T="InvestmentInstrumentOptionDto" Label="Instrument"
                              Value="_selectedInstrument"
                              ValueChanged="OnInstrumentSelectedAsync"
+                             TextChanged="OnInstrumentTextChanged"
                              SearchFunc="SearchInstrumentsAsync"
                              ToStringFunc="@(dto => dto is null ? string.Empty : $"{dto.Ticker} — {dto.DisplayName}")"
                              MinCharacters="1" DebounceInterval="300" ResetValueOnEmptyText="true"
@@ -16,7 +17,7 @@
                 <ItemTemplate Context="option">
                     <MudStack Spacing="0">
                         <MudText Typo="Typo.body2">@option.Ticker — @option.DisplayName</MudText>
-                        <MudText Typo="Typo.caption">@option.ExchangeName (@option.ExchangeMic) · @option.TradingCurrency · @GetSourceLabel(option.Source)</MudText>
+                        <MudText Typo="Typo.caption">@FormatInstrumentSubtitle(option)</MudText>
                         @if (!string.IsNullOrWhiteSpace(option.Isin))
                         {
                             <MudText Typo="Typo.caption">ISIN: @option.Isin</MudText>
@@ -27,14 +28,25 @@
                         }
                     </MudStack>
                 </ItemTemplate>
+                <NoItemsTemplate>
+                    <MudText Typo="Typo.body2" Class="pa-2" Color="Color.Warning">
+                        No recognized instrument matched "@_lastSearchQuery" in the catalog or external sources.
+                    </MudText>
+                </NoItemsTemplate>
             </MudAutocomplete>
+            @if (ShowUnrecognizedInputWarning)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true">
+                    No recognized instrument matched "@_lastSearchQuery" in the catalog or external sources. Select a recognized instrument before saving.
+                </MudAlert>
+            }
             @if (_selectedInstrument?.Source == InstrumentOptionSource.External)
             {
                 <MudAlert Severity="Severity.Info" Dense="true">
-                    <MudText Typo="Typo.body2">This instrument will be added when the transaction is saved.</MudText>
+                    <MudText Typo="Typo.body2">This instrument will be added to the shared catalog when the transaction is saved. Enter the unit price from your trade confirmation.</MudText>
                     @foreach (var warning in _selectedInstrument.Warnings ?? [])
                     {
-                        <MudText Typo="Typo.caption">@warning</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block">@warning</MudText>
                     }
                 </MudAlert>
             }
@@ -47,16 +59,29 @@
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
             </MudSelect>
             <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-            <MudTextField T="string" Label="Unit price" Value="@(_selectedInstrument is null ? string.Empty : MoneyFormatter.FormatNumber(_formUnitPrice))" ReadOnly="true" Disabled="true" />
+            <MudNumericField T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.0001M"
+                             Disabled="@(_selectedInstrument is null || _isPriceLoading)" />
             @if (_isPriceLoading)
             {
                 <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="Loading price" />
             }
             @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. You can still save the transaction — the unit price will be recalculated once a price quote is available.</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. Enter the unit price manually or keep 0 — automatic prices will update once available.</MudAlert>
             }
-            <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
+            @if (RequiresManualCurrencySelection)
+            {
+                <MudSelect T="string" Label="Currency" @bind-Value="_formCurrency" Dense="true">
+                    @foreach (var currencyCode in _availableCurrencies)
+                    {
+                        <MudSelectItem T="string" Value="@currencyCode">@currencyCode</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
+            }
             <MudDatePicker Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
             <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
             <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />

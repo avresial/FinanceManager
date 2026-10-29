@@ -161,6 +161,6 @@ public class FeeDragServiceTests
             Type = type,
             Quantity = quantity,
             TradeDate = new DateOnly(2026, 9, 1),
-            Currency = listing.TradingCurrency,
+            Currency = listing.TradingCurrency ?? DefaultCurrency.USD.ShortName,
         };
 }

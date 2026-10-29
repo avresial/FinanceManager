@@ -36,9 +36,9 @@ public static class AssetMappingExtensions
         Id = listing.Id,
         AssetId = listing.AssetId,
         Ticker = listing.Ticker,
-        ExchangeMic = listing.ExchangeMic,
+        ExchangeMic = listing.ExchangeMic ?? string.Empty,
         ExchangeName = listing.ExchangeName,
-        TradingCurrency = listing.TradingCurrency,
+        TradingCurrency = listing.TradingCurrency ?? string.Empty,
         ListingFigi = listing.ListingFigi,
         ExchangeInstrumentId = listing.ExchangeInstrumentId,
         IsPrimaryListing = listing.IsPrimaryListing,
@@ -93,9 +93,9 @@ public static class AssetMappingExtensions
     public static void ApplyTo(this AssetListingDto dto, AssetListing listing)
     {
         listing.Ticker = dto.Ticker.Trim();
-        listing.ExchangeMic = dto.ExchangeMic.Trim();
+        listing.ExchangeMic = Normalize(dto.ExchangeMic);
         listing.ExchangeName = dto.ExchangeName.Trim();
-        listing.TradingCurrency = dto.TradingCurrency.Trim();
+        listing.TradingCurrency = Normalize(dto.TradingCurrency);
         listing.ListingFigi = Normalize(dto.ListingFigi);
         listing.ExchangeInstrumentId = Normalize(dto.ExchangeInstrumentId);
         listing.IsPrimaryListing = dto.IsPrimaryListing;

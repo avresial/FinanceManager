@@ -7,7 +7,6 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Moq;
-using Moq.Protected;
 using System.Net;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
@@ -29,6 +28,24 @@ public sealed class AlphaVantageSymbolResolverTests
         Assert.Equal("not found", (await sut.ResolveAsync(Instrument("XETR", "GBP"), TestContext.Current.CancellationToken)).Status);
         Assert.Equal("not found", (await sut.ResolveAsync(Instrument("XLON", "EUR"), TestContext.Current.CancellationToken)).Status);
         Assert.Equal("not found", (await sut.ResolveAsync(new InstrumentDiscoveryResultDto { Ticker = "OTHER", ExchangeMic = "XLON", TradingCurrency = "GBP" }, TestContext.Current.CancellationToken)).Status);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenCurrencyOrVenueAndProviderSymbolMissing_SkipsSearchWithoutConsumingQuota()
+    {
+        var handler = new Handler("{}");
+        var sut = Create(handler);
+
+        var noCurrency = await sut.ResolveAsync(
+            new InstrumentDiscoveryResultDto { Ticker = "VWCE", ExchangeMic = "XETR", TradingCurrency = null },
+            TestContext.Current.CancellationToken);
+        var noVenueOrSymbol = await sut.ResolveAsync(
+            new InstrumentDiscoveryResultDto { Ticker = "VWCE", ExchangeMic = null, TradingCurrency = "EUR", ProviderSymbol = null },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("not found", noCurrency.Status);
+        Assert.Equal("not found", noVenueOrSymbol.Status);
+        Assert.Equal(0, handler.RequestCount);
     }
 
     [Fact]

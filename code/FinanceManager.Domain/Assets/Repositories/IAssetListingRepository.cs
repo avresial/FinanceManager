@@ -19,7 +19,7 @@ public interface IAssetListingRepository
     /// <summary>Insert a new listing and return the persisted entity (with its generated id).</summary>
     Task<AssetListing> Add(AssetListing listing, CancellationToken cancellationToken = default);
 
-    /// <summary>Insert the listing, or update the existing one matched by (Ticker, ExchangeMic, TradingCurrency).</summary>
+    /// <summary>Insert the listing, or update the existing one matched by ListingFigi or complete (Ticker, ExchangeMic, TradingCurrency) or incomplete asset-scoped identity.</summary>
     Task<AssetListing> Upsert(AssetListing listing, CancellationToken cancellationToken = default);
 
     /// <summary>Update an existing listing's editable fields by id (AssetId and CreatedAt untouched). Returns <c>false</c> when none exists.</summary>

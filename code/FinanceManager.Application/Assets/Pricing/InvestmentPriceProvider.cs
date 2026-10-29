@@ -333,6 +333,15 @@ public class InvestmentPriceProvider(
                 }
 
                 var rawCurrencyName = string.IsNullOrWhiteSpace(symbol.Currency) ? listing.TradingCurrency : symbol.Currency;
+                if (string.IsNullOrWhiteSpace(rawCurrencyName))
+                {
+                    logger.LogWarning(
+                        "Skipping price fetch for listing {ListingId} provider {Provider}: neither symbol nor listing currency is configured.",
+                        listing.Id,
+                        symbol.Provider);
+                    continue;
+                }
+
                 var rawCurrency = await currencyRepository.GetOrAdd(rawCurrencyName, rawCurrencyName, ct);
 
                 IReadOnlyList<Domain.FinancialAccounts.Investments.Entities.StockPrice> prices;

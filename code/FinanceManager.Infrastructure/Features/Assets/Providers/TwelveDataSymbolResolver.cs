@@ -23,6 +23,11 @@ internal sealed class TwelveDataSymbolResolver(
 
     public async Task<MarketDataSymbolResolution> ResolveAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(instrument.Ticker)
+            || string.IsNullOrWhiteSpace(instrument.ExchangeMic)
+            || string.IsNullOrWhiteSpace(instrument.TradingCurrency))
+            return new(Provider, Priority, "not found");
+
         var config = await configService.GetServiceAsync("TwelveData", ct);
         if (!options.Value.Enabled || !config.IsEnabled || string.IsNullOrWhiteSpace(config.ApiKey)) return Unavailable("Twelve Data is disabled or unconfigured.");
         if (!budget.TryConsume()) return Unavailable("Twelve Data request budget is exhausted.");

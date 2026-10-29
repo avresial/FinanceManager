@@ -104,7 +104,7 @@ internal static class McpResponseMapper
             listing.Id,
             listing.Ticker,
             listing.ExchangeName,
-            listing.TradingCurrency,
+            listing.TradingCurrency ?? string.Empty,
             quantity);
 
     public static McpCurrency Currency(Currency currency) =>

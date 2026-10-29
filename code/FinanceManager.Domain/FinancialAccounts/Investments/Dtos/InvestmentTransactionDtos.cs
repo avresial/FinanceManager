@@ -18,7 +18,8 @@ public record InvestmentTransactionDto(
     string? Notes,
     string Ticker = "",
     string ExchangeName = "",
-    AssetType AssetType = AssetType.Other);
+    AssetType AssetType = AssetType.Other,
+    bool AutomaticPricesAvailable = true);
 
 /// <summary>Request to add a new investment transaction. The owning user is derived from the account, not this payload.</summary>
 public record AddInvestmentTransactionRequest(

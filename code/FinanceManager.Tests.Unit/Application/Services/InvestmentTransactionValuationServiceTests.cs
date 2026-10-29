@@ -17,12 +17,12 @@ public class InvestmentTransactionValuationServiceTests
     private const long _listingId = 11;
     private static readonly AssetListing _listing = new() { Id = _listingId, Ticker = "CSPX" };
 
-    private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1) => new()
+    private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1, AssetListing? listing = null) => new()
     {
         Id = id,
         AccountId = _accountId,
-        AssetListingId = _listingId,
-        AssetListing = _listing,
+        AssetListingId = (listing ?? _listing).Id,
+        AssetListing = listing ?? _listing,
         Type = InvestmentTransactionType.Buy,
         Quantity = quantity,
         UnitPrice = unitPrice,
@@ -72,6 +72,37 @@ public class InvestmentTransactionValuationServiceTests
         Assert.Equal(5000m, result.CurrentValuation); // 10 * 500
         Assert.Equal(1000m, result.GainLoss);
         Assert.Equal(25m, result.GainLossPercent);    // (5000/4000 - 1) * 100
+    }
+
+    [Fact]
+    public async Task UsesListingTradingCurrencyWhenCurated_AndFallsBackToTransactionCurrencyWhenUnknown()
+    {
+        var tradeDate = new DateOnly(2026, 2, 15);
+        var incompleteListing = new AssetListing { Id = 88, Ticker = "VWCE", ExchangeMic = null, TradingCurrency = null };
+        var curatedListing = new AssetListing { Id = 89, Ticker = "VWCE", ExchangeMic = "XETR", TradingCurrency = "EUR" };
+
+        var (repo, price, fx) = Mocks(
+            Buy(2m, 100m, "CHF", tradeDate, id: 1, listing: incompleteListing),
+            Buy(2m, 100m, "CHF", tradeDate, id: 2, listing: curatedListing));
+
+        fx.Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "CHF"), DefaultCurrency.PLN, tradeDate.ToDateTime(TimeOnly.MinValue)))
+            .ReturnsAsync(4.5m);
+        fx.Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "EUR"), DefaultCurrency.PLN, tradeDate.ToDateTime(TimeOnly.MinValue)))
+            .ReturnsAsync(4.3m);
+        price.Setup(x => x.GetPricePerUnitAsync(88, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0m);
+        price.Setup(x => x.GetPricePerUnitAsync(89, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(460m);
+
+        var results = await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken);
+
+        var incompleteResult = results.Single(r => r.TransactionId == 1);
+        Assert.Equal(900m, incompleteResult.PurchaseValue); // 2 * 100 * 4.5 (fell back to transaction's CHF)
+        Assert.False(incompleteResult.HasCurrentPrice);
+
+        var curatedResult = results.Single(r => r.TransactionId == 2);
+        Assert.Equal(860m, curatedResult.PurchaseValue); // 2 * 100 * 4.3 (used curated listing's EUR)
+        Assert.Equal(920m, curatedResult.CurrentValuation);
     }
 
     [Fact]

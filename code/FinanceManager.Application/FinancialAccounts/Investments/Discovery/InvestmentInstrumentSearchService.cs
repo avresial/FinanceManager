@@ -48,10 +48,10 @@ public sealed class InvestmentInstrumentSearchService(
                 Ticker = external.Ticker,
                 DisplayName = external.DisplayName,
                 ExchangeMic = external.ExchangeMic,
-                ExchangeName = external.ExchangeName ?? external.ExchangeMic ?? string.Empty,
+                ExchangeName = external.ExchangeName ?? external.ExchangeMic ?? external.ExchangeCode ?? string.Empty,
                 TradingCurrency = external.TradingCurrency ?? string.Empty,
                 Isin = external.Isin,
-                Warnings = external.Warnings
+                Warnings = BuildExternalWarnings(external)
             });
 
             if (results.Count == maxResults)
@@ -82,9 +82,40 @@ public sealed class InvestmentInstrumentSearchService(
         DisplayName = listing.Asset?.Name ?? listing.Ticker,
         ExchangeMic = listing.ExchangeMic,
         ExchangeName = listing.ExchangeName,
-        TradingCurrency = listing.TradingCurrency,
-        Isin = listing.Asset?.Isin
+        TradingCurrency = listing.TradingCurrency ?? string.Empty,
+        Isin = listing.Asset?.Isin,
+        Warnings = BuildExistingWarnings(listing)
     };
+
+    private static IReadOnlyList<string> BuildExistingWarnings(AssetListing listing)
+    {
+        var warnings = new List<string>();
+        if (string.IsNullOrWhiteSpace(listing.ExchangeMic))
+            warnings.Add("Exchange venue is not confirmed yet.");
+        if (string.IsNullOrWhiteSpace(listing.TradingCurrency))
+            warnings.Add("Trading currency is unknown; choose the transaction currency.");
+        if (!listing.HasEnabledSymbol)
+            warnings.Add("Automatic prices aren't available yet.");
+        return warnings;
+    }
+
+    private static IReadOnlyList<string> BuildExternalWarnings(InstrumentDiscoveryResultDto external)
+    {
+        var warnings = external.Warnings.ToList();
+        if (string.IsNullOrWhiteSpace(external.ExchangeMic)
+            && !warnings.Any(w => w.Contains("venue", StringComparison.OrdinalIgnoreCase) || w.Contains("exchange", StringComparison.OrdinalIgnoreCase)))
+        {
+            warnings.Add("Exchange venue could not be mapped automatically; an administrator can complete it later.");
+        }
+
+        if (string.IsNullOrWhiteSpace(external.TradingCurrency)
+            && !warnings.Any(w => w.Contains("currency", StringComparison.OrdinalIgnoreCase)))
+        {
+            warnings.Add("Trading currency was not provided; select the currency for this transaction.");
+        }
+
+        return warnings;
+    }
 
     private static bool MatchesExisting(AssetListing listing, InstrumentDiscoveryResultDto external)
     {
@@ -92,15 +123,27 @@ public sealed class InvestmentInstrumentSearchService(
             && string.Equals(listing.ListingFigi, external.ListingFigi, StringComparison.OrdinalIgnoreCase))
             return true;
 
+        if (!string.IsNullOrWhiteSpace(external.ListingFigi) && !string.IsNullOrWhiteSpace(listing.ListingFigi))
+            return false;
+
         if (!string.IsNullOrWhiteSpace(external.ProviderSymbol)
             && listing.MarketDataSymbols.Any(symbol =>
                 symbol.Provider == MarketDataProvider.AlphaVantage
                 && string.Equals(symbol.Symbol, external.ProviderSymbol, StringComparison.OrdinalIgnoreCase)))
             return true;
 
+        if (!string.IsNullOrWhiteSpace(external.ExchangeMic) && !string.IsNullOrWhiteSpace(external.TradingCurrency))
+        {
+            return string.Equals(listing.Ticker, external.Ticker, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(listing.ExchangeMic, external.ExchangeMic, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(listing.TradingCurrency, external.TradingCurrency, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var expectedExchangeName = external.ExchangeName ?? external.ExchangeMic ?? external.ExchangeCode ?? string.Empty;
         return string.Equals(listing.Ticker, external.Ticker, StringComparison.OrdinalIgnoreCase)
             && string.Equals(listing.ExchangeMic, external.ExchangeMic, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(listing.TradingCurrency, external.TradingCurrency, StringComparison.OrdinalIgnoreCase);
+            && string.Equals(listing.TradingCurrency, external.TradingCurrency, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(listing.ExchangeName, expectedExchangeName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CacheKey(string resultId) => $"{_cachePrefix}{resultId}";
