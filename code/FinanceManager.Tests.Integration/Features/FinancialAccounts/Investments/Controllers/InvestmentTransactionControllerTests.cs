@@ -461,10 +461,21 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             "USD",
             new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "unrecognized-result-id");
-        var response = await Client.PostAsJsonAsync(
-            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        var context = _testDatabase!.Context;
+        var ct = TestContext.Current.CancellationToken;
+        var assetsBefore = await context.Assets.CountAsync(ct);
+        var listingsBefore = await context.AssetListings.CountAsync(ct);
+        var symbolsBefore = await context.MarketDataSymbols.CountAsync(ct);
+        var transactionsBefore = await context.InvestmentTransactions.CountAsync(ct);
+
+        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Rejection happens before anything is written to the shared catalog.
+        Assert.Equal(assetsBefore, await context.Assets.CountAsync(ct));
+        Assert.Equal(listingsBefore, await context.AssetListings.CountAsync(ct));
+        Assert.Equal(symbolsBefore, await context.MarketDataSymbols.CountAsync(ct));
+        Assert.Equal(transactionsBefore, await context.InvestmentTransactions.CountAsync(ct));
     }
 
     [Fact]
