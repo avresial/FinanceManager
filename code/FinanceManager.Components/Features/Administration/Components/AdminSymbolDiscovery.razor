@@ -1,0 +1,50 @@
+@using FinanceManager.Domain.Assets.Discovery
+
+<MudStack Spacing="2" Class="mt-3">
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="@(() => FindSymbols(false))" Disabled="_busy"
+               StartIcon="@Icons.Material.Filled.Search" aria-label="@($"Find symbols for {Listing.Ticker} on {Listing.ExchangeMic}")">Find symbols</MudButton>
+    @if (_busy)
+    {
+        <MudProgressLinear Indeterminate Color="Color.Primary" aria-label="Finding provider symbols" />
+    }
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Warning">@_error</MudAlert>
+    }
+    @if (IsDraft && Listing.MarketDataSymbols.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle2">Provider symbols to create</MudText>
+        <MudTable Items="Listing.MarketDataSymbols" Dense Elevation="0" Breakpoint="Breakpoint.Sm">
+            <HeaderContent><MudTh>Provider</MudTh><MudTh>Symbol</MudTh><MudTh>Currency</MudTh><MudTh>Primary</MudTh><MudTh>Enabled</MudTh><MudTh>Action</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Provider">@context.Provider</MudTd>
+                <MudTd DataLabel="Symbol"><MudTextField T="string" @bind-Value="context.Symbol" Label="Provider symbol" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudTd>
+                <MudTd DataLabel="Currency"><MudTextField T="string" @bind-Value="context.Currency" Label="Symbol currency" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudTd>
+                <MudTd DataLabel="Primary"><MudCheckBox T="bool" @bind-Value="context.IsPrimary" aria-label="@($"Primary {context.Provider} symbol")" /></MudTd>
+                <MudTd DataLabel="Enabled"><MudCheckBox T="bool" @bind-Value="context.IsEnabled" aria-label="@($"Enable {context.Provider} symbol")" /></MudTd>
+                <MudTd DataLabel="Action"><MudIconButton Icon="@Icons.Material.Filled.Delete" OnClick="@(() => Remove(context))" aria-label="@($"Remove {context.Provider} symbol")" /></MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+    @if (_results is not null)
+    {
+        <MudTable Items="_results" Dense Elevation="0" Breakpoint="Breakpoint.Sm" aria-label="Provider symbol candidates">
+            <HeaderContent><MudTh>Provider</MudTh><MudTh>Candidate</MudTh><MudTh>Status</MudTh><MudTh>Action</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Provider">@context.Provider</MudTd>
+                <MudTd DataLabel="Candidate">@(context.Symbol ?? "—")</MudTd>
+                <MudTd DataLabel="Status">@context.Status @context.Error</MudTd>
+                <MudTd DataLabel="Action">
+                    @if (Exists(context))
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Already present</MudText>
+                    }
+                    else if (context.Status == "resolved" && !string.IsNullOrWhiteSpace(context.Symbol))
+                    {
+                        <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => UseSymbol(context))" Disabled="_busy">Use symbol</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>

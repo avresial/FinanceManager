@@ -57,8 +57,48 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
     private async Task<IReadOnlyList<InstrumentDiscoveryResultDto>> SearchByIsinAsync(string isin, CancellationToken ct)
     {
         var listings = await SafeOpenFigi(() => openFigiClient.MapByIsinAsync(isin, ct), nameof(SearchByIsinAsync));
-        if (listings.Count == 0)
+        var (results, _) = await BuildListingsAsync(listings, isin, ct);
+        return results;
+    }
+
+    // Admin draft and "Find listings" requests repeat this lookup for the same share class, and each
+    // run can spend up to three Alpha Vantage searches from the shared 25-per-day budget. Only
+    // complete lookups are cached: a provider failure degrades to OpenFIGI-only (or empty) results,
+    // and caching those would hide the symbols once the provider recovers.
+    public async Task<IReadOnlyList<InstrumentDiscoveryResultDto>> DiscoverListingsAsync(string? isin, string? shareClassFigi, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(isin) && string.IsNullOrWhiteSpace(shareClassFigi))
             return [];
+
+        var normalizedIsin = string.IsNullOrWhiteSpace(isin) ? null : isin.Trim().ToUpperInvariant();
+        var trimmedShareClassFigi = string.IsNullOrWhiteSpace(shareClassFigi) ? null : shareClassFigi.Trim();
+        var cacheKey = $"INSTRUMENT_LISTING_DISCOVERY_{normalizedIsin}_{trimmedShareClassFigi?.ToUpperInvariant()}";
+
+        if (cache.TryGetValue(cacheKey, out IReadOnlyList<InstrumentDiscoveryResultDto>? cached) && cached is not null)
+            return cached;
+
+        var listings = trimmedShareClassFigi is not null
+            ? await TryOpenFigi(() => openFigiClient.MapByShareClassFigiAsync(trimmedShareClassFigi, ct), nameof(DiscoverListingsAsync))
+            : await TryOpenFigi(() => openFigiClient.MapByIsinAsync(normalizedIsin!, ct), nameof(DiscoverListingsAsync));
+        if (listings is null)
+            return [];
+
+        if (trimmedShareClassFigi is not null)
+            listings = listings.Where(x => string.Equals(x.ShareClassFigi, trimmedShareClassFigi, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var (results, complete) = await BuildListingsAsync(listings, normalizedIsin, ct);
+        if (complete)
+            cache.Set(cacheKey, results, _cacheTtl);
+
+        return results;
+    }
+
+    // Complete is false when any Alpha Vantage symbol search failed, so the caller can tell
+    // degraded OpenFIGI-only results apart from a full lookup.
+    private async Task<(IReadOnlyList<InstrumentDiscoveryResultDto> Results, bool Complete)> BuildListingsAsync(IReadOnlyList<OpenFigiListing> listings, string? isin, CancellationToken ct)
+    {
+        if (listings.Count == 0)
+            return ([], true);
 
         // Alpha Vantage's free tier allows 25 requests/day (shared with price refreshes), so cap
         // the symbol lookups per ISIN search instead of spending one request per venue. Take the
@@ -81,9 +121,14 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
             .Take(3)
             .ToList();
 
+        var complete = true;
         var avMatchesByTicker = new Dictionary<string, IReadOnlyList<TickerSearchMatch>>(StringComparer.OrdinalIgnoreCase);
         foreach (var ticker in tickersToSearch)
-            avMatchesByTicker[ticker] = await SafeAlphaVantage(() => alphaVantageClient.SearchTicker(ticker, ct));
+        {
+            var avMatches = await TryAlphaVantage(() => alphaVantageClient.SearchTicker(ticker, ct));
+            complete &= avMatches is not null;
+            avMatchesByTicker[ticker] = avMatches ?? [];
+        }
 
         var results = new List<InstrumentDiscoveryResultDto>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -99,7 +144,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
             }
         }
 
-        return results;
+        return (results, complete);
     }
 
     // Ticker/name path: fan out to OpenFIGI ticker mapping and Alpha Vantage symbol search, then merge.
@@ -363,6 +408,12 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
 
     private async Task<IReadOnlyList<OpenFigiListing>> SafeOpenFigi(
         Func<Task<IReadOnlyList<OpenFigiListing>>> call,
+        string context) =>
+        await TryOpenFigi(call, context) ?? [];
+
+    // Returns null when the call fails, so callers can tell a failure from "no listings".
+    private async Task<IReadOnlyList<OpenFigiListing>?> TryOpenFigi(
+        Func<Task<IReadOnlyList<OpenFigiListing>>> call,
         string context)
     {
         try
@@ -377,11 +428,15 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "OpenFIGI call failed during {Context}", context);
-            return [];
+            return null;
         }
     }
 
-    private async Task<IReadOnlyList<TickerSearchMatch>> SafeAlphaVantage(Func<Task<IReadOnlyList<TickerSearchMatch>>> call)
+    private async Task<IReadOnlyList<TickerSearchMatch>> SafeAlphaVantage(Func<Task<IReadOnlyList<TickerSearchMatch>>> call) =>
+        await TryAlphaVantage(call) ?? [];
+
+    // Returns null when the search fails, so callers can tell a failure from "no matches".
+    private async Task<IReadOnlyList<TickerSearchMatch>?> TryAlphaVantage(Func<Task<IReadOnlyList<TickerSearchMatch>>> call)
     {
         try
         {
@@ -395,7 +450,7 @@ public sealed partial class InvestmentInstrumentDiscoveryService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Alpha Vantage symbol search failed");
-            return [];
+            return null;
         }
     }
 }

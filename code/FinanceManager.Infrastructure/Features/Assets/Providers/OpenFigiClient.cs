@@ -32,7 +32,7 @@ internal sealed class OpenFigiClient(
         {
             IdType = "TICKER",
             IdValue = baseTicker,
-            ExchCode = exchCode ?? string.Empty
+            ExchCode = string.IsNullOrWhiteSpace(exchCode) ? null : exchCode
         };
 
         return await ExecuteMapping([request], $"ticker {Sanitize(baseTicker)} / exchCode {Sanitize(exchCode) ?? "(any)"}", knownIsin: null, ct);
@@ -46,13 +46,26 @@ internal sealed class OpenFigiClient(
         var request = new OpenFigiMappingRequest
         {
             IdType = "ID_ISIN",
-            IdValue = isin,
-            ExchCode = string.Empty
+            IdValue = isin
         };
 
         // OpenFIGI never echoes ISIN in its response, so stamp the queried ISIN back onto the
         // results to preserve it as a cross-reference on the ID_ISIN input path.
         return await ExecuteMapping([request], $"ISIN {Sanitize(isin)}", knownIsin: isin, ct);
+    }
+
+    public async Task<IReadOnlyList<OpenFigiListing>> MapByShareClassFigiAsync(string shareClassFigi, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(shareClassFigi))
+            return [];
+
+        var request = new OpenFigiMappingRequest
+        {
+            IdType = "ID_BB_GLOBAL_SHARE_CLASS_LEVEL",
+            IdValue = shareClassFigi
+        };
+
+        return await ExecuteMapping([request], $"share class FIGI {Sanitize(shareClassFigi)}", knownIsin: null, ct);
     }
 
     private async Task<IReadOnlyList<OpenFigiListing>> ExecuteMapping(List<OpenFigiMappingRequest> requests, string debugLabel, string? knownIsin, CancellationToken ct)
@@ -138,8 +151,10 @@ internal sealed class OpenFigiClient(
         [JsonPropertyName("idValue")]
         public string IdValue { get; set; } = string.Empty;
 
+        // OpenFIGI rejects an empty exchCode ("exchCode must be a valid string"), so omit it when unfiltered.
         [JsonPropertyName("exchCode")]
-        public string ExchCode { get; set; } = string.Empty;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? ExchCode { get; set; }
     }
 
     private sealed class OpenFigiMappingResponse

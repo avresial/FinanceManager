@@ -19,6 +19,7 @@ public partial class AdminEditAsset : ComponentBase
 
     private bool _isLoading = true;
     private bool _isSaving;
+    private bool _isDiscovering;
     private bool _isNew;
     private AssetDto? _asset;
     private AssetListingDto? _newListing;
@@ -109,7 +110,7 @@ public partial class AdminEditAsset : ComponentBase
         {
             if (_isNew)
             {
-                var created = await AssetHttpClient.CreateAsset(_asset);
+                var created = await AssetHttpClient.CreateExternalAsset(_asset);
                 if (created is null)
                 {
                     _errors.Add("Failed to create asset.");
@@ -117,7 +118,7 @@ public partial class AdminEditAsset : ComponentBase
                 }
                 _asset = created;
                 _isNew = false;
-                _info.Add("Asset created. You can now add listings.");
+                _info.Add("Asset and selected listings created.");
                 // Move to the edit route so a refresh or the breadcrumb reflects the created asset
                 // instead of reopening an empty Add form. Same component, so state is kept.
                 NavigationManager.NavigateTo($"Admin/EditAsset/{created.Id}", replace: true);
@@ -144,6 +145,8 @@ public partial class AdminEditAsset : ComponentBase
             _isSaving = false;
         }
     }
+
+    private void ExternalDraftChanged(AssetDto asset) => _asset = asset;
 
     private void StartAddListing() =>
         _newListing = new AssetListingDto { PriceMultiplier = 1m, IsActive = true };

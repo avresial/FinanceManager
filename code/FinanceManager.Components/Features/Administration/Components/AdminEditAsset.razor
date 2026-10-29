@@ -33,6 +33,8 @@ else
 
     <MudText Typo="Typo.h5" Class="mb-3">@(_isNew ? "Add asset" : $"Edit {_asset.Name}")</MudText>
 
+    <AdminAssetDiscovery Asset="_asset" IsNew="_isNew" Currencies="TradingCurrencyOptions" DraftChanged="ExternalDraftChanged" BusyChanged="@(busy => _isDiscovering = busy)" />
+
     <MudGrid Spacing="3">
         <MudItem xs="12" sm="6">
             <MudTextField T="string" @bind-Value="_asset.Name" Label="Name" Required RequiredError="Name is required"
@@ -48,6 +50,9 @@ else
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField T="string" @bind-Value="_asset.Isin" Label="ISIN" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField T="string" @bind-Value="_asset.ShareClassFigi" Label="Share-class FIGI" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudTextField T="string" @bind-Value="_asset.Issuer" Label="Issuer" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -99,7 +104,7 @@ else
     </MudGrid>
 
     <MudStack Row Spacing="2" Class="mt-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsset" Disabled="_isSaving"
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsset" Disabled="@(_isSaving || _isDiscovering)"
                    StartIcon="@Icons.Material.Filled.Save">@(_isNew ? "Create" : "Save")</MudButton>
         <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="Admin/Assets"
                    StartIcon="@Icons.Material.Filled.ArrowBack" Disabled="_isSaving">Back to assets</MudButton>
@@ -119,7 +124,7 @@ else
         {
             <MudPaper Elevation="0" Outlined Class="pa-4 mb-3">
                 <MudText Typo="Typo.subtitle1" Class="mb-2">New listing</MudText>
-                @ListingFields(_newListing)
+                <AdminAssetListingFields Listing="_newListing" Currencies="TradingCurrencyOptions" />
                 <MudStack Row Spacing="2" Class="mt-2">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateListing" Disabled="_isSaving">Create listing</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="@(() => _newListing = null)" Disabled="_isSaving">Cancel</MudButton>
@@ -137,7 +142,7 @@ else
                 @foreach (var listing in _asset.Listings)
                 {
                     <MudExpansionPanel Text="@($"{listing.Ticker} · {listing.ExchangeMic} · {listing.TradingCurrency}")">
-                        @ListingFields(listing)
+                        <AdminAssetListingFields Listing="listing" Currencies="TradingCurrencyOptions" />
                         <MudStack Row Spacing="2" Class="mt-2">
                             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                        OnClick="@(() => SaveListing(listing))" Disabled="_isSaving">Save listing</MudButton>
@@ -147,6 +152,7 @@ else
 
                         <MudDivider Class="my-3" />
                         <MudText Typo="Typo.subtitle2" Class="mb-2">Provider symbols</MudText>
+                        <AdminSymbolDiscovery Asset="_asset" Listing="listing" Changed="@(() => StateHasChanged())" />
 
                         @if (listing.MarketDataSymbols.Count > 0)
                         {
@@ -202,42 +208,4 @@ else
             </MudExpansionPanels>
         }
     }
-}
-
-@* Reusable listing field block for both the add-form and each edit panel. *@
-@code {
-    private RenderFragment ListingFields(AssetListingDto l) =>
-    @<MudGrid Spacing="3">
-        <MudItem xs="12" sm="4">
-            <MudTextField T="string" @bind-Value="l.Ticker" Label="Ticker" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudTextField T="string" @bind-Value="l.ExchangeMic" Label="Exchange MIC" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudTextField T="string" @bind-Value="l.ExchangeName" Label="Exchange name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudSelect T="string" @bind-Value="l.TradingCurrency" Label="Trading currency"
-                       Variant="Variant.Outlined" Margin="Margin.Dense">
-                @foreach (var currency in TradingCurrencyOptions)
-                {
-                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudNumericField T="decimal" @bind-Value="l.PriceMultiplier" Label="Price multiplier" Step="0.01m" Min="0.0000001m"
-                             Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="0.01 for GBX→GBP" />
-        </MudItem>
-        <MudItem xs="12" sm="4">
-            <MudTextField T="string" @bind-Value="l.ListingFigi" Label="Listing FIGI" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </MudItem>
-        <MudItem xs="12" sm="6" Class="d-flex align-center">
-            <MudSwitch T="bool" @bind-Value="l.IsPrimaryListing" Label="Primary listing" Color="Color.Primary" />
-        </MudItem>
-        <MudItem xs="12" sm="6" Class="d-flex align-center">
-            <MudSwitch T="bool" @bind-Value="l.IsActive" Label="Active" Color="Color.Primary" />
-        </MudItem>
-    </MudGrid>;
 }

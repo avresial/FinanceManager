@@ -3,6 +3,7 @@ using FinanceManager.Domain.Shared.ExternalServices.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Text.Json;
 
 namespace FinanceManager.Tests.Unit.Infrastructure.Features.Assets.Providers;
 
@@ -122,6 +123,70 @@ public class OpenFigiClientTests
     }
 
     [Fact]
+    public async Task MapByShareClassFigiAsync_WithValidFigi_MapsAndPreservesResponseIdentity()
+    {
+        var httpHandler = new MockHttpMessageHandler(response: """
+            [{"data":[{"figi":"BBG000B9XRY4","ticker":"AAPL","name":"Apple Inc","exchCode":"US","compositeFIGI":"BBG000HKWL63","shareClassFIGI":"BBG001S5N8V8","securityType":"Common Stock","securityType2":"Common Stock","marketSector":"Equity"}]}]
+            """);
+        var client = CreateClient(httpHandler);
+
+        var result = await client.MapByShareClassFigiAsync("BBG001S5N8V8", TestContext.Current.CancellationToken);
+
+        using var request = JsonDocument.Parse(httpHandler.LastRequestContent!);
+        var requestJob = request.RootElement[0];
+        Assert.Equal("ID_BB_GLOBAL_SHARE_CLASS_LEVEL", requestJob.GetProperty("idType").GetString());
+        Assert.Equal("BBG001S5N8V8", requestJob.GetProperty("idValue").GetString());
+        Assert.False(requestJob.TryGetProperty("exchCode", out _));
+        Assert.Null(result.Single().Isin);
+        Assert.Equal("BBG000B9XRY4", result[0].Figi);
+        Assert.Equal("BBG000HKWL63", result[0].CompositeFigi);
+        Assert.Equal("BBG001S5N8V8", result[0].ShareClassFigi);
+        Assert.Equal("AAPL", result[0].Ticker);
+        Assert.Equal("Apple Inc", result[0].Name);
+        Assert.Equal("US", result[0].ExchCode);
+        Assert.Equal("Common Stock", result[0].SecurityType);
+        Assert.Equal("Common Stock", result[0].SecurityType2);
+        Assert.Equal("Equity", result[0].MarketSector);
+    }
+
+    [Fact]
+    public async Task MapByShareClassFigiAsync_WithBlankFigi_ReturnsEmptyWithoutRequest()
+    {
+        var httpHandler = new MockHttpMessageHandler(response: "[]");
+        var client = CreateClient(httpHandler);
+
+        var result = await client.MapByShareClassFigiAsync(" ", TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        Assert.Null(httpHandler.LastRequestContent);
+    }
+
+    // OpenFIGI answers an empty exchCode with "exchCode must be a valid string" and no data.
+    [Fact]
+    public async Task MapByIsinAsync_OmitsExchCodeFromRequest()
+    {
+        var httpHandler = new MockHttpMessageHandler(response: "[]");
+        var client = CreateClient(httpHandler);
+
+        await client.MapByIsinAsync("IE00BK5BQT80", TestContext.Current.CancellationToken);
+
+        using var request = JsonDocument.Parse(httpHandler.LastRequestContent!);
+        Assert.False(request.RootElement[0].TryGetProperty("exchCode", out _));
+    }
+
+    [Fact]
+    public async Task MapByTickerAsync_WithoutExchange_OmitsExchCodeFromRequest()
+    {
+        var httpHandler = new MockHttpMessageHandler(response: "[]");
+        var client = CreateClient(httpHandler);
+
+        await client.MapByTickerAsync("VWCE", null, TestContext.Current.CancellationToken);
+
+        using var request = JsonDocument.Parse(httpHandler.LastRequestContent!);
+        Assert.False(request.RootElement[0].TryGetProperty("exchCode", out _));
+    }
+
+    [Fact]
     public async Task MapByTickerAsync_WithEmptyTicker_ReturnsEmpty()
     {
         // Arrange
@@ -165,6 +230,7 @@ public class OpenFigiClientTests
         private readonly string _response;
 
         public bool LastRequestHadApiKey { get; private set; }
+        public string? LastRequestContent { get; private set; }
 
         public MockHttpMessageHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string response = "")
         {
@@ -176,6 +242,8 @@ public class OpenFigiClientTests
         {
             if (request.Content?.Headers.Contains("X-OPENFIGI-APIKEY") ?? false)
                 LastRequestHadApiKey = true;
+
+            LastRequestContent = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult();
 
             return Task.FromResult(new HttpResponseMessage
             {

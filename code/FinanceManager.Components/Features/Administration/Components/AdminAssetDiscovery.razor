@@ -1,0 +1,87 @@
+@using FinanceManager.Domain.Assets.Discovery
+
+<MudPaper Outlined Elevation="0" Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6">External sources</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">Search, review and adjust external data before saving. Fields the sources do not provide stay unchanged.</MudText>
+    <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Spacing="2">
+        <MudTextField T="string" @bind-Value="_query" Label="Ticker, name or ISIN" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Class="flex-grow-1" Style="min-width:0" Immediate="true" OnKeyDown="SearchKeyDown" Disabled="_busy" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Search" Disabled="@(_busy || string.IsNullOrWhiteSpace(_query))" StartIcon="@Icons.Material.Filled.Search">Search</MudButton>
+        @if (!IsNew)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="RefreshFields" Disabled="_busy">Refresh from external sources</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="FindListings" Disabled="_busy">Find listings</MudButton>
+        }
+    </MudStack>
+    @if (_busy)
+    {
+        <MudProgressLinear Indeterminate Color="Color.Primary" Class="mt-3" aria-label="Searching external sources" />
+    }
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mt-3">@_error</MudAlert>
+    }
+    @if (_message is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-3">@_message</MudAlert>
+    }
+    @if (_results.Count > 0)
+    {
+        <MudTable Items="_results" Dense Elevation="0" Breakpoint="Breakpoint.Sm" Class="mt-3" aria-label="External asset search results">
+            <HeaderContent><MudTh>Instrument</MudTh><MudTh>Listing</MudTh><MudTh>Currency</MudTh><MudTh>Action</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Instrument">@context.DisplayName<MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Isin @context.Source</MudText></MudTd>
+                <MudTd DataLabel="Listing">@context.Ticker · @(context.ExchangeMic ?? context.ExchangeCode ?? "Unknown venue")</MudTd>
+                <MudTd DataLabel="Currency">@(context.TradingCurrency ?? "Unknown")</MudTd>
+                <MudTd DataLabel="Action"><MudButton Color="Color.Primary" Size="Size.Small" OnClick="@(() => UseResult(context))" Disabled="_busy">@(IsNew ? "Use result" : "Review fields")</MudButton></MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+    @if (_fieldChanges.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mt-3">Review changed fields</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">Accept each value you want, then save the asset.</MudText>
+        <MudTable Items="_fieldChanges" Dense Elevation="0" Breakpoint="Breakpoint.Sm" aria-label="External field changes">
+            <HeaderContent><MudTh>Field</MudTh><MudTh>Current</MudTh><MudTh>External</MudTh><MudTh>Action</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Field">@context.Name</MudTd><MudTd DataLabel="Current">@context.Current</MudTd><MudTd DataLabel="External">@context.Proposed</MudTd>
+                <MudTd DataLabel="Action"><MudButton Color="Color.Primary" Size="Size.Small" OnClick="@(() => AcceptField(context))">Use value</MudButton></MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+    @if (_candidates.Count > 0)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mt-4">@(IsNew ? "Select listings to create" : "Review missing listings")</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">Only selected listings are resolved. Confirm missing venue or currency details before saving.</MudText>
+        @foreach (var candidate in VisibleCandidates)
+        {
+            <MudPaper @key="candidate" Outlined Elevation="0" Class="pa-3 mt-2">
+                <MudCheckBox T="bool" Value="candidate.Selected" ValueChanged="@(value => SelectListing(candidate, value))"
+                             Label="@string.Join(" · ", new[] { candidate.Listing.Ticker, candidate.Listing.ExchangeMic, candidate.Listing.TradingCurrency }.Where(x => !string.IsNullOrWhiteSpace(x)))" Disabled="_busy" />
+                @if (candidate.Selected)
+                {
+                    @foreach (var warning in candidate.Source.Warnings)
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2">@warning</MudText>
+                    }
+                    @if (candidate.Warning is not null)
+                    {
+                        <MudAlert Severity="Severity.Info" Class="mb-2">@candidate.Warning</MudAlert>
+                    }
+                    <AdminAssetListingFields Listing="candidate.Listing" Currencies="Currencies" Changed="@(() => ListingChanged(candidate))" />
+                    <AdminSymbolDiscovery Asset="Asset" Listing="candidate.Listing" Source="candidate.Source" IsDraft AutoResolve="@(!candidate.Resolved)"
+                                          Changed="@(() => CandidateSymbolsChanged(candidate))" BusyChanged="SymbolsBusyChanged" />
+                    @if (!IsNew)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="@(() => AddListing(candidate))" Disabled="@(_busy || _symbolRequests > 0)">Add listing</MudButton>
+                    }
+                }
+            </MudPaper>
+        }
+        @if (HiddenCandidateCount > 0)
+        {
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Class="mt-2" OnClick="@(() => _showUnrecognizedVenues = true)"
+                       StartIcon="@Icons.Material.Filled.ExpandMore">Show @HiddenCandidateCount listings on unrecognized venues</MudButton>
+        }
+    }
+</MudPaper>

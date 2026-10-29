@@ -15,6 +15,11 @@ public interface IOpenFigiClient
     /// Maps an ISIN to all known listing venues and metadata.
     /// </summary>
     Task<IReadOnlyList<OpenFigiListing>> MapByIsinAsync(string isin, CancellationToken ct = default);
+
+    /// <summary>
+    /// Maps a share-class FIGI to listing metadata.
+    /// </summary>
+    Task<IReadOnlyList<OpenFigiListing>> MapByShareClassFigiAsync(string shareClassFigi, CancellationToken ct = default);
 }
 
 /// <summary>

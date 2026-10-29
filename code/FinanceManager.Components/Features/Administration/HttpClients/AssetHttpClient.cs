@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -10,6 +11,33 @@ namespace FinanceManager.Components.Features.Administration.HttpClients;
 public class AssetHttpClient(HttpClient httpClient, ILogger<AssetHttpClient> logger)
 {
     private string Base => $"{httpClient.BaseAddress}api/admin/assets";
+
+    public async Task<List<InstrumentDiscoveryResultDto>> SearchExternal(string query, CancellationToken ct = default) =>
+        await httpClient.GetFromJsonAsync<List<InstrumentDiscoveryResultDto>>($"{Base}/discovery/search?query={Uri.EscapeDataString(query)}", ct) ?? [];
+
+    public Task<AdminAssetDraftDto> GetExternalDraft(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default) =>
+        PostDiscovery<InstrumentDiscoveryResultDto, AdminAssetDraftDto>("draft", instrument, ct);
+
+    public Task<List<InstrumentDiscoveryResultDto>> FindExternalListings(AssetDto asset, CancellationToken ct = default) =>
+        PostDiscovery<AssetDto, List<InstrumentDiscoveryResultDto>>("listings", asset, ct);
+
+    public Task<List<MarketDataSymbolResolution>> FindExternalSymbols(InstrumentDiscoveryResultDto instrument, long? listingId = null, CancellationToken ct = default) =>
+        PostDiscovery<InstrumentDiscoveryResultDto, List<MarketDataSymbolResolution>>($"symbols{(listingId is > 0 ? $"?listingId={listingId}" : string.Empty)}", instrument, ct);
+
+    public Task<AssetDto> CreateExternalAsset(AssetDto asset, CancellationToken ct = default) =>
+        PostDiscovery<AssetDto, AssetDto>("create", asset, ct);
+
+    public Task<AssetListingDto> AddExternalListing(long assetId, AssetListingDto listing, CancellationToken ct = default) =>
+        PostDiscovery<AssetListingDto, AssetListingDto>($"{assetId}/listings", listing, ct);
+
+    private async Task<TResponse> PostDiscovery<TRequest, TResponse>(string path, TRequest request, CancellationToken ct)
+    {
+        using var response = await httpClient.PostAsJsonAsync($"{Base}/discovery/{path}", request, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException((await response.Content.ReadAsStringAsync(ct)).Trim('"'));
+        return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("The external discovery response was empty.");
+    }
 
     public async Task<List<AssetDto>> GetAssets(CancellationToken cancellationToken = default) =>
         await httpClient.GetFromJsonAsync<List<AssetDto>>(Base, cancellationToken)
