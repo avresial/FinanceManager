@@ -41,15 +41,16 @@
         }
         else
         {
-            @* Without any expense ratio the cost is unknown, not zero: show a dash instead of a confident 0.00. *@
-            <div class="fee-drag-card__hero@(IsFeeUnknown ? " fee-drag-card__hero--unknown" : "")" data-testid="fee-drag-annual-fee">
-                <span class="fee-drag-card__hero-value">@(IsFeeUnknown ? _unknownValue : FormatAmount(_analysis.AnnualFeeCost))</span>
-                @if (!IsFeeUnknown)
-                {
+            @* Without any expense ratio the cost is unknown, not zero: the warning below explains it, so the card
+               shows no figure instead of a confident 0.00 or a lone dash. *@
+            @if (!IsFeeUnknown)
+            {
+                <div class="fee-drag-card__hero" data-testid="fee-drag-annual-fee">
+                    <span class="fee-drag-card__hero-value">@FormatAmount(_analysis.AnnualFeeCost)</span>
                     <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
-                }
-                <span class="fee-drag-card__hero-caption">/ year</span>
-            </div>
+                    <span class="fee-drag-card__hero-caption">/ year</span>
+                </div>
+            }
 
             @if (_analysis.MissingTerCount > 0)
             {

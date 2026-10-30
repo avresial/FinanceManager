@@ -11,6 +11,7 @@
     --fm-toolbar-control-height: 32px;
 }
 
+/* Bordered 32px box shared by the toolbar's icon buttons (search and the label filter). */
 .fm-tx-toolbar ::deep .fm-toolbar-search-button {
     width: var(--fm-toolbar-control-height);
     height: var(--fm-toolbar-control-height);

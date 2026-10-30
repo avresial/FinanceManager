@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.Models;
@@ -187,7 +188,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             Zoom = new Zoom { Enabled = false },
             FontFamily = "Roboto, sans-serif"
         },
-        Colors = ["#ffab00", "#42a5f5"],
+        // Same encoding as the dashboard forecast card: the balance is amber, solid for history and dashed for
+        // the forecast (the dash is set on the forecast series).
+        Colors = [CardChartColors.Accent, CardChartColors.Accent],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
@@ -198,12 +201,16 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         {
             Show = true,
             Position = LegendPosition.Top,
-            HorizontalAlign = ApexCharts.Align.Right
+            HorizontalAlign = ApexCharts.Align.Right,
+            // Default markers touch their labels and the items run together.
+            Markers = new LegendMarkers { Width = 8, Height = 8, OffsetX = -4 },
+            ItemMargin = new LegendItemMargin { Horizontal = 10 }
         },
         Fill = new Fill
         {
             Type = [FillType.Gradient, FillType.Solid],
-            Gradient = new FillGradient { OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
+            // Both gradient ends are the accent so only the opacity fades; the default dark shade turned it grey.
+            Gradient = new FillGradient { GradientToColors = [CardChartColors.Accent, CardChartColors.Accent], OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
             Opacity = [1d, 1d]
         },
         Grid = new Grid

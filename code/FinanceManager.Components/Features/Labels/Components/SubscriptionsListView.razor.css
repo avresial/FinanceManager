@@ -1,5 +1,4 @@
-/* Two lines keep the instrument name (e.g. "Investment — iShares Core S&P 500 ETF") identifiable; the fixed
-   height lines up the cadence chips and dividers across the cards in a row. */
+/* Two lines keep the instrument name (e.g. "Investment — iShares Core S&P 500 ETF") identifiable. */
 .fm-subscription-title ::deep h2 {
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -8,9 +7,16 @@
     overflow: hidden;
     overflow-wrap: anywhere;
     line-height: 1.3;
-    min-height: 2.6em;
 }
 
-.fm-subscription-title {
-    min-height: 3.25rem;
+/* Where cards sit side by side, a fixed two-line height lines up the cadence chips and dividers across a row.
+   On a phone each card has its own row, so the reserved line would only leave a gap under short names. */
+@media (min-width: 600px) {
+    .fm-subscription-title ::deep h2 {
+        min-height: 2.6em;
+    }
+
+    .fm-subscription-title {
+        min-height: 3.25rem;
+    }
 }

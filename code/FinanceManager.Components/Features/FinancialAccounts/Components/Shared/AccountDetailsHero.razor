@@ -2,8 +2,9 @@
 @using FinanceManager.Domain.MoneyFlow.Entities
 
 @{
-    // "Custom" is only the range key; a custom range is shown as its dates.
-    var rangeText = SelectedRange == DateRangeHelper.CustomRangeKey && RangeStart is DateTime start && RangeEnd is DateTime end
+    // Range keys ("Month", "3M", "Custom") are toolbar shorthand; beside the change the dates read the same for
+    // every range. Without dates the key is the best label there is.
+    var rangeText = RangeStart is DateTime start && RangeEnd is DateTime end
         ? DateFormatter.FormatRange(start, end)
         : SelectedRange;
 }

@@ -155,7 +155,7 @@ public partial class CashFlowForecastCard : ComponentBase
                 FontFamily = "Roboto, sans-serif"
             },
             // ApexCharts parses series colors and cannot resolve CSS variables here.
-            Colors = [CardChartColors.Neutral, CardChartColors.Accent],
+            Colors = [CardChartColors.Accent, CardChartColors.Accent],
             Stroke = new Stroke { Curve = Curve.Stepline },
             Fill = new Fill { Opacity = 1d },
             Markers = new Markers { Size = 0.1, StrokeWidth = 0.1 },
@@ -186,8 +186,11 @@ public partial class CashFlowForecastCard : ComponentBase
                         Text = days == 0 ? "Today" : $"{days}d",
                         Orientation = Orientation.Horizontal,
                         BorderColor = "transparent",
-                        OffsetX = days == 90 ? -12 : 0,
-                        Style = new Style { Background = "transparent", Color = muted, FontSize = "10px" }
+                        // Labels sit beside their marker line instead of centred on it (the line ran through the
+                        // word), on the card surface so a series passing behind them does not cut the text.
+                        TextAnchor = days == 90 ? TextAnchor.End : TextAnchor.Start,
+                        OffsetX = days == 90 ? -4 : 4,
+                        Style = new Style { Background = "var(--mud-palette-surface)", Color = muted, FontSize = "10px" }
                     }
                 }).ToList(),
                 Points = model.LowestBalancePoint is TimeSeriesModel lowest

@@ -24,7 +24,7 @@ public partial class AccountDetailsHero
     /// </summary>
     [Parameter] public string SelectedRange { get; set; } = "3M";
 
-    /// <summary>Dates of a custom range, shown instead of the "Custom" key beside the balance change.</summary>
+    /// <summary>Dates of the selected range, shown instead of its key beside the balance change.</summary>
     [Parameter] public DateTime? RangeStart { get; set; }
     [Parameter] public DateTime? RangeEnd { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
@@ -154,6 +154,9 @@ public partial class AccountDetailsHero
             ShowForSingleSeries = false,
             Position = LegendPosition.Top,
             HorizontalAlign = ApexCharts.Align.Right,
+            // Default markers touch their labels and the items run together.
+            Markers = new LegendMarkers { Width = 8, Height = 8, OffsetX = -4 },
+            ItemMargin = new LegendItemMargin { Horizontal = 10 },
         },
         // Fill types are matched to series by index. The balance area (index 0) fades out
         // downwards; the benchmark and capital lines (indices 1 and 2) must be solid, because

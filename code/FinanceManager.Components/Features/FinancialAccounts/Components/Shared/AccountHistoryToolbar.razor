@@ -28,7 +28,7 @@
                 <ActivatorContent>
                     <MudBadge Content="@SelectedLabels.Count" Color="Color.Primary" Overlap="true" Bordered="true"
                               Visible="@(SelectedLabels.Count > 0)">
-                        <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small"
+                        <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Class="fm-toolbar-search-button"
                                        Color="@(SelectedLabels.Count > 0 ? Color.Primary : Color.Default)"
                                        OnClick="ToggleLabelMenu" aria-label="@CategoryButtonText" title="@CategoryButtonText"
                                        aria-haspopup="menu" />

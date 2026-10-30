@@ -126,7 +126,9 @@
     position: sticky;
     top: var(--mud-appbar-height, 64px);
     z-index: 1;
-    background-color: var(--mud-palette-surface);
+    /* The day cards are transparent, so the page background keeps the header flat in both themes (the surface
+       colour drew a grey band in dark mode only) while still masking rows that scroll under it. */
+    background-color: var(--mud-palette-background);
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 

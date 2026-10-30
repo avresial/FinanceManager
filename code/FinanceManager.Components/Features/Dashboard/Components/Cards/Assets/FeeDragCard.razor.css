@@ -28,10 +28,6 @@
     font-size: 1.1rem;
 }
 
-.fee-drag-card__hero--unknown .fee-drag-card__hero-value {
-    color: var(--mud-palette-text-secondary);
-}
-
 .fee-drag-card__hero-caption {
     color: var(--mud-palette-text-secondary);
     font-size: 0.8rem;
