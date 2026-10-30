@@ -157,6 +157,73 @@ public class BondDashboardContextTests
         Assert.Equal("Bond valuation requires details for bond id 42.", exception.Message);
     }
 
+    [Theory]
+    [MemberData(nameof(ParityDateOrders))]
+    public async Task GetOrComputePrice_MatchesEntryGetPriceAt_ForAscendingDescendingAndShuffledDates(int[] dayOffsets)
+    {
+        var details = CreateParityDetails(1);
+        var repository = new Mock<IBondDetailsRepository>();
+        repository
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
+
+        var context = new BondDashboardContext(repository.Object);
+        var account = new BondAccount(
+            1,
+            10,
+            "Bonds",
+            [new BondAccountEntry(10, 1, new DateTime(2023, 1, 1), 10m, 10m, 1)],
+            AccountLabel.Other);
+        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
+
+        var entry = account.Entries[0];
+        var baseDate = new DateOnly(2023, 1, 1);
+        foreach (var pass in new[] { dayOffsets, dayOffsets })
+        {
+            foreach (var dayOffset in pass)
+            {
+                var date = baseDate.AddDays(dayOffset);
+                Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GetOrComputePrice_MatchesEntryGetPriceAt_AroundMethodExpiryGap()
+    {
+        var details = CreateParityDetails(1, untilDate: "2023-01-05");
+        var repository = new Mock<IBondDetailsRepository>();
+        repository
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
+
+        var context = new BondDashboardContext(repository.Object);
+        var account = new BondAccount(
+            1,
+            10,
+            "Bonds",
+            [new BondAccountEntry(10, 1, new DateTime(2023, 1, 1), 10m, 10m, 1)],
+            AccountLabel.Other);
+        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
+
+        var entry = account.Entries[0];
+        var baseDate = new DateOnly(2023, 1, 1);
+        foreach (var dayOffset in new[] { 0, 4, 5, 6, 10 })
+        {
+            var date = baseDate.AddDays(dayOffset);
+            Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
+        }
+    }
+
+    public static IEnumerable<object[]> ParityDateOrders()
+    {
+        var ascending = new[] { -1, 0, 1, 364, 365, 366, 730 };
+        var shuffled = new[] { 365, -1, 730, 1, 364, 366, 0 };
+        yield return [ascending];
+        yield return [ascending.Reverse().ToArray()];
+        yield return [shuffled];
+    }
+
     private static BondDetails CreateDetails(int id, decimal unitValue = 100m) =>
         new(
             "Bond",
@@ -172,6 +239,25 @@ public class BondDashboardContextTests
             DefaultCurrency.PLN,
             BondType.InflationBond,
             unitValue)
+        {
+            Id = id,
+        };
+
+    private static BondDetails CreateParityDetails(int id, string untilDate = "2027-01-01") =>
+        new(
+            "Bond",
+            "Issuer",
+            new DateOnly(2023, 1, 1),
+            new DateOnly(2027, 1, 1),
+            [new BondCalculationMethod
+            {
+                DateOperator = DateOperator.UntilDate,
+                DateValue = untilDate,
+                Rate = 0.0365m,
+            }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            100m)
         {
             Id = id,
         };
