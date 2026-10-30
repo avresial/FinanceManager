@@ -251,7 +251,7 @@ code {
 
 /* Low-emphasis segmented toggle shared by every in-card view switch (distribution view, top movers, forecast
    horizon): no filled primary surface, only the selected item gets a light tint. Wrap the MudToggleGroup in
-   <div class="fm-view-toggle"> and leave its Color/Outlined at the defaults. */
+   <div class="fm-view-toggle"> and give the group Color.Default (Primary paints amber outlines and labels). */
 .fm-view-toggle {
     flex: 0 0 auto;
     margin-top: 2px;
@@ -264,7 +264,7 @@ code {
     box-shadow: none;
 }
 
-.fm-view-toggle .mud-toggle-item {
+.fm-view-toggle .mud-toggle-group .mud-toggle-item {
     background: transparent;
     color: var(--mud-palette-text-secondary);
     font-size: 0.75rem;
@@ -283,6 +283,13 @@ code {
     font-weight: 600;
 }
 
+/* Touch screens get a finger-sized target; the compact look stays for mouse users. */
+@media (pointer: coarse) {
+    .fm-view-toggle .mud-toggle-group .mud-toggle-item {
+        min-height: 36px;
+    }
+}
+
 .fm-view-toggle .mud-toggle-item:focus-visible {
     outline: 2px solid var(--mud-palette-text-primary);
     outline-offset: -2px;
@@ -293,14 +300,14 @@ code {
    and the dark theme keep the palette primary. prefers-color-scheme is how this app picks its theme. */
 :root {
     --fm-primary-text: #9a6700;
-    /* Pale amber Secondary (Cancel, Recalculate) reads at 1.4:1 on white, so its text/outlined buttons go neutral. */
+    /* Pale amber Secondary (Cancel, Recalculate) reads at 1.4:1 on white, so its text/outlined buttons are
+       neutral; the dark theme matches so the same action looks the same in both. */
     --fm-secondary-text: var(--mud-palette-text-secondary);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
         --fm-primary-text: var(--mud-palette-primary);
-        --fm-secondary-text: var(--mud-palette-secondary);
     }
 }
 
@@ -318,7 +325,7 @@ code {
 }
 
 .mud-button-outlined-secondary {
-    border-color: var(--mud-palette-lines-inputs);
+    border-color: var(--mud-palette-lines-inputs) !important;
 }
 
 /* ApexCharts writes a fixed mid-grey into each axis label; the theme's secondary text colour keeps the labels
@@ -326,4 +333,9 @@ code {
 .apexcharts-xaxis-label,
 .apexcharts-yaxis-label {
     fill: var(--mud-palette-text-secondary);
+}
+
+/* MudStepper paints the active step number in fixed white, ignoring PrimaryContrastText (1.8:1 on amber). */
+.mud-stepper .mud-stepper-nav .mud-step .mud-step-label .mud-step-label-icon.mud-primary {
+    color: var(--mud-palette-primary-text);
 }

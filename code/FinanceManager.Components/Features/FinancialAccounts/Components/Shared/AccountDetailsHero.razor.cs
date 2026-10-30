@@ -23,6 +23,10 @@ public partial class AccountDetailsHero
     /// change — the range is picked in <see cref="AccountHistoryToolbar"/> below the chart. #706
     /// </summary>
     [Parameter] public string SelectedRange { get; set; } = "3M";
+
+    /// <summary>Dates of a custom range, shown instead of the "Custom" key beside the balance change.</summary>
+    [Parameter] public DateTime? RangeStart { get; set; }
+    [Parameter] public DateTime? RangeEnd { get; set; }
     [Parameter] public bool IsChartLoading { get; set; }
 
     // Some account types (investments) only know their balance/appreciation after an async
@@ -168,7 +172,7 @@ public partial class AccountDetailsHero
             // gridlines and labels must read on both a light and a dark surface.
             BorderColor = "rgba(128,128,128,0.18)",
             StrokeDashArray = 0,
-            Padding = new Padding { Left = 0, Right = 8, Top = 4, Bottom = 0 },
+            Padding = new Padding { Left = 6, Right = 8, Top = 4, Bottom = 0 },
             Xaxis = new GridXAxis { Lines = new Lines { Show = false } },
             Yaxis = new GridYAxis { Lines = new Lines { Show = true } },
         },
@@ -183,7 +187,7 @@ public partial class AccountDetailsHero
             Crosshairs = new AxisCrosshairs { Show = true, Width = 1 },
             Labels = new XAxisLabels
             {
-                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                 // Format per tick granularity so sub-month ranges do not repeat the month
                 // (a daily "Month" range would otherwise show "Jun '26" on every tick).
                 DatetimeFormatter = new DatetimeFormatter { Year = "yyyy", Month = "MMM 'yy", Day = "dd MMM" },
@@ -201,7 +205,7 @@ public partial class AccountDetailsHero
                 Labels = new YAxisLabels
                 {
                     Show = true,
-                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter,
                 },
             },

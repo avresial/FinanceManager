@@ -1,6 +1,6 @@
 /* Two lines keep the instrument name (e.g. "Investment — iShares Core S&P 500 ETF") identifiable; the fixed
    height lines up the cadence chips and dividers across the cards in a row. */
-.fm-subscription-title {
+.fm-subscription-title ::deep h2 {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -9,4 +9,8 @@
     overflow-wrap: anywhere;
     line-height: 1.3;
     min-height: 2.6em;
+}
+
+.fm-subscription-title {
+    min-height: 3.25rem;
 }

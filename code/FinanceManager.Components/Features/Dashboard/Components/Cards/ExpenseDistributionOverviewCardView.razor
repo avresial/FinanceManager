@@ -3,7 +3,7 @@
 @using FinanceManager.Domain.MoneyFlow.Entities
 @using FinanceManager.Domain.Shared.Charting
 
-<MudCard Outlined Class="rounded-lg fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
+<MudCard Outlined Class="rounded-lg overflow-hidden fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="Expense distribution" StackedAside="true"
                 InfoText="How your spending in the selected period splits across labels."
                 InfoAriaLabel="About expense distribution card">
@@ -19,7 +19,7 @@
         </KeyFigure>
     </CardHeader>
 
-    <MudPaper Class="@($"flex-grow-1 overflow-hidden d-flex {(IsSingleCategory ? "align-start" : "align-center")}")" Elevation="0">
+    <MudPaper Style="background:transparent;border-radius:inherit;" Class="@($"flex-grow-1 overflow-hidden d-flex {(IsSingleCategory ? "align-start" : "align-center")}")" Elevation="0">
         @if (IsLoading)
         {
             <div style="width:100%;height:100%">

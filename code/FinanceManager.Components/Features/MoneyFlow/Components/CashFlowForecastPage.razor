@@ -12,7 +12,7 @@
         <Actions>
             <div class="fm-view-toggle">
                 <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
-                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="MudBlazor.Size.Small"
+                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Default"
                                 aria-label="Forecast horizon">
                     @foreach (var horizon in Horizons)
                     {
@@ -89,7 +89,7 @@
                     {
                         <div class="d-flex justify-space-between align-center gap-3 py-2 cash-flow-row">
                             <div class="cash-flow-row-name">
-                                <MudText Typo="Typo.body2" Class="text-truncate">@row.Transaction.Description</MudText>
+                                <MudText Typo="Typo.body2" title="@row.Transaction.Description" Style="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;">@row.Transaction.Description</MudText>
                                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">
                                     @DateFormatter.FormatDayMonth(row.Transaction.Date) · @row.Transaction.Cadence
                                 </MudText>

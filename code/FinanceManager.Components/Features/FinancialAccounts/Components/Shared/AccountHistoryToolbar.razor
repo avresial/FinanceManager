@@ -12,7 +12,7 @@
                        aria-expanded="@_isSearchExpanded" aria-controls="@_searchPanelId" />
 
         @* Income / Expense toggle group *@
-        <MudToggleGroup T="TxFilter?" Value="ActiveFilter" ValueChanged="ActiveFilterChanged"
+        <MudToggleGroup T="TxFilter?" Value="@(ActiveFilter ?? TxFilter.All)" ValueChanged="ActiveFilterChanged"
                         SelectionMode="SelectionMode.ToggleSelection" Color="Color.Default" Dense="true" Size="Size.Small" Outlined
                         Delimiters>
             <MudToggleItem Value="@((TxFilter?)TxFilter.All)">All</MudToggleItem>

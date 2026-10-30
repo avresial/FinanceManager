@@ -66,7 +66,7 @@ public partial class AdminDashboard : ComponentBase
             {
                 Rotate = 0,
                 HideOverlappingLabels = true,
-                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
             },
         },
         Yaxis =
@@ -79,7 +79,7 @@ public partial class AdminDashboard : ComponentBase
                 {
                     // User counts are whole numbers; skip the fractional ticks (0.2, 0.4…) a small max produces.
                     Formatter = "function(v){ return Number.isInteger(v) ? v : ''; }",
-                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                 },
             },
         ],

@@ -1,7 +1,7 @@
 @using FinanceManager.Components.Shared.Helpers
 
 <div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
-     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     style="@(_expanded ? "background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);" : "")"
      role="button" tabindex="0" aria-expanded="@_expanded.ToString().ToLowerInvariant()"
      aria-label="@GetAccessibleName()" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
@@ -125,13 +125,13 @@
     </div>
 </MudCollapse>
 
-<MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1150">
+<MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
     <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
         <UpdateBondEntry BondAccount="Account" BondAccountEntry="Entry" ActionCompleted="HideOverlay" />
     </MudPaper>
 </MudOverlay>
 
-<MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1150">
+<MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
     <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
         <RemoveBondEntry BondAccountName="@Account.Name" BondAccountEntry="Entry"
                          Cancel="HideOverlay" Confirm="ConfirmRemove" />

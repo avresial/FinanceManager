@@ -69,6 +69,12 @@
     gap: 8px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 2px;
+    margin-bottom: 12px;
+}
+
+.fee-drag-card__projections--unknown {
+    display: block;
+    font-size: 0.875rem;
 }
 
 .fee-drag-card__projection {

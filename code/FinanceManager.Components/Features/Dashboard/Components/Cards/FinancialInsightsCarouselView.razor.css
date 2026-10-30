@@ -195,8 +195,8 @@
 }
 
 .ins-arrow:hover {
-    background: rgba(255, 179, 0, 0.14);
-    color: #FF8F00;
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    color: var(--fm-primary-text);
 }
 
 .ins-arrow:focus-visible {
@@ -256,8 +256,8 @@
     border-radius: 50%;
     display: grid;
     place-items: center;
-    background: rgba(255, 179, 0, 0.12);
-    color: #FF8F00;
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    color: var(--fm-primary-text);
     margin-bottom: 4px;
 }
 

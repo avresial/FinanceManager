@@ -1,6 +1,13 @@
 @using ApexCharts
 @using FinanceManager.Domain.MoneyFlow.Entities
 
+@{
+    // "Custom" is only the range key; a custom range is shown as its dates.
+    var rangeText = SelectedRange == DateRangeHelper.CustomRangeKey && RangeStart is DateTime start && RangeEnd is DateTime end
+        ? DateFormatter.FormatRange(start, end)
+        : SelectedRange;
+}
+
 @if (IsMobile)
 {
     @* On mobile the account name moves into the top app bar *@
@@ -45,7 +52,7 @@
                 </MudStack>
 
                 <MudStack Spacing="1" AlignItems="AlignItems.End">
-                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@ChangeLabel@(ShowChangeRange ? $" · {SelectedRange}" : null)</MudText>
+                    <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@ChangeLabel@(ShowChangeRange ? $" · {rangeText}" : null)</MudText>
                     @if (IsBalanceLoading)
                     {
                         <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="120px" Height="40px" />
@@ -96,7 +103,7 @@
                 <MudText Typo="Typo.body2" Class="fm-tabular"
                          Color="@(BalanceChange >= 0 ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
                     @MoneyFormatter.FormatSigned(BalanceChange, Currency)@(BalanceChangePercent.HasValue ? $" · {(BalanceChange >= 0 ? "+" : "")}{BalanceChangePercent.Value:0.0}%" : null)
-                    <span style="color: var(--mud-palette-text-secondary);">@ChangeLabel.ToLowerInvariant()@(ShowChangeRange ? $" · {SelectedRange}" : null)</span>
+                    <span style="color: var(--mud-palette-text-secondary);">@ChangeLabel.ToLowerInvariant()@(ShowChangeRange ? $" · {rangeText}" : null)</span>
                 </MudText>
             }
         </div>

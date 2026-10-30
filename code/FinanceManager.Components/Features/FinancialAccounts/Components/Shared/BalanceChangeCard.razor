@@ -1,5 +1,5 @@
 <MudCard Outlined="true" Style="background-color: transparent;">
-    <CardHeader Title="@(ShowRange ? $"{Label} · {RangeLabel}" : Label)" InfoText="@InfoText"
+    <CardHeader Title="@(ShowRange ? $"{Label} · {RangeText}" : Label)" InfoText="@InfoText"
                 InfoAriaLabel="@($"About {Label} card")" />
     <MudCardContent>
         @* h4 rather than h3: in the narrow side column an h3 amount pushed the currency onto its own line. *@
@@ -27,6 +27,11 @@
     [Parameter] public string RangeLabel { get; set; } = string.Empty;
     [Parameter] public DateTime FromDate { get; set; }
     [Parameter] public DateTime ToDate { get; set; }
+
+    // "Custom" is only the range key; show the dates it covers instead.
+    private string RangeText => RangeLabel == DateRangeHelper.CustomRangeKey
+        ? DateFormatter.FormatRange(FromDate, ToDate)
+        : RangeLabel;
 
     private string InfoText =>
         $"How much the balance changed between {DateFormatter.Format(FromDate)} and {DateFormatter.Format(ToDate)}.";

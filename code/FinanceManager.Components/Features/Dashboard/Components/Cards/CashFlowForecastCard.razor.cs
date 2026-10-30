@@ -155,7 +155,7 @@ public partial class CashFlowForecastCard : ComponentBase
                 FontFamily = "Roboto, sans-serif"
             },
             // ApexCharts parses series colors and cannot resolve CSS variables here.
-            Colors = ["#888888", "#D98000"],
+            Colors = [CardChartColors.Neutral, CardChartColors.Accent],
             Stroke = new Stroke { Curve = Curve.Stepline },
             Fill = new Fill { Opacity = 1d },
             Markers = new Markers { Size = 0.1, StrokeWidth = 0.1 },

@@ -89,3 +89,9 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
     border: none !important;
 }
+
+/* The hover dot's ring follows the card surface; chart options only accept a fixed colour, and the
+   previous near-black ring looked like a stray outline in the light theme. */
+.fm-tsvc-card .apexcharts-marker {
+    stroke: var(--mud-palette-surface);
+}

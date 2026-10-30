@@ -2,7 +2,7 @@
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
 
 <div class="pa-2 mud-list-item-clickable"
-     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     style="@(_expanded ? "background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"

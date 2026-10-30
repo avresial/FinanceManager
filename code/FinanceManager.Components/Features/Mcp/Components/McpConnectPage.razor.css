@@ -124,8 +124,9 @@ pre {
     margin: 1.25rem 0 1rem;
     padding: 1rem;
     border-radius: .65rem;
-    background: #1f2430;
-    color: #f5f7fa;
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-background));
+    color: var(--mud-palette-text-primary);
+    border: 1px solid var(--mud-palette-lines-default);
     overflow-x: auto;
 }
 

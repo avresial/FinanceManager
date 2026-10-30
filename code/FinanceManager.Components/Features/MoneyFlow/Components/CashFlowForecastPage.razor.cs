@@ -220,7 +220,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             AxisTicks = new AxisTicks { Show = false },
             Labels = new XAxisLabels
             {
-                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                 DatetimeFormatter = new DatetimeFormatter { Year = "yyyy", Month = "MMM 'yy", Day = "dd MMM" }
             }
         },
@@ -232,7 +232,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new YAxisLabels
                 {
-                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter
                 }
             }

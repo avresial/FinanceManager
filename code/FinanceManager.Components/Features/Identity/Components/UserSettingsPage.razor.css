@@ -16,3 +16,9 @@
     background-color: rgba(var(--mud-palette-primary-rgb), 0.16) !important;
     font-weight: 500;
 }
+
+/* Keep helper text flush with the field edge instead of MudBlazor's 14px outlined indent. */
+.settings-section ::deep .mud-input-helper-text-contained {
+    margin-left: 0;
+    margin-right: 0;
+}

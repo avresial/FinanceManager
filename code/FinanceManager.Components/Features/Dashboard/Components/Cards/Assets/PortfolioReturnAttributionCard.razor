@@ -61,6 +61,7 @@
                                      data-end="@column.End.ToString(CultureInfo.InvariantCulture)">
                                     <span class="attribution-bar @BarTone(column)" style="@BarStyle(column, scale)"></span>
                                     <span class="attribution-value @ValueTone(column.Value) @(column.IsTotal ? "total" : null)"
+                                          title="@FormatAmount(column.Value)"
                                           data-testid="return-attribution-value"
                                           style="@PositionStyle(column.End, scale)">@FormatColumnValue(column)</span>
                                 </div>

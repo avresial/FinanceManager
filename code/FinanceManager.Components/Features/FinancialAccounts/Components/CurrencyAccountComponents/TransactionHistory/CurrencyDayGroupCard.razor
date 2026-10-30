@@ -4,18 +4,18 @@
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
     <MudCardHeader Class="@(IsMobile ? "py-1 px-4" : "py-1 pl-4 pr-2")">
         <CardHeaderContent>
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+            @* Same columns as TransactionRow: the description grows, the day net sits over the amounts and Balance over
+               the 110px balance column, so the header's figures share the rows' right edges. *@
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline" Class="w-100">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline" Class="flex-grow-1" Style="min-width: 0;">
                     <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(Day)</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Default">@DateFormatter.FormatWeekday(Day)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Default">· @_renderedEntries.Length @(_renderedEntries.Length == 1 ? "entry" : "entries")</MudText>
                 </MudStack>
-                <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Baseline" Class="fm-card-info-actions">
-                    <MudText Typo="Typo.caption" Color="Color.Default">@_renderedEntries.Length @(_renderedEntries.Length == 1 ? "entry" : "entries")</MudText>
-                    <MudText Typo="Typo.caption" Class="fm-tabular"
-                             Color="@AmountSign.ColorFor(DailyNet)">
-                        @MoneyFormatter.FormatSigned(DailyNet, Currency)
-                    </MudText>
-                </MudStack>
+                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;"
+                         Color="@AmountSign.ColorFor(DailyNet)">
+                    @MoneyFormatter.FormatSigned(DailyNet, Currency)
+                </MudText>
                 @if (!IsMobile)
                 {
                     <MudText Typo="Typo.overline" Color="Color.Default" Style="min-width: 110px; text-align: right;">Balance</MudText>

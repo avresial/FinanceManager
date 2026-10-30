@@ -49,11 +49,11 @@
                                 <ApexPointSeries TItem="TimeSeriesModel" Items="@(_model.HistoricalPoints ?? [])"
                                                  Name="Actual" SeriesType="SeriesType.Line"
                                                  XValue="@(point => point.DateTime)" YValue="@(point => point.Value)"
-                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = "#888888" })" />
+                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = CardChartColors.Neutral })" />
                                 <ApexPointSeries TItem="TimeSeriesModel" Items="_model.ForecastPoints"
                                                  Name="Forecast" SeriesType="SeriesType.Line"
                                                  XValue="@(point => point.DateTime)" YValue="@(point => point.Value)"
-                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = "#D98000" })" />
+                                                 Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = CardChartColors.Accent })" />
                             </ApexChart>
                         </div>
                     </div>

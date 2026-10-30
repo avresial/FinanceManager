@@ -4,7 +4,7 @@
 
 @* Shared body of the Assets and Liabilities distribution cards: a donut with the total in its centre,
    linked to a legend with proportion bars. Each card keeps its own data loading and snapshots. *@
-<MudCard Outlined Class="fm-phone-auto-height rounded-lg d-flex flex-column" Style="@($"height:{Height};")">
+<MudCard Outlined Class="fm-phone-auto-height rounded-lg overflow-hidden d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="@Title" StackedAside="true"
                 InfoText="@InfoText"
                 InfoAriaLabel="@InfoAriaLabel"
@@ -20,7 +20,7 @@
             <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
         </MudAlert>
     }
-    <MudPaper Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
+    <MudPaper Style="background:transparent;border-radius:inherit;" Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
         @if (IsLoading)
         {
             <div style="width:100%;height:100%">

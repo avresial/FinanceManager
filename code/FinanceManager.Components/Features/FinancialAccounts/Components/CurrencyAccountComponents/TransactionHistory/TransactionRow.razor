@@ -1,6 +1,6 @@
 @using FinanceManager.Components.Shared.Helpers
 <div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
-     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     style="@(_expanded ? "background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
@@ -15,7 +15,7 @@
         }
 
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-            <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@GetTitle()</MudText>
+            <MudText Typo="Typo.body1" title="@GetTitle()" Style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">@GetTitle()</MudText>
             @if (HasMeta)
             {
                 <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
@@ -119,7 +119,7 @@
 
 @if (_updateEntryVisibility)
 {
-    <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1150">
+    <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
             <UpdateCurrencyEntry CurrencyAccount="Account" CurrencyAccountEntry="Entry"
                                  ActionCompleted="HideOverlay" />
@@ -129,7 +129,7 @@
 
 @if (_removeEntryVisibility)
 {
-    <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1150">
+    <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
             <RemoveCurrencyEntry CurrencyAccountName="@Account.Name" CurrencyAccountEntry="Entry" Currency="@Currency"
                                  Cancel="HideOverlay" Confirm="ConfirmRemove" />

@@ -75,14 +75,21 @@
                 <div class="fee-drag-card__control-range" aria-hidden="true"><span>-10%</span><span>10%</span></div>
             </div>
 
-            <div class="fee-drag-card__projections" data-testid="fee-drag-projections" role="region" aria-label="Projected fee drag">
-                @foreach (var projection in ComputedProjections)
+            <div class="fee-drag-card__projections@(IsFeeUnknown ? " fee-drag-card__projections--unknown" : "")" data-testid="fee-drag-projections" role="region" aria-label="Projected fee drag">
+                @if (IsFeeUnknown)
                 {
-                    <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
-                        <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
-                        <MudText Typo="Typo.body1">@(IsFeeUnknown ? _unknownValue : FormatCurrency(projection.CumulativeFeeCost))</MudText>
-                        <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
-                    </div>
+                    <span class="mud-text-secondary">Set the expense ratio to see 10/20/30-year drag.</span>
+                }
+                else
+                {
+                    @foreach (var projection in ComputedProjections)
+                    {
+                        <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
+                            <MudText Typo="Typo.body1">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
+                        </div>
+                    }
                 }
             </div>
 

@@ -47,16 +47,19 @@ public class PortfolioReturnAttributionCardTests
             ["FX effect", "External cash movement", "Known transaction fees", "Market / valuation effect", "End"],
             categories.Select(category => category.GetAttribute("title")));
 
+        // Bar labels compact thousands so five columns fit; the exact amount stays in each label's title.
         var values = cut.FindAll("[data-testid='return-attribution-value']");
         Assert.Equal(
             [
-                $"+{1605.99m.ToString("N2", CultureInfo.CurrentCulture)}",
+                $"+{1.61m.ToString("0.##", CultureInfo.CurrentCulture)}k",
                 0m.ToString("N2", CultureInfo.CurrentCulture),
                 0m.ToString("N2", CultureInfo.CurrentCulture),
                 $"-{51.18m.ToString("N2", CultureInfo.CurrentCulture)}",
-                1554.81m.ToString("N2", CultureInfo.CurrentCulture),
+                $"{1.55m.ToString("0.##", CultureInfo.CurrentCulture)}k",
             ],
             values.Select(value => value.TextContent.Trim()));
+        Assert.Contains(1605.99m.ToString("N2", CultureInfo.CurrentCulture), values[0].GetAttribute("title"));
+        Assert.Contains(1554.81m.ToString("N2", CultureInfo.CurrentCulture), values[4].GetAttribute("title"));
 
         var columns = cut.FindAll("[data-testid='return-attribution-column']");
         Assert.Equal("0", columns[0].GetAttribute("data-start"));
