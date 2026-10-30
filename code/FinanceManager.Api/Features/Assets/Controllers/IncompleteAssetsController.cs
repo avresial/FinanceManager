@@ -11,6 +11,10 @@ namespace FinanceManager.Api.Features.Assets.Controllers;
 public class IncompleteAssetsController(IncompleteAssetQueueService service) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType<IncompleteAssetPage>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null, CancellationToken ct = default)
     {
         try { return Ok(await service.GetAsync(page, pageSize, search, ct)); }
@@ -18,6 +22,11 @@ public class IncompleteAssetsController(IncompleteAssetQueueService service) : C
     }
 
     [HttpPost("listings/{listingId:long}/symbols")]
+    [ProducesResponseType<MarketDataSymbolDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SaveSymbol(long listingId, [FromBody] MarketDataSymbolDto symbol, CancellationToken ct)
     {
         try { return Ok(await service.ValidateAndSaveSymbolAsync(listingId, symbol, ct)); }
