@@ -117,6 +117,28 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
     }
 
     [Fact]
+    public async Task GetCapitalSeries_PreservesHistoricalFxAfterListingCurrencyEnrichment()
+    {
+        await SeedProductionFixture();
+        var ct = TestContext.Current.CancellationToken;
+        var context = _testDatabase!.Context;
+        var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, ct);
+        listing.TradingCurrency = null;
+        await context.SaveChangesAsync(ct);
+        var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
+        var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
+        var before = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+
+        listing.TradingCurrency = "EUR";
+        await context.SaveChangesAsync(ct);
+        context.ChangeTracker.Clear();
+        var after = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+
+        Assert.Equal(24216.418720m, before[_accountId][end]);
+        Assert.Equal(before[_accountId].OrderBy(x => x.Key), after[_accountId].OrderBy(x => x.Key));
+    }
+
+    [Fact]
     public async Task InvestmentValuationService_GetCapitalSeries_MatchesEveryProductionDailyValueInUsdAndPln()
     {
         await SeedProductionFixture();

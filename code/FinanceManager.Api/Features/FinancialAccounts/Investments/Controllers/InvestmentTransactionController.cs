@@ -152,11 +152,11 @@ public class InvestmentTransactionController(
     {
         var recoveredAny = false;
         var missingPrices = transactions
-            .Where(x => x.UnitPrice <= 0m && !string.IsNullOrWhiteSpace(x.AssetListing?.ResolveCurrencyOrFallback(x.Currency) ?? x.Currency))
+            .Where(x => x.UnitPrice <= 0m && !string.IsNullOrWhiteSpace(x.Currency))
             .GroupBy(x => new
             {
                 x.AssetListingId,
-                Currency = x.AssetListing?.ResolveCurrencyOrFallback(x.Currency) ?? x.Currency,
+                x.Currency,
                 x.TradeDate
             });
 

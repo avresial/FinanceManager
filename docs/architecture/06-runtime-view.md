@@ -115,6 +115,8 @@ sequenceDiagram
 
 Evidence: [typed client](../../code/FinanceManager.Components/Features/FinancialAccounts/HttpClients/InvestmentValuationHttpClient.cs), [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/InvestmentValuationController.cs), [valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs), [price provider](../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs), [quote repository](../../code/FinanceManager.Infrastructure/Features/Assets/Repositories/PriceQuoteRepository.cs).
 
+Historical purchase valuation follows a separate currency boundary: [transaction valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentTransactionValuationService.cs), remaining-buy cost and capital flows convert the recorded transaction amounts using their transaction currency. Filling an incomplete listing's currency later changes quote metadata, not historical trade denominations. Missing-price recovery requests a price in the transaction currency before saving it back to the trade. [Financial semantics](08-crosscutting-concepts.md#81-domain-and-financial-semantics).
+
 Important branches:
 
 - The controller returns missing-account/currency and forbidden-owner responses before valuation. Date-range endpoints reject reversed ranges.

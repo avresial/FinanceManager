@@ -68,11 +68,4 @@ public class AssetListing
         || string.IsNullOrWhiteSpace(TradingCurrency)
         || (Asset is not null && Asset.Type == AssetType.Other)
         || !HasEnabledSymbol;
-
-    /// <summary>
-    /// Returns <see cref="TradingCurrency"/> when known, falling back to <paramref name="transactionCurrency"/>
-    /// when the listing's trading currency has not been curated yet.
-    /// </summary>
-    public string ResolveCurrencyOrFallback(string transactionCurrency) =>
-        !string.IsNullOrWhiteSpace(TradingCurrency) ? TradingCurrency : transactionCurrency;
 }

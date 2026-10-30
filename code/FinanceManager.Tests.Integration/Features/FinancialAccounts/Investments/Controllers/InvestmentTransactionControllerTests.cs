@@ -566,6 +566,42 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task GetByAccount_RecoversPricesInRecordedCurrencyAfterListingCurrencyEnrichment()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tradeDate = new DateOnly(2024, 1, 10);
+        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
+        var context = _testDatabase!.Context;
+        var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, ct);
+        listing.TradingCurrency = null;
+        await context.SaveChangesAsync(ct);
+        Authorize("testuser", _testUserId, UserRole.User);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(321.45m);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(300m);
+
+        var before = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
+        Assert.Equal(321.45m, Assert.Single(before).UnitPrice);
+
+        listing.TradingCurrency = "EUR";
+        await context.SaveChangesAsync(ct);
+        await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
+        var after = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
+
+        Assert.Equal(2, after.Count);
+        Assert.All(after, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
+        Assert.All(await context.InvestmentTransactions.ToListAsync(ct), transaction =>
+        {
+            Assert.Equal("USD", transaction.Currency);
+            Assert.Equal(321.45m, transaction.UnitPrice);
+        });
+        _priceProvider.Verify(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Get_ReturnsTransaction()
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));

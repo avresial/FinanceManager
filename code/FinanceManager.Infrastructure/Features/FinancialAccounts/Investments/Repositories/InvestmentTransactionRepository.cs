@@ -214,9 +214,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 x.Quantity,
                 x.UnitPrice,
                 x.Fee,
-                x.AssetListing.TradingCurrency != null && x.AssetListing.TradingCurrency != ""
-                    ? x.AssetListing.TradingCurrency
-                    : x.Currency,
+                x.Currency,
                 (decimal?)x.AssetListing.PriceMultiplier))
             .ToListAsync(cancellationToken);
     }

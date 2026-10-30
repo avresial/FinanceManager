@@ -12,6 +12,7 @@ Terms below describe FinanceManager's current model. Refer to [financial semanti
 | Account entry | A dated currency or bond account record, including a value/value change; accumulated balances may need recalculation after earlier mutations |
 | Posting date | Effective date of an account entry; used for ordering, balance history and bond holding changes |
 | Trade date | Date of an investment transaction; distinct from the time a price provider publishes a quote |
+| Transaction currency | Recorded denomination of an investment trade's unit price and fee; later catalog enrichment does not replace it with the listing's quote currency |
 | Asset | Instrument identity shared across listings; not synonymous with a user's holding |
 | Asset listing | A tradable listing of an asset with exchange/quote-currency/multiplier context; pricing resolves at this level |
 | Market-data symbol | Provider-specific identifier and configuration used to fetch a listing's market data |
