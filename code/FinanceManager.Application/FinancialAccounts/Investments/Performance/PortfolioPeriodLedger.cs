@@ -29,7 +29,7 @@ public sealed record PortfolioPeriodLedger(
 
             var sourceCurrency = flow.Currency.Trim();
             var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(sourceCurrency, out var majorCurrency);
-            var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
+            var multiplier = isMinorQuote ? 0.01m : 1m;
             var principal = flow.Quantity * flow.UnitPrice * multiplier;
             var currency = isMinorQuote ? majorCurrency! : sourceCurrency;
             quantityChanges.Add(new PortfolioQuantityChange(

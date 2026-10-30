@@ -380,7 +380,7 @@ internal class InvestmentValuationService(
     {
         var currency = flow.Currency.Trim();
         var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(currency, out var majorCurrency);
-        var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
+        var multiplier = isMinorQuote ? 0.01m : 1m;
 
         return new InvestmentCapitalFlow(
             flow.TransactionId,

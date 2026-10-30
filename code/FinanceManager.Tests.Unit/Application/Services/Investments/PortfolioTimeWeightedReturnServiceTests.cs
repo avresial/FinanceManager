@@ -83,6 +83,33 @@ public class PortfolioTimeWeightedReturnServiceTests
         Assert.Equal(0.1m, result.TotalReturn);
     }
 
+    [Theory]
+    [InlineData("GBX", "GBP")]
+    [InlineData("GBP.", "GBP")]
+    [InlineData("ZAC", "ZAR")]
+    [InlineData("ILA", "ILS")]
+    public async Task GetAsync_NormalizesMinorTransactionCurrencyWithoutListingMultiplier(string minorCurrency, string majorCurrency)
+    {
+        var fixture = CreateFixture(
+            [new IInvestmentTransactionRepository.CapitalFlowInput(
+                1, _accountId, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+                1m, 100m, null, minorCurrency, 1m)],
+            new IInvestmentTransactionRepository.AccountValuationInputs(
+                [], [new(_accountId, _listingId, DateOnly.FromDateTime(_start), 1m)]));
+        fixture.PriceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(_listingId, DefaultCurrency.PLN, _start, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Prices((100m, 5m), (101m, 5.5m), (102m, 5.5m)));
+        fixture.CurrencyExchange
+            .Setup(x => x.GetExchangeRateAsync(
+                It.Is<Currency>(c => c.ShortName == majorCurrency), DefaultCurrency.PLN, _start, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([(_start, 5m), (_end, 5m)]);
+
+        var result = await fixture.Service.GetAsync(_userId, DefaultCurrency.PLN, _start, _end, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TimeWeightedReturnStatus.Available, result.Status);
+        Assert.Equal(0.1m, result.TotalReturn);
+    }
+
     [Fact]
     public async Task GetAsync_ReturnsUnavailableWhenPriceCoverageIsMissing()
     {

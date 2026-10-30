@@ -429,6 +429,26 @@ public class InvestmentValuationServiceTests
             Times.Once);
     }
 
+    [Theory]
+    [InlineData("GBX", "GBP")]
+    [InlineData("GBP.", "GBP")]
+    [InlineData("ZAC", "ZAR")]
+    [InlineData("ILA", "ILS")]
+    public async Task GetCapitalSeries_NormalizesMinorTransactionCurrencyWithoutListingMultiplier(string minorCurrency, string majorCurrency)
+    {
+        var date = new DateTime(2024, 1, 1);
+        _transactionRepository.Setup(x => x.GetCapitalFlowInputs(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new IInvestmentTransactionRepository.CapitalFlowInput(
+                1, _accountId, 1, DateOnly.FromDateTime(date), InvestmentTransactionType.Buy,
+                2m, 100m, null, minorCurrency, 1m)]);
+
+        var series = await CreateSut().GetCapitalSeriesAsync(
+            [_accountId], new Currency(0, majorCurrency, majorCurrency), date, date, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2m, series[_accountId][date]);
+    }
+
     [Fact]
     public async Task GetCapitalSeries_SellRemovesHistoricalCostBasis_NotSaleProceedsOrFees()
     {
