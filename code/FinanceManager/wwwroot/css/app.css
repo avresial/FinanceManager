@@ -339,3 +339,9 @@ code {
 .mud-stepper .mud-stepper-nav .mud-step .mud-step-label .mud-step-label-icon.mud-primary {
     color: var(--mud-palette-primary-text);
 }
+
+/* The wordmark is the brand, not body text (logos are exempt from contrast minimums), so it keeps the palette
+   amber instead of the deeper text amber above. */
+:root .fm-brand.mud-primary-text {
+    color: var(--mud-palette-primary) !important;
+}
