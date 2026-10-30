@@ -3,8 +3,8 @@
 
 @* Toolbar of the Transactions page. Mirrors the date-range control of the account details toolbar
    (same presets, same custom range picker) without its account-specific actions, followed by the
-   account-type chips and the account multi-select. The row scrolls itself instead of overflowing
-   on a phone, and keeps all filters available on narrow screens. *@
+   account-type chips and the account multi-select. The row wraps on a phone (the account
+   select takes its own line), so every filter stays visible on narrow screens. *@
 <div class="fm-tx-toolbar mb-4">
     <div class="d-flex align-center fm-txlog-toolbar-row" style="gap: 8px;">
         <MudIconButton @ref="_searchButton" Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
@@ -58,7 +58,7 @@
             }
         </MudChipSet>
 
-        <MudSelect T="int" Label="Accounts" MultiSelection="true" Dense="true" Margin="Margin.Dense"
+        <MudSelect T="int" Placeholder="All accounts" aria-label="Accounts" MultiSelection="true" Dense="true" Margin="Margin.Dense"
                    Variant="Variant.Outlined" Clearable="true" Disabled="@(VisibleAccounts.Count == 0)"
                    SelectedValues="Filter.AccountIds" SelectedValuesChanged="OnAccountIdsChanged"
                    ToStringFunc="GetAccountName" MultiSelectionTextFunc="GetAccountsSummary"

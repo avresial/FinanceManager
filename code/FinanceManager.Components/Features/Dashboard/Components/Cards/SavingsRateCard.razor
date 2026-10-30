@@ -22,8 +22,8 @@
                 @if (_currentMonthPercentage is decimal currentRate)
                 {
                     <div class="d-flex align-baseline mr-auto">
-                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary">@FormatRateNumber(currentRate)</MudText>
-                        <MudText Typo="Typo.h6" Color="MudBlazor.Color.Primary" Class="ml-1">%</MudText>
+                        <MudText Typo="Typo.h3" Style="color:var(--fm-primary-text);">@FormatRateNumber(currentRate)</MudText>
+                        <MudText Typo="Typo.h6" Style="color:var(--fm-primary-text);" Class="ml-1">%</MudText>
                     </div>
                 }
                 else

@@ -1,6 +1,6 @@
 @using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 
-<MudCard Outlined Class="fm-phone-auto-height fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
+<MudCard Outlined Class="rounded-lg fm-phone-auto-height fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
     <CardHeader Title="ETF fee drag"
                 InfoAriaLabel="About ETF fee drag card"
                 InfoTooltipClass="fm-card-info-glossary"
@@ -41,9 +41,13 @@
         }
         else
         {
-            <div class="fee-drag-card__hero" data-testid="fee-drag-annual-fee">
-                <span class="fee-drag-card__hero-value">@FormatAmount(_analysis.AnnualFeeCost)</span>
-                <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
+            @* Without any expense ratio the cost is unknown, not zero: show a dash instead of a confident 0.00. *@
+            <div class="fee-drag-card__hero@(IsFeeUnknown ? " fee-drag-card__hero--unknown" : "")" data-testid="fee-drag-annual-fee">
+                <span class="fee-drag-card__hero-value">@(IsFeeUnknown ? _unknownValue : FormatAmount(_analysis.AnnualFeeCost))</span>
+                @if (!IsFeeUnknown)
+                {
+                    <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
+                }
                 <span class="fee-drag-card__hero-caption">/ year</span>
             </div>
 
@@ -76,7 +80,7 @@
                 {
                     <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
                         <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
+                        <MudText Typo="Typo.body1">@(IsFeeUnknown ? _unknownValue : FormatCurrency(projection.CumulativeFeeCost))</MudText>
                         <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
                     </div>
                 }
@@ -84,7 +88,7 @@
 
             <div class="fee-drag-card__footer">
                 <span>@_analysis.TotalHoldingsCount ETF holding@(_analysis.TotalHoldingsCount == 1 ? "" : "s")</span>
-                <span>Avg TER @FormatPercentage(_analysis.WeightedExpenseRatio)</span>
+                <span>Avg TER @(IsFeeUnknown ? _unknownValue : FormatPercentage(_analysis.WeightedExpenseRatio))</span>
             </div>
         }
     </MudCardContent>

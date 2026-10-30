@@ -24,7 +24,7 @@
 
 .pc-hero-num {
     font: 300 40px/1 var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     letter-spacing: -0.5px;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
@@ -36,7 +36,7 @@
 
 .pc-hero-cur {
     font: 400 20px/1 var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     margin-left: 2px;
 }
 
@@ -63,7 +63,7 @@
 .pc-vs-pill {
     border: 0;
     background: rgba(255, 143, 0, 0.16);
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     padding: 2px 8px;
     border-radius: 12px;
     font-weight: 500;
@@ -160,7 +160,7 @@
 
 .pc-named-chip--on .pc-named-chip-label,
 .pc-named-chip--on .pc-named-chip-rate {
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
 }
 
 .pc-foot {

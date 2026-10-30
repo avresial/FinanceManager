@@ -16,7 +16,7 @@
 }
 
 .fee-drag-card__hero-value {
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     font-size: 2.25rem;
     font-weight: 300;
     letter-spacing: -0.03em;
@@ -24,8 +24,12 @@
 }
 
 .fee-drag-card__hero-currency {
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     font-size: 1.1rem;
+}
+
+.fee-drag-card__hero--unknown .fee-drag-card__hero-value {
+    color: var(--mud-palette-text-secondary);
 }
 
 .fee-drag-card__hero-caption {

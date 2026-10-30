@@ -64,66 +64,75 @@
 </div>
 
 <MudCollapse Expanded="_expanded">
-    <div class="px-4 pb-3" style="@(IsMobile ? "" : "padding-left: 60px;")" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
-        <MudDivider Class="mb-3" Style="border-style: dashed;" />
-        <MudGrid Spacing="3">
-            <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
-                <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
-            </MudItem>
-            @if (!string.IsNullOrWhiteSpace(Entry.Description))
-            {
-                <MudItem xs="12">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Description</MudText>
-                    <MudText Typo="Typo.body2">@Entry.Description</MudText>
+    @* Rendered on first expand only: a day list holds ~100 rows and eager details tripled the page's render time. *@
+    @if (_detailsRendered)
+    {
+        <div class="px-4 pb-3" style="@(IsMobile ? "" : "padding-left: 60px;")" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+            <MudDivider Class="mb-3" Style="border-style: dashed;" />
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
                 </MudItem>
-            }
-            @if (!string.IsNullOrWhiteSpace(Entry.ContractorDetails))
-            {
-                <MudItem xs="12">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Contractor details</MudText>
-                    <MudText Typo="Typo.body2">@Entry.ContractorDetails</MudText>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
                 </MudItem>
-            }
-            @if (Entry.Labels is not null && Entry.Labels.Count > 1)
-            {
+                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.overline" Color="Color.Default">Description</MudText>
+                        <MudText Typo="Typo.body2">@Entry.Description</MudText>
+                    </MudItem>
+                }
+                @if (!string.IsNullOrWhiteSpace(Entry.ContractorDetails))
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.overline" Color="Color.Default">Contractor details</MudText>
+                        <MudText Typo="Typo.body2">@Entry.ContractorDetails</MudText>
+                    </MudItem>
+                }
+                @if (Entry.Labels is not null && Entry.Labels.Count > 1)
+                {
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.overline" Color="Color.Default">Labels</MudText>
+                        <MudStack Row="true" Spacing="1" Class="mt-1" Wrap="Wrap.Wrap">
+                            @foreach (var label in Entry.Labels)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@label.Name</MudChip>
+                            }
+                        </MudStack>
+                    </MudItem>
+                }
                 <MudItem xs="12">
-                    <MudText Typo="Typo.overline" Color="Color.Default">Labels</MudText>
-                    <MudStack Row="true" Spacing="1" Class="mt-1" Wrap="Wrap.Wrap">
-                        @foreach (var label in Entry.Labels)
-                        {
-                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@label.Name</MudChip>
-                        }
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
                     </MudStack>
                 </MudItem>
-            }
-            <MudItem xs="12">
-                <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
-                </MudStack>
-            </MudItem>
-        </MudGrid>
-    </div>
+            </MudGrid>
+        </div>
+    }
 </MudCollapse>
 
-<MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1150">
-    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-        <UpdateCurrencyEntry CurrencyAccount="Account" CurrencyAccountEntry="Entry"
-                             ActionCompleted="HideOverlay" />
-    </MudPaper>
-</MudOverlay>
+@if (_updateEntryVisibility)
+{
+    <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1150">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <UpdateCurrencyEntry CurrencyAccount="Account" CurrencyAccountEntry="Entry"
+                                 ActionCompleted="HideOverlay" />
+        </MudPaper>
+    </MudOverlay>
+}
 
-<MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1150">
-    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-        <RemoveCurrencyEntry CurrencyAccountName="@Account.Name" CurrencyAccountEntry="Entry" Currency="@Currency"
-                             Cancel="HideOverlay" Confirm="ConfirmRemove" />
-    </MudPaper>
-</MudOverlay>
-
+@if (_removeEntryVisibility)
+{
+    <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1150">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <RemoveCurrencyEntry CurrencyAccountName="@Account.Name" CurrencyAccountEntry="Entry" Currency="@Currency"
+                                 Cancel="HideOverlay" Confirm="ConfirmRemove" />
+        </MudPaper>
+    </MudOverlay>
+}

@@ -3,8 +3,8 @@
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 
 <MudOverlay Visible="@Visible" DarkBackground="true" ZIndex="1300">
-    <MudPaper Class="pa-5" Style="width: min(460px, 92vw);" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
-        <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
+    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(460px, 92vw); max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
+        <MudText Typo="Typo.h4" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
         <MudStack Spacing="3">
             <MudAutocomplete T="InvestmentInstrumentOptionDto" Label="Instrument"
                              Value="_selectedInstrument"
@@ -86,7 +86,7 @@
             <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
             <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
             <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
-                <MudButton Variant="Variant.Text" OnClick="CloseAsync" Disabled="@_saving">Cancel</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseAsync" Disabled="@_saving">Cancel</MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>
             </MudStack>
         </MudStack>

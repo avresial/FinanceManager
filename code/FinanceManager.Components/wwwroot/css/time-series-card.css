@@ -23,28 +23,15 @@
     white-space: nowrap;
 }
 
-/* Good/bad tokens mirror transaction-log-card.css and flip under prefers-color-scheme: dark,
-   which is how this app flips theme; the light pair keeps the text readable on white. */
+/* Good/bad colours are the theme's Success/Error, which App.razor tunes for contrast in both themes. */
 .fm-tsvc-delta--good {
-    color: #2E7D32;
-    background: rgba(46, 125, 50, 0.15);
+    color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
 }
 
 .fm-tsvc-delta--bad {
-    color: #C62828;
-    background: rgba(198, 40, 40, 0.13);
-}
-
-@media (prefers-color-scheme: dark) {
-    .fm-tsvc-delta--good {
-        color: #66BB6A;
-        background: rgba(102, 187, 106, 0.15);
-    }
-
-    .fm-tsvc-delta--bad {
-        color: #EF5350;
-        background: rgba(239, 83, 80, 0.15);
-    }
+    color: var(--mud-palette-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
 }
 
 /* Header value placeholder shown while the series loads. */
@@ -70,9 +57,10 @@
 
 /* X-axis date labels overlay the bottom of the plot, so they get a halo in the card surface
    colour to stay legible over the fill. paint-order keeps the halo under the text. The y-axis
-   labels need none: they sit in their own gutter (see TimeSeriesValueCard). */
-.fm-tsvc-card .apexcharts-xaxis-texts-g text,
-.fm-hero-chart .apexcharts-xaxis-texts-g text {
+   labels need none: they sit in their own gutter (see TimeSeriesValueCard). The account hero
+   chart's dates sit below its plot on the page background, so a surface-coloured halo there
+   only drew a lighter box around each date. */
+.fm-tsvc-card .apexcharts-xaxis-texts-g text {
     paint-order: stroke;
     stroke: var(--mud-palette-surface);
     stroke-width: 4px;

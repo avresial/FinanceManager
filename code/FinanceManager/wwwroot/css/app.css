@@ -115,7 +115,7 @@ a:hover {
     }
 
 code {
-    color: #c02d76;
+    color: var(--mud-palette-text-primary);
 }
 
 
@@ -247,4 +247,83 @@ code {
     .fm-onb-carousel .mud-icon-button.align-self-center {
         display: none;
     }
+}
+
+/* Low-emphasis segmented toggle shared by every in-card view switch (distribution view, top movers, forecast
+   horizon): no filled primary surface, only the selected item gets a light tint. Wrap the MudToggleGroup in
+   <div class="fm-view-toggle"> and leave its Color/Outlined at the defaults. */
+.fm-view-toggle {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.fm-view-toggle .mud-toggle-group {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background: transparent;
+    box-shadow: none;
+}
+
+.fm-view-toggle .mud-toggle-item {
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    min-height: 0;
+    padding: 2px 10px;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+.fm-view-toggle .mud-toggle-item.mud-toggle-item-selected {
+    /* Amber text fails contrast on light surfaces, so the label stays in the normal text colour and the
+       accent only marks the selection (tint + underline). */
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, transparent);
+    box-shadow: inset 0 -2px 0 var(--mud-palette-primary);
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+.fm-view-toggle .mud-toggle-item:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: -2px;
+}
+
+/* Amber (#ffb300) is the light theme's brand fill, but as text on white it reads at 1.8:1. Primary-coloured
+   text, text/outlined buttons and the active nav link use a deeper amber there (4.9:1); fills, chart lines
+   and the dark theme keep the palette primary. prefers-color-scheme is how this app picks its theme. */
+:root {
+    --fm-primary-text: #9a6700;
+    /* Pale amber Secondary (Cancel, Recalculate) reads at 1.4:1 on white, so its text/outlined buttons go neutral. */
+    --fm-secondary-text: var(--mud-palette-text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fm-primary-text: var(--mud-palette-primary);
+        --fm-secondary-text: var(--mud-palette-secondary);
+    }
+}
+
+:root .mud-primary-text,
+.mud-button-text-primary,
+.mud-button-outlined-primary,
+.mud-nav-link.active:not(.mud-nav-link-disabled) {
+    color: var(--fm-primary-text) !important;
+}
+
+:root .mud-secondary-text,
+.mud-button-text-secondary,
+.mud-button-outlined-secondary {
+    color: var(--fm-secondary-text) !important;
+}
+
+.mud-button-outlined-secondary {
+    border-color: var(--mud-palette-lines-inputs);
+}
+
+/* ApexCharts writes a fixed mid-grey into each axis label; the theme's secondary text colour keeps the labels
+   legible on both card surfaces (2.6:1 → 4.8:1 in dark mode). CSS fill wins over the SVG attribute. */
+.apexcharts-xaxis-label,
+.apexcharts-yaxis-label {
+    fill: var(--mud-palette-text-secondary);
 }

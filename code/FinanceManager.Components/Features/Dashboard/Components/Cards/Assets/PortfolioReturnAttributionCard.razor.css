@@ -38,7 +38,7 @@
 .attribution-chart {
     display: grid;
     flex: 1 1 auto;
-    grid-template-columns: 2.55rem minmax(0, 1fr);
+    grid-template-columns: 3.1rem minmax(0, 1fr);
     grid-template-rows: minmax(7rem, 1fr) auto;
     min-height: 10rem;
     border-top: 1px solid var(--mud-palette-divider);
@@ -55,14 +55,14 @@
 .attribution-axis-track,
 .attribution-plot-area {
     position: absolute;
-    inset: 0.8rem 0 0.25rem;
+    inset: 1rem 0 0.25rem;
 }
 
 .attribution-axis-label {
     position: absolute;
     right: 0.3rem;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.62rem;
+    font-size: 0.75rem;
     line-height: 1;
     transform: translateY(50%);
     white-space: nowrap;
@@ -159,7 +159,7 @@
     left: 50%;
     margin-bottom: 0.12rem;
     color: var(--mud-palette-text-primary);
-    font-size: 0.61rem;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     line-height: 1;
@@ -201,7 +201,7 @@
 
 .attribution-category {
     color: var(--mud-palette-text-secondary);
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     line-height: 1.05;
     /* Labels are short enough to fit; wrap only between words and never hyphenate. #921 */
     overflow-wrap: normal;
@@ -225,18 +225,6 @@
 
 @media (max-width: 380px) {
     .attribution-chart {
-        grid-template-columns: 2.2rem minmax(0, 1fr);
-    }
-
-    .attribution-axis-label {
-        font-size: 0.58rem;
-    }
-
-    .attribution-value {
-        font-size: 0.55rem;
-    }
-
-    .attribution-category {
-        font-size: 0.59rem;
+        grid-template-columns: 2.8rem minmax(0, 1fr);
     }
 }

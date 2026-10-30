@@ -3,7 +3,7 @@
 @using FinanceManager.Domain.FinancialAccounts.Shared.Repositories
 
 <MudForm @ref="_form" @bind-IsValid="@_success" @bind-Errors="@_errors">
-    <MudContainer MaxWidth="MaxWidth.Medium">
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="px-0">
 
         <MudGrid Justify="Justify.FlexStart">
             <MudItem xs="12" sm="12" md="12">
@@ -41,19 +41,20 @@
                     Variant="Variant.Text" MaxLength="140" Counter="140" />
             </MudItem>
             <MudItem xs="12">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add Disabled="@_isAdding">
-                    @if (_isAdding)
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    @if (CustomButton is not null)
                     {
-                        <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                        @CustomButton
                     }
-                    Add
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
-                    Class="mx-2">Cancel</MudButton>
-                @if (CustomButton is not null)
-                {
-                    @CustomButton
-                }
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick=Cancel>Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add Disabled="@_isAdding">
+                        @if (_isAdding)
+                        {
+                            <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                        }
+                        Add
+                    </MudButton>
+                </MudStack>
             </MudItem>
 
             @if (_errors.Any())

@@ -87,7 +87,7 @@ public partial class DistributionCardView
                 Pie = new PlotOptionsPie
                 {
                     ExpandOnClick = true,
-                    Donut = new PlotOptionsDonut { Size = "68%", Labels = new DonutLabels { Show = false } },
+                    Donut = new PlotOptionsDonut { Size = "74%", Labels = new DonutLabels { Show = false } },
                 },
             },
             Tooltip = new Tooltip

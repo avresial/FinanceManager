@@ -6,13 +6,14 @@
     <CardHeader Title="Top movers" InfoText="The largest trades in the selected period — the biggest cash gains and losses."
                 InfoAriaLabel="About top movers card" StackedAside="true">
         <Actions>
-            <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
-                            SelectionMode="SelectionMode.SingleSelection" Color="Color.Primary"
-                            Outlined="true" Size="Size.Small" aria-label="Top movers mode">
-                <MudToggleItem Value="@MoverMode.Combined" Text="All" Class="px-1" />
-                <MudToggleItem Value="@MoverMode.Top" Text="Top" Class="px-1" />
-                <MudToggleItem Value="@MoverMode.Bottom" Text="Bottom" Class="px-1" />
-            </MudToggleGroup>
+            <div class="fm-view-toggle">
+                <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
+                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="Size.Small" aria-label="Top movers mode">
+                    <MudToggleItem Value="@MoverMode.Combined" Text="All" />
+                    <MudToggleItem Value="@MoverMode.Top" Text="Top" />
+                    <MudToggleItem Value="@MoverMode.Bottom" Text="Bottom" />
+                </MudToggleGroup>
+            </div>
         </Actions>
     </CardHeader>
     <MudCardContent>
@@ -72,7 +73,7 @@
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@entryRank.ToString("00")</MudText>
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
-                        <MudText Typo="Typo.body2" Class="text-truncate">@GetTitle(entry)</MudText>
+                        <MudText Typo="Typo.body2" Style="overflow-wrap: anywhere;">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default">
                             @DateFormatter.FormatDayMonth(entry.TradeDate) · @(entry.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy")
                         </MudText>

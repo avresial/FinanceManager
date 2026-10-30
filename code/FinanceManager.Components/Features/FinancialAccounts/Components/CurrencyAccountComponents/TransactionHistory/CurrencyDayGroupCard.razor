@@ -2,7 +2,7 @@
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
-    <MudCardHeader Class="py-1 px-4">
+    <MudCardHeader Class="@(IsMobile ? "py-1 px-4" : "py-1 pl-4 pr-2")">
         <CardHeaderContent>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
@@ -16,13 +16,14 @@
                         @MoneyFormatter.FormatSigned(DailyNet, Currency)
                     </MudText>
                 </MudStack>
+                @if (!IsMobile)
+                {
+                    <MudText Typo="Typo.overline" Color="Color.Default" Style="min-width: 110px; text-align: right;">Balance</MudText>
+                }
             </MudStack>
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent Class="pa-0">
-        <div class="@(IsMobile ? "px-4" : "px-2") d-flex justify-end">
-            <MudText Typo="Typo.overline" Color="Color.Default" Style="@(IsMobile ? "" : "min-width: 110px; text-align: right;")">Balance</MudText>
-        </div>
         <MudStack Spacing="0">
             @{
                 // Evaluated once per render: the check scans every entry of the day.

@@ -10,14 +10,16 @@
     <PageHeader Title="Cash flow forecast"
                 Subtitle="A deterministic projection from your current cash balances and recurring activity.">
         <Actions>
-            <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
-                            SelectionMode="SelectionMode.SingleSelection" Color="MudBlazor.Color.Primary"
-                            Outlined="true" CheckMark="true" aria-label="Forecast horizon">
-                @foreach (var horizon in Horizons)
-                {
-                    <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
-                }
-            </MudToggleGroup>
+            <div class="fm-view-toggle">
+                <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
+                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="MudBlazor.Size.Small"
+                                aria-label="Forecast horizon">
+                    @foreach (var horizon in Horizons)
+                    {
+                        <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
+                    }
+                </MudToggleGroup>
+            </div>
         </Actions>
     </PageHeader>
 

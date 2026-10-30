@@ -55,6 +55,25 @@
     margin-top: 0;
 }
 
+/* A placeholder instead of a floating label lets the outlined select shrink to the 32px row height,
+   so its box and text line up with the chips and the range button. */
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input.mud-input-outlined {
+    height: var(--fm-toolbar-control-height);
+}
+
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-slot {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* On a phone the select gets its own full-width row: scrolled off the right edge it looked cut off. */
+@media (max-width: 599.98px) {
+    .fm-tx-toolbar ::deep .fm-txlog-account-select {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+}
+
 .fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-slot,
 .fm-tx-toolbar ::deep .fm-txlog-account-select .mud-select-input,
 .fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-label {

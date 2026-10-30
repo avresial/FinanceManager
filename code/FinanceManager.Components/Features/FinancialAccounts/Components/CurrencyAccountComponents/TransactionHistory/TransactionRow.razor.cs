@@ -11,6 +11,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Curren
 public partial class TransactionRow
 {
     private bool _expanded;
+    private bool _detailsRendered;
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
     private int? _loadedEntryId;
@@ -37,9 +38,14 @@ public partial class TransactionRow
         _loadedEntryId = Entry.EntryId;
         _loadedInitiallyExpanded = InitiallyExpanded;
         _expanded = InitiallyExpanded;
+        _detailsRendered |= _expanded;
     }
 
-    private void ToggleExpanded() => _expanded = !_expanded;
+    private void ToggleExpanded()
+    {
+        _expanded = !_expanded;
+        _detailsRendered = true;
+    }
 
     private void OnKeyDown(KeyboardEventArgs e)
     {

@@ -228,12 +228,10 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         [
             new YAxis
             {
-                Floating = true,
                 AxisBorder = new AxisBorder { Show = false },
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new YAxisLabels
                 {
-                    OffsetX = 38,
                     Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter
                 }

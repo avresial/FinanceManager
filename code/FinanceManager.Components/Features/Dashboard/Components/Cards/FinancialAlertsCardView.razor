@@ -1,7 +1,7 @@
 @using FinanceManager.Application.Alerts.Models
 @using FinanceManager.Components.Features.Alerts.Components
 
-<MudCard Outlined Class="fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
+<MudCard Outlined Class="rounded-lg fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")" data-testid="financial-alerts-card">
     <CardHeader Title="@(SelectedAlert?.AlertTitle ?? "Alerts")"
                 InfoText="Configured financial conditions that are currently triggered."
                 InfoAriaLabel="About financial alerts card"
