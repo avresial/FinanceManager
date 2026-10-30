@@ -6,6 +6,8 @@
 
 <PageTitle>Assets - Admin</PageTitle>
 
+<MudTabs Rounded Border ActivePanelIndex="@(Tab == "incomplete" ? 1 : 0)">
+    <MudTabPanel Text="All assets">
 @if (!_isLoading)
 {
     @if (_loadError is not null)
@@ -72,3 +74,8 @@ else
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
 }
+    </MudTabPanel>
+    <MudTabPanel Text="Incomplete">
+        <AdminIncompleteAssets />
+    </MudTabPanel>
+</MudTabs>

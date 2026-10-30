@@ -1,0 +1,73 @@
+@using FinanceManager.Domain.Assets.Dtos
+@using FinanceManager.Domain.Assets.Entities
+@using FinanceManager.Domain.Assets.Discovery
+
+<MudPaper Outlined Elevation="0" Class="pa-3 my-3">
+    <MudStack Row Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.h6">Repair @Item.Name</MudText>
+        <MudButton OnClick="Close" Disabled="_busy">Close repair</MudButton>
+    </MudStack>
+    @if (_error is not null) { <MudAlert Severity="Severity.Warning" Class="my-2">@_error</MudAlert> }
+    @if (_busy) { <MudProgressLinear Indeterminate Color="Color.Primary" aria-label="Repair operation in progress" /> }
+    @if (_asset is not null)
+    {
+        <MudText Typo="Typo.body2" Class="my-2">Suggestions fill missing values only. Review the fields, then save. Save listing details before finding or validating symbols.</MudText>
+        <MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="_busy" OnClick="FindSources">Complete from sources</MudButton>
+        @if (_sources is not null)
+        {
+            @if (_sources.Count == 0) { <MudAlert Severity="Severity.Info" Class="my-2">No source matches found. Complete fields manually or use the full editor.</MudAlert> }
+            <MudTable Items="_sources" Dense Breakpoint="Breakpoint.Sm" Elevation="0" aria-label="Catalog completion suggestions">
+                <HeaderContent><MudTh>Instrument</MudTh><MudTh>Listing</MudTh><MudTh>Identity</MudTh><MudTh>Action</MudTh></HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Instrument">@context.DisplayName · @context.SecurityType</MudTd>
+                    <MudTd DataLabel="Listing">@context.Ticker · @context.ExchangeMic · @context.TradingCurrency</MudTd>
+                    <MudTd DataLabel="Identity">@context.Isin @context.ShareClassFigi @context.CompositeFigi @context.ListingFigi</MudTd>
+                    <MudTd DataLabel="Action"><MudButton Color="Color.Primary" Disabled="_busy" OnClick="@(() => Review(context))">Review missing fields</MudButton></MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        <MudGrid Class="mt-2">
+            <MudItem xs="12" sm="4"><MudSelect T="AssetType" @bind-Value="_asset.Type" Label="Asset type" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy">
+                @foreach (var type in Enum.GetValues<AssetType>()) { <MudSelectItem Value="type">@type</MudSelectItem> }
+            </MudSelect></MudItem>
+            <MudItem xs="12" sm="4"><MudTextField T="string" @bind-Value="_asset.Isin" Label="ISIN" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy" /></MudItem>
+            <MudItem xs="12" sm="4"><MudTextField T="string" @bind-Value="_asset.ShareClassFigi" Label="Share-class FIGI" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy" /></MudItem>
+            <MudItem xs="12" sm="4"><MudTextField T="string" @bind-Value="_asset.CompositeFigi" Label="Composite FIGI" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy" /></MudItem>
+        </MudGrid>
+        @if (_listing is not null)
+        {
+            <AdminAssetListingFields Listing="_listing" Currencies="_currencies" Disabled="_busy" />
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Class="my-2">This asset has no listings. Use the full editor to add one.</MudAlert>
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy" OnClick="SaveMetadata" Class="my-3">Save reviewed fields</MudButton>
+        @if (_listing is not null)
+        {
+            <MudDivider Class="my-2" />
+            <MudText Typo="Typo.subtitle1">Provider symbols</MudText>
+            <MudButton Color="Color.Primary" Disabled="_busy" OnClick="FindSymbols">Find symbols</MudButton>
+            @if (_symbols is not null)
+            {
+                <MudTable Items="_symbols" Dense Breakpoint="Breakpoint.Sm" Elevation="0" aria-label="Queue symbol suggestions">
+                    <HeaderContent><MudTh>Provider</MudTh><MudTh>Symbol</MudTh><MudTh>Status</MudTh><MudTh>Action</MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Provider">@context.Provider</MudTd><MudTd DataLabel="Symbol">@context.Symbol</MudTd>
+                        <MudTd DataLabel="Status">@context.Status @context.Error</MudTd>
+                        <MudTd DataLabel="Action">
+                            @if (context.Status == "resolved") { <MudButton Color="Color.Primary" Disabled="_busy" OnClick="@(() => SaveSymbol(context))">Validate and use symbol</MudButton> }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            <MudGrid Class="mt-2">
+                <MudItem xs="12" sm="4"><MudSelect T="MarketDataProvider" @bind-Value="_manual.Provider" Label="Provider" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy">
+                    @foreach (var provider in new[] { MarketDataProvider.AlphaVantage, MarketDataProvider.TwelveData, MarketDataProvider.Eodhd }) { <MudSelectItem Value="provider">@provider</MudSelectItem> }
+                </MudSelect></MudItem>
+                <MudItem xs="12" sm="5"><MudTextField T="string" @bind-Value="_manual.Symbol" Label="Manual provider symbol" Immediate Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_busy" /></MudItem>
+                <MudItem xs="12" sm="3"><MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@(_busy || string.IsNullOrWhiteSpace(_manual.Symbol))" OnClick="@(() => ValidateSymbol(_manual))">Validate and save</MudButton></MudItem>
+            </MudGrid>
+        }
+    }
+</MudPaper>

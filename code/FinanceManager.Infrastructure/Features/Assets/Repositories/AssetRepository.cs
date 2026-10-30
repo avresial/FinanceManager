@@ -1,5 +1,7 @@
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +29,51 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
 
     public async Task<IReadOnlyList<Asset>> GetAll(CancellationToken cancellationToken = default) =>
         await context.Assets.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+
+    public async Task<IncompleteAssetPage> GetIncomplete(int page, int pageSize, string? search, DateTimeOffset staleBefore, CancellationToken cancellationToken = default)
+    {
+        var today = DateOnly.FromDateTime(staleBefore.AddDays(7).UtcDateTime);
+        var query = context.Assets.AsNoTracking()
+            .SelectMany(asset => asset.Listings.DefaultIfEmpty(), (asset, listing) => new { Asset = asset, Listing = listing })
+            .Where(x => x.Listing == null
+                || string.IsNullOrWhiteSpace(x.Listing.ExchangeMic)
+                || string.IsNullOrWhiteSpace(x.Listing.TradingCurrency)
+                || x.Asset.Type == AssetType.Other
+                || (string.IsNullOrWhiteSpace(x.Asset.Isin) && string.IsNullOrWhiteSpace(x.Asset.ShareClassFigi) && string.IsNullOrWhiteSpace(x.Asset.CompositeFigi))
+                || !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled)
+                || !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled && string.IsNullOrEmpty(s.LastError))
+                || !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled && s.LastSuccessfulPriceFetchAt >= staleBefore));
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToUpperInvariant();
+            query = query.Where(x => x.Asset.Name.ToUpper().Contains(term)
+                || (x.Asset.Isin != null && x.Asset.Isin.ToUpper().Contains(term))
+                || (x.Listing != null && x.Listing.Ticker.ToUpper().Contains(term)));
+        }
+        var count = await query.CountAsync(cancellationToken);
+        var items = await query.OrderBy(x => x.Asset.Name).ThenBy(x => x.Asset.Id).ThenBy(x => x.Listing == null ? 0 : x.Listing.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(x => new IncompleteAssetItem(
+                x.Asset.Id, x.Asset.Name, x.Listing == null ? null : x.Listing.Id,
+                x.Listing == null ? null : x.Listing.Ticker,
+                x.Listing == null ? null : x.Listing.ExchangeMic,
+                x.Listing == null ? null : x.Listing.TradingCurrency,
+                x.Listing == null ? 0 : context.InvestmentTransactions
+                    .Where(t => t.AssetListingId == x.Listing.Id && t.TradeDate <= today)
+                    .GroupBy(t => t.UserId)
+                    .Where(g => g.Sum(t => t.Type == InvestmentTransactionType.Buy ? t.Quantity : -t.Quantity) > 0).Count(),
+                x.Listing == null ? null : x.Listing.MarketDataSymbols.Where(s => s.IsEnabled && s.LastError != null && s.LastError != "")
+                    .OrderByDescending(s => s.UpdatedAt).ThenBy(s => s.Id).Select(s => s.LastError).FirstOrDefault(),
+                x.Listing != null && string.IsNullOrWhiteSpace(x.Listing.ExchangeMic),
+                x.Listing != null && string.IsNullOrWhiteSpace(x.Listing.TradingCurrency),
+                x.Asset.Type == AssetType.Other,
+                string.IsNullOrWhiteSpace(x.Asset.Isin) && string.IsNullOrWhiteSpace(x.Asset.ShareClassFigi) && string.IsNullOrWhiteSpace(x.Asset.CompositeFigi),
+                x.Listing != null && !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled),
+                x.Listing != null && x.Listing.MarketDataSymbols.Any(s => s.IsEnabled) && !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled && string.IsNullOrEmpty(s.LastError)),
+                x.Listing != null && x.Listing.MarketDataSymbols.Any(s => s.IsEnabled) && !x.Listing.MarketDataSymbols.Any(s => s.IsEnabled && s.LastSuccessfulPriceFetchAt >= staleBefore)))
+            .ToListAsync(cancellationToken);
+        return new(items, count, page, pageSize);
+    }
 
     public async Task<Asset> Add(Asset asset, CancellationToken cancellationToken = default)
     {
