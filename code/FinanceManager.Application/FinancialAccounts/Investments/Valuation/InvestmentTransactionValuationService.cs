@@ -40,17 +40,18 @@ internal class InvestmentTransactionValuationService(
         var results = new List<InvestmentTransactionValuationDto>();
         foreach (var transaction in transactions.Where(t => t.Type == InvestmentTransactionType.Buy))
         {
+            var purchaseCurrency = transaction.Currency;
             var purchaseValueInTradeCurrency = transaction.Quantity * transaction.UnitPrice;
-            var sameAsTarget = string.Equals(transaction.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase);
+            var sameAsTarget = string.Equals(purchaseCurrency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase);
 
             var purchaseRate = sameAsTarget
                 ? 1m
-                : await GetPurchaseRateAsync(transaction, targetCurrency, purchaseRateByKey);
+                : await GetPurchaseRateAsync(purchaseCurrency, transaction.TradeDate, targetCurrency, purchaseRateByKey);
 
             // Convert into the user's default currency only when the trade-date rate is known;
-            // otherwise present the whole row in the transaction's own currency.
+            // otherwise present the whole row in the recorded transaction currency.
             var converted = purchaseRate is decimal rate && rate > 0m;
-            var displayCurrency = converted ? targetCurrency : new Currency { ShortName = transaction.Currency, Symbol = transaction.Currency };
+            var displayCurrency = converted ? targetCurrency : new Currency { ShortName = purchaseCurrency, Symbol = purchaseCurrency };
 
             var purchaseValue = converted ? purchaseValueInTradeCurrency * purchaseRate!.Value : purchaseValueInTradeCurrency;
             // Per-unit purchase price in the display currency, so it can be compared like-for-like
@@ -83,16 +84,17 @@ internal class InvestmentTransactionValuationService(
     }
 
     private async Task<decimal?> GetPurchaseRateAsync(
-        InvestmentTransaction transaction,
+        string sourceCurrencyCode,
+        DateOnly tradeDate,
         Currency targetCurrency,
         Dictionary<(string Currency, DateOnly TradeDate), decimal?> cache)
     {
-        var key = (transaction.Currency, transaction.TradeDate);
+        var key = (sourceCurrencyCode, tradeDate);
         if (cache.TryGetValue(key, out var cached)) return cached;
 
-        var sourceCurrency = new Currency { ShortName = transaction.Currency, Symbol = transaction.Currency };
+        var sourceCurrency = new Currency { ShortName = sourceCurrencyCode, Symbol = sourceCurrencyCode };
         var rate = await currencyExchangeService.GetExchangeRateAsync(
-            sourceCurrency, targetCurrency, transaction.TradeDate.ToDateTime(TimeOnly.MinValue));
+            sourceCurrency, targetCurrency, tradeDate.ToDateTime(TimeOnly.MinValue));
         cache[key] = rate;
         return rate;
     }

@@ -16,7 +16,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 public class AssetsServiceInvestmentTests
 {
     [Fact]
-    public async Task GetUnrealizedGainLossPerAccount_ConvertsRemainingBuyCostAtTradeDate()
+    public async Task GetUnrealizedGainLossPerAccount_PreservesRemainingBuyCostAfterListingCurrencyEnrichment()
     {
         var accountRepository = new Mock<IFinancialAccountRepository>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
@@ -78,6 +78,15 @@ public class AssetsServiceInvestmentTests
         Assert.Equal(2040m, result.CostBasis);
         Assert.Equal(2500m, result.CurrentValue);
         Assert.Equal(460m, result.UnrealizedGainLoss);
+
+        listing.TradingCurrency = "EUR";
+        var enrichedResult = Assert.Single(await service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, DateTime.UtcNow));
+
+        Assert.Equal(result.CostBasis, enrichedResult.CostBasis);
+        Assert.Equal(result.CurrentValue, enrichedResult.CurrentValue);
+        Assert.Equal(result.UnrealizedGainLoss, enrichedResult.UnrealizedGainLoss);
+        exchangeService.Verify(x => x.GetExchangeRateAsync(
+            It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<Currency>(), It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]

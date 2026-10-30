@@ -19,7 +19,8 @@ public static class InvestmentTransactionMappingExtensions
         transaction.Notes,
         transaction.AssetListing?.Ticker ?? string.Empty,
         transaction.AssetListing?.ExchangeName ?? string.Empty,
-        transaction.AssetListing?.Asset?.Type ?? AssetType.Other);
+        transaction.AssetListing?.Asset?.Type ?? AssetType.Other,
+        transaction.AssetListing?.HasEnabledSymbol ?? true);
 
     /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
     public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, long assetListingId) => new()

@@ -987,6 +987,47 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
+    public async Task GetCapitalFlowInputs_PreservesTransactionAmountsAfterListingCurrencyEnrichment()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var context = CreateContext();
+        var asset = await new AssetRepository(context).Add(MakeISharesAsset(), ct);
+        var listing = await new AssetListingRepository(context).Add(new AssetListing
+        {
+            AssetId = asset.Id,
+            Ticker = "VWCE",
+            TradingCurrency = null
+        }, ct);
+        var repository = new InvestmentTransactionRepository(context);
+        foreach (var type in new[] { InvestmentTransactionType.Buy, InvestmentTransactionType.Sell })
+        {
+            await repository.Add(new InvestmentTransaction
+            {
+                UserId = 1,
+                AccountId = 10,
+                AssetListingId = listing.Id,
+                Type = type,
+                Quantity = 2m,
+                UnitPrice = 100m,
+                Fee = 5m,
+                Currency = "CHF",
+                TradeDate = new DateOnly(2026, 1, 10)
+            }, ct);
+        }
+
+        var before = await repository.GetCapitalFlowInputs([10], new DateOnly(2026, 1, 20), ct);
+        listing.ExchangeMic = "XETR";
+        listing.TradingCurrency = "EUR";
+        await context.SaveChangesAsync(ct);
+        context.ChangeTracker.Clear();
+        var after = await repository.GetCapitalFlowInputs([10], new DateOnly(2026, 1, 20), ct);
+
+        Assert.Equal(2, before.Count);
+        Assert.All(before, flow => Assert.Equal("CHF", flow.Currency));
+        Assert.Equal(before, after);
+    }
+
+    [Fact]
     public async Task GetCapitalFlowInputs_ProjectsBoundedFields_AndIncludesPriceMultiplier()
     {
         var ct = TestContext.Current.CancellationToken;

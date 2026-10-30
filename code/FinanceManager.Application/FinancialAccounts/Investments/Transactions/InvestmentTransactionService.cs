@@ -4,6 +4,8 @@ using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ public sealed class InvestmentTransactionService(
     IInstrumentImportService instrumentImportService,
     IAtomicOperation atomicOperation,
     ICacheInvalidator cacheInvalidator,
+    ICurrencyRepository currencyRepository,
     ILogger<InvestmentTransactionService> logger) : IInvestmentTransactionService
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _externalAddGates = new(StringComparer.OrdinalIgnoreCase);
@@ -28,6 +31,8 @@ public sealed class InvestmentTransactionService(
         CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
+        var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
+        request = request with { Currency = normalizedCurrency };
 
         var external = !string.IsNullOrWhiteSpace(request.ExternalInstrumentResultId);
         InstrumentDiscoveryResultDto? instrument = null;
@@ -41,6 +46,8 @@ public sealed class InvestmentTransactionService(
                     "instrument_result_expired",
                     "The external search result expired. Search for the instrument again.");
 
+            await ValidateTransactionCurrencyAsync(instrument.TradingCurrency, normalizedCurrency, cancellationToken);
+
             try
             {
                 // Provider validation is deliberately completed before the database transaction starts.
@@ -51,11 +58,17 @@ public sealed class InvestmentTransactionService(
                 throw new InvestmentTransactionCommandException(ex.Code, ex.Message, ex);
             }
         }
-        else if (await listingRepository.Get(request.AssetListingId!.Value, cancellationToken) is null)
+        else
         {
-            throw new InvestmentTransactionCommandException(
-                "instrument_not_found",
-                "The selected instrument no longer exists. Search for it again.");
+            var existingListing = await listingRepository.Get(request.AssetListingId!.Value, cancellationToken);
+            if (existingListing is null)
+            {
+                throw new InvestmentTransactionCommandException(
+                    "instrument_not_found",
+                    "The selected instrument no longer exists. Search for it again.");
+            }
+
+            await ValidateTransactionCurrencyAsync(existingListing.TradingCurrency, normalizedCurrency, cancellationToken);
         }
 
         var externalGate = external
@@ -74,6 +87,7 @@ public sealed class InvestmentTransactionService(
             var result = await atomicOperation.ExecuteAsync(async transactionCancellationToken =>
             {
                 long listingId;
+                bool? importedHasAutomaticPrices = null;
                 if (instrument is not null)
                 {
                     ImportedInstrumentDto imported;
@@ -94,6 +108,8 @@ public sealed class InvestmentTransactionService(
                     }
 
                     listingId = imported.AssetListingId;
+                    importedHasAutomaticPrices = imported.MarketDataSymbolId is not null
+                        && imported.ProviderResults.Any(r => r.Status == "resolved");
                 }
                 else
                 {
@@ -110,7 +126,11 @@ public sealed class InvestmentTransactionService(
                     if (saved is null)
                         throw new InvalidOperationException("The created transaction could not be reloaded.");
 
-                    result = saved.ToDto();
+                    var automaticPricesAvailable = saved.AssetListing is not null
+                        ? saved.AssetListing.HasEnabledSymbol
+                        : importedHasAutomaticPrices ?? true;
+
+                    result = saved.ToDto() with { AutomaticPricesAvailable = automaticPricesAvailable };
                 }
                 catch (InvestmentTransactionCommandException)
                 {
@@ -164,8 +184,46 @@ public sealed class InvestmentTransactionService(
         }
     }
 
+    private async Task ValidateTransactionCurrencyAsync(
+        string? listingTradingCurrency,
+        string normalizedRequestCurrency,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(listingTradingCurrency))
+        {
+            if (!string.Equals(listingTradingCurrency.Trim(), normalizedRequestCurrency, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvestmentTransactionCommandException(
+                    "currency_mismatch",
+                    $"Transaction currency must match the listing's trading currency ({listingTradingCurrency.Trim().ToUpperInvariant()}).");
+            }
+
+            return;
+        }
+
+        if (!await IsKnownCurrencyAsync(normalizedRequestCurrency, cancellationToken))
+        {
+            throw new InvestmentTransactionCommandException(
+                "invalid_currency",
+                "Select a predefined currency for the transaction.");
+        }
+    }
+
+    private async Task<bool> IsKnownCurrencyAsync(string code, CancellationToken cancellationToken)
+    {
+        if (string.Equals(code, DefaultCurrency.PLN.ShortName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(code, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase)
+            || DefaultCurrency.CommonCurrencies.Any(c => string.Equals(c.ShortName, code, StringComparison.OrdinalIgnoreCase))
+            || DefaultCurrency.MinorQuoteUnits.ContainsKey(code))
+        {
+            return true;
+        }
+
+        return await currencyRepository.GetByCode(code, cancellationToken) is not null;
+    }
+
     private static string GetExternalGateKey(InstrumentDiscoveryResultDto instrument) =>
-        $"{instrument.Ticker.Trim().ToUpperInvariant()}:{instrument.ExchangeMic}:{instrument.TradingCurrency}";
+        $"{instrument.Ticker.Trim().ToUpperInvariant()}:{instrument.ExchangeMic ?? instrument.ExchangeCode}:{instrument.TradingCurrency}:{instrument.ListingFigi}:{instrument.Isin}";
 
     private static void ValidateRequest(AddInvestmentTransactionRequest request)
     {

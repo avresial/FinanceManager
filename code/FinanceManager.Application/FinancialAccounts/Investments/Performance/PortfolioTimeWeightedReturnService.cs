@@ -340,7 +340,7 @@ public class PortfolioTimeWeightedReturnService(
 
             var sourceCurrency = flow.Currency.Trim();
             var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(sourceCurrency, out var majorCurrency);
-            var multiplier = isMinorQuote ? flow.ListingPriceMultiplier ?? 0.01m : 1m;
+            var multiplier = isMinorQuote ? 0.01m : 1m;
             var amount = flow.Quantity * flow.UnitPrice * multiplier;
             var fee = flow.Fee ?? 0m;
             amount = flow.Type == InvestmentTransactionType.Buy ? amount + fee : amount - fee;

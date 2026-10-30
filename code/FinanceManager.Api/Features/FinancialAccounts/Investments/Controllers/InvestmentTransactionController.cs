@@ -153,7 +153,12 @@ public class InvestmentTransactionController(
         var recoveredAny = false;
         var missingPrices = transactions
             .Where(x => x.UnitPrice <= 0m && !string.IsNullOrWhiteSpace(x.Currency))
-            .GroupBy(x => new { x.AssetListingId, x.Currency, x.TradeDate });
+            .GroupBy(x => new
+            {
+                x.AssetListingId,
+                x.Currency,
+                x.TradeDate
+            });
 
         foreach (var group in missingPrices)
         {
@@ -294,7 +299,7 @@ public class InvestmentTransactionController(
         if (string.IsNullOrWhiteSpace(q)) return Ok(Array.Empty<InstrumentSearchResultDto>());
         maxResults = Math.Clamp(maxResults, 1, 20);
         var listings = await assetListingRepository.SearchAsync(q, maxResults, cancellationToken);
-        return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency)).ToList());
+        return Ok(listings.Select(x => new InstrumentSearchResultDto(x.Id, x.Ticker, x.ExchangeName, x.TradingCurrency ?? string.Empty)).ToList());
     }
 
     [HttpGet("SearchInstruments")]
@@ -317,7 +322,7 @@ public class InvestmentTransactionController(
         var listing = await assetListingRepository.Get(listingId, cancellationToken);
         return listing is null
             ? NotFound()
-            : Ok(new InstrumentSearchResultDto(listing.Id, listing.Ticker, listing.ExchangeName, listing.TradingCurrency));
+            : Ok(new InstrumentSearchResultDto(listing.Id, listing.Ticker, listing.ExchangeName, listing.TradingCurrency ?? string.Empty));
     }
 
     [HttpGet("ListingPrice/{listingId:long}")]
@@ -327,6 +332,9 @@ public class InvestmentTransactionController(
     {
         var listing = await assetListingRepository.Get(listingId, cancellationToken);
         if (listing is null) return NotFound();
+        if (string.IsNullOrWhiteSpace(listing.TradingCurrency))
+            return Ok(new ListingPriceDto(null, string.Empty, "Automatic prices aren't available until the listing currency is configured.", null));
+
         var currency = new Currency(0, listing.TradingCurrency, listing.TradingCurrency);
         var priceDate = asOf?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow;
         var result = await priceProvider.GetPricePerUnitResultAsync(listingId, currency, priceDate, cancellationToken);

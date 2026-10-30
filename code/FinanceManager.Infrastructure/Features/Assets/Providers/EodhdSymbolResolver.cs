@@ -19,6 +19,11 @@ internal sealed class EodhdSymbolResolver(
 
     public async Task<MarketDataSymbolResolution> ResolveAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(instrument.Ticker)
+            || string.IsNullOrWhiteSpace(instrument.TradingCurrency)
+            || (string.IsNullOrWhiteSpace(instrument.ExchangeMic) && string.IsNullOrWhiteSpace(instrument.ProviderSymbol)))
+            return new(Provider, Priority, "not found");
+
         var config = await configService.GetServiceAsync("Eodhd", ct);
         if (!config.IsEnabled || string.IsNullOrWhiteSpace(config.ApiKey)) return Unavailable("EODHD is disabled or unconfigured.");
         var url = $"{config.BaseUrl.TrimEnd('/')}/search/{Uri.EscapeDataString(instrument.Ticker)}?api_token={Uri.EscapeDataString(config.ApiKey)}&fmt=json&limit=20";
@@ -28,6 +33,7 @@ internal sealed class EodhdSymbolResolver(
             if (!response.IsSuccessStatusCode) return Unavailable("EODHD search failed.");
             using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
             if (json.RootElement.ValueKind != JsonValueKind.Array) return Unavailable("EODHD returned an invalid search response.");
+            var expectedMic = string.IsNullOrWhiteSpace(instrument.ExchangeMic) ? null : instrument.ExchangeMic;
             foreach (var item in json.RootElement.EnumerateArray())
             {
                 var code = Text(item, "Code");
@@ -36,7 +42,7 @@ internal sealed class EodhdSymbolResolver(
                 var isin = Text(item, "ISIN");
                 var mic = MapExchange(exchange);
                 if (!string.Equals(code, instrument.Ticker, StringComparison.OrdinalIgnoreCase) ||
-                    !string.Equals(mic, instrument.ExchangeMic, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(mic, expectedMic, StringComparison.OrdinalIgnoreCase) ||
                     !string.Equals(currency, instrument.TradingCurrency, StringComparison.OrdinalIgnoreCase)) continue;
                 if (!string.IsNullOrWhiteSpace(instrument.Isin) && !string.IsNullOrWhiteSpace(isin) &&
                     !string.Equals(isin, instrument.Isin, StringComparison.OrdinalIgnoreCase)) continue;

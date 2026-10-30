@@ -192,6 +192,8 @@ public class AssetController(
         var listing = await listingRepository.Get(listingId, cancellationToken);
         if (listing is null)
             return NotFound("Listing not found.");
+        if (string.IsNullOrWhiteSpace(listing.TradingCurrency))
+            return BadRequest("Set the listing trading currency before adding a manual price.");
 
         var priceQuote = new PriceQuote
         {

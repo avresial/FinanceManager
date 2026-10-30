@@ -1,9 +1,6 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Discovery;
@@ -34,17 +31,13 @@ public sealed class InstrumentImportService(
     {
         ValidateImport(command.Instrument);
         var results = await symbolResolutionService.ResolveAsync(command.Instrument, ct);
-        return await PersistAsync(command.Instrument, results, ct);
+        return await PersistAsync(command.Instrument, results, persistUnresolvedCandidates: true, ct);
     }
 
     public async Task<ValidatedInstrumentImport> ValidateForTransactionAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
         ThrowIfTransactionImportBlocked(instrument);
         var results = await symbolResolutionService.ResolveAsync(instrument, ct);
-        if (!results.Any(x => x.Status == "resolved"))
-            throw new InstrumentImportException(
-                results.Any(x => x.Status == "provider unavailable") ? "provider_unavailable" : "market_data_symbol_invalid",
-                "No configured provider could validate the selected instrument. No asset or transaction was created.");
         return new(instrument, results);
     }
 
@@ -52,7 +45,7 @@ public sealed class InstrumentImportService(
     {
         // All network work completed before the caller entered its database transaction.
         ThrowIfTransactionImportBlocked(validated.Instrument);
-        return await PersistAsync(validated.Instrument, validated.ProviderResults, ct);
+        return await PersistAsync(validated.Instrument, validated.ProviderResults, persistUnresolvedCandidates: false, ct);
     }
 
     public bool CanImportForTransaction(InstrumentDiscoveryResultDto instrument) =>
@@ -61,19 +54,22 @@ public sealed class InstrumentImportService(
     private async Task<ImportedInstrumentDto> PersistAsync(
         InstrumentDiscoveryResultDto instrument,
         IReadOnlyList<MarketDataSymbolResolution> providerResults,
+        bool persistUnresolvedCandidates,
         CancellationToken ct)
     {
         var warnings = ImportWarnings(instrument).ToList();
         var (asset, listing, symbol) = await FindExistingAsync(instrument, ct);
+        var normalizedTradingCurrency = NormalizeOptionalUpper(instrument.TradingCurrency);
+        var normalizedExchangeMic = NormalizeOptionalUpper(instrument.ExchangeMic);
         var createdAsset = asset is null;
         asset ??= await assetRepository.Upsert(new Asset
         {
-            Name = instrument.DisplayName,
+            Name = instrument.DisplayName.Trim(),
             Type = ParseAssetType(instrument.SecurityType),
-            Isin = instrument.Isin,
-            ShareClassFigi = instrument.ShareClassFigi,
-            CompositeFigi = instrument.CompositeFigi,
-            BaseCurrency = instrument.TradingCurrency!.ToUpperInvariant()
+            Isin = NormalizeOptional(instrument.Isin),
+            ShareClassFigi = NormalizeOptional(instrument.ShareClassFigi),
+            CompositeFigi = NormalizeOptional(instrument.CompositeFigi),
+            BaseCurrency = normalizedTradingCurrency
         }, ct);
 
         var metadata = providerResults.FirstOrDefault(x => x.Status == "resolved");
@@ -84,16 +80,22 @@ public sealed class InstrumentImportService(
         { asset.Type = resolvedType; enriched = true; }
         if (enriched) await assetRepository.Update(asset, ct);
 
+        var exchangeName = NormalizeOptional(instrument.ExchangeName)
+            ?? NormalizeOptional(metadata?.ExchangeName)
+            ?? normalizedExchangeMic
+            ?? NormalizeOptional(instrument.ExchangeCode)
+            ?? string.Empty;
+
         var createdListing = listing is null;
         listing ??= await listingRepository.Upsert(new AssetListing
         {
             AssetId = asset.Id,
             Ticker = instrument.Ticker.Trim().ToUpperInvariant(),
-            ExchangeMic = instrument.ExchangeMic!,
-            ExchangeName = instrument.ExchangeName ?? metadata?.ExchangeName ?? instrument.ExchangeMic!,
-            TradingCurrency = instrument.TradingCurrency!.ToUpperInvariant(),
-            ListingFigi = instrument.ListingFigi,
-            PriceMultiplier = InstrumentCurrencyUnits.IsMinor(instrument.TradingCurrency) ? 0.01m : 1m
+            ExchangeMic = normalizedExchangeMic,
+            ExchangeName = exchangeName,
+            TradingCurrency = normalizedTradingCurrency,
+            ListingFigi = NormalizeOptional(instrument.ListingFigi),
+            PriceMultiplier = InstrumentCurrencyUnits.IsMinor(normalizedTradingCurrency) ? 0.01m : 1m
         }, ct);
 
         if (string.IsNullOrWhiteSpace(listing.ExchangeName) && !string.IsNullOrWhiteSpace(metadata?.ExchangeName))
@@ -131,6 +133,10 @@ public sealed class InstrumentImportService(
                 symbol ??= existing;
                 continue;
             }
+
+            if (result.Status != "resolved" && !persistUnresolvedCandidates)
+                continue;
+
             var saved = await symbolRepository.Upsert(new MarketDataSymbol
             {
                 AssetListingId = listing.Id,
@@ -148,7 +154,18 @@ public sealed class InstrumentImportService(
             createdSymbol = true;
         }
 
-        logger.LogInformation("Imported listing {ListingId} with {ResolvedCount} validated provider mappings", listing.Id, resolved.Length);
+        if (resolved.Length == 0 && !existingSymbols.Any(x => x.IsEnabled))
+        {
+            // Only the generated id is logged; ticker, venue and currency come from user-selected search results.
+            logger.LogWarning(
+                "Catalog listing {ListingId} was saved without an enabled price symbol and needs administrator review.",
+                listing.Id);
+        }
+        else
+        {
+            logger.LogInformation("Imported listing {ListingId} with {ResolvedCount} validated provider mappings", listing.Id, resolved.Length);
+        }
+
         return new ImportedInstrumentDto
         {
             AssetId = asset.Id,
@@ -156,7 +173,7 @@ public sealed class InstrumentImportService(
             MarketDataSymbolId = symbol?.Id,
             Ticker = listing.Ticker,
             ExchangeName = listing.ExchangeName,
-            TradingCurrency = listing.TradingCurrency,
+            TradingCurrency = listing.TradingCurrency ?? string.Empty,
             CreatedAsset = createdAsset,
             CreatedListing = createdListing,
             CreatedMarketDataSymbol = createdSymbol,
@@ -190,9 +207,11 @@ public sealed class InstrumentImportService(
                 x.Type == ParseAssetType(instrument.SecurityType) && string.Equals(x.Name.Trim(), instrument.DisplayName.Trim(), StringComparison.OrdinalIgnoreCase));
 
         AssetListing? listing = null;
-        if (!string.IsNullOrWhiteSpace(instrument.ExchangeMic) && !string.IsNullOrWhiteSpace(instrument.TradingCurrency))
+        var expectedMic = NormalizeOptionalUpper(instrument.ExchangeMic);
+        var expectedCurrency = NormalizeOptionalUpper(instrument.TradingCurrency);
+        if (expectedMic is not null && expectedCurrency is not null)
         {
-            listing = await listingRepository.Get(instrument.Ticker, instrument.ExchangeMic, instrument.TradingCurrency, ct);
+            listing = await listingRepository.Get(instrument.Ticker.Trim().ToUpperInvariant(), expectedMic, expectedCurrency, ct);
             if (listing is not null)
                 asset = await assetRepository.Get(listing.AssetId, ct);
         }
@@ -200,11 +219,17 @@ public sealed class InstrumentImportService(
         {
             var listings = await listingRepository.GetByAsset(asset.Id, ct);
             if (!string.IsNullOrWhiteSpace(instrument.ListingFigi))
-                listing = listings.FirstOrDefault(x => x.ListingFigi == instrument.ListingFigi);
+                listing = listings.FirstOrDefault(x => string.Equals(x.ListingFigi, instrument.ListingFigi, StringComparison.OrdinalIgnoreCase));
+            var expectedExchangeName = NormalizeOptional(instrument.ExchangeName)
+                ?? expectedMic
+                ?? NormalizeOptional(instrument.ExchangeCode)
+                ?? string.Empty;
             listing ??= listings.FirstOrDefault(x =>
-                x.Ticker.Equals(instrument.Ticker, StringComparison.OrdinalIgnoreCase)
-                && x.ExchangeMic.Equals(instrument.ExchangeMic, StringComparison.OrdinalIgnoreCase)
-                && x.TradingCurrency.Equals(instrument.TradingCurrency, StringComparison.OrdinalIgnoreCase));
+                string.Equals(x.Ticker, instrument.Ticker, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.ExchangeMic, expectedMic, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.TradingCurrency, expectedCurrency, StringComparison.OrdinalIgnoreCase)
+                && (expectedMic is not null && expectedCurrency is not null
+                    || string.Equals(x.ExchangeName, expectedExchangeName, StringComparison.OrdinalIgnoreCase)));
         }
 
         MarketDataSymbol? symbol = null;
@@ -228,10 +253,9 @@ public sealed class InstrumentImportService(
             throw new ArgumentException("Only stocks and ETFs can be imported.");
     }
 
-    // Structural blockers only. Informational discovery warnings (e.g. "identity was not confirmed
-    // by OpenFIGI") are shown to the user but must not block saving a result that has everything the
-    // import needs. Both validation and the search-time importability check read this one rule set so
-    // they cannot drift.
+    // Structural blockers only. Informational discovery warnings and missing exchange/currency/type
+    // metadata do not block adding a confirmed external instrument from Add transaction; only missing
+    // core identity (name/ticker) or an explicit non-equity/non-ETF classification blocks save.
     private static void ThrowIfTransactionImportBlocked(InstrumentDiscoveryResultDto instrument)
     {
         var blocker = GetTransactionImportBlocker(instrument);
@@ -241,20 +265,49 @@ public sealed class InstrumentImportService(
 
     private static InstrumentImportException? GetTransactionImportBlocker(InstrumentDiscoveryResultDto instrument)
     {
-        if (!HasRequiredImportData(instrument))
+        if (string.IsNullOrWhiteSpace(instrument.DisplayName) || string.IsNullOrWhiteSpace(instrument.Ticker))
             return new InstrumentImportException(
                 "instrument_not_found",
-                "The selected instrument is missing a name, ticker, exchange, or trading currency.");
-        if (ParseAssetType(instrument.SecurityType) is AssetType.Other)
+                "The selected instrument is missing a name or ticker.");
+        if (IsUnsupportedTransactionSecurityType(instrument.SecurityType))
             return new InstrumentImportException(
                 "instrument_import_failed",
-                "The selected instrument's asset type could not be determined; only stocks and ETFs can be added to an investment transaction.");
+                "Only stocks and ETFs can be added to an investment transaction.");
         return null;
     }
 
     private static bool HasRequiredImportData(InstrumentDiscoveryResultDto instrument) =>
         !string.IsNullOrWhiteSpace(instrument.DisplayName) && !string.IsNullOrWhiteSpace(instrument.Ticker)
         && !string.IsNullOrWhiteSpace(instrument.ExchangeMic) && !string.IsNullOrWhiteSpace(instrument.TradingCurrency);
+
+    private static bool IsUnsupportedTransactionSecurityType(string? securityType)
+    {
+        if (string.IsNullOrWhiteSpace(securityType))
+            return false;
+
+        if (ParseAssetType(securityType) is AssetType.Stock or AssetType.ETF)
+            return false;
+
+        return securityType.Contains("Bond", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Debt", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Note", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Bill", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Govt", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Muni", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Option", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Future", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Swap", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Warrant", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Index", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Curncy", StringComparison.OrdinalIgnoreCase)
+            || securityType.Contains("Currency", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? NormalizeOptionalUpper(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToUpperInvariant();
 
     internal static AssetType ParseAssetType(string? securityType) =>
         securityType?.Contains("ETF", StringComparison.OrdinalIgnoreCase) == true

@@ -63,7 +63,9 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         resolver.SetupGet(x => x.Priority).Returns(100);
         resolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((InstrumentDiscoveryResultDto instrument, CancellationToken _) =>
-                new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "candidate", instrument.ProviderSymbol, instrument.ExchangeCode, instrument.TradingCurrency));
+                string.IsNullOrWhiteSpace(instrument.ProviderSymbol) || string.IsNullOrWhiteSpace(instrument.TradingCurrency)
+                    ? new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "not found")
+                    : new MarketDataSymbolResolution(MarketDataProvider.AlphaVantage, 100, "candidate", instrument.ProviderSymbol, instrument.ExchangeCode, instrument.TradingCurrency));
         resolver.Setup(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>()))
             .Returns(async (MarketDataSymbolResolution candidate, CancellationToken ct) =>
                 (await _alphaVantageClient.Object.GetDailySeries(candidate.Symbol!, DateTime.UtcNow.AddDays(-10), DateTime.UtcNow,
@@ -151,7 +153,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
         _priceProvider
-            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(InvestmentPriceResult.Success(321.45m));
 
         var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
@@ -168,7 +170,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var tradeDate = new DateOnly(2024, 6, 1);
         _priceProvider
-            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+            .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(),
                 tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
             .ReturnsAsync(InvestmentPriceResult.Success(300m));
 
@@ -190,7 +192,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         _priceProvider
             .Setup(x => x.GetPricePerUnitResultAsync(
                 _listingId,
-                It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(),
+                It.IsAny<Currency>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(pending);
@@ -255,6 +257,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         Assert.NotNull(transaction);
         Assert.True(transaction!.AssetListingId > 0);
+        Assert.True(transaction.AutomaticPricesAvailable);
         Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
@@ -315,7 +318,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task Add_WithInvalidExternalProviderResult_CreatesNoMasterData()
+    public async Task Add_WhenAllPriceProvidersFail_SavesCatalogInstrumentWithoutSymbolsAndSavesTransaction()
     {
         await SeedAccount();
         SetupExternalInstrument();
@@ -343,15 +346,136 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             ExternalInstrumentResultId: Assert.Single(options!).ResultId);
         var response = await Client.PostAsJsonAsync(
             "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
-        var problem = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(
+
+        response.EnsureSuccessStatusCode();
+        var saved = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("provider_unavailable", problem!["code"]?.ToString());
-        Assert.Empty(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
-        Assert.Empty(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.NotNull(saved);
+        Assert.Equal(100m, saved!.UnitPrice);
+        Assert.False(saved.AutomaticPricesAvailable);
+        Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
+        var listing = Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("CSPX", listing.Ticker);
+        Assert.Equal("XLON", listing.ExchangeMic);
+        Assert.Equal("USD", listing.TradingCurrency);
+        Assert.True(listing.IsIncomplete);
         Assert.Empty(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
-        Assert.Empty(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Single(await _testDatabase.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Add_WithIncompleteExternalInstrumentMissingVenueAndCurrency_SavesCatalogListingAndSupportsReadEndpoints()
+    {
+        await SeedAccount();
+        _openFigiClient
+            .Setup(x => x.MapByTickerAsync("VWCE", It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new OpenFigiListing(
+                    Isin: null,
+                    Ticker: "VWCE",
+                    Name: "VANG FTSE AW USDA",
+                    ExchCode: "GF",
+                    Figi: "BBG000GF001",
+                    ShareClassFigi: "BBG000SC001",
+                    SecurityType: null)
+            ]);
+        _alphaVantageClient
+            .Setup(x => x.SearchTicker("VWCE", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
+            "api/InvestmentTransaction/SearchInstruments?q=VWCE",
+            TestContext.Current.CancellationToken);
+        var option = Assert.Single(options!);
+        Assert.Equal(InstrumentOptionSource.External, option.Source);
+        Assert.Null(option.ExchangeMic);
+        Assert.Equal(string.Empty, option.TradingCurrency);
+        Assert.NotEmpty(option.Warnings);
+
+        var request = new AddInvestmentTransactionRequest(
+            _testAccountId,
+            null,
+            InvestmentTransactionType.Buy,
+            4m,
+            117.50m,
+            "EUR",
+            new DateOnly(2026, 2, 10),
+            ExternalInstrumentResultId: option.ResultId);
+        var response = await Client.PostAsJsonAsync(
+            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var created = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(created);
+        Assert.False(created!.AutomaticPricesAvailable);
+        Assert.Equal("EUR", created.Currency);
+        Assert.Equal(117.50m, created.UnitPrice);
+
+        var asset = Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(AssetType.Other, asset.Type);
+        var listing = Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Null(listing.ExchangeMic);
+        Assert.Null(listing.TradingCurrency);
+        Assert.Equal("GF", listing.ExchangeName);
+        Assert.True(listing.IsIncomplete);
+        Assert.Empty(await _testDatabase.Context.MarketDataSymbols.ToListAsync(TestContext.Current.CancellationToken));
+
+        // Subsequent search surfaces the saved catalog listing as Existing with gap warnings
+        var repeatOptions = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
+            "api/InvestmentTransaction/SearchInstruments?q=VWCE",
+            TestContext.Current.CancellationToken);
+        var existingOption = Assert.Single(repeatOptions!);
+        Assert.Equal(InstrumentOptionSource.Existing, existingOption.Source);
+        Assert.Equal(listing.Id, existingOption.AssetListingId);
+
+        // ListingPrice endpoint safely returns null LatestPrice when TradingCurrency is unknown
+        var listingPrice = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(listing.Id);
+        Assert.NotNull(listingPrice);
+        Assert.Null(listingPrice!.LatestPrice);
+        Assert.Equal(string.Empty, listingPrice.Currency);
+
+        // History page endpoint reads back the saved transaction without errors
+        var history = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
+            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}",
+            TestContext.Current.CancellationToken);
+        Assert.Single(history!.Items);
+        Assert.Equal("EUR", history.Items[0].Currency);
+    }
+
+    [Fact]
+    public async Task Add_WithUnrecognizedExternalResultId_ReturnsBadRequest()
+    {
+        await SeedAccount();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var request = new AddInvestmentTransactionRequest(
+            _testAccountId,
+            null,
+            InvestmentTransactionType.Buy,
+            1m,
+            100m,
+            "USD",
+            new DateOnly(2026, 1, 1),
+            ExternalInstrumentResultId: "unrecognized-result-id");
+        var context = _testDatabase!.Context;
+        var ct = TestContext.Current.CancellationToken;
+        var assetsBefore = await context.Assets.CountAsync(ct);
+        var listingsBefore = await context.AssetListings.CountAsync(ct);
+        var symbolsBefore = await context.MarketDataSymbols.CountAsync(ct);
+        var transactionsBefore = await context.InvestmentTransactions.CountAsync(ct);
+
+        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Rejection happens before anything is written to the shared catalog.
+        Assert.Equal(assetsBefore, await context.Assets.CountAsync(ct));
+        Assert.Equal(listingsBefore, await context.AssetListings.CountAsync(ct));
+        Assert.Equal(symbolsBefore, await context.MarketDataSymbols.CountAsync(ct));
+        Assert.Equal(transactionsBefore, await context.InvestmentTransactions.CountAsync(ct));
     }
 
     [Fact]
@@ -428,7 +552,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
         Authorize("testuser", _testUserId, UserRole.User);
         _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
             .ReturnsAsync(321.45m);
 
         var transactions = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!;
@@ -437,8 +561,44 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.All(transactions, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
         Assert.All(await _testDatabase!.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken), transaction => Assert.Equal(321.45m, transaction.UnitPrice));
         _priceProvider.Verify(
-            x => x.GetPricePerUnitAsync(_listingId, It.IsAny<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByAccount_RecoversPricesInRecordedCurrencyAfterListingCurrencyEnrichment()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tradeDate = new DateOnly(2024, 1, 10);
+        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
+        var context = _testDatabase!.Context;
+        var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, ct);
+        listing.TradingCurrency = null;
+        await context.SaveChangesAsync(ct);
+        Authorize("testuser", _testUserId, UserRole.User);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(321.45m);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(300m);
+
+        var before = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
+        Assert.Equal(321.45m, Assert.Single(before).UnitPrice);
+
+        listing.TradingCurrency = "EUR";
+        await context.SaveChangesAsync(ct);
+        await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
+        var after = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
+
+        Assert.Equal(2, after.Count);
+        Assert.All(after, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
+        Assert.All(await context.InvestmentTransactions.ToListAsync(ct), transaction =>
+        {
+            Assert.Equal("USD", transaction.Currency);
+            Assert.Equal(321.45m, transaction.UnitPrice);
+        });
+        _priceProvider.Verify(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

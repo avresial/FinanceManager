@@ -243,10 +243,11 @@ internal class AssetsServiceInvestment(
         DateTime asOfDate,
         CancellationToken cancellationToken)
     {
-        if (string.Equals(buy.Currency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
+        var purchaseCurrency = buy.Currency;
+        if (string.Equals(purchaseCurrency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
             return 1m;
 
-        var sourceCurrency = new Currency { ShortName = buy.Currency, Symbol = buy.Currency };
+        var sourceCurrency = new Currency { ShortName = purchaseCurrency, Symbol = purchaseCurrency };
         var tradeDateRate = cancellationToken.CanBeCanceled
             ? await currencyExchangeService.GetExchangeRateAsync(
                 sourceCurrency,

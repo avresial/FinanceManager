@@ -20,6 +20,11 @@ internal sealed class AlphaVantageSymbolResolver(
 
     public async Task<MarketDataSymbolResolution> ResolveAsync(InstrumentDiscoveryResultDto instrument, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(instrument.Ticker)
+            || string.IsNullOrWhiteSpace(instrument.TradingCurrency)
+            || (string.IsNullOrWhiteSpace(instrument.ExchangeMic) && string.IsNullOrWhiteSpace(instrument.ProviderSymbol)))
+            return new(Provider, Priority, "not found");
+
         var config = await configService.GetServiceAsync("AlphaVantage", ct);
         if (!config.IsEnabled || string.IsNullOrWhiteSpace(config.ApiKey) || !budget.TryConsume())
             return Unavailable("Alpha Vantage is disabled, unconfigured, or over budget.");
@@ -33,7 +38,7 @@ internal sealed class AlphaVantageSymbolResolver(
             if (!json.RootElement.TryGetProperty("bestMatches", out var matches) || matches.ValueKind != JsonValueKind.Array)
                 return Unavailable("Alpha Vantage returned an invalid search response.");
 
-            var expectedMic = instrument.ExchangeMic;
+            var expectedMic = string.IsNullOrWhiteSpace(instrument.ExchangeMic) ? null : instrument.ExchangeMic;
             foreach (var match in matches.EnumerateArray())
             {
                 var symbol = Text(match, "1. symbol");
@@ -46,8 +51,8 @@ internal sealed class AlphaVantageSymbolResolver(
                 var (regionMic, regionCode) = MapRegion(region);
                 var mic = suffixMic ?? regionMic;
                 var exchangeCode = suffixCode ?? regionCode;
-                if (expectedMic is not null && !string.Equals(expectedMic, mic, StringComparison.OrdinalIgnoreCase)) continue;
-                if (mic is null && (exchangeCode != "US" || expectedMic is not null || !string.Equals(instrument.ProviderSymbol, symbol, StringComparison.OrdinalIgnoreCase))) continue;
+                if (!string.Equals(expectedMic, mic, StringComparison.OrdinalIgnoreCase)) continue;
+                if (mic is null && (exchangeCode != "US" || !string.Equals(instrument.ProviderSymbol, symbol, StringComparison.OrdinalIgnoreCase))) continue;
 
                 return new(Provider, Priority, "candidate", symbol, exchangeCode, currency,
                     Text(match, "2. name"), Text(match, "3. type"), region);

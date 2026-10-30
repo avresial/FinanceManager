@@ -17,12 +17,12 @@ public class InvestmentTransactionValuationServiceTests
     private const long _listingId = 11;
     private static readonly AssetListing _listing = new() { Id = _listingId, Ticker = "CSPX" };
 
-    private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1) => new()
+    private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1, AssetListing? listing = null) => new()
     {
         Id = id,
         AccountId = _accountId,
-        AssetListingId = _listingId,
-        AssetListing = _listing,
+        AssetListingId = (listing ?? _listing).Id,
+        AssetListing = listing ?? _listing,
         Type = InvestmentTransactionType.Buy,
         Quantity = quantity,
         UnitPrice = unitPrice,
@@ -72,6 +72,37 @@ public class InvestmentTransactionValuationServiceTests
         Assert.Equal(5000m, result.CurrentValuation); // 10 * 500
         Assert.Equal(1000m, result.GainLoss);
         Assert.Equal(25m, result.GainLossPercent);    // (5000/4000 - 1) * 100
+    }
+
+    [Fact]
+    public async Task ListingCurrencyEnrichment_PreservesPurchaseCurrency_AndEnablesCurrentValuation()
+    {
+        var tradeDate = new DateOnly(2026, 2, 15);
+        var listing = new AssetListing { Id = 88, Ticker = "VWCE", ExchangeMic = null, TradingCurrency = null };
+        var (repo, price, fx) = Mocks(Buy(2m, 100m, "CHF", tradeDate, listing: listing));
+
+        fx.Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "CHF"), DefaultCurrency.PLN, tradeDate.ToDateTime(TimeOnly.MinValue)))
+            .ReturnsAsync(4.5m);
+        fx.Setup(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "EUR"), DefaultCurrency.PLN, tradeDate.ToDateTime(TimeOnly.MinValue)))
+            .ReturnsAsync(4.3m);
+        price.Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => listing.TradingCurrency is null ? 0m : 460m);
+        var service = Build(repo, price, fx);
+
+        var before = Assert.Single(await service.GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+        listing.ExchangeMic = "XETR";
+        listing.TradingCurrency = "EUR";
+        var after = Assert.Single(await service.GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+
+        Assert.Equal(900m, before.PurchaseValue);
+        Assert.False(before.HasCurrentPrice);
+        Assert.Equal(before.PurchaseUnitPrice, after.PurchaseUnitPrice);
+        Assert.Equal(before.PurchaseValue, after.PurchaseValue);
+        Assert.Equal("PLN", after.Currency);
+        Assert.True(after.HasCurrentPrice);
+        Assert.Equal(920m, after.CurrentValuation);
+        Assert.Equal(20m, after.GainLoss);
+        fx.Verify(x => x.GetExchangeRateAsync(It.Is<Currency>(c => c.ShortName == "EUR"), DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]

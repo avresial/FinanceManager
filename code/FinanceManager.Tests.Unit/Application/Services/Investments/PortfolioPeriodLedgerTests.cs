@@ -54,6 +54,24 @@ public class PortfolioPeriodLedgerTests
             });
     }
 
+    [Theory]
+    [InlineData("GBX", "GBP")]
+    [InlineData("GBP.", "GBP")]
+    [InlineData("ZAC", "ZAR")]
+    [InlineData("ILA", "ILS")]
+    public void Build_NormalizesMinorTransactionCurrencyWithoutListingMultiplier(string minorCurrency, string majorCurrency)
+    {
+        var buy = new IInvestmentTransactionRepository.CapitalFlowInput(
+            11, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+            2m, 100m, null, minorCurrency, 1m);
+
+        var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
+
+        var principal = Assert.Single(ledger.Movements);
+        Assert.Equal(2m, principal.Amount);
+        Assert.Equal(majorCurrency, principal.Currency);
+    }
+
     [Fact]
     public void Build_RepresentsSalesAndFeeRebatesAsPositiveAmounts()
     {

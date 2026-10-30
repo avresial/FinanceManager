@@ -12,14 +12,16 @@ public class AssetListingConfiguration : IEntityTypeConfiguration<AssetListing>
         builder.Property(x => x.Id).ValueGeneratedOnAdd();
 
         builder.Property(x => x.Ticker).HasMaxLength(32).IsRequired();
-        builder.Property(x => x.ExchangeMic).HasMaxLength(16).IsRequired();
+        builder.Property(x => x.ExchangeMic).HasMaxLength(16).IsRequired(false);
         builder.Property(x => x.ExchangeName).HasMaxLength(128).IsRequired();
-        builder.Property(x => x.TradingCurrency).HasMaxLength(3).IsRequired();
+        builder.Property(x => x.TradingCurrency).HasMaxLength(3).IsRequired(false);
         builder.Property(x => x.ListingFigi).HasMaxLength(16);
         builder.Property(x => x.ExchangeInstrumentId).HasMaxLength(64);
         builder.Property(x => x.PriceMultiplier).HasPrecision(18, 8);
 
-        builder.HasIndex(x => new { x.Ticker, x.ExchangeMic, x.TradingCurrency }).IsUnique();
+        builder.HasIndex(x => new { x.Ticker, x.ExchangeMic, x.TradingCurrency })
+            .IsUnique()
+            .HasFilter("\"ExchangeMic\" IS NOT NULL AND \"TradingCurrency\" IS NOT NULL");
         builder.HasIndex(x => x.AssetId);
         builder.HasIndex(x => x.ExchangeMic);
         builder.HasIndex(x => x.Ticker);

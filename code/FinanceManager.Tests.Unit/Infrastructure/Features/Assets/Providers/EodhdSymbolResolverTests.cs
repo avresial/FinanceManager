@@ -28,6 +28,17 @@ public sealed class EodhdSymbolResolverTests
     }
 
     [Fact]
+    public async Task ResolveAsync_WhenMicOrCurrencyIsMissing_ReturnsNotFoundWithoutHttpCall()
+    {
+        var handler = new Handler();
+        var sut = Create(handler);
+
+        Assert.Equal("not found", (await sut.ResolveAsync(Instrument(mic: null, currency: "GBP"), TestContext.Current.CancellationToken)).Status);
+        Assert.Equal("not found", (await sut.ResolveAsync(Instrument(mic: "XLON", currency: null), TestContext.Current.CancellationToken)).Status);
+        Assert.Empty(handler.RequestUris);
+    }
+
+    [Fact]
     public async Task ResolveAsync_RejectsDifferentIsinEvenWhenTickerVenueAndCurrencyMatch()
     {
         var sut = Create(new Handler("""[{"Code":"VOD","Exchange":"LSE","Currency":"GBP","Name":"Other Vodafone line","ISIN":"GB00BH4HKS40"}]"""));

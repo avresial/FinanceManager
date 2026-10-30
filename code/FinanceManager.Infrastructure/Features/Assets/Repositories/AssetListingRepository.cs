@@ -61,16 +61,17 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
     public async Task<AssetListing> Upsert(AssetListing listing, CancellationToken cancellationToken = default)
     {
         EnsureValidPriceMultiplier(listing);
-        var existing = await context.AssetListings.FirstOrDefaultAsync(
-            x => x.Ticker == listing.Ticker && x.ExchangeMic == listing.ExchangeMic && x.TradingCurrency == listing.TradingCurrency,
-            cancellationToken);
+        var existing = await FindExistingForUpsertAsync(listing, cancellationToken);
 
         if (existing is not null)
         {
             existing.AssetId = listing.AssetId;
-            existing.ExchangeName = listing.ExchangeName;
-            existing.ListingFigi = listing.ListingFigi;
-            existing.ExchangeInstrumentId = listing.ExchangeInstrumentId;
+            existing.ExchangeMic ??= listing.ExchangeMic;
+            if (!string.IsNullOrWhiteSpace(listing.ExchangeName))
+                existing.ExchangeName = listing.ExchangeName;
+            existing.TradingCurrency ??= listing.TradingCurrency;
+            existing.ListingFigi ??= listing.ListingFigi;
+            existing.ExchangeInstrumentId ??= listing.ExchangeInstrumentId;
             existing.IsPrimaryListing = listing.IsPrimaryListing;
             existing.PriceMultiplier = listing.PriceMultiplier;
             existing.IsActive = listing.IsActive;
@@ -86,12 +87,41 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
         catch (DbUpdateException)
         {
             context.Entry(listing).State = EntityState.Detached;
-            var concurrent = await context.AssetListings.FirstOrDefaultAsync(
-                x => x.Ticker == listing.Ticker && x.ExchangeMic == listing.ExchangeMic && x.TradingCurrency == listing.TradingCurrency,
-                cancellationToken);
+            var concurrent = await FindExistingForUpsertAsync(listing, cancellationToken);
             if (concurrent is null) throw;
             return concurrent;
         }
+    }
+
+    private async Task<AssetListing?> FindExistingForUpsertAsync(AssetListing listing, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(listing.ExchangeMic) && !string.IsNullOrWhiteSpace(listing.TradingCurrency))
+        {
+            var byCompleteKey = await context.AssetListings.FirstOrDefaultAsync(
+                x => x.Ticker == listing.Ticker
+                    && x.ExchangeMic == listing.ExchangeMic
+                    && x.TradingCurrency == listing.TradingCurrency,
+                cancellationToken);
+            if (byCompleteKey is not null)
+                return byCompleteKey;
+        }
+
+        if (!string.IsNullOrWhiteSpace(listing.ListingFigi))
+        {
+            var byFigi = await context.AssetListings.FirstOrDefaultAsync(
+                x => x.ListingFigi == listing.ListingFigi,
+                cancellationToken);
+            if (byFigi is not null)
+                return byFigi;
+        }
+
+        return await context.AssetListings.FirstOrDefaultAsync(
+            x => x.AssetId == listing.AssetId
+                && x.Ticker == listing.Ticker
+                && x.ExchangeMic == listing.ExchangeMic
+                && x.TradingCurrency == listing.TradingCurrency
+                && x.ExchangeName == listing.ExchangeName,
+            cancellationToken);
     }
 
     public async Task<bool> Update(AssetListing listing, CancellationToken cancellationToken = default)

@@ -339,7 +339,6 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.Property<string>("ExchangeMic")
-                        .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
@@ -368,7 +367,6 @@ namespace FinanceManager.Api.Migrations
                         .HasColumnType("character varying(32)");
 
                     b.Property<string>("TradingCurrency")
-                        .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
@@ -386,7 +384,8 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("Ticker");
 
                     b.HasIndex("Ticker", "ExchangeMic", "TradingCurrency")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"ExchangeMic\" IS NOT NULL AND \"TradingCurrency\" IS NOT NULL");
 
                     b.ToTable("AssetListings");
                 });
