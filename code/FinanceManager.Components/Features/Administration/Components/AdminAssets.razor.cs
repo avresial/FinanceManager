@@ -8,6 +8,8 @@ namespace FinanceManager.Components.Features.Administration.Components;
 
 public partial class AdminAssets : ComponentBase
 {
+    [SupplyParameterFromQuery(Name = "tab")] public string? Tab { get; set; }
+
     private bool _isLoading = true;
     private string? _loadError;
     private int _elementsPerPage = 20;

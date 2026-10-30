@@ -12,6 +12,19 @@ public class AssetHttpClient(HttpClient httpClient, ILogger<AssetHttpClient> log
 {
     private string Base => $"{httpClient.BaseAddress}api/admin/assets";
 
+    public async Task<IncompleteAssetPage> GetIncomplete(int page, string? search, CancellationToken ct = default) =>
+        await httpClient.GetFromJsonAsync<IncompleteAssetPage>($"{Base}/incomplete?page={page}&pageSize=20&search={Uri.EscapeDataString(search ?? string.Empty)}", ct)
+        ?? throw new InvalidOperationException("The incomplete assets response was empty.");
+
+    public async Task<MarketDataSymbolDto> ValidateQueueSymbol(long listingId, MarketDataSymbolDto symbol, CancellationToken ct = default)
+    {
+        using var response = await httpClient.PostAsJsonAsync($"{Base}/incomplete/listings/{listingId}/symbols", symbol, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException((await response.Content.ReadAsStringAsync(ct)).Trim('"'));
+        return await response.Content.ReadFromJsonAsync<MarketDataSymbolDto>(cancellationToken: ct)
+            ?? throw new InvalidOperationException("The symbol response was empty.");
+    }
+
     public async Task<List<InstrumentDiscoveryResultDto>> SearchExternal(string query, CancellationToken ct = default) =>
         await httpClient.GetFromJsonAsync<List<InstrumentDiscoveryResultDto>>($"{Base}/discovery/search?query={Uri.EscapeDataString(query)}", ct) ?? [];
 

@@ -1,3 +1,4 @@
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
 
 namespace FinanceManager.Domain.Assets.Repositories;
@@ -12,6 +13,8 @@ public interface IAssetRepository
 
     /// <summary>Get the asset whose <see cref="Asset.ShareClassFigi"/> matches, or <c>null</c> if none exists.</summary>
     Task<Asset?> GetByShareClassFigi(string shareClassFigi, CancellationToken cancellationToken = default);
+
+    Task<IncompleteAssetPage> GetIncomplete(int page, int pageSize, string? search, DateTimeOffset staleBefore, CancellationToken cancellationToken = default);
 
     /// <summary>Get all assets.</summary>
     Task<IReadOnlyList<Asset>> GetAll(CancellationToken cancellationToken = default);

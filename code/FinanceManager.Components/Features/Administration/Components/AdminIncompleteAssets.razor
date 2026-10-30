@@ -1,0 +1,86 @@
+@using FinanceManager.Domain.Assets.Dtos
+@using FinanceManager.Components.Features.Administration.HttpClients
+@implements IDisposable
+
+<MudText Typo="Typo.h5" Class="mt-4">Incomplete instruments</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">Missing catalog details, failing symbols or no successful price in seven days. Review suggestions before saving.</MudText>
+<MudStack Row Wrap="Wrap.Wrap" Spacing="2" Class="mb-3">
+    <MudTextField T="string" @bind-Value="_search" Label="Search name, ticker or ISIN" Immediate Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="_loading" Class="flex-grow-1" Style="min-width:0" OnKeyDown="SearchKeyDown" />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="_loading" OnClick="@(() => Load(1))">Search</MudButton>
+    <MudButton Color="Color.Primary" Disabled="_loading" OnClick="@(() => Load(_page))">Refresh</MudButton>
+</MudStack>
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+}
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" aria-label="Loading incomplete instruments" />
+}
+else if (_result is not null)
+{
+    <MudText Typo="Typo.body2" Class="mb-2" role="status">@_result.TotalCount listings or assets need attention</MudText>
+    @if (_result.Items.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No incomplete instruments match this search.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_result.Items" Dense Elevation="0" Breakpoint="Breakpoint.Sm" aria-label="Incomplete instruments">
+            <HeaderContent><MudTh>Asset / listing</MudTh><MudTh>Needs attention</MudTh><MudTh>Holders</MudTh><MudTh>Last error</MudTh><MudTh>Actions</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Asset / listing"><b>@context.Name</b><MudText Typo="Typo.body2">@(context.Ticker ?? "No listing") · @(context.ExchangeMic ?? "Unknown venue") · @(context.TradingCurrency ?? "Unknown currency")</MudText></MudTd>
+                <MudTd DataLabel="Needs attention">@string.Join(", ", context.Reasons)</MudTd>
+                <MudTd DataLabel="Holders">@context.Holders</MudTd>
+                <MudTd DataLabel="Last error"><span class="queue-error">@(context.LastError ?? "—")</span></MudTd>
+                <MudTd DataLabel="Actions"><MudStack Row Wrap="Wrap.Wrap" Spacing="1">
+                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => _selected = context)">Review / repair</MudButton>
+                    <MudButton Size="Size.Small" Color="Color.Primary" Href="@($"Admin/EditAsset/{context.AssetId}")" aria-label="@($"Edit asset {context.Name}")">Full editor</MudButton>
+                </MudStack></MudTd>
+            </RowTemplate>
+            <ChildRowContent>
+                @if (_selected?.AssetId == context.AssetId && _selected.ListingId == context.ListingId)
+                {
+                    <MudTr><td colspan="5"><AdminIncompleteAssetRepair @key="context" Item="context" Saved="Repaired" Close="@(() => _selected = null)" /></td></MudTr>
+                }
+            </ChildRowContent>
+        </MudTable>
+        @if (_result.TotalCount > _result.PageSize)
+        {
+            <MudPagination Count="@((int)Math.Ceiling((double)_result.TotalCount / _result.PageSize))" Selected="_page" SelectedChanged="Load" Class="my-3" />
+        }
+    }
+}
+
+@code {
+    [Inject] public required AssetHttpClient Client { get; set; }
+    private readonly CancellationTokenSource _lifetime = new();
+    private string _search = string.Empty;
+    private string? _error;
+    private bool _loading;
+    private int _page = 1;
+    private IncompleteAssetPage? _result;
+    private IncompleteAssetItem? _selected;
+
+    protected override Task OnInitializedAsync() => Load(1);
+    private Task SearchKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args) => args.Key == "Enter" ? Load(1) : Task.CompletedTask;
+    private async Task Load(int page)
+    {
+        if (_loading) return;
+        _loading = true;
+        _error = null;
+        _selected = null;
+        try
+        {
+            _result = await Client.GetIncomplete(page, _search, _lifetime.Token);
+            if (_result.Items.Count == 0 && page > 1)
+                _result = await Client.GetIncomplete(Math.Max(1, (int)Math.Ceiling((double)_result.TotalCount / _result.PageSize)), _search, _lifetime.Token);
+            _page = _result.Page;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception) { _error = "Unable to load the queue. Refresh to try again."; }
+        finally { _loading = false; }
+    }
+    private Task Repaired() => Load(_page);
+    public void Dispose() { _lifetime.Cancel(); _lifetime.Dispose(); GC.SuppressFinalize(this); }
+}
