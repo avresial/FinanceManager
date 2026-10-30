@@ -15,7 +15,7 @@
             <div class="fm-holdings-list" role="list" aria-label="Holdings">
                 @foreach (var holding in Holdings)
                 {
-                    <article class="fm-holding-item pa-3" role="listitem" @key="holding.ListingId">
+                    <article class="fm-holding-item px-4 py-3" role="listitem" @key="holding.ListingId">
                         <div class="fm-holding-header">
                             <div class="fm-holding-title-group">
                                 <MudText Typo="Typo.subtitle2" Class="fm-holding-ticker">@holding.Ticker</MudText>

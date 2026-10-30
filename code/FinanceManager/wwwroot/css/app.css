@@ -345,3 +345,14 @@ code {
 :root .fm-brand.mud-primary-text {
     color: var(--mud-palette-primary) !important;
 }
+
+/* Import steps that are not reachable yet render in MudBlazor's disabled colour (1.6:1 in dark), so the user
+   could not read what comes next. They stay muted but legible; only the active step gets the primary disc. */
+.fm-import-stepper .mud-stepper-nav .mud-step:disabled .mud-typography {
+    color: var(--mud-palette-text-secondary) !important;
+}
+
+.fm-import-stepper .mud-stepper-nav .mud-step:disabled .mud-step-label-icon {
+    background-color: var(--mud-palette-action-default-hover) !important;
+    border: 1px solid var(--mud-palette-lines-default);
+}

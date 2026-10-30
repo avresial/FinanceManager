@@ -53,6 +53,15 @@
     flex: 0 0 168px;
     width: 168px;
     margin-top: 0;
+    /* MudBlazor's dense margin adds 4px below the box, which lifted it 2px above the centred controls. */
+    margin-bottom: 0;
+}
+
+/* "All accounts" is the current value, not a hint, so it reads like the other controls' labels instead of a
+   faded placeholder that made the select look disabled. */
+.fm-tx-toolbar ::deep .fm-txlog-account-select .mud-input-slot::placeholder {
+    color: var(--mud-palette-text-primary);
+    opacity: 1;
 }
 
 /* A placeholder instead of a floating label lets the outlined select shrink to the 32px row height,

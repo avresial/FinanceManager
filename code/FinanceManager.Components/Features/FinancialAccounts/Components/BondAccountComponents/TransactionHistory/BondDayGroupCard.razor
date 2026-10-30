@@ -1,7 +1,7 @@
 @using FinanceManager.Domain.FinancialAccounts.Bond.Entities
 
 <MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;">
-    <MudCardHeader Class="py-1 px-4">
+    <MudCardHeader Class="@(IsMobile ? "py-1 px-4" : "py-1 pl-4 pr-2")">
         <CardHeaderContent>
             <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">

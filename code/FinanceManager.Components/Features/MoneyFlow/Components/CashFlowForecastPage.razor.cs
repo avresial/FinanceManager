@@ -221,7 +221,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             Labels = new XAxisLabels
             {
                 Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
-                DatetimeFormatter = new DatetimeFormatter { Year = "yyyy", Month = "MMM 'yy", Day = "dd MMM" }
+                // A horizon that crosses New Year made ApexCharts print the year on every tick ("12 Oct 2026"); the
+                // fixed format matches the other charts, and the tooltip still shows the full date.
+                Format = "dd MMM",
             }
         },
         Yaxis =
