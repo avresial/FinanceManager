@@ -30,7 +30,7 @@ public sealed class TransactionLogCardTests
         {
             var link = cut.Find("a[href='/Transactions']");
             Assert.Equal("View all", link.TextContent.Trim());
-            Assert.Equal("See all transactions", link.GetAttribute("aria-label"));
+            Assert.Equal("View all transactions", link.GetAttribute("aria-label"));
         });
     }
 
