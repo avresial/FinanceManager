@@ -69,6 +69,23 @@ public class IncompleteAssetQueueServiceTests
         _symbols.Verify(x => x.Add(It.IsAny<MarketDataSymbol>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task RevalidatedPrimary_RespectsOtherEnabledPrimary(bool competingPrimary, bool expectedPrimary)
+    {
+        var existing = new MarketDataSymbol { Id = 9, AssetListingId = 4, Provider = _draft.Provider, Symbol = "TEST", IsEnabled = false, IsPrimary = true };
+        _listing.MarketDataSymbols.Add(existing);
+        _listing.MarketDataSymbols.Add(new MarketDataSymbol { Id = 10, AssetListingId = 4, Provider = MarketDataProvider.TwelveData, Symbol = "OTHER", IsEnabled = competingPrimary, IsPrimary = true });
+        _symbols.Setup(x => x.Get(_draft.Provider, "TEST", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var saved = await Service().ValidateAndSaveSymbolAsync(4, _draft, TestContext.Current.CancellationToken);
+
+        Assert.True(saved.IsEnabled);
+        Assert.Equal(expectedPrimary, saved.IsPrimary);
+        _symbols.Verify(x => x.Update(It.Is<MarketDataSymbol>(s => s.Id == 9 && s.IsPrimary == expectedPrimary), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task SymbolOnAnotherListing_IsNeverValidatedOrMoved()
     {

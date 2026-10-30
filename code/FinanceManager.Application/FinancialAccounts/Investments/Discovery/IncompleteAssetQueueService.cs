@@ -39,7 +39,8 @@ public sealed class IncompleteAssetQueueService(
         entity.IsEnabled = true;
         entity.Currency = listing.TradingCurrency;
         entity.ProviderExchangeCode = draft.ProviderExchangeCode;
-        entity.IsPrimary = existing?.IsPrimary ?? !listing.MarketDataSymbols.Any(x => x.IsPrimary && x.IsEnabled);
+        entity.IsPrimary = (existing is null || existing.IsPrimary)
+            && !listing.MarketDataSymbols.Any(x => x.Id != entity.Id && x.IsPrimary && x.IsEnabled);
         entity.LastValidatedAt = DateTimeOffset.UtcNow;
         entity.LastSuccessfulPriceFetchAt = entity.LastValidatedAt;
         entity.LastError = null;
