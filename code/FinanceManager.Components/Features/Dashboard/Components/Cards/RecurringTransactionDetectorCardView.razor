@@ -75,7 +75,8 @@
                                             <MudProgressLinear Value="@GetPercentage(item.Value, items)" Color="@color" aria-label="@($"{item.Name}: relative monthly {label.ToLowerInvariant()}")"
                                                                Class="mt-1" Size="Size.Small" />
                                         </span>
-                                        <MudText Typo="Typo.body2" HtmlTag="span" Color="@color" Class="font-weight-600 flex-shrink-0" Style="text-align:right;white-space:nowrap;">
+                                        @* A shared minimum width for the amounts gives every bar the same track, so lengths compare across rows. *@
+                                        <MudText Typo="Typo.body2" HtmlTag="span" Color="@color" Class="font-weight-600 flex-shrink-0" Style="min-width:8rem;text-align:right;white-space:nowrap;">
                                             @($"{FormatFlow(isIncome, item.Value)}/mo")
                                         </MudText>
                                     </span>
