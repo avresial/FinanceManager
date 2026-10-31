@@ -23,15 +23,26 @@
     white-space: nowrap;
 }
 
-/* Good/bad colours are the theme's Success/Error, which App.razor tunes for contrast in both themes. */
+/* Good/bad colours are the theme's Success/Error. On their own tint those read just under 4.5:1, so the text is
+   pushed away from the background: darker in the light theme, lighter in the dark one. */
 .fm-tsvc-delta--good {
-    color: var(--mud-palette-success);
+    color: color-mix(in srgb, var(--mud-palette-success) 85%, black);
     background: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
 }
 
 .fm-tsvc-delta--bad {
-    color: var(--mud-palette-error);
+    color: color-mix(in srgb, var(--mud-palette-error) 85%, black);
     background: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+    .fm-tsvc-delta--good {
+        color: color-mix(in srgb, var(--mud-palette-success) 70%, white);
+    }
+
+    .fm-tsvc-delta--bad {
+        color: color-mix(in srgb, var(--mud-palette-error) 70%, white);
+    }
 }
 
 /* Header value placeholder shown while the series loads. */

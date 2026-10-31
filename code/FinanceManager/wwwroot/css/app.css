@@ -302,10 +302,10 @@ code {
 }
 
 /* Amber (#ffb300) is the light theme's brand fill, but as text on white it reads at 1.8:1. Primary-coloured
-   text, text/outlined buttons and the active nav link use a deeper amber there (4.9:1); fills, chart lines
+   text, text/outlined buttons and the active nav link use a deeper amber there (5.5:1, 5.0:1 on its amber tints); fills, chart lines
    and the dark theme keep the palette primary. prefers-color-scheme is how this app picks its theme. */
 :root {
-    --fm-primary-text: #9a6700;
+    --fm-primary-text: #8f5f00;
     /* Pale amber Secondary (Cancel, Recalculate) reads at 1.4:1 on white, so its text/outlined buttons are
        neutral; the dark theme matches so the same action looks the same in both. */
     --fm-secondary-text: var(--mud-palette-text-secondary);
