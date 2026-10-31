@@ -30,7 +30,12 @@
         if (firstRender)
         {
             if (_useSystemPreferences && _mudThemeProvider is not null)
+            {
                 _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+                // The stylesheets follow prefers-color-scheme live; keep the MudBlazor palette in step when the
+                // system theme changes while the app is open, or the two disagree until a reload.
+                await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemDarkModeChanged);
+            }
 
             // Remove the preload styles applied in index.html after the app finishes initial render
             try
@@ -44,6 +49,12 @@
 
             StateHasChanged();
         }
+    }
+
+    private Task OnSystemDarkModeChanged(bool isDarkMode)
+    {
+        _isDarkMode = isDarkMode;
+        return InvokeAsync(StateHasChanged);
     }
 
     // Text colours meet WCAG AA (4.5:1) on the card surface of their theme: MudBlazor's default Success/Error and
