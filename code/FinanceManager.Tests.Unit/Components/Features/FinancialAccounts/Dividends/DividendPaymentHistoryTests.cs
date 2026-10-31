@@ -406,6 +406,24 @@ public class DividendPaymentHistoryTests
         Assert.DoesNotContain("Old account fund", cut.Markup);
     }
 
+    [Theory]
+    [InlineData("0.00000001", "0.00000001 USD")]
+    [InlineData("12.34567890", "12.3456789 USD")]
+    [InlineData("1234.5", "1,234.50 USD")]
+    public async Task History_PreservesSignificantPaymentPrecision(string amount, string expected)
+    {
+        var payment = new DividendPaymentDto(1, 10, 42, "Fund", "FUND", new(2020, 1, 1), decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture), "USD", null);
+        var handler = new StubHttpHandler(request => Task.FromResult(
+            request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
+                ? JsonResponse(Array.Empty<DividendHoldingOption>())
+                : request.RequestUri.AbsolutePath.EndsWith("/Currency/GetAll", StringComparison.Ordinal)
+                    ? JsonResponse(new[] { _pln })
+                    : JsonResponse(new DividendPaymentPage([payment], 1, 1, 20))));
+        await using var context = CreateBunitContext(handler);
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.AccountId, 10));
+        cut.WaitForAssertion(() => Assert.Contains(expected, cut.Markup));
+    }
+
     private static BunitContext CreateBunitContext(HttpMessageHandler handler, bool confirmedDelete = true)
     {
         var context = new BunitContext();

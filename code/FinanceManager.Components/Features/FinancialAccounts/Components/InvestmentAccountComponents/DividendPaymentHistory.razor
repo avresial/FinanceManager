@@ -28,7 +28,7 @@
                 <RowTemplate>
                     <MudTd DataLabel="Received date">@DateFormatter.Format(context.PaymentDate)</MudTd>
                     <MudTd DataLabel="Holding">@context.HoldingName · @context.Ticker</MudTd>
-                    <MudTd DataLabel="Cash received">@MoneyFormatter.Format(context.Amount, context.Currency)</MudTd>
+                    <MudTd DataLabel="Cash received">@FormatCashReceived(context)</MudTd>
                     <MudTd DataLabel="Notes"><span style="overflow-wrap:anywhere">@(context.Notes ?? "—")</span></MudTd>
                     <MudTd DataLabel="Actions"><MudStack Row Wrap="Wrap.Wrap" Spacing="1">
                         <MudButton Disabled="Busy" Size="Size.Small" OnClick="@(() => ShowEdit(context))" aria-label="@($"Edit dividend {context.Ticker} on {DateFormatter.Format(context.PaymentDate)}")">Edit</MudButton>

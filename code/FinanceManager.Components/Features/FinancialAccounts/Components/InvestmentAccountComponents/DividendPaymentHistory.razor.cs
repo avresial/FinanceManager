@@ -5,6 +5,7 @@ using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 
@@ -140,6 +141,10 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         _editVisible = false;
         _editingPayment = null;
     }
+    // Keep the ledger's accepted precision while retaining the usual two decimal places for whole amounts.
+    private static string FormatCashReceived(DividendPaymentDto payment) =>
+        $"{payment.Amount.ToString("#,##0.00######", CultureInfo.InvariantCulture)} {payment.Currency}";
+
     private bool CanSaveEdit => !_savingEdit && _formHoldingId > 0 && _formAmount > 0
         && !string.IsNullOrWhiteSpace(_formCurrency) && _formPaymentDate is DateTime date && date <= DateTime.UtcNow.Date;
 

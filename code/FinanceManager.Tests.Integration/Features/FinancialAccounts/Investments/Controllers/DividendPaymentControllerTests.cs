@@ -93,6 +93,36 @@ public class DividendPaymentControllerTests(OptionsProvider optionsProvider) : C
         Assert.Equal(new[] { 3m, 2m, 1m }, first.Items.Concat(second!.Items).Select(x => x.Amount));
         Assert.Equal(3, first.Items.Concat(second.Items).Select(x => x.Id).Distinct().Count());
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MissingPaymentDate_IsRejectedWithoutCreatingOrOverwritingRecords(bool updating)
+    {
+        Seed();
+        Authorize("owner", 1, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        long id = 0;
+        if (updating)
+        {
+            using var created = await Client.PostAsJsonAsync(_route, Request(), ct);
+            created.EnsureSuccessStatusCode();
+            id = await created.Content.ReadFromJsonAsync<long>(ct);
+        }
+        var omittedDate = new { AssetListingId = 8, Amount = 99m, Currency = "USD" };
+        using var response = updating
+            ? await Client.PutAsJsonAsync($"{_route}/{id}", omittedDate, ct)
+            : await Client.PostAsJsonAsync(_route, omittedDate, ct);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var records = await _database!.Context.DividendPayments.ToListAsync(ct);
+        if (updating)
+        {
+            var record = Assert.Single(records);
+            Assert.Equal(new DateOnly(2020, 1, 1), record.PaymentDate);
+            Assert.Equal(12m, record.Amount);
+        }
+        else Assert.Empty(records);
+    }
+
     [Fact]
     public async Task InvalidPaymentAndPagingReturnActionableBadRequest()
     {
