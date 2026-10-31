@@ -37,6 +37,8 @@ internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepos
 
         var toRemove = await context.Accounts.Where(x => x.AccountId == accountId).ToListAsync();
         if (toRemove.Count == 0) return false;
+        var dividends = await context.DividendPayments.Where(x => x.AccountId == accountId).ToListAsync();
+        context.DividendPayments.RemoveRange(dividends);
         context.Accounts.RemoveRange(toRemove);
         await context.SaveChangesAsync();
         return true;

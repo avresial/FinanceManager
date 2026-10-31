@@ -208,7 +208,7 @@ public class DistributionOverviewCardViewTests
 
         other.Click();
 
-        var members = cut.Find("[data-testid=distribution-other-members]");
+        var members = cut.WaitForElement("[data-testid=distribution-other-members]", TimeSpan.FromSeconds(3));
         Assert.Contains("Item 1", members.TextContent);
         Assert.Contains("Item 3", members.TextContent);
         Assert.Equal("true", cut.Find("button[data-testid=distribution-row]").GetAttribute("aria-expanded"));

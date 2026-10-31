@@ -19,6 +19,7 @@ using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.FinancialAccounts.Investments.Assets;
 using FinanceManager.Application.FinancialAccounts.Investments.Balance;
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
+using FinanceManager.Application.FinancialAccounts.Investments.Dividends;
 using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
 using FinanceManager.Application.FinancialAccounts.Investments.Performance;
 using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
@@ -96,6 +97,7 @@ internal static class Registration
                 .AddScoped<AdminAssetDiscoveryService>()
                 .AddScoped<IncompleteAssetQueueService>()
                 .AddScoped<IInvestmentTransactionService, InvestmentTransactionService>()
+                .AddScoped<DividendPaymentService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
 
