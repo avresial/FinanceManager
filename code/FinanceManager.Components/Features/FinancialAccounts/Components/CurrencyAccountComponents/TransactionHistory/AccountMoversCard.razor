@@ -4,7 +4,7 @@
     <CardHeader Title="Top movers" InfoText="The largest entries in the selected period — the biggest inflows and outflows."
                 InfoAriaLabel="About top movers card" StackedAside="true">
         <Actions>
-            <div class="fm-view-toggle">
+            <div class="fm-view-toggle fm-view-toggle--compact">
                 <MudToggleGroup T="MoverMode" Value="_mode" ValueChanged="OnModeChanged"
                                 SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="Size.Small" Color="Color.Default" aria-label="Top movers mode">
                     <MudToggleItem Value="@MoverMode.Combined" Text="All" />
