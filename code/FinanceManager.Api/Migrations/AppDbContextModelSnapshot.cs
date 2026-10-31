@@ -714,6 +714,56 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("ExchangeRates");
                 });
 
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.DividendPayment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
+                    b.Property<long>("AssetListingId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateOnly>("PaymentDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("AssetListingId");
+
+                    b.HasIndex("UserId", "AccountId", "PaymentDate", "Id");
+
+                    b.ToTable("DividendPayments");
+                });
+
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction", b =>
                 {
                     b.Property<long>("Id")
@@ -1642,6 +1692,23 @@ namespace FinanceManager.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Currency");
+                });
+
+            modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.DividendPayment", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Dtos.FinancialAccountBaseDto", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceManager.Domain.Assets.Entities.AssetListing", "AssetListing")
+                        .WithMany()
+                        .HasForeignKey("AssetListingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssetListing");
                 });
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction", b =>

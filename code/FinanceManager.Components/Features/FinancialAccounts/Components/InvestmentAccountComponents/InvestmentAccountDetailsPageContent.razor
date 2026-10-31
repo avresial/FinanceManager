@@ -131,6 +131,10 @@ else
     }
 }
 
+<MudContainer MaxWidth="MaxWidth.Large">
+        <DividendPaymentHistory AccountId="@AccountId" DefaultCurrency="@_currency.ShortName" />
+    </MudContainer>
+
 <InvestmentTransactionForm AccountId="@AccountId" Visible="@_formVisible" VisibleChanged="OnFormVisibleChanged"
                            Transaction="@_editingTransaction" OnSaved="OnTransactionSavedAsync" />
 

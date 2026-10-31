@@ -95,3 +95,7 @@ The UI palette is defined in [`App.razor`](../../code/FinanceManager/App.razor);
 - **Semantic colors (`Success`, `Error`, `Warning`):** gains, losses and alerts only.
 
 Both themes must keep muted text readable; production renders dark, local sandboxes render light.
+
+### Historical cash dividends
+
+[DividendPayment](../../code/FinanceManager.Domain/FinancialAccounts/Investments/Entities/DividendPayment.cs) records cash actually received, with an explicit payout currency and historical received date. API requests must supply the received date. Receipt amounts display two to eight fractional digits, retaining significant recorded precision. It is independent of the Buy/Sell trade ledger. Create, correction and deletion do not post cash entries, change quantities, alter portfolio valuation/returns or feed the Paycheck Estimator. Values are displayed in their recorded currency without FX conversion or mixed-currency totals. The first slice deliberately excludes tax/per-share calculations, forecasts, imports and reinvestment. These boundaries keep a manual income record from silently changing existing financial calculations.
