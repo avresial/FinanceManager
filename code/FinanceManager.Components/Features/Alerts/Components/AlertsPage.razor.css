@@ -1,0 +1,5 @@
+/* MudBlazor indents outlined helper text 14px under the field; keep it flush with the field edge. */
+.alerts-form ::deep .mud-input-helper-text-contained {
+    margin-left: 0;
+    margin-right: 0;
+}

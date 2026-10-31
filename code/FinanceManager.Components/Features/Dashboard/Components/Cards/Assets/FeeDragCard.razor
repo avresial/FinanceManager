@@ -1,6 +1,6 @@
 @using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 
-<MudCard Outlined Class="fm-phone-auto-height fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
+<MudCard Outlined Class="rounded-lg fm-phone-auto-height fee-drag-card d-flex flex-column" Style="@($"height:{Height};")" data-testid="fee-drag-card">
     <CardHeader Title="ETF fee drag"
                 InfoAriaLabel="About ETF fee drag card"
                 InfoTooltipClass="fm-card-info-glossary"
@@ -41,11 +41,16 @@
         }
         else
         {
-            <div class="fee-drag-card__hero" data-testid="fee-drag-annual-fee">
-                <span class="fee-drag-card__hero-value">@FormatAmount(_analysis.AnnualFeeCost)</span>
-                <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
-                <span class="fee-drag-card__hero-caption">/ year</span>
-            </div>
+            @* Without any expense ratio the cost is unknown, not zero: the warning below explains it, so the card
+               shows no figure instead of a confident 0.00 or a lone dash. *@
+            @if (!IsFeeUnknown)
+            {
+                <div class="fee-drag-card__hero" data-testid="fee-drag-annual-fee">
+                    <span class="fee-drag-card__hero-value">@FormatAmount(_analysis.AnnualFeeCost)</span>
+                    <span class="fee-drag-card__hero-currency">@_currency.ShortName</span>
+                    <span class="fee-drag-card__hero-caption">/ year</span>
+                </div>
+            }
 
             @if (_analysis.MissingTerCount > 0)
             {
@@ -71,20 +76,27 @@
                 <div class="fee-drag-card__control-range" aria-hidden="true"><span>-10%</span><span>10%</span></div>
             </div>
 
-            <div class="fee-drag-card__projections" data-testid="fee-drag-projections" role="region" aria-label="Projected fee drag">
-                @foreach (var projection in ComputedProjections)
+            <div class="fee-drag-card__projections@(IsFeeUnknown ? " fee-drag-card__projections--unknown" : "")" data-testid="fee-drag-projections" role="region" aria-label="Projected fee drag">
+                @if (IsFeeUnknown)
                 {
-                    <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
-                        <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Error">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
-                        <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
-                    </div>
+                    <span class="mud-text-secondary">Set the expense ratio to see 10/20/30-year drag.</span>
+                }
+                else
+                {
+                    @foreach (var projection in ComputedProjections)
+                    {
+                        <div class="fee-drag-card__projection" data-testid="@($"fee-drag-projection-{projection.Years}")">
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">@projection.Years years</MudText>
+                            <MudText Typo="Typo.body1">@FormatCurrency(projection.CumulativeFeeCost)</MudText>
+                            <MudText Class="mud-text-secondary" Typo="Typo.caption">estimated drag</MudText>
+                        </div>
+                    }
                 }
             </div>
 
             <div class="fee-drag-card__footer">
                 <span>@_analysis.TotalHoldingsCount ETF holding@(_analysis.TotalHoldingsCount == 1 ? "" : "s")</span>
-                <span>Avg TER @FormatPercentage(_analysis.WeightedExpenseRatio)</span>
+                <span>Avg TER @(IsFeeUnknown ? _unknownValue : FormatPercentage(_analysis.WeightedExpenseRatio))</span>
             </div>
         }
     </MudCardContent>

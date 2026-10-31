@@ -20,6 +20,7 @@ public partial class FeeDragCard : IDisposable
     private const decimal _maximumReturnRate = 0.10m;
     private const decimal _returnRateStep = 0.005m;
     private const decimal _defaultReturnRate = 0.07m;
+    private const string _unknownValue = "—";
     private static readonly int[] _projectionHorizons = [10, 20, 30];
 
     private bool _isLoading;
@@ -46,6 +47,9 @@ public partial class FeeDragCard : IDisposable
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
+
+    // Every holding lacks an expense ratio, so any computed fee would be a misleading zero.
+    private bool IsFeeUnknown => _analysis is FeeDragAnalysisResult analysis && analysis.TotalHoldingsCount > 0 && analysis.MissingTerCount >= analysis.TotalHoldingsCount;
 
     internal decimal AssumedAnnualReturnRate => _assumedAnnualReturnRate;
 

@@ -2,14 +2,14 @@
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
 
 <div class="pa-2 mud-list-item-clickable"
-     style="@(_expanded ? "background: rgba(255,171,0,0.06);" : "")"
+     style="@(_expanded ? "background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);" : "")"
      role="button" tabindex="0" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
     <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
         <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
                  Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
                  Size="Size.Small" />
 
-        <MudChip T="string" Size="Size.Small" Color="@TypeColor" Variant="Variant.Filled" Style="flex-shrink: 0;">@TypeLabel</MudChip>
+        <MudChip T="string" Size="Size.Small" Color="@TypeColor" Variant="Variant.Outlined" Style="flex-shrink: 0;">@TypeLabel</MudChip>
 
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
             <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@Transaction.Ticker</MudText>
@@ -35,6 +35,10 @@
                      Color="@AmountSign.ColorFor(CashImpact)">
                 @MoneyFormatter.FormatSigned(CashImpact, Transaction.Currency)
             </MudText>
+            @if (!IsMobile)
+            {
+                <MudText Typo="Typo.caption" aria-hidden="true">&nbsp;</MudText>
+            }
         </MudStack>
 
         @if (!IsMobile)
@@ -43,7 +47,7 @@
                 <MudText Typo="Typo.overline" Color="Color.Default">Gain / loss</MudText>
                 @if (ShowGainLoss)
                 {
-                    <MudText Typo="Typo.body2" Class="fm-tabular" Style="white-space: nowrap;"
+                    <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
                              Color="@AmountSign.ColorFor(Valuation!.GainLoss)">
                         @MoneyFormatter.FormatSigned(Valuation.GainLoss, Valuation.Currency)
                     </MudText>
@@ -53,7 +57,8 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Default">—</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Default">—</MudText>
+                    <MudText Typo="Typo.caption" aria-hidden="true">&nbsp;</MudText>
                 }
             </MudStack>
         }

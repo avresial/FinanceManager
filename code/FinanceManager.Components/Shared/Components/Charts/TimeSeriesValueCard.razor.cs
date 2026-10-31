@@ -275,7 +275,8 @@ public partial class TimeSeriesValueCard
                 // so gridlines/labels must read on both a light and a dark card surface.
                 BorderColor = "rgba(128,128,128,0.18)",
                 StrokeDashArray = 0,
-                Padding = new Padding { Left = 0, Right = 8, Top = 4, Bottom = 0 },
+                // Left = 6 keeps a series that starts on a tick off the tick label.
+                Padding = new Padding { Left = 6, Right = 8, Top = 4, Bottom = 0 },
                 Xaxis = new GridXAxis { Lines = new Lines { Show = false } },
                 Yaxis = new GridYAxis { Lines = new Lines { Show = true } },
             },
@@ -299,7 +300,7 @@ public partial class TimeSeriesValueCard
                     // -16 lands the labels ~6px above the card bottom. (0 dropped them
                     // below the clip; -34 floated them ~40px up into the plot.)
                     OffsetY = -16,
-                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                     // Format per tick granularity so sub-month ranges don't repeat the
                     // month (e.g. a "This month" daily range showed "Jun '26" on every tick,
                     // and finer-than-month ticks duplicated "Jan '26 Jan '26"). Day ticks now
@@ -320,7 +321,7 @@ public partial class TimeSeriesValueCard
                     Labels = new YAxisLabels
                     {
                         OffsetX = 0,
-                        Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                        Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                         // compact currency ticks: 2.5k / 7.5k / 10k / 13k
                         Formatter = ChartHelper.CompactCurrencyTickFormatter,
                     },

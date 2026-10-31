@@ -1,6 +1,6 @@
 @using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 
-<MudCard Outlined Class="d-flex flex-column" Style="@($"height:{Height};")" data-testid="recurring-transactions-card">
+<MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")" data-testid="recurring-transactions-card">
     <CardHeader Title="@(SelectedItem?.Name ?? "Recurring transactions")"
                 InfoText="Transactions that repeat on a schedule, grouped by income and outgoing with monthly totals. Select one to see its entries."
                 InfoAriaLabel="About recurring transactions card"
@@ -19,8 +19,9 @@
                     <span data-testid="recurring-subtitle" style="white-space:normal;">
                         @if (_income.Count > 0)
                         {
-                            <span data-testid="recurring-net" class="@(NetMonthlyFlow > 0 ? "mud-success-text" : NetMonthlyFlow < 0 ? "mud-error-text" : null)">Net @MoneyFormatter.FormatSigned(NetMonthlyFlow, Currency)/mo</span>
-                            @($" · {MoneyFormatter.Format(TotalMonthlyIncome, Currency)} in · {MoneyFormatter.Format(TotalMonthlyOutgoing, Currency)} out")
+                            @* One line on purpose: whitespace between the spans would land in the text. Each fragment stays whole
+                               and the line only breaks at the spaces between them. *@
+                            <span data-testid="recurring-net" class="text-nowrap @(NetMonthlyFlow > 0 ? "mud-success-text" : NetMonthlyFlow < 0 ? "mud-error-text" : null)">Net @MoneyFormatter.FormatSigned(NetMonthlyFlow, Currency)/mo</span>@(" ")<span class="text-nowrap">· @MoneyFormatter.Format(TotalMonthlyIncome, Currency) in</span>@(" ")<span class="text-nowrap">· @MoneyFormatter.Format(TotalMonthlyOutgoing, Currency) out</span>
                         }
                         else
                         {
@@ -62,7 +63,7 @@
                     {
                         <section class="px-2 pb-2" aria-label="@label" data-testid="@(isIncome ? "recurring-income-group" : "recurring-outgoing-group")">
                             <div class="d-flex justify-space-between align-center gap-2 px-2 py-1">
-                                <MudText Typo="Typo.body2" HtmlTag="h3" Class="font-weight-600">@label</MudText>
+                                <MudText Typo="Typo.overline" HtmlTag="h3" Class="fm-caps font-weight-600">@label</MudText>
                                 <MudText Typo="Typo.caption" Color="@color" Class="font-weight-600">@FormatFlow(isIncome, items.Sum(item => Math.Abs(item.Value)))/mo</MudText>
                             </div>
                             @foreach (var item in items)
@@ -70,11 +71,12 @@
                                 <MudButton @ref="_rowButtons[item]" Variant="Variant.Text" Color="Color.Default" FullWidth Class="py-1 px-2" Style="text-transform:none;" OnClick="() => OnItemSelected.InvokeAsync(item)">
                                     <span class="d-flex align-center gap-3 w-100">
                                         <span class="flex-grow-1" style="min-width:0;text-align:left;">
-                                            <MudText Typo="Typo.body2" HtmlTag="span" Class="d-block font-weight-500" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="@item.Name">@item.Name</MudText>
+                                            <MudText Typo="Typo.body2" HtmlTag="span" Class="d-block font-weight-500 mb-1" Style="display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;" title="@item.Name">@item.Name</MudText>
                                             <MudProgressLinear Value="@GetPercentage(item.Value, items)" Color="@color" aria-label="@($"{item.Name}: relative monthly {label.ToLowerInvariant()}")"
                                                                Class="mt-1" Size="Size.Small" />
                                         </span>
-                                        <MudText Typo="Typo.body2" HtmlTag="span" Color="@color" Class="font-weight-600 flex-shrink-0" Style="text-align:right;white-space:nowrap;">
+                                        @* A shared minimum width for the amounts gives every bar the same track, so lengths compare across rows. *@
+                                        <MudText Typo="Typo.body2" HtmlTag="span" Color="@color" Class="font-weight-600 flex-shrink-0" Style="min-width:8rem;text-align:right;white-space:nowrap;">
                                             @($"{FormatFlow(isIncome, item.Value)}/mo")
                                         </MudText>
                                     </span>

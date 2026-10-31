@@ -30,6 +30,8 @@ public partial class ExpenseDistributionOverviewCardView
             Background = "transparent",
         },
         Legend = new Legend { Show = false },
+        // ApexCharts outlines slices in white by default, which showed as bright seams on the dark card surface.
+        Stroke = new Stroke { Width = 0 },
         Colors = ColorsProvider.GetColors(),
     };
 

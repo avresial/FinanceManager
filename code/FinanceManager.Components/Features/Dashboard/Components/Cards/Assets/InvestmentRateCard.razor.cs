@@ -20,9 +20,9 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 public partial class InvestmentRateCard : IDisposable
 {
     private const int _horizonMonths = 12;
-    private const string _highlightColor = "#FF9800";
+    private static readonly string _highlightColor = CardChartColors.Accent;
     private const decimal _maximumChartPercentage = 300m;
-    private const string _mutedBarColor = "#5F6368";
+    private const string _mutedBarColor = CardChartColors.Neutral;
     private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
 
     private static readonly string[] _singleLetterMonths =

@@ -24,7 +24,7 @@
 
 .pc-hero-num {
     font: 300 40px/1 var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     letter-spacing: -0.5px;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
@@ -36,7 +36,7 @@
 
 .pc-hero-cur {
     font: 400 20px/1 var(--mud-typography-default-family, "Roboto", "Helvetica", "Arial", sans-serif);
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
     margin-left: 2px;
 }
 
@@ -44,8 +44,7 @@
     font-size: 13px;
     color: var(--mud-palette-text-secondary);
     margin-left: 4px;
-    align-self: flex-end;
-    padding-bottom: 3px;
+    align-self: baseline;
 }
 
 .pc-vs {
@@ -62,8 +61,8 @@
 
 .pc-vs-pill {
     border: 0;
-    background: rgba(255, 143, 0, 0.16);
-    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 16%, transparent);
+    color: var(--fm-primary-text);
     padding: 2px 8px;
     border-radius: 12px;
     font-weight: 500;
@@ -118,8 +117,9 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid transparent;
+    /* Tinted from the text colour so the tile shows on both card surfaces (white-alpha vanished in light mode). */
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    border: 1px solid var(--mud-palette-lines-default);
     border-radius: 6px;
     cursor: pointer;
     text-align: left;
@@ -128,7 +128,7 @@
 }
 
 .pc-named-chip:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 12%, transparent);
 }
 
 .pc-named-chip:focus-visible {
@@ -154,13 +154,13 @@
 }
 
 .pc-named-chip--on {
-    background: rgba(255, 143, 0, 0.18);
-    border-color: rgba(255, 143, 0, 0.45);
+    background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, transparent);
 }
 
 .pc-named-chip--on .pc-named-chip-label,
 .pc-named-chip--on .pc-named-chip-rate {
-    color: var(--mud-palette-primary);
+    color: var(--fm-primary-text);
 }
 
 .pc-foot {

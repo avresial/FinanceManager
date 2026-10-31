@@ -60,9 +60,11 @@
                                      data-start="@column.Start.ToString(CultureInfo.InvariantCulture)"
                                      data-end="@column.End.ToString(CultureInfo.InvariantCulture)">
                                     <span class="attribution-bar @BarTone(column)" style="@BarStyle(column, scale)"></span>
+                                    @* Anchored to the top of the bar: a falling column ends at its bottom, so its end value put the label on the bar. *@
                                     <span class="attribution-value @ValueTone(column.Value) @(column.IsTotal ? "total" : null)"
+                                          title="@FormatAmount(column.Value)"
                                           data-testid="return-attribution-value"
-                                          style="@PositionStyle(column.End, scale)">@FormatColumnValue(column)</span>
+                                          style="@PositionStyle(Math.Max(column.Start, column.End), scale)">@FormatColumnValue(column)</span>
                                 </div>
                             }
                         </div>

@@ -10,14 +10,16 @@
     <PageHeader Title="Cash flow forecast"
                 Subtitle="A deterministic projection from your current cash balances and recurring activity.">
         <Actions>
-            <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
-                            SelectionMode="SelectionMode.SingleSelection" Color="MudBlazor.Color.Primary"
-                            Outlined="true" CheckMark="true" aria-label="Forecast horizon">
-                @foreach (var horizon in Horizons)
-                {
-                    <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
-                }
-            </MudToggleGroup>
+            <div class="fm-view-toggle">
+                <MudToggleGroup T="int" Value="_horizonDays" ValueChanged="SelectHorizon"
+                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="MudBlazor.Size.Small" Color="MudBlazor.Color.Default"
+                                aria-label="Forecast horizon">
+                    @foreach (var horizon in Horizons)
+                    {
+                        <MudToggleItem Value="@horizon" Text="@($"{horizon} days")" />
+                    }
+                </MudToggleGroup>
+            </div>
         </Actions>
     </PageHeader>
 
@@ -49,19 +51,21 @@
                         <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.HistoricalSeries"
                                          Name="Historical balance" SeriesType="SeriesType.Area"
                                          XValue="@(point => point.DateTime.ToLocalTime())"
-                                         YValue="@(point => point.Value)" />
+                                         YValue="@(point => point.Value)"
+                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = CardChartColors.Accent })" />
                     }
                     @if (_forecast.ForecastSeries.Count > 0)
                     {
                         <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.ForecastSeries"
                                          Name="Forecast balance" SeriesType="SeriesType.Line"
                                          XValue="@(point => point.DateTime.ToLocalTime())"
-                                         YValue="@(point => point.Value)" />
+                                         YValue="@(point => point.Value)"
+                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = CardChartColors.Accent })" />
                     }
                 </ApexChart>
             </div>
             <MudText Class="mud-text-secondary" Typo="Typo.caption">
-                Historical balance is shaded; the forecast line begins at today's balance.
+                Solid shaded line: historical balance. Dashed line: forecast, starting from today's balance.
             </MudText>
         </MudPaper>
 
@@ -85,9 +89,9 @@
                     </div>
                     @foreach (var row in month.Rows)
                     {
-                        <div class="d-flex justify-space-between align-center gap-3 py-2 cash-flow-row">
+                        <div class="d-flex justify-space-between align-start gap-3 py-2 cash-flow-row">
                             <div class="cash-flow-row-name">
-                                <MudText Typo="Typo.body2" Class="text-truncate">@row.Transaction.Description</MudText>
+                                <MudText Typo="Typo.body2" title="@row.Transaction.Description" Style="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal;">@row.Transaction.Description</MudText>
                                 <MudText Typo="Typo.caption" Color="MudBlazor.Color.Default">
                                     @DateFormatter.FormatDayMonth(row.Transaction.Date) · @row.Transaction.Cadence
                                 </MudText>

@@ -10,7 +10,7 @@
     <header class="hero">
         <div class="back-link"><MudLink Href="/" Underline="Underline.None">← Finance Manager</MudLink></div>
         <MudText Typo="Typo.overline" Class="mud-text-secondary">MODEL CONTEXT PROTOCOL</MudText>
-        <MudText Typo="Typo.h2" HtmlTag="h1">Connect your AI client</MudText>
+        <MudText Typo="Typo.h5" HtmlTag="h1">Connect your AI client</MudText>
         <MudText Typo="Typo.body1" Class="hero-copy">
             Give ChatGPT, Claude, or another MCP client secure access to your Finance Manager account.
             You sign in with OAuth, so there is no API key or password to paste into the client.
@@ -30,7 +30,7 @@
     else
     {
         <section class="connect-card" aria-labelledby="server-title">
-            <MudText Typo="Typo.h4" HtmlTag="h2" id="server-title">Server details</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="server-title">Server details</MudText>
             <MudText Typo="Typo.body2" Class="section-copy">Most clients only need the server URL and discover the OAuth settings automatically.</MudText>
 
             <div class="value-block">
@@ -66,7 +66,7 @@
         </section>
 
         <section class="connect-card" aria-labelledby="config-title">
-            <MudText Typo="Typo.h4" HtmlTag="h2" id="config-title">Copy or download configuration</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="config-title">Copy or download configuration</MudText>
             <MudText Typo="Typo.body2" Class="section-copy">Use this JSON when your client accepts an MCP configuration file.</MudText>
             <pre><code data-testid="mcp-config">@ConfigurationJson</code></pre>
             <div class="actions">
@@ -84,7 +84,7 @@
         </section>
 
         <section class="connect-card" aria-labelledby="manual-title">
-            <MudText Typo="Typo.h4" HtmlTag="h2" id="manual-title">Manual OAuth settings</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="manual-title">Manual OAuth settings</MudText>
             <dl>
                 <div><dt>Transport</dt><dd>Streamable HTTP</dd></div>
                 <div><dt>Authentication</dt><dd>OAuth 2.0 Authorization Code with PKCE</dd></div>
@@ -106,7 +106,7 @@
         </section>
 
         <section class="connect-card guidance" aria-labelledby="help-title">
-            <MudText Typo="Typo.h4" HtmlTag="h2" id="help-title">Troubleshooting and disconnecting</MudText>
+            <MudText Typo="Typo.h6" HtmlTag="h2" id="help-title">Troubleshooting and disconnecting</MudText>
             <MudExpansionPanels Elevation="0" Class="mt-4">
                 <MudExpansionPanel Text="The OAuth redirect or callback is rejected">
                     Copy the exact callback URL shown by your client. It must be registered by the Finance Manager administrator;

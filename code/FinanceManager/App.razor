@@ -30,7 +30,12 @@
         if (firstRender)
         {
             if (_useSystemPreferences && _mudThemeProvider is not null)
+            {
                 _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
+                // The stylesheets follow prefers-color-scheme live; keep the MudBlazor palette in step when the
+                // system theme changes while the app is open, or the two disagree until a reload.
+                await _mudThemeProvider.WatchSystemDarkModeAsync(OnSystemDarkModeChanged);
+            }
 
             // Remove the preload styles applied in index.html after the app finishes initial render
             try
@@ -46,24 +51,53 @@
         }
     }
 
+    private Task OnSystemDarkModeChanged(bool isDarkMode)
+    {
+        _isDarkMode = isDarkMode;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // Text colours meet WCAG AA (4.5:1) on the card surface of their theme: MudBlazor's default Success/Error and
+    // white text on amber did not (as low as 1.8:1). Money amounts, deltas and chips all read these palette entries.
     private MudTheme MyCustomTheme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
         {
             Primary = Colors.Amber.Darken1,
+            PrimaryContrastText = "rgba(0,0,0,0.87)",
             Secondary = Colors.Amber.Lighten2,
+            SecondaryContrastText = "rgba(0,0,0,0.87)",
+            Success = Colors.Green.Darken3,
+            Error = Colors.Red.Darken3,
+            Warning = Colors.Orange.Darken4,
             AppbarBackground = Colors.Shades.White,
         },
         PaletteDark = new PaletteDark()
         {
-            Primary = Colors.Amber.Darken3,
+            Primary = Colors.Amber.Darken2,
+            PrimaryContrastText = "rgba(0,0,0,0.87)",
             Secondary = Colors.Amber.Darken1,
+            SecondaryContrastText = "rgba(0,0,0,0.87)",
+            Success = Colors.Green.Lighten2,
+            SuccessContrastText = "rgba(0,0,0,0.87)",
+            Error = Colors.Red.Lighten3,
+            ErrorContrastText = "rgba(0,0,0,0.87)",
+            // MudAlert paints its text in the *Darken shade, which loses contrast on a dark surface; lighter
+            // shades keep alert messages at 4.5:1 or more on their tinted background.
+            SuccessDarken = Colors.Green.Lighten3,
+            ErrorDarken = Colors.Red.Lighten4,
+            WarningDarken = Colors.Orange.Lighten2,
+            InfoDarken = Colors.Blue.Lighten3,
 
             Background = Colors.Gray.Darken4,
+            // MudBlazor's default (#27272f) is blue-tinted next to the neutral greys used everywhere else.
+            BackgroundGray = "#303030",
 
             AppbarBackground = Colors.Gray.Darken4,
             DrawerBackground = Colors.Gray.Darken4,
             Surface = Colors.Gray.Darken3,
+            // MudBlazor's 0.50 white reads at 3.9:1 on the Darken3 card surface; 0.60 reaches 4.8:1.
+            TextSecondary = "rgba(255,255,255,0.60)",
         },
     };
 }

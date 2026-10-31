@@ -1,4 +1,5 @@
 using ApexCharts;
+using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.Models;
@@ -187,23 +188,23 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             Zoom = new Zoom { Enabled = false },
             FontFamily = "Roboto, sans-serif"
         },
-        Colors = ["#ffab00", "#42a5f5"],
+        // Same encoding as the dashboard forecast card: the balance is amber, solid for history and dashed for
+        // the forecast (the dash is set on the forecast series).
+        Colors = [CardChartColors.Accent, CardChartColors.Accent],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
         // with zero-size markers. A sub-pixel stroke (non-zero so it serializes) hides it while
         // the hover marker still appears.
         Markers = new Markers { Size = 0.1, StrokeWidth = 0.1, Hover = new MarkersHover { Size = 5 } },
-        Legend = new Legend
-        {
-            Show = true,
-            Position = LegendPosition.Top,
-            HorizontalAlign = ApexCharts.Align.Right
-        },
+        // Both series are amber and differ only by dash, which legend dots cannot show; the caption under the chart
+        // names the line styles instead, as on the dashboard forecast card.
+        Legend = new Legend { Show = false },
         Fill = new Fill
         {
             Type = [FillType.Gradient, FillType.Solid],
-            Gradient = new FillGradient { OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
+            // Both gradient ends are the accent so only the opacity fades; the default dark shade turned it grey.
+            Gradient = new FillGradient { GradientToColors = [CardChartColors.Accent, CardChartColors.Accent], OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
             Opacity = [1d, 1d]
         },
         Grid = new Grid
@@ -220,21 +221,21 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             AxisTicks = new AxisTicks { Show = false },
             Labels = new XAxisLabels
             {
-                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
-                DatetimeFormatter = new DatetimeFormatter { Year = "yyyy", Month = "MMM 'yy", Day = "dd MMM" }
+                Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
+                // A horizon that crosses New Year made ApexCharts print the year on every tick ("12 Oct 2026"); the
+                // fixed format matches the other charts, and the tooltip still shows the full date.
+                Format = "dd MMM",
             }
         },
         Yaxis =
         [
             new YAxis
             {
-                Floating = true,
                 AxisBorder = new AxisBorder { Show = false },
                 AxisTicks = new AxisTicks { Show = false },
                 Labels = new YAxisLabels
                 {
-                    OffsetX = 38,
-                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "11px" },
+                    Style = new AxisLabelStyle { Colors = "rgba(130,130,130,0.95)", FontSize = "12px" },
                     Formatter = ChartHelper.CompactCurrencyTickFormatter
                 }
             }

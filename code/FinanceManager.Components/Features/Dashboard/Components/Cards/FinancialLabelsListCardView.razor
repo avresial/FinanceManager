@@ -4,14 +4,11 @@
     <CardHeader Title="Money by label"
                 InfoText="Your money grouped by label for the selected period, split into income and spending."
                 InfoAriaLabel="About money by label card"
-                Subtitle="@PeriodLabel">
+                Subtitle="@($"Net · {PeriodLabel}")">
         <KeyFigure>
             @if (!IsLoading && !HasError && Data.Any())
             {
-                <div class="d-flex flex-column align-end">
-                    <MudText Typo="Typo.overline" Class="fm-muted fm-tight fm-caps">Net</MudText>
-                    <MudText Typo="Typo.subtitle1" Class="@($"fm-amount fm-tight {(_net >= 0 ? "fm-pos" : "fm-neg")}")">@Fmt(_net, true)</MudText>
-                </div>
+                @Fmt(_net, true)
             }
         </KeyFigure>
     </CardHeader>

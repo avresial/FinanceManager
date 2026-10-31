@@ -14,7 +14,7 @@
 .rule-row { display: flex; align-items: center; gap: 1rem; width: 100%; padding: 1rem; border: 0; text-align: left; cursor: pointer; color: var(--mud-palette-text-primary); background: transparent; font: inherit; }
 .rule-row:hover, .is-expanded > .rule-row { background: var(--mud-palette-action-default-hover); }
 .rule-row:focus-visible { outline: 3px solid var(--mud-palette-primary); outline-offset: -3px; }
-.rule-number { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--mud-palette-primary); }
+.rule-number { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--fm-primary-text); }
 .rule-row-copy { flex: 1; min-width: 0; }
 .rule-name { display: block; font-weight: 600; overflow-wrap: anywhere; }
 .rule-detail-header > div { min-width: 0; max-width: 100%; }
@@ -28,7 +28,7 @@
 .rule-definition { min-width: 0; }
 .rule-step { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
 .rule-step > div { min-width: 0; }
-.step-label { display: inline-flex; flex-shrink: 0; justify-content: center; align-items: center; width: 2.5rem; height: 2rem; border-radius: 4px; color: var(--mud-palette-primary); background: var(--mud-palette-action-default-hover); font-weight: 700; font-size: .75rem; }
+.step-label { display: inline-flex; flex-shrink: 0; justify-content: center; align-items: center; width: 2.5rem; height: 2rem; border-radius: 4px; color: var(--fm-primary-text); background: var(--mud-palette-action-default-hover); font-weight: 700; font-size: .75rem; }
 .do-label { color: var(--mud-palette-text-primary); }
 .condition-list, .action-list, .sequence-trail { padding-left: 1.25rem; margin: .5rem 0; }
 .condition-list li, .action-list li, .sequence-trail li { padding: .3rem 0; overflow-wrap: anywhere; }
@@ -42,7 +42,7 @@
 .facts-column dl { margin-top: .5rem; }
 .facts-column dt { font-size: .75rem; color: var(--mud-palette-text-secondary); }
 .facts-column dd { margin: 0 0 .75rem; overflow-wrap: anywhere; font-size: .875rem; }
-.facts-arrow { align-self: center; color: var(--mud-palette-primary); }
+.facts-arrow { align-self: center; color: var(--fm-primary-text); }
 .changed-value { font-weight: 700; }
 .delete-confirmation { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .creation-workspace { border: 1px solid var(--mud-palette-divider); border-radius: 8px; padding: 1rem; }

@@ -23,9 +23,10 @@
     border-color: color-mix(in srgb, var(--mud-palette-success) 22%, var(--mud-palette-divider));
 }
 
+/* TWR gets the neutral info hue: warning orange made a positive return read as a problem. */
 .portfolio-return-metric--time {
-    background: color-mix(in srgb, var(--mud-palette-warning) 9%, var(--mud-palette-surface));
-    border-color: color-mix(in srgb, var(--mud-palette-warning) 22%, var(--mud-palette-divider));
+    background: color-mix(in srgb, var(--mud-palette-info) 9%, var(--mud-palette-surface));
+    border-color: color-mix(in srgb, var(--mud-palette-info) 22%, var(--mud-palette-divider));
 }
 
 .portfolio-return-metric-heading {
@@ -42,7 +43,7 @@
 
 .portfolio-return-metric--time .portfolio-return-metric-icon,
 .portfolio-return-value--time {
-    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
 }
 
 .portfolio-return-value--negative {
@@ -62,15 +63,15 @@
     margin-top: 0.75rem;
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
-    border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 18%, var(--mud-palette-divider));
-    background: color-mix(in srgb, var(--mud-palette-warning) 6%, var(--mud-palette-surface));
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 18%, var(--mud-palette-divider));
+    background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface));
     color: var(--mud-palette-text-primary);
     font-size: 0.875rem;
 }
 
 .portfolio-return-insight-icon {
     flex: none;
-    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
 }
 
 .portfolio-return-footer {

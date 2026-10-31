@@ -19,8 +19,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 public partial class SavingsRateCard : IDisposable
 {
     private const int _horizonMonths = 12;
-    private const string _highlightColor = "#FF9800";
-    private const string _mutedBarColor = "#5F6368";
+    private static readonly string _highlightColor = CardChartColors.Accent;
+    private const string _mutedBarColor = CardChartColors.Neutral;
     private const string _mutedLabelColor = "var(--mud-palette-text-secondary)";
 
     private static readonly string[] _singleLetterMonths =

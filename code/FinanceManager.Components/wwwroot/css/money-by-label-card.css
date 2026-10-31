@@ -5,24 +5,21 @@
    scoped-CSS attribute, so .razor.css isolation can't reach them. Everything is
    nested under .fm-labels-card to avoid collisions.
 
-   Structural colours (text, dividers) come from MudBlazor palette variables so
-   they auto theme-switch. The money green/red are tuned to FinanceManager's
-   tokens (brighter than MudBlazor's Success/Error) and flipped under
-   prefers-color-scheme: dark, which is how this app flips theme. */
+   All colours come from MudBlazor palette variables so they auto theme-switch; the
+   money green/red are the theme's Success/Error. Only the tints and the track
+   differ per theme, under prefers-color-scheme: dark, which is how this app flips theme. */
 .fm-labels-card {
-    --fm-pos: #2E7D32;
-    --fm-neg: #C62828;
-    --fm-tint-pos: rgba(46, 125, 50, 0.15);
-    --fm-tint-neg: rgba(198, 40, 40, 0.13);
+    --fm-pos: var(--mud-palette-success);
+    --fm-neg: var(--mud-palette-error);
+    --fm-tint-pos: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
+    --fm-tint-neg: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
     --fm-track: rgba(0, 0, 0, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
     .fm-labels-card {
-        --fm-pos: #66BB6A;
-        --fm-neg: #EF5350;
-        --fm-tint-pos: rgba(102, 187, 106, 0.18);
-        --fm-tint-neg: rgba(239, 83, 80, 0.16);
+        --fm-tint-pos: color-mix(in srgb, var(--mud-palette-success) 18%, transparent);
+        --fm-tint-neg: color-mix(in srgb, var(--mud-palette-error) 16%, transparent);
         --fm-track: rgba(255, 255, 255, 0.11);
     }
 }

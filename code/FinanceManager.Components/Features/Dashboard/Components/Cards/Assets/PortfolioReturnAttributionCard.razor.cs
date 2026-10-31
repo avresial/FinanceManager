@@ -175,9 +175,11 @@ public partial class PortfolioReturnAttributionCard
 
     private static string FormatColumnValue(AttributionColumn column)
     {
-        return column.IsTotal
-            ? MoneyFormatter.FormatNumber(column.Value)
-            : MoneyFormatter.FormatSigned(column.Value);
+        var absolute = Math.Abs(column.Value);
+        var compact = absolute >= 1000m
+            ? $"{(absolute / 1000m).ToString("0.##", CultureInfo.CurrentCulture)}k"
+            : absolute.ToString("N2", CultureInfo.CurrentCulture);
+        return column.Value < 0m ? $"-{compact}" : column.Value > 0m && !column.IsTotal ? $"+{compact}" : compact;
     }
 
     private static string FormatAxisValue(decimal value) => Math.Abs(value) >= 1000m

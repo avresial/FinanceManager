@@ -4,9 +4,8 @@
 <ComponentStateView IsLoading="@_isLoading" ErrorMessage="@ErrorMessage">
     <AccountFormContainer>
         <PageHeader Title="Export" />
-        <MudPaper Class="pa-4">
+        <MudPaper Outlined Class="pa-4">
             <MudStack Spacing="2">
-                <MudText Typo="Typo.h4">Export data</MudText>
                 <MudText Typo="Typo.subtitle1">@GetAccountTypeLabel() account</MudText>
                 @if (!string.IsNullOrWhiteSpace(AccountName))
                 {

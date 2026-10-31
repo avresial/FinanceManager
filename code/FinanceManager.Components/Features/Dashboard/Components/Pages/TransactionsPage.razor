@@ -72,8 +72,8 @@
                     <div class="d-flex align-baseline gap-2">
                         <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(group.Key)</MudText>
                         <MudText Typo="Typo.caption" Class="fm-muted">@DateFormatter.FormatWeekday(group.Key)</MudText>
+                        <MudText Typo="Typo.caption" Class="fm-muted">· @group.Count() @(group.Count() == 1 ? "entry" : "entries")</MudText>
                     </div>
-                    <MudText Typo="Typo.caption" Class="fm-muted">@group.Count() @(group.Count() == 1 ? "entry" : "entries")</MudText>
                 </div>
                 <div class="fm-txlog-day-rows">
                     @foreach (var entry in group)

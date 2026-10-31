@@ -5,21 +5,19 @@
    scoped-CSS attribute, so .razor.css isolation can't reach them. Everything is
    nested under .fm-txlog-scope to avoid collisions.
 
-   The money green/red tokens mirror money-by-label-card.css and flip under
-   prefers-color-scheme: dark, which is how this app flips theme. */
+   The money green/red are the theme's Success/Error (as in money-by-label-card.css); only
+   the tints change under prefers-color-scheme: dark, which is how this app flips theme. */
 .fm-txlog-scope {
-    --fm-pos: #2E7D32;
-    --fm-neg: #C62828;
-    --fm-tint-pos: rgba(46, 125, 50, 0.15);
-    --fm-tint-neg: rgba(198, 40, 40, 0.13);
+    --fm-pos: var(--mud-palette-success);
+    --fm-neg: var(--mud-palette-error);
+    --fm-tint-pos: color-mix(in srgb, var(--mud-palette-success) 15%, transparent);
+    --fm-tint-neg: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
     .fm-txlog-scope {
-        --fm-pos: #66BB6A;
-        --fm-neg: #EF5350;
-        --fm-tint-pos: rgba(102, 187, 106, 0.18);
-        --fm-tint-neg: rgba(239, 83, 80, 0.16);
+        --fm-tint-pos: color-mix(in srgb, var(--mud-palette-success) 18%, transparent);
+        --fm-tint-neg: color-mix(in srgb, var(--mud-palette-error) 16%, transparent);
     }
 }
 
@@ -128,7 +126,9 @@
     position: sticky;
     top: var(--mud-appbar-height, 64px);
     z-index: 1;
-    background-color: var(--mud-palette-surface);
+    /* The day cards are transparent, so the page background keeps the header flat in both themes (the surface
+       colour drew a grey band in dark mode only) while still masking rows that scroll under it. */
+    background-color: var(--mud-palette-background);
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
@@ -139,5 +139,6 @@
 /* The toolbar row scrolls itself instead of pushing a phone-width page into horizontal overflow. */
 .fm-txlog-scope .fm-txlog-toolbar-row {
     min-height: 40px;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    row-gap: 8px;
 }
