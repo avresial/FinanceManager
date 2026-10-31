@@ -115,6 +115,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAssetListingRepository, AssetListingRepository>()
                 .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
                 .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
+                .AddScoped<IDividendPaymentRepository, DividendPaymentRepository>()
                 .AddScoped<IAtomicOperation, EfAtomicOperation>()
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IFinancialAccountRepository, AccountRepository>()

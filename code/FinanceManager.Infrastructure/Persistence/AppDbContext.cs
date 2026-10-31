@@ -38,6 +38,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AssetListing> AssetListings { get; set; } = default!;
     public DbSet<MarketDataSymbol> MarketDataSymbols { get; set; } = default!;
     public DbSet<AssetIdentifier> AssetIdentifiers { get; set; } = default!;
+    public DbSet<DividendPayment> DividendPayments { get; set; } = default!;
     public DbSet<InvestmentTransaction> InvestmentTransactions { get; set; } = default!;
     public DbSet<PriceQuote> PriceQuotes { get; set; } = default!;
     public DbSet<NewVisits> NewVisits { get; set; } = default!;
@@ -71,6 +72,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.ApplyConfiguration(new MarketDataSymbolConfiguration());
         modelBuilder.ApplyConfiguration(new AssetIdentifierConfiguration());
         modelBuilder.ApplyConfiguration(new InvestmentTransactionConfiguration());
+        modelBuilder.ApplyConfiguration(new DividendPaymentConfiguration());
         modelBuilder.ApplyConfiguration(new PriceQuoteConfiguration());
         modelBuilder.ApplyConfiguration(new UserDtoConfiguration());
         modelBuilder.ApplyConfiguration(new GiftCodeConfiguration());
