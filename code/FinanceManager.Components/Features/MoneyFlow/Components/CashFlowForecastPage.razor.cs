@@ -197,15 +197,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         // with zero-size markers. A sub-pixel stroke (non-zero so it serializes) hides it while
         // the hover marker still appears.
         Markers = new Markers { Size = 0.1, StrokeWidth = 0.1, Hover = new MarkersHover { Size = 5 } },
-        Legend = new Legend
-        {
-            Show = true,
-            Position = LegendPosition.Top,
-            HorizontalAlign = ApexCharts.Align.Right,
-            // Default markers touch their labels and the items run together.
-            Markers = new LegendMarkers { Width = 8, Height = 8, OffsetX = -4 },
-            ItemMargin = new LegendItemMargin { Horizontal = 10 }
-        },
+        // Both series are amber and differ only by dash, which legend dots cannot show; the caption under the chart
+        // names the line styles instead, as on the dashboard forecast card.
+        Legend = new Legend { Show = false },
         Fill = new Fill
         {
             Type = [FillType.Gradient, FillType.Solid],
