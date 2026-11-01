@@ -40,8 +40,9 @@ public sealed class TransactionLogCardTests
         var date = new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc);
         await using var context = CreateContext(
         [
-            new TransactionLogEntryDto(11, "Everyday", AccountType.Currency, 5, date, -12.5m, "Coffee"),
-            new TransactionLogEntryDto(12, "Brokerage", AccountType.Stock, 6, date, 100m, ""),
+            new TransactionLogEntryDto(11, "Everyday", AccountType.Currency, 5, date, -12.5m, "Coffee", "USD"),
+            new TransactionLogEntryDto(12, "Brokerage", AccountType.Stock, 6, date, 100m, "", "GBX"),
+            new TransactionLogEntryDto(13, "Bonds", AccountType.Bond, 7, date, -2m, "Bond", "units"),
         ]);
 
         var cut = context.Render<TransactionLogCard>();
@@ -49,7 +50,8 @@ public sealed class TransactionLogCardTests
         cut.WaitForAssertion(() =>
         {
             var rows = cut.FindAll("a.fm-txlog-link");
-            Assert.Equal(["/AccountDetails/11?entryId=5", "/AccountDetails/12"], rows.Select(row => row.GetAttribute("href")));
+            Assert.Equal(["/AccountDetails/11?entryId=5", "/AccountDetails/12", "/AccountDetails/13"], rows.Select(row => row.GetAttribute("href")));
+            Assert.Equal(["-12.50 USD", "+100.00 GBX", "-2.00 units"], rows.Select(row => row.QuerySelector(".fm-amount")!.TextContent.Trim()));
             Assert.Contains("Coffee", rows[0].TextContent);
             Assert.Contains("15 Oct 2026", rows[0].TextContent);
             // A blank description falls back to the account name.

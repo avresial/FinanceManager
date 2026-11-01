@@ -48,7 +48,8 @@ internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccoun
     public IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId) => context.Accounts
         .AsNoTracking()
         .Where(x => x.UserId == userId && x.AccountType == AccountType.Currency)
-        .Select(x => new AvailableAccount(x.AccountId, x.Name, x.AccountLabel))
+        .Select(x => new AvailableAccount(x.AccountId, x.Name, x.AccountLabel,
+            context.Currencies.Where(currency => currency.Id == x.CurrencyId).Select(currency => currency.ShortName).FirstOrDefault()))
         .AsAsyncEnumerable();
 
     public Task<bool> Exists(int accountId) => context.Accounts.AsNoTracking().AnyAsync(x => x.AccountId == accountId && x.AccountType == AccountType.Currency);

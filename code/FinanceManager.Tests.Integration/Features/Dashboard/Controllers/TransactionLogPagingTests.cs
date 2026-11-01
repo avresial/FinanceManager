@@ -55,6 +55,19 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         }
 
         Assert.Equal(expected, actual);
+        Assert.All(actual.Where(e => e.AccountId == 10), e => Assert.Equal("PLN", e.CurrencyOrUnit));
+        Assert.All(actual.Where(e => e.AccountId == 11), e => Assert.Equal("USD", e.CurrencyOrUnit));
+        Assert.All(actual.Where(e => e.AccountType == AccountType.Bond), e =>
+        {
+            Assert.Equal("units", e.CurrencyOrUnit);
+            Assert.Equal(e.EntryId, e.ValueChange);
+        });
+        Assert.All(actual.Where(e => e.AccountType == AccountType.Stock), e =>
+        {
+            // Listing metadata is PLN; historical trade amounts remain in their recorded GBX.
+            Assert.Equal("GBX", e.CurrencyOrUnit);
+            Assert.Equal(2m, e.ValueChange);
+        });
         Assert.All(actual, e => Assert.Contains(e.AccountId, new[] { 10, 11, 20, 30 }));
         Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
         var intraday = await client.GetPage(641, new(day.AddHours(1), day.AddDays(1)), ct);
@@ -70,9 +83,10 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
     {
         var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
         var db = _database!.Context;
+        db.Currencies.Add(DefaultCurrency.USD);
         db.Accounts.AddRange(
             new FinancialAccountBaseDto { AccountId = 10, UserId = 641, Name = "Bank", AccountType = AccountType.Currency },
-            new FinancialAccountBaseDto { AccountId = 11, UserId = 641, Name = "Savings", AccountType = AccountType.Currency },
+            new FinancialAccountBaseDto { AccountId = 11, UserId = 641, Name = "Savings", AccountType = AccountType.Currency, CurrencyId = 1 },
             new FinancialAccountBaseDto { AccountId = 20, UserId = 641, Name = "Bonds", AccountType = AccountType.Bond },
             new FinancialAccountBaseDto { AccountId = 30, UserId = 641, Name = "Broker", AccountType = AccountType.Stock },
             new FinancialAccountBaseDto { AccountId = 98, UserId = 999, Name = "Other bonds", AccountType = AccountType.Bond },
@@ -95,9 +109,9 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             TradingCurrency = "PLN"
         });
         db.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { Id = 1, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
+            new InvestmentTransaction { Id = 1, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
             new InvestmentTransaction { Id = 97, AccountId = 97, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
-            new InvestmentTransaction { Id = 2, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" });
+            new InvestmentTransaction { Id = 2, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         Authorize("owner", 641, UserRole.User);
