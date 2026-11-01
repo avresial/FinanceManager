@@ -2,6 +2,7 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
@@ -17,6 +18,28 @@ public class MultiAccountHistoryPageTests
 {
     private static readonly DateTime _start = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = _start.AddDays(2);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AvailableCashAccounts_ProjectTheirOwnCurrency_WithoutDroppingMissingMetadata(bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        context.Currencies.AddRange(DefaultCurrency.PLN, DefaultCurrency.USD);
+        context.Accounts.AddRange(
+            new FinancialAccountBaseDto { AccountId = 1, UserId = 1, Name = "PLN cash", AccountType = AccountType.Currency },
+            new FinancialAccountBaseDto { AccountId = 2, UserId = 1, Name = "USD cash", AccountType = AccountType.Currency, CurrencyId = 1 },
+            new FinancialAccountBaseDto { AccountId = 3, UserId = 1, Name = "Unknown", AccountType = AccountType.Currency, CurrencyId = 999 },
+            new FinancialAccountBaseDto { AccountId = 4, UserId = 2, Name = "Other owner", AccountType = AccountType.Currency });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+
+        var accounts = await new CurrencyAccountRepository(context).GetAvailableAccounts(1).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([(1, "PLN"), (2, "USD"), (3, (string?)null)],
+            accounts.OrderBy(a => a.AccountId).Select(a => (a.AccountId, a.Currency)));
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
 
     [Theory]
     [InlineData(false, false)]

@@ -96,6 +96,33 @@ public class TransactionLogServiceTests
         Assert.Equal("EDO0134", bondEntry.Description);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MixedStreams_PreserveSourceCurrencyOrUnit_WithoutChangingAmounts(bool paged)
+    {
+        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+        SetupCurrencyAccount(10, "Dollar cash", [new(10, 1, day, 0, -76)]);
+        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(ToAsyncEnumerable([new AvailableAccount(10, "Dollar cash", Currency: "USD")]));
+        SetupBondAccount(20, "Bonds", [new(20, 2, day, 0, -2, 7)]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string>());
+        SetupInvestmentAccount(30, "Broker", [new InvestmentTransaction
+        {
+            Id = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day),
+            Type = InvestmentTransactionType.Sell, Quantity = 2.5m, UnitPrice = 125,
+            Fee = 10, Currency = "GBX", AssetListing = new AssetListing { TradingCurrency = "GBP" }
+        }]);
+
+        var result = paged
+            ? (await _service.GetPage(_userId, new(day, day), TestContext.Current.CancellationToken)).Items
+            : await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal([(AccountType.Stock, -312.5m, "GBX"), (AccountType.Bond, -2m, "units"), (AccountType.Currency, -76m, "USD")],
+            result.Select(e => (e.AccountType, e.ValueChange, e.CurrencyOrUnit)));
+    }
+
     [Fact]
     public async Task GetLastTransactions_LimitsMergedResultToCount()
     {

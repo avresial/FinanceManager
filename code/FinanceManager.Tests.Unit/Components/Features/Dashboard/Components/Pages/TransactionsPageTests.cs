@@ -31,6 +31,24 @@ public sealed class TransactionsPageTests
     private static readonly DateTime _oct13 = new(2026, 10, 13, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public async Task Rows_RenderSourceCurrenciesAndBondUnits_FromThePagedResponse()
+    {
+        using var handler = new PageHandler((_, _) => Respond(new TransactionLogPage(
+        [
+            new(10, "Cash", AccountType.Currency, 1, _oct15, -76m, "Groceries", "EUR"),
+            new(20, "Bonds", AccountType.Bond, 2, _oct15, -2m, "Redemption", "units"),
+            new(30, "Broker", AccountType.Stock, 3, _oct15, 1234.5m, "Buy", "GBX"),
+            new(10, "Legacy cash", AccountType.Currency, 4, _oct15, 0m, "Missing metadata")
+        ], null)));
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Equal(["-76.00 EUR", "-2.00 units", "+1,234.50 GBX", "0.00"],
+            cut.FindAll(".fm-txlog-link .fm-amount").Select(e => e.TextContent.Trim())));
+    }
+
+    [Fact]
     public async Task SearchChangeResetsCursorAndKeepsAccountFilters()
     {
         using var handler = new PageHandler((count, _) => Respond(new TransactionLogPage([Entry(count == 3 ? 4 : 5, _oct15)], new(_oct15, AccountType.Currency, 5))));

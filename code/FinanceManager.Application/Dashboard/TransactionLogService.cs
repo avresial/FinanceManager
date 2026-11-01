@@ -41,6 +41,7 @@ public class TransactionLogService(
         if (currencyAccounts.Count != 0)
         {
             var currencyAccountNames = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
             var entries = await currencyEntryRepository.GetMostRecentByAccounts(
                 [.. currencyAccountNames.Keys], count, cancellationToken);
 
@@ -51,7 +52,7 @@ public class TransactionLogService(
                 e.EntryId,
                 e.PostingDate,
                 e.ValueChange,
-                GetCurrencyDescription(e))));
+                GetCurrencyDescription(e), currencies[e.AccountId])));
         }
 
         var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
@@ -69,7 +70,7 @@ public class TransactionLogService(
                 e.EntryId,
                 e.PostingDate,
                 e.ValueChange,
-                bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond")));
+                bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond", "units")));
         }
 
         Dictionary<int, string> investmentAccounts = [];
@@ -87,7 +88,7 @@ public class TransactionLogService(
                     t.Id,
                     t.TradeDate.ToDateTime(TimeOnly.MinValue),
                     t.SignedQuantity * t.UnitPrice,
-                    GetInvestmentDescription(t))));
+                    GetInvestmentDescription(t), t.Currency)));
         }
 
         return [.. result
@@ -126,12 +127,13 @@ public class TransactionLogService(
         if (currencyAccounts.Count != 0)
         {
             var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
+            var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
             var boundary = GetPageBoundary(query.Cursor, AccountType.Currency, int.MaxValue);
             var entries = await currencyEntryRepository.GetHistoryPage(
                 [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
-                e.ValueChange, GetCurrencyDescription(e))));
+                e.ValueChange, GetCurrencyDescription(e), currencies[e.AccountId])));
         }
 
         var bondAccounts = IncludesStream(query, AccountType.Bond)
@@ -146,7 +148,7 @@ public class TransactionLogService(
             var bondNames = await GetBondNames(entries, cancellationToken);
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
-                e.ValueChange, bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond")));
+                e.ValueChange, bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond", "units")));
         }
 
         // Investment dates represent midnight. A non-midnight start excludes that day's trades.
@@ -173,7 +175,7 @@ public class TransactionLogService(
                     boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
                 result.AddRange(transactions.Select(t => new TransactionLogEntryDto(
                     t.AccountId, names[t.AccountId], AccountType.Stock, t.Id, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                    t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t))));
+                    t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency)));
             }
         }
 
