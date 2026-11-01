@@ -1,0 +1,9 @@
+Running tests from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
+/Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64) passed (27s 704ms)
+
+Test run summary: Passed!
+  total: 2286
+  failed: 0
+  succeeded: 2286
+  skipped: 0
+  duration: 28s 324ms

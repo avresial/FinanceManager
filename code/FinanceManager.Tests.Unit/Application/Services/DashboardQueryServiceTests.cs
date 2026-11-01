@@ -1,6 +1,7 @@
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -59,8 +60,8 @@ public class DashboardQueryServiceTests
         _liabilitiesService.Setup(s => s.GetEndLiabilitiesPerType(_userId, _start, _end)).Returns(new[] { new NameValueResult("Mortgage", -1000) }.ToAsyncEnumerable());
         _liabilitiesService.Setup(s => s.GetEndLiabilitiesPerAccount(_userId, _start, _end)).Returns(new[] { new NameValueResult("Bank A", -1000) }.ToAsyncEnumerable());
         _labelsValueService.Setup(s => s.GetLabelsValue(_userId, _start, _end)).ReturnsAsync([new("Salary", 5000)]);
-        _assetsService.Setup(s => s.GetEndAssetsPerType(_userId, currency, _end)).Returns(new[] { new NameValueResult("Cash", 3000) }.ToAsyncEnumerable());
-        _assetsService.Setup(s => s.GetEndAssetsPerAccount(_userId, currency, _end)).Returns(new[] { new NameValueResult("Bank A", 3000) }.ToAsyncEnumerable());
+        _assetsService.Setup(s => s.GetEndAssetsDistribution(_userId, currency, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetsDistributionResult([new("Cash", 3000)], [new("Bank A", 3000)]));
         _expenseDistributionService.Setup(s => s.GetExpenseDistribution(_userId, currency, _start, _end)).ReturnsAsync([new("Food", 400)]);
 
         // Act
@@ -99,10 +100,9 @@ public class DashboardQueryServiceTests
         _netWorthService.Setup(x => x.GetNetWorth(_userId, currency, _start, _end)).ReturnsAsync(new Dictionary<DateTime, decimal>());
         _liabilitiesService.Setup(x => x.GetEndLiabilitiesPerType(_userId, _start, _end)).Returns(Array.Empty<NameValueResult>().ToAsyncEnumerable());
         _liabilitiesService.Setup(x => x.GetEndLiabilitiesPerAccount(_userId, _start, _end)).Returns(Array.Empty<NameValueResult>().ToAsyncEnumerable());
-        _assetsService.Setup(x => x.GetEndAssetsPerType(_userId, currency, _end))
-            .Returns(() => fail ? throw new InvalidOperationException("valuation failed") : new[] { new NameValueResult("Stock", value) }.ToAsyncEnumerable());
-        _assetsService.Setup(x => x.GetEndAssetsPerAccount(_userId, currency, _end))
-            .Returns(() => new[] { new NameValueResult("Investment", value) }.ToAsyncEnumerable());
+        _assetsService.Setup(x => x.GetEndAssetsDistribution(_userId, currency, _end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => fail ? throw new InvalidOperationException("valuation failed")
+                : new AssetsDistributionResult([new("Stock", value)], [new("Investment", value)]));
         var services = new ServiceCollection();
         services.AddHybridCache();
         using var provider = services.BuildServiceProvider();
@@ -116,8 +116,9 @@ public class DashboardQueryServiceTests
         Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
         Assert.Equal(420m, Assert.Single(refreshed!.AssetsPerType).Value);
         Assert.Equal(420m, Assert.Single(refreshed.AssetsPerAccount).Value);
-        _assetsService.Verify(x => x.GetEndAssetsPerType(_userId, currency, _end), Times.Exactly(2));
-        _assetsService.Verify(x => x.GetEndAssetsPerAccount(_userId, currency, _end), Times.Exactly(2));
+        _assetsService.Verify(x => x.GetEndAssetsDistribution(_userId, currency, _end, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _assetsService.Verify(x => x.GetEndAssetsPerType(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()), Times.Never);
+        _assetsService.Verify(x => x.GetEndAssetsPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()), Times.Never);
         _netWorthService.Verify(x => x.GetNetWorth(_userId, currency, _start, _end), Times.Once);
 
         fail = true;

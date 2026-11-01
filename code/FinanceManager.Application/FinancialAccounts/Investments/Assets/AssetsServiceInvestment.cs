@@ -4,6 +4,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -70,29 +71,55 @@ internal class AssetsServiceInvestment(
         return await GetAssetsTimeSeries(userId, currency, start, end);
     }
 
+    public async Task<AssetsDistributionResult> GetEndAssetsDistribution(
+        int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
+    {
+        var (accounts, values) = await GetEndValues(userId, currency, asOfDate, cancellationToken);
+        return new(GetPerType(values).ToList(), GetPerAccount(accounts, values).ToList());
+    }
+
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        List<InvestmentAccount> accounts = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
-            accounts.Add(account);
-
-        var valuesByAccount = await valuationService.GetAccountValueAsync(accounts.Select(a => a.AccountId).ToList(), currency, asOfDate);
-        foreach (var account in accounts)
-        {
-            if (valuesByAccount.TryGetValue(account.AccountId, out var value) && value > 0)
-                yield return new NameValueResult(account.Name, value) { AccountId = account.AccountId };
-        }
+        var (accounts, values) = await GetEndValues(userId, currency, asOfDate);
+        foreach (var row in GetPerAccount(accounts, values))
+            yield return row;
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        List<int> accountIds = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
-            accountIds.Add(account.AccountId);
+        var (_, values) = await GetEndValues(userId, currency, asOfDate);
+        foreach (var row in GetPerType(values))
+            yield return row;
+    }
 
-        var valuesByAccount = await valuationService.GetAccountValueAsync(accountIds, currency, asOfDate);
-        var total = valuesByAccount.Values.Sum();
+    private async Task<(List<(int AccountId, string Name)> Accounts, IReadOnlyDictionary<int, decimal> Values)> GetEndValues(
+        int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
+    {
+        // Copy identity/metadata before valuation; no mutable account entity survives this read.
+        List<(int AccountId, string Name)> accounts = [];
+        await foreach (var account in financialAccountRepository
+            .GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate)
+            .WithCancellation(cancellationToken))
+            accounts.Add((account.AccountId, account.Name));
 
+        var values = await valuationService.GetAccountValueAsync(
+            accounts.Select(a => a.AccountId).ToList(), currency, asOfDate, cancellationToken);
+        return (accounts, values);
+    }
+
+    private static IEnumerable<NameValueResult> GetPerAccount(
+        List<(int AccountId, string Name)> accounts, IReadOnlyDictionary<int, decimal> values)
+    {
+        foreach (var account in accounts)
+        {
+            if (values.TryGetValue(account.AccountId, out var value) && value > 0)
+                yield return new NameValueResult(account.Name, value) { AccountId = account.AccountId };
+        }
+    }
+
+    private static IEnumerable<NameValueResult> GetPerType(IReadOnlyDictionary<int, decimal> values)
+    {
+        var total = values.Values.Sum();
         if (total > 0)
             yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
     }

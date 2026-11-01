@@ -170,3 +170,7 @@ project it had a PostgreSQL branch and an `else` branch that assumed SQL Server 
 relational provider got statements it could not parse. Adding SQLite support meant making that switch
 explicit (`DatabaseProviders`), which also means an unrecognised provider now falls back to the correct
 managed path instead of failing. Production behaviour on SQL Server and PostgreSQL is unchanged.
+
+## Operation-local dashboard distribution evidence
+
+[Issue #1026 allocation comparison](../../performance/1026-assets-distribution/README.md) records the bounded warm SQLite baseline/candidate pair, exact seed/source hashes, correctness checks and limitations for sharing investment valuation within one overview or asset refresh. It establishes no browser or production latency improvement.

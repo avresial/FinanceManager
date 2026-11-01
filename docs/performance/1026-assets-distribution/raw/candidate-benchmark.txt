@@ -1,0 +1,195 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 2 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// ***** Done, took 00:00:00 (0.02 sec)   *****
+// Found 2 benchmarks:
+//   DashboardBenchmarks.'GET api/Dashboard/overview (6 months)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+//   DashboardBenchmarks.'GET api/Dashboard/overview (1 month)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+
+// **************************
+// Benchmark: DashboardBenchmarks.'GET api/Dashboard/overview (6 months)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// ! Failed to set up priority High for process System.Diagnostics.Process (FinanceManager.Benchmarks). Make sure you have the right permissions. Message: Permission denied
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), Arm64 RyuJIT armv8.0-a
+// GC=Non-concurrent Workstation
+// HardwareIntrinsics=ArmBase+AdvSimd,AES,CRC32,DP,RDM,SHA1,SHA256 VectorSize=128
+// Job: Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: Microsoft.EntityFrameworkCore.Query[20504]
+      Compiling a query which loads related collections for more than one collection navigation, either via 'Include' or through projection, but no 'QuerySplittingBehavior' has been configured. By default, Entity Framework will use 'QuerySplittingBehavior.SingleQuery', which can potentially result in slow query performance. See https://go.microsoft.com/fwlink/?linkid=2134277 for more information. To identify the query that's triggering this warning call 'ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))'.
+OverheadJitting  1: 1 op, 121833.00 ns, 121.8330 us/op
+WorkloadJitting  1: 1 op, 27106917.00 ns, 27.1069 ms/op
+
+WorkloadPilot    1: 4 op, 60809334.00 ns, 15.2023 ms/op
+WorkloadPilot    2: 16 op, 255828000.00 ns, 15.9893 ms/op
+
+WorkloadWarmup   1: 16 op, 285570458.00 ns, 17.8482 ms/op
+WorkloadWarmup   2: 16 op, 249743125.00 ns, 15.6089 ms/op
+WorkloadWarmup   3: 16 op, 239195875.00 ns, 14.9497 ms/op
+
+WorkloadActual   1: 16 op, 243941584.00 ns, 15.2463 ms/op
+WorkloadActual   2: 16 op, 249183875.00 ns, 15.5740 ms/op
+WorkloadActual   3: 16 op, 246188625.00 ns, 15.3868 ms/op
+WorkloadActual   4: 16 op, 267765333.00 ns, 16.7353 ms/op
+WorkloadActual   5: 16 op, 268570000.00 ns, 16.7856 ms/op
+WorkloadActual   6: 16 op, 268308125.00 ns, 16.7693 ms/op
+WorkloadActual   7: 16 op, 258938375.00 ns, 16.1836 ms/op
+WorkloadActual   8: 16 op, 257063709.00 ns, 16.0665 ms/op
+WorkloadActual   9: 16 op, 250751125.00 ns, 15.6719 ms/op
+WorkloadActual  10: 16 op, 272138084.00 ns, 17.0086 ms/op
+
+WorkloadResult   1: 16 op, 243941584.00 ns, 15.2463 ms/op
+WorkloadResult   2: 16 op, 249183875.00 ns, 15.5740 ms/op
+WorkloadResult   3: 16 op, 246188625.00 ns, 15.3868 ms/op
+WorkloadResult   4: 16 op, 267765333.00 ns, 16.7353 ms/op
+WorkloadResult   5: 16 op, 268570000.00 ns, 16.7856 ms/op
+WorkloadResult   6: 16 op, 268308125.00 ns, 16.7693 ms/op
+WorkloadResult   7: 16 op, 258938375.00 ns, 16.1836 ms/op
+WorkloadResult   8: 16 op, 257063709.00 ns, 16.0665 ms/op
+WorkloadResult   9: 16 op, 250751125.00 ns, 15.6719 ms/op
+WorkloadResult  10: 16 op, 272138084.00 ns, 17.0086 ms/op
+// GC:  1 0 0 10007896 16
+// Threading:  39 0 16
+
+
+Mean = 16.143 ms, StdErr = 0.206 ms (1.28%), N = 10, StdDev = 0.653 ms
+Min = 15.246 ms, Q1 = 15.598 ms, Median = 16.125 ms, Q3 = 16.761 ms, Max = 17.009 ms
+IQR = 1.162 ms, LowerFence = 13.855 ms, UpperFence = 18.504 ms
+ConfidenceInterval = [15.156 ms; 17.130 ms] (CI 99.9%), Margin = 0.987 ms (6.11% of Mean)
+Skewness = -0.03, Kurtosis = 1.18, MValue = 2
+
+// ** Remained 1 (50.0%) benchmark(s) to run. Estimated finish 2026-11-01 14:45 (0h 0m from now) **
+// **************************
+// Benchmark: DashboardBenchmarks.'GET api/Dashboard/overview (1 month)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+// *** Execute ***
+// Launch: 1 / 1
+// ! Failed to set up priority High for process System.Diagnostics.Process (FinanceManager.Benchmarks). Make sure you have the right permissions. Message: Permission denied
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 10.0.10 (10.0.10, 10.0.1026.32716), Arm64 RyuJIT armv8.0-a
+// GC=Non-concurrent Workstation
+// HardwareIntrinsics=ArmBase+AdvSimd,AES,CRC32,DP,RDM,SHA1,SHA256 VectorSize=128
+// Job: Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 198125.00 ns, 198.1250 us/op
+WorkloadJitting  1: 1 op, 17989833.00 ns, 17.9898 ms/op
+
+WorkloadPilot    1: 4 op, 63975541.00 ns, 15.9939 ms/op
+WorkloadPilot    2: 16 op, 247463125.00 ns, 15.4664 ms/op
+
+WorkloadWarmup   1: 16 op, 249257917.00 ns, 15.5786 ms/op
+WorkloadWarmup   2: 16 op, 254260291.00 ns, 15.8913 ms/op
+WorkloadWarmup   3: 16 op, 249853500.00 ns, 15.6158 ms/op
+
+WorkloadActual   1: 16 op, 245485709.00 ns, 15.3429 ms/op
+WorkloadActual   2: 16 op, 240287000.00 ns, 15.0179 ms/op
+WorkloadActual   3: 16 op, 243062875.00 ns, 15.1914 ms/op
+WorkloadActual   4: 16 op, 241262084.00 ns, 15.0789 ms/op
+WorkloadActual   5: 16 op, 237641750.00 ns, 14.8526 ms/op
+WorkloadActual   6: 16 op, 227372958.00 ns, 14.2108 ms/op
+WorkloadActual   7: 16 op, 235588125.00 ns, 14.7243 ms/op
+WorkloadActual   8: 16 op, 212856541.00 ns, 13.3035 ms/op
+WorkloadActual   9: 16 op, 221309083.00 ns, 13.8318 ms/op
+WorkloadActual  10: 16 op, 203973959.00 ns, 12.7484 ms/op
+
+WorkloadResult   1: 16 op, 245485709.00 ns, 15.3429 ms/op
+WorkloadResult   2: 16 op, 240287000.00 ns, 15.0179 ms/op
+WorkloadResult   3: 16 op, 243062875.00 ns, 15.1914 ms/op
+WorkloadResult   4: 16 op, 241262084.00 ns, 15.0789 ms/op
+WorkloadResult   5: 16 op, 237641750.00 ns, 14.8526 ms/op
+WorkloadResult   6: 16 op, 227372958.00 ns, 14.2108 ms/op
+WorkloadResult   7: 16 op, 235588125.00 ns, 14.7243 ms/op
+WorkloadResult   8: 16 op, 212856541.00 ns, 13.3035 ms/op
+WorkloadResult   9: 16 op, 221309083.00 ns, 13.8318 ms/op
+WorkloadResult  10: 16 op, 203973959.00 ns, 12.7484 ms/op
+// GC:  1 0 0 9540208 16
+// Threading:  37 0 16
+
+
+Mean = 14.430 ms, StdErr = 0.278 ms (1.93%), N = 10, StdDev = 0.879 ms
+Min = 12.748 ms, Q1 = 13.927 ms, Median = 14.788 ms, Q3 = 15.064 ms, Max = 15.343 ms
+IQR = 1.137 ms, LowerFence = 12.221 ms, UpperFence = 16.769 ms
+ConfidenceInterval = [13.102 ms; 15.759 ms] (CI 99.9%), Margin = 1.328 ms (9.21% of Mean)
+Skewness = -0.68, Kurtosis = 1.86, MValue = 2
+
+// ** Remained 0 (0.0%) benchmark(s) to run. Estimated finish 2026-11-01 14:45 (0h 0m from now) **
+Run time: 00:00:10 (10.9 sec), executed benchmarks: 2
+
+// ***** BenchmarkRunner: Finish  *****
+
+// * Export *
+  tmp/fm-1026-evidence/candidate/artifacts/results/FinanceManager.Benchmarks.Benchmarks.DashboardBenchmarks-report.csv
+  tmp/fm-1026-evidence/candidate/artifacts/results/FinanceManager.Benchmarks.Benchmarks.DashboardBenchmarks-report-github.md
+  tmp/fm-1026-evidence/candidate/artifacts/results/FinanceManager.Benchmarks.Benchmarks.DashboardBenchmarks-report.html
+  tmp/fm-1026-evidence/candidate/artifacts/results/FinanceManager.Benchmarks.Benchmarks.DashboardBenchmarks-report-full.json
+
+// * Detailed results *
+DashboardBenchmarks.'GET api/Dashboard/overview (6 months)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+Runtime = ; GC =
+Mean = 16.143 ms, StdErr = 0.206 ms (1.28%), N = 10, StdDev = 0.653 ms
+Min = 15.246 ms, Q1 = 15.598 ms, Median = 16.125 ms, Q3 = 16.761 ms, Max = 17.009 ms
+IQR = 1.162 ms, LowerFence = 13.855 ms, UpperFence = 18.504 ms
+ConfidenceInterval = [15.156 ms; 17.130 ms] (CI 99.9%), Margin = 0.987 ms (6.11% of Mean)
+Skewness = -0.03, Kurtosis = 1.18, MValue = 2
+-------------------- Histogram --------------------
+[15.062 ms ; 15.857 ms) | @@@@
+[15.857 ms ; 16.824 ms) | @@@@@
+[16.824 ms ; 17.406 ms) | @
+---------------------------------------------------
+
+DashboardBenchmarks.'GET api/Dashboard/overview (1 month)': Job-QEVVIT(Toolchain=InProcessEmitToolchain, IterationCount=10, IterationTime=250ms, WarmupCount=3)
+Runtime = ; GC =
+Mean = 14.430 ms, StdErr = 0.278 ms (1.93%), N = 10, StdDev = 0.879 ms
+Min = 12.748 ms, Q1 = 13.927 ms, Median = 14.788 ms, Q3 = 15.064 ms, Max = 15.343 ms
+IQR = 1.137 ms, LowerFence = 12.221 ms, UpperFence = 16.769 ms
+ConfidenceInterval = [13.102 ms; 15.759 ms] (CI 99.9%), Margin = 1.328 ms (9.21% of Mean)
+Skewness = -0.68, Kurtosis = 1.86, MValue = 2
+-------------------- Histogram --------------------
+[12.213 ms ; 13.222 ms) | @
+[13.222 ms ; 14.498 ms) | @@@
+[14.498 ms ; 15.569 ms) | @@@@@@
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.15.8, macOS Tahoe 26.6.2 (25G83) [Darwin 25.6.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.302
+  [Host] : .NET 10.0.10 (10.0.10, 10.0.1026.32716), Arm64 RyuJIT armv8.0-a
+
+Toolchain=InProcessEmitToolchain  IterationCount=10  IterationTime=250ms
+WarmupCount=3
+
+| Method                                  | Mean     | Error    | StdDev   | Median   | P95      | Ratio | RatioSD | Gen0    | Allocated | Alloc Ratio |
+|---------------------------------------- |---------:|---------:|---------:|---------:|---------:|------:|--------:|--------:|----------:|------------:|
+| 'GET api/Dashboard/overview (6 months)' | 16.14 ms | 0.987 ms | 0.653 ms | 16.13 ms | 16.91 ms |  1.00 |    0.05 | 62.5000 | 610.83 KB |        1.00 |
+| 'GET api/Dashboard/overview (1 month)'  | 14.43 ms | 1.328 ms | 0.879 ms | 14.79 ms | 15.27 ms |  0.90 |    0.06 | 62.5000 | 582.29 KB |        0.95 |
+
+// * Legends *
+  Mean        : Arithmetic mean of all measurements
+  Error       : Half of 99.9% confidence interval
+  StdDev      : Standard deviation of all measurements
+  Median      : Value separating the higher half of all measurements (50th percentile)
+  P95         : Percentile 95
+  Ratio       : Mean of the ratio distribution ([Current]/[Baseline])
+  RatioSD     : Standard deviation of the ratio distribution ([Current]/[Baseline])
+  Gen0        : GC Generation 0 collects per 1000 operations
+  Allocated   : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  Alloc Ratio : Allocated memory ratio distribution ([Current]/[Baseline])
+  1 ms        : 1 Millisecond (0.001 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+
+
+// ***** BenchmarkRunner: End *****
+Global total time: 00:00:11 (11.28 sec), executed benchmarks: 2
+// * Artifacts cleanup *
+Artifacts cleanup is finished
