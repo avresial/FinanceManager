@@ -60,7 +60,7 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
 
         builder.ConfigureServices(s =>
         {
-            // Remove hosted services that access DB on startup to avoid
+            // Remove hosted services that access DB outside requests to avoid
             // race conditions with the singleton in-memory test context.
             var databaseInitializerDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(DatabaseInitializer));
             if (databaseInitializerDescriptor != null)
@@ -69,6 +69,10 @@ internal sealed class FinanceManagerApiTestApp : WebApplicationFactory<ApiEntryP
             var labelSetterDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LabelSetterStartupService));
             if (labelSetterDescriptor != null)
                 s.Remove(labelSetterDescriptor);
+
+            var labelWorkerDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LabelSetterBackgroundService));
+            if (labelWorkerDescriptor != null)
+                s.Remove(labelWorkerDescriptor);
 
             var logPersistenceDescriptor = s.FirstOrDefault(d => d.ImplementationType == typeof(LogEntryPersistenceBackgroundService));
             if (logPersistenceDescriptor != null)
