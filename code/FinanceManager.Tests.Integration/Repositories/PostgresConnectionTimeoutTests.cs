@@ -57,8 +57,10 @@ public sealed class PostgresConnectionTimeoutTests
         }
     }
 
-    [Fact]
-    public async Task RegisteredContext_RecoversWhenPostgresResumesAfterConnectionTimeout()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3000)]
+    public async Task RegisteredContext_RecoversWhenPostgresResumesAfterConnectionTimeout(int resumeDelayMilliseconds)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         Assert.SkipUnless(await DockerAvailable(cancellationToken), "Docker is required for the PostgreSQL recovery test.");
@@ -67,7 +69,14 @@ public sealed class PostgresConnectionTimeoutTests
         try
         {
             var connectionString = await StartPostgres(containerName, cancellationToken);
-            var retryLogger = new RetrySignalLogger();
+            using var recoveryTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var retryLogger = new RetrySignalLogger(() =>
+            {
+                // ILogger.Log is synchronous: finish resuming before the interceptor starts its retry.
+                // The delayed case exceeds the connection timeout to model a loaded runner's handoff.
+                Task.Delay(resumeDelayMilliseconds, recoveryTimeout.Token).GetAwaiter().GetResult();
+                Docker(recoveryTimeout.Token, "unpause", containerName).GetAwaiter().GetResult();
+            });
             await using var provider = CreateProvider(connectionString, retryLogger);
             await using var scope = provider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -76,22 +85,13 @@ public sealed class PostgresConnectionTimeoutTests
             NpgsqlConnection.ClearPool(Assert.IsType<NpgsqlConnection>(context.Database.GetDbConnection()));
             await Docker(cancellationToken, "pause", containerName);
 
-            var queryTask = context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken);
-            try
-            {
-                await retryLogger.RetryStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                await Docker(cancellationToken, "unpause", containerName);
-                Assert.Equal(1, await queryTask);
-                Assert.Equal(1, retryLogger.WarningCount);
+            recoveryTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+            Assert.Equal(1, await context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(recoveryTimeout.Token));
+            Assert.Equal(1, retryLogger.WarningCount);
 
-                await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-                Assert.Equal(1, await context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken));
-                await transaction.RollbackAsync(cancellationToken);
-            }
-            finally
-            {
-                await DockerExitCode(CancellationToken.None, "unpause", containerName);
-            }
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            Assert.Equal(1, await context.Database.SqlQueryRaw<int>("SELECT 1 AS \"Value\"").SingleAsync(cancellationToken));
+            await transaction.RollbackAsync(cancellationToken);
         }
         finally
         {
@@ -148,11 +148,10 @@ public sealed class PostgresConnectionTimeoutTests
         return services.BuildServiceProvider();
     }
 
-    private sealed class RetrySignalLogger : ILogger<PostgresConnectionOpenRetryInterceptor>
+    private sealed class RetrySignalLogger(Action? beforeRetry = null) : ILogger<PostgresConnectionOpenRetryInterceptor>
     {
         private int _warningCount;
 
-        public TaskCompletionSource RetryStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int WarningCount => Volatile.Read(ref _warningCount);
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NullLogger.Instance.BeginScope(state);
         public bool IsEnabled(LogLevel logLevel) => true;
@@ -164,7 +163,7 @@ public sealed class PostgresConnectionTimeoutTests
                 return;
 
             Interlocked.Increment(ref _warningCount);
-            RetryStarted.TrySetResult();
+            beforeRetry?.Invoke();
         }
     }
 
