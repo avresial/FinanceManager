@@ -29,6 +29,7 @@ public class AssetsDistributionOperationTests
     private readonly AssetsServiceInvestment _investment;
     private readonly DashboardQueryService _dashboard;
 
+    // A conventional constructor configures shared mocks before composing the services under test.
     public AssetsDistributionOperationTests()
     {
         _investment = new AssetsServiceInvestment(_accounts.Object,
