@@ -71,6 +71,11 @@ public class NetWorthService(
 
         await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
 
+        // The loaded accounts do not change during the daily loop, so each account's ids are built once.
+        var bondIdsByAccount = bondAccounts
+            .Select(account => (Account: account, BondIds: account.GetStoredBondsIds()))
+            .ToList();
+
         List<InvestmentAccount> investmentAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
             investmentAccounts.Add(account);
@@ -93,9 +98,9 @@ public class NetWorthService(
                 dailyTotal += entry.Value;
             }
 
-            foreach (var account in bondAccounts)
+            foreach (var (account, bondIds) in bondIdsByAccount)
             {
-                foreach (var detailsId in account.GetStoredBondsIds())
+                foreach (var detailsId in bondIds)
                 {
                     var entry = account.GetThisOrNextOlder(date, detailsId);
                     if (entry is null) continue;

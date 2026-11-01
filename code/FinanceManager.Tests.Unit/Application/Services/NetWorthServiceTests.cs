@@ -155,4 +155,69 @@ public class NetWorthServiceTests
         Assert.NotNull(capturedIds);
         Assert.Equal(new[] { 1, 2, 3 }, capturedIds!.OrderBy(x => x));
     }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_BondAccounts_SumsEveryStoredBondPerDay()
+    {
+        // Rate-0 definitions keep each price exact: entry value x unit value. The accruing bond adds
+        // fractional prices so the totals also prove the final two-decimal rounding.
+        const int userId = 1;
+        const int sharedBondId = 1;
+        const int boundaryOnlyBondId = 2;
+        const int accruingBondId = 3;
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var middle = start.AddDays(1);
+        var end = start.AddDays(2);
+
+        // Account 10 holds the shared bond both in range and at the older boundary, plus a bond that
+        // only exists at the boundary. Account 20 holds the shared bond and changes it within the
+        // window, plus an accruing bond held at the boundary. Account 30 is empty.
+        BondAccount boundaryAndInRangeAccount = new(userId, 10, "Bonds A",
+            [new BondAccountEntry(10, 1, middle, 5, 3, sharedBondId)],
+            nextOlderEntries: new Dictionary<int, BondAccountEntry>
+            {
+                [sharedBondId] = new(10, 2, new DateTime(2023, 12, 20, 0, 0, 0, DateTimeKind.Utc), 2, 2, sharedBondId),
+                [boundaryOnlyBondId] = new(10, 3, new DateTime(2023, 12, 1, 0, 0, 0, DateTimeKind.Utc), 3, 3, boundaryOnlyBondId)
+            });
+        BondAccount changingAccount = new(userId, 20, "Bonds B",
+        [
+            new BondAccountEntry(20, 5, end, 4, 3, sharedBondId),
+            new BondAccountEntry(20, 4, start, 1, 1, sharedBondId)
+        ],
+            nextOlderEntries: new Dictionary<int, BondAccountEntry>
+            {
+                [accruingBondId] = new(20, 6, new DateTime(2023, 12, 31, 0, 0, 0, DateTimeKind.Utc), 100, 100, accruingBondId)
+            });
+        BondAccount emptyAccount = new(userId, 30, "Bonds C");
+
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(new[] { boundaryAndInRangeAccount, changingAccount, emptyAccount }.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreateBond(sharedBondId, 100m), CreateBond(boundaryOnlyBondId, 10m), CreateBond(accruingBondId, 1m, 0.04m)]);
+
+        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
+
+        // The accruing bond gains round(100 * 0.04 / 365, 5) = 0.01096 units per day after 2023-12-31.
+        // start:  A shared boundary 2*100 + A boundary-only 3*10 + B 1*100 + 100.01096 = 430.01096 -> 430.01
+        // middle: A shared in range 5*100 + 30 + B 1*100 + 100.02192 = 730.02192 -> 730.02
+        // end:    500 + 30 + B changed 4*100 + 100.03288 = 1030.03288 -> 1030.03
+        Assert.Equal([end, middle, start], result.Keys);
+        Assert.Equal(430.01m, result[start]);
+        Assert.Equal(730.02m, result[middle]);
+        Assert.Equal(1030.03m, result[end]);
+    }
+
+    private static BondDetails CreateBond(int id, decimal unitValue, decimal rate = 0m) =>
+        new(
+            $"Bond {id}",
+            "Issuer",
+            new DateOnly(2023, 1, 1),
+            new DateOnly(2030, 1, 1),
+            [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = "2030-01-01", Rate = rate }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            unitValue)
+        {
+            Id = id
+        };
 }
