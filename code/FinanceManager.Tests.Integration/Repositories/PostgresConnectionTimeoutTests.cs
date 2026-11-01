@@ -109,11 +109,11 @@ public sealed class PostgresConnectionTimeoutTests
 
         try
         {
-            var connectionString = await StartPostgres(containerName, cancellationToken);
-            var connectionSettings = new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 1, Timeout = 1 };
+            // Readiness must warm this exact pool, not a different pool followed by a cold one-second open.
+            var connectionString = await StartPostgres(containerName, cancellationToken, timeoutSeconds: 1, maxPoolSize: 1);
             var retryLogger = new RetrySignalLogger();
-            await using var provider = CreateProvider(connectionSettings.ConnectionString, retryLogger);
-            await using var heldConnection = new NpgsqlConnection(connectionSettings.ConnectionString);
+            await using var provider = CreateProvider(connectionString, retryLogger);
+            await using var heldConnection = new NpgsqlConnection(connectionString);
             await heldConnection.OpenAsync(cancellationToken);
             await using var scope = provider.CreateAsyncScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -167,7 +167,8 @@ public sealed class PostgresConnectionTimeoutTests
         }
     }
 
-    private static async Task<string> StartPostgres(string containerName, CancellationToken cancellationToken)
+    private static async Task<string> StartPostgres(
+        string containerName, CancellationToken cancellationToken, int timeoutSeconds = 2, int maxPoolSize = 100)
     {
         await Docker(cancellationToken, "run", "--detach", "--rm", "--name", containerName,
             "--env", "POSTGRES_HOST_AUTH_METHOD=trust", "--publish", "127.0.0.1::5432", "postgres:17");
@@ -180,9 +181,10 @@ public sealed class PostgresConnectionTimeoutTests
             Port = port,
             Database = "postgres",
             Username = "postgres",
-            Timeout = 2,
+            Timeout = timeoutSeconds,
             CommandTimeout = 2,
-            Pooling = true
+            Pooling = true,
+            MaxPoolSize = maxPoolSize
         }.ConnectionString;
 
         for (var attempt = 0; attempt < 40; attempt++)
