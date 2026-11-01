@@ -2,4 +2,4 @@
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 
-public record AvailableAccount(int AccountId, string AccountName, AccountLabel? AccountLabel = null);
+public record AvailableAccount(int AccountId, string AccountName, AccountLabel? AccountLabel = null, string? Currency = null);

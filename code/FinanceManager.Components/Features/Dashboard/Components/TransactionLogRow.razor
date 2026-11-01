@@ -14,7 +14,7 @@
                     @(string.IsNullOrWhiteSpace(Entry.Description) ? Entry.AccountName : Entry.Description)
                 </MudText>
                 <MudText Typo="Typo.body2" Class="@($"fm-amount {(Entry.ValueChange >= 0 ? "fm-pos" : "fm-neg")}")">
-                    @MoneyFormatter.FormatSigned(Entry.ValueChange)
+                    @MoneyFormatter.FormatSigned(Entry.ValueChange, Entry.CurrencyOrUnit)
                 </MudText>
             </div>
             <div class="d-flex justify-space-between align-center gap-2">
