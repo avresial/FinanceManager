@@ -1,6 +1,6 @@
-Running tests from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
+Running tests from <repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
 failed FinanceManager.Tests.Unit.Application.Services.AssetsDistributionOperationTests.Refresh_LoadsAndValuesInvestmentsOnce_ForBothDistributions (111ms)
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
   Xunit.MicrosoftTestingPlatform.XunitException: Moq.MockException :
   Expected invocation on the mock once, but was 2 times: x => x.GetAccounts<InvestmentAccount>(1, 5/12/2026 10:29:00 AM, 5/12/2026 10:30:00 AM, True)
 
@@ -13,9 +13,9 @@ failed FinanceManager.Tests.Unit.Application.Services.AssetsDistributionOperatio
 
     at Moq.Mock.Verify(Mock mock, LambdaExpression expression, Times times, String failMessage) in /_/src/Moq/Mock.cs:332
     at Moq.Mock`1.Verify[TResult](Expression`1 expression, Func`1 times) in /_/src/Moq/Mock`1.cs:847
-    at FinanceManager.Tests.Unit.Application.Services.AssetsDistributionOperationTests.Refresh_LoadsAndValuesInvestmentsOnce_ForBothDistributions() in /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/Application/Services/AssetsDistributionOperationTests.cs:61
+    at FinanceManager.Tests.Unit.Application.Services.AssetsDistributionOperationTests.Refresh_LoadsAndValuesInvestmentsOnce_ForBothDistributions() in <repository>/code/FinanceManager.Tests.Unit/Application/Services/AssetsDistributionOperationTests.cs:61
     --- End of stack trace from previous location ---
-/Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64) failed with 1 error(s) (886ms)
+<repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64) failed with 1 error(s) (886ms)
 Exit code: 2
 
 Test run summary: Failed!

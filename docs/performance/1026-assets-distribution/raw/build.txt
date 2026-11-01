@@ -1,18 +1,18 @@
   Determining projects to restore...
   All projects are up-to-date for restore.
-  ServiceDefaults -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/ServiceDefaults/bin/Debug/net10.0/ServiceDefaults.dll
-  FinanceManager.Domain -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Domain/bin/Debug/net10.0/FinanceManager.Domain.dll
-  FinanceManager.Application -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Application/bin/Debug/net10.0/FinanceManager.Application.dll
-  FinanceManager.Infrastructure -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Infrastructure/bin/Debug/net10.0/FinanceManager.Infrastructure.dll
-  FinanceManager.Components -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Components/bin/Debug/net10.0/FinanceManager.Components.dll
-  FinanceManager.WebUi -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager/bin/Debug/net10.0/FinanceManager.WebUi.dll
-  FinanceManager.WebUi (Blazor output) -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager/bin/Debug/net10.0/wwwroot
-  FinanceManager.Api -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Api/bin/Debug/net10.0/FinanceManager.Api.dll
-  FinanceManager.Benchmarks -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Benchmarks/bin/Debug/net10.0/FinanceManager.Benchmarks.dll
-  AppHost -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/AppHost/bin/Debug/net10.0/AppHost.dll
-  FinanceManager.Tests.Architecture -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture.dll
-  FinanceManager.Tests.Integration -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll
-  FinanceManager.Tests.Unit -> /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll
+  ServiceDefaults -> <repository>/code/ServiceDefaults/bin/Debug/net10.0/ServiceDefaults.dll
+  FinanceManager.Domain -> <repository>/code/FinanceManager.Domain/bin/Debug/net10.0/FinanceManager.Domain.dll
+  FinanceManager.Application -> <repository>/code/FinanceManager.Application/bin/Debug/net10.0/FinanceManager.Application.dll
+  FinanceManager.Infrastructure -> <repository>/code/FinanceManager.Infrastructure/bin/Debug/net10.0/FinanceManager.Infrastructure.dll
+  FinanceManager.Components -> <repository>/code/FinanceManager.Components/bin/Debug/net10.0/FinanceManager.Components.dll
+  FinanceManager.WebUi -> <repository>/code/FinanceManager/bin/Debug/net10.0/FinanceManager.WebUi.dll
+  FinanceManager.WebUi (Blazor output) -> <repository>/code/FinanceManager/bin/Debug/net10.0/wwwroot
+  FinanceManager.Api -> <repository>/code/FinanceManager.Api/bin/Debug/net10.0/FinanceManager.Api.dll
+  FinanceManager.Benchmarks -> <repository>/code/FinanceManager.Benchmarks/bin/Debug/net10.0/FinanceManager.Benchmarks.dll
+  AppHost -> <repository>/code/AppHost/bin/Debug/net10.0/AppHost.dll
+  FinanceManager.Tests.Architecture -> <repository>/code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture.dll
+  FinanceManager.Tests.Integration -> <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll
+  FinanceManager.Tests.Unit -> <repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll
 
 Build succeeded.
     0 Warning(s)

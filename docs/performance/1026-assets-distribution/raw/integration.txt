@@ -1,29 +1,29 @@
-Running tests from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+Running tests from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchTreatsWildcardCharactersLiterally(provider: "PostgreSql")
   Set FM_SEARCH_POSTGRESQL_CONNECTION for disposable PostgreSql tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchTreatsWildcardCharactersLiterally(provider: "SqlServer")
   Set FM_SEARCH_SQLSERVER_CONNECTION for disposable SqlServer tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "PostgreSql", stream: "Currency")
   Set FM_SEARCH_POSTGRESQL_CONNECTION for disposable PostgreSql tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "PostgreSql", stream: "Investment")
   Set FM_SEARCH_POSTGRESQL_CONNECTION for disposable PostgreSql tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "SqlServer", stream: "Currency")
   Set FM_SEARCH_SQLSERVER_CONNECTION for disposable SqlServer tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "SqlServer", stream: "Bond")
   Set FM_SEARCH_SQLSERVER_CONNECTION for disposable SqlServer tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "SqlServer", stream: "Investment")
   Set FM_SEARCH_SQLSERVER_CONNECTION for disposable SqlServer tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
 skipped FinanceManager.Tests.Integration.Repositories.TransactionLogSearchTests.SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(provider: "PostgreSql", stream: "Bond")
   Set FM_SEARCH_POSTGRESQL_CONNECTION for disposable PostgreSql tests.
-  from /Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
-/Users/a2485/.t3/worktrees/FinanceManager/t3-f9947978/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64) passed (1m 12s 418ms)
+  from <repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64)
+<repository>/code/FinanceManager.Tests.Integration/bin/Debug/net10.0/FinanceManager.Tests.Integration.dll (net10.0|arm64) passed (1m 12s 418ms)
 
 Test run summary: Passed!
   total: 516
