@@ -9,13 +9,8 @@
         : SelectedRange;
 }
 
-@if (IsMobile)
-{
-    @* On mobile the account name moves into the top app bar *@
-    <SectionContent SectionName="page-title">
-        <MudText Typo="Typo.h6" Class="ml-2" Style="color: var(--mud-palette-text-primary);">@AccountName</MudText>
-    </SectionContent>
-}
+@* The account name is the page title in the app bar on every viewport, like other pages. *@
+<PageHeader Title="@AccountName" />
 
 <MudPaper Elevation="0" Class="px-6 pb-0 mb-0" Style="background-color: transparent;">
     @if (!IsMobile)
@@ -30,7 +25,7 @@
                     <MudStack Spacing="0">
                         <MudText Typo="Typo.overline" Color="MudBlazor.Color.Default">@AccountTypeLabel · @Currency
                         </MudText>
-                        <MudText Typo="Typo.h5">@AccountName</MudText>
+                        <MudText Typo="Typo.h5" HtmlTag="p">@AccountName</MudText>
                     </MudStack>
                 </MudStack>
             </MudStack>
