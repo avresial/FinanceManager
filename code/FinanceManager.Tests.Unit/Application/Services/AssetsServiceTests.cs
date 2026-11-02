@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -67,6 +68,27 @@ public class AssetsServiceTests
 
         mock.Setup(x => x.GetEndAssetsPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .Returns(() => Sequence());
+    }
+
+    [Fact]
+    public async Task GetEndAssetsDistribution_PreservesTypedServiceAndRowOrder_WithoutParallelReads()
+    {
+        var asOf = new DateTime(2026, 5, 12);
+        var first = new TaskCompletionSource<AssetsDistributionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mockService1.Setup(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, It.IsAny<CancellationToken>()))
+            .Returns(first.Task);
+        _mockService2.Setup(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetsDistributionResult([new("Second type", 3)], [new("Duplicate", 3) { AccountId = 3 }]));
+
+        var pending = _assetsService.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, TestContext.Current.CancellationToken);
+        _mockService2.Verify(x => x.GetEndAssetsDistribution(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        first.SetResult(new AssetsDistributionResult([new("First type", 30)],
+            [new("Duplicate", 20) { AccountId = 2 }, new("Duplicate", 10) { AccountId = 1 }]));
+        var result = await pending.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { "First type", "Second type" }, result.PerType.Select(x => x.Name));
+        Assert.Equal(new int?[] { 2, 1, 3 }, result.PerAccount.Select(x => x.AccountId));
+        _mockService2.Verify(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, TestContext.Current.CancellationToken), Times.Once);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 ﻿using FinanceManager.Application.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -10,6 +11,22 @@ namespace FinanceManager.Application.FinancialAccounts;
 
 public class AssetsService(IEnumerable<IAssetsServiceTyped> typedAssetServices) : IAssetsService
 {
+    public async Task<AssetsDistributionResult> GetEndAssetsDistribution(
+        int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
+    {
+        List<NameValueResult> perType = [];
+        List<NameValueResult> perAccount = [];
+        foreach (var service in typedAssetServices)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var distribution = await service.GetEndAssetsDistribution(userId, currency, asOfDate, cancellationToken);
+            perType.AddRange(distribution.PerType);
+            perAccount.AddRange(distribution.PerAccount);
+        }
+
+        return new(perType, perAccount);
+    }
+
     public async Task<bool> IsAnyAccountWithAssets(int userId)
     {
         foreach (var service in typedAssetServices)

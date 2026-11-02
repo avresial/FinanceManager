@@ -73,13 +73,17 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         var dashboard = new DashboardHttpClient(Client);
         var initial = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
         Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
-
-        // A provider/cache refresh can change valuation without a user transaction mutation.
-        _price = price;
         var currency = new Currency { Id = _currencyId };
         var assets = new AssetsHttpClient(Client);
         var types = await assets.GetEndAssetsPerType(_userId, currency, _end);
         var accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
+        Assert.Equal(types.Select(x => (x.Name, x.Value)), initial.AssetsPerType.Select(x => (x.Name, x.Value)));
+        Assert.Equal(accounts.Select(x => (x.AccountId, x.Name, x.Value)), initial.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
+
+        // A provider/cache refresh can change valuation without a user transaction mutation.
+        _price = price;
+        types = await assets.GetEndAssetsPerType(_userId, currency, _end);
+        accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
         var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_accountId}/{_currencyId}/{_end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
         var refreshed = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
 
@@ -88,6 +92,36 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         Assert.Equal(value, accounts.Sum(x => x.Value));
         Assert.Equal(value, refreshed!.AssetsPerType.Sum(x => x.Value));
         Assert.Equal(value, refreshed.AssetsPerAccount.Sum(x => x.Value));
+        _netWorth.Verify(x => x.GetNetWorth(_userId, It.IsAny<Currency>(), _start, _end), Times.Once);
+    }
+
+    [Fact]
+    public async Task CachedOverview_AfterAccountAndTransactionChanges_RefreshesWithoutMutatingOriginal()
+    {
+        await Seed();
+        var dashboard = new DashboardHttpClient(Client);
+        var initial = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
+        var context = _database!.Context;
+        var account = await context.Accounts.SingleAsync(x => x.AccountId == _accountId, TestContext.Current.CancellationToken);
+        account.Name = "Renamed investment";
+        var transaction = await context.InvestmentTransactions.SingleAsync(x => x.AccountId == _accountId, TestContext.Current.CancellationToken);
+        transaction.Quantity = 5m;
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Deliberately retain the aggregate cache to exercise the asset-only refresh after a write.
+        // These investment account/transaction reads go directly to their repositories.
+        var refreshed = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
+        var assets = new AssetsHttpClient(Client);
+        var currency = new Currency { Id = _currencyId };
+        var types = await assets.GetEndAssetsPerType(_userId, currency, _end);
+        var accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
+
+        Assert.Equal(types.Select(x => (x.Name, x.Value)), refreshed!.AssetsPerType.Select(x => (x.Name, x.Value)));
+        Assert.Equal(accounts.Select(x => (x.AccountId, x.Name, x.Value)), refreshed.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
+        Assert.Equal(500m, Assert.Single(refreshed.AssetsPerType).Value);
+        Assert.Equal("Renamed investment", Assert.Single(refreshed.AssetsPerAccount).Name);
+        Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
+        Assert.Equal("Investment", Assert.Single(initial.AssetsPerAccount).Name);
         _netWorth.Verify(x => x.GetNetWorth(_userId, It.IsAny<Currency>(), _start, _end), Times.Once);
     }
 

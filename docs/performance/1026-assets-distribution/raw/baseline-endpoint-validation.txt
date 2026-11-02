@@ -1,0 +1,57 @@
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
+warn: Microsoft.EntityFrameworkCore.Query[20504]
+      Compiling a query which loads related collections for more than one collection navigation, either via 'Include' or through projection, but no 'QuerySplittingBehavior' has been configured. By default, Entity Framework will use 'QuerySplittingBehavior.SingleQuery', which can potentially result in slow query performance. See https://go.microsoft.com/fwlink/?linkid=2134277 for more information. To identify the query that's triggering this warning call 'ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))'.
+
+Category                       Call                                                             Time      Bytes  Status
+-----------------------------------------------------------------------------------------------------------------------------
+AccountReadBenchmarks          GET api/CurrencyAccount (list)                                 3.6 ms        113  ok
+AccountReadBenchmarks          GET api/CurrencyAccount/{id} (summary)                        10.8 ms        138  ok
+AccountReadBenchmarks          GET api/InvestmentAccount (list)                               2.0 ms         65  ok
+AccountReadBenchmarks          GET api/InvestmentAccount/{id}                                 8.8 ms         76  ok
+AccountReadBenchmarks          GET api/InvestmentTransaction/GetByAccount/{id}               62.5 ms       1893  ok
+AccountReadBenchmarks          GET api/InvestmentValuation/Holdings/{id}/{date}              34.2 ms         12  ok
+AccountReadBenchmarks          GET api/InvestmentValuation/Value/{id}/{currency}/{date}      64.3 ms         13  ok
+AccountReadBenchmarks          GET api/InvestmentValuation/TransactionValuations/{id}/{c…    43.2 ms       1569  ok
+AccountReadBenchmarks          GET api/BondAccount (list)                                     2.2 ms         60  ok
+AnalysisBenchmarks             GET api/ExpenseDistribution/GetExpenseDistribution            88.8 ms        157  ok
+AnalysisBenchmarks             GET api/EssentialSpending/GetEssentialSpending                28.0 ms        430  ok
+AnalysisBenchmarks             GET api/Diversification (score)                               87.4 ms         68  ok
+AnalysisBenchmarks             GET api/Diversification (breakdown)                           30.6 ms        149  ok
+AnalysisBenchmarks             GET api/Liabilities/IsAnyAccountWithLiabilities               12.9 ms          4  ok
+AnalysisBenchmarks             GET api/Liabilities/GetEndLiabilitiesPerAccount               13.4 ms         50  ok
+AnalysisBenchmarks             GET api/Liabilities/GetEndLiabilitiesPerType                  17.3 ms         51  ok
+AnalysisBenchmarks             GET api/Liabilities/GetLiabilitiesTimeSeries                  23.2 ms        442  ok
+AssetsBenchmarks               GET api/Assets/IsAnyAccountWithAssets                         15.9 ms          4  ok
+AssetsBenchmarks               GET api/Assets/GetEndAssetsPerAccount                         43.2 ms        160  ok
+AssetsBenchmarks               GET api/Assets/GetEndAssetsPerType                            32.5 ms        161  ok
+AssetsBenchmarks               GET api/Assets/GetAssetsTimeSeries                           107.6 ms        476  ok
+AssetsBenchmarks               GET api/Assets/GetInvestmentPaycheckEstimate                  26.3 ms        292  ok
+AssetsBenchmarks               GET api/Assets/GetUnrealizedGainLossPerAccount                21.6 ms        507  ok
+AssetsBenchmarks               GET api/Assets/GetUnrealizedGainLossPerInstrument             14.7 ms        677  ok
+CurrencyEntryWriteBenchmarks   POST api/CurrencyEntry (append entry)                         52.9 ms          4  ok
+CurrencyEntryWriteBenchmarks   POST api/CurrencyEntry/Recalculate/{accountId}                12.1 ms          0  ok
+DashboardBenchmarks            GET api/Dashboard/overview (6 months)                        149.1 ms      14542  ok
+DashboardBenchmarks            GET api/Dashboard/overview (1 month)                          51.1 ms       7767  ok
+FinancialAccountEntryReadBenchmarks GET api/CurrencyAccount/{id}&{start}&{end} (full range)       24.8 ms      71721  ok
+FinancialAccountEntryReadBenchmarks GET api/CurrencyAccount/{id}/entries (50 older)               24.7 ms      11114  ok
+FinancialAccountEntryReadBenchmarks GET api/CurrencyAccount/{id}/entries (50 newer)               16.7 ms      11158  ok
+FinancialAccountEntryReadBenchmarks GET api/BondAccount/{id}/{start}/{end} (full range)           15.5 ms        906  ok
+FinancialAccountEntryReadBenchmarks GET api/BondAccount/{id}/entries (50 older)                   15.9 ms        906  ok
+FinancialAccountEntryReadBenchmarks GET api/BondAccount/{id}/entries (50 newer)                   10.6 ms        906  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetNetWorth (single date)                   20.7 ms          8  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetNetWorth (series)                        31.0 ms       5746  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetInflow                                   19.5 ms        795  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetOutflow                                  16.3 ms        430  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetNetCashFlow                              15.2 ms        788  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetClosingBalance                           25.3 ms        543  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetLabelsValue                              11.2 ms        868  ok
+MoneyFlowBenchmarks            GET api/MoneyFlow/GetInvestmentRate                           23.1 ms        127  ok
+SupportingReadBenchmarks       GET api/User/Get/{userId}                                     12.2 ms        208  ok
+SupportingReadBenchmarks       GET api/Currency/GetAll                                        7.2 ms        540  ok
+SupportingReadBenchmarks       GET api/FinancialLabel/get-count                               7.3 ms          2  ok
+SupportingReadBenchmarks       GET api/FinancialLabel/get-by-index-and-count                  6.9 ms       1678  ok
+SupportingReadBenchmarks       GET api/FinancialLabel/get-by-account-id                      16.4 ms       1438  ok
+SupportingReadBenchmarks       GET api/TransactionLog/Get/{userId}                           33.0 ms       1438  ok
+
+All 48 benchmarked calls succeeded.

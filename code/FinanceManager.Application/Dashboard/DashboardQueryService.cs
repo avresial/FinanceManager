@@ -30,8 +30,7 @@ public class DashboardQueryService(
         var currency = await currencyRepository.GetCurrency(overview.CurrencyId, cancellationToken);
         if (currency is null) return null;
 
-        var assetsPerType = await assetsService.GetEndAssetsPerType(overview.UserId, currency, overview.EndDate).ToListAsync(cancellationToken);
-        var assetsPerAccount = await assetsService.GetEndAssetsPerAccount(overview.UserId, currency, overview.EndDate).ToListAsync(cancellationToken);
+        var assets = await assetsService.GetEndAssetsDistribution(overview.UserId, currency, overview.EndDate, cancellationToken);
 
         // HybridCache can share this instance across callers: never mutate the cached overview.
         return new DashboardOverviewDto
@@ -46,8 +45,8 @@ public class DashboardQueryService(
             LiabilitiesPerType = overview.LiabilitiesPerType,
             LiabilitiesPerAccount = overview.LiabilitiesPerAccount,
             LabelsValue = overview.LabelsValue,
-            AssetsPerType = assetsPerType,
-            AssetsPerAccount = assetsPerAccount,
+            AssetsPerType = assets.PerType,
+            AssetsPerAccount = assets.PerAccount,
             ExpenseDistribution = overview.ExpenseDistribution,
         };
     }
@@ -63,8 +62,7 @@ public class DashboardQueryService(
         var liabilitiesPerType = await liabilitiesService.GetEndLiabilitiesPerType(userId, start, end).ToListAsync(cancellationToken);
         var liabilitiesPerAccount = await liabilitiesService.GetEndLiabilitiesPerAccount(userId, start, end).ToListAsync(cancellationToken);
         var labelsValue = await labelsValueService.GetLabelsValue(userId, start, end);
-        var assetsPerType = await assetsService.GetEndAssetsPerType(userId, currency, end).ToListAsync(cancellationToken);
-        var assetsPerAccount = await assetsService.GetEndAssetsPerAccount(userId, currency, end).ToListAsync(cancellationToken);
+        var assets = await assetsService.GetEndAssetsDistribution(userId, currency, end, cancellationToken);
         var expenseDistribution = await expenseDistributionService.GetExpenseDistribution(userId, currency, start, end);
 
         return new DashboardOverviewDto
@@ -81,8 +79,8 @@ public class DashboardQueryService(
             LiabilitiesPerType = liabilitiesPerType,
             LiabilitiesPerAccount = liabilitiesPerAccount,
             LabelsValue = labelsValue,
-            AssetsPerType = assetsPerType,
-            AssetsPerAccount = assetsPerAccount,
+            AssetsPerType = assets.PerType,
+            AssetsPerAccount = assets.PerAccount,
             ExpenseDistribution = expenseDistribution,
         };
     }
