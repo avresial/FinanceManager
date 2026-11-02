@@ -13,6 +13,23 @@ public class TimeSeriesValueCardTests
     private static readonly DateTime _start = new(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public async Task Caption_NamesTheShownPointByDay()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        // Midday, so the local-time conversion keeps the same calendar day in any time zone.
+        List<TimeSeriesModel> points = [new(new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc), 1m)];
+
+        var cut = context.Render<TimeSeriesValueCard>(p => p
+            .Add(x => x.Title, "Assets over time")
+            .Add(x => x.Data, points));
+
+        Assert.Equal("Current value \u00B7 30 Oct 2026", cut.Find(".fm-card-header-subtitle").TextContent.Trim());
+    }
+
+    [Fact]
     public async Task YAxis_ReservesALeftGutterAndInsetsTheRightEdge()
     {
         var options = await RenderedOptionsAsync(Points(-21400, -21600, -22000), "250px");
