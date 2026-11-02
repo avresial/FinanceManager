@@ -39,6 +39,8 @@ public partial class AccountDetailsHero
     [Parameter] public List<TimeSeriesModel> CapitalData { get; set; } = [];
     [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
+    /// <summary>Colour of the balance series; see <see cref="AccountChartColors.BalanceColor"/>.</summary>
+    [Parameter] public string BalanceColor { get; set; } = AccountChartColors.DefaultBalanceColor;
 
     private const int _yAxisTickCount = 5;
 
@@ -71,6 +73,7 @@ public partial class AccountDetailsHero
         _chartData = aligned[0];
         _benchmarkData = aligned[1];
         _capitalData = aligned[2];
+        _heroChartOptions.Colors = [BalanceColor, "#42a5f5", "#66bb6a"];
         ApplyYScale();
     }
 
@@ -141,7 +144,6 @@ public partial class AccountDetailsHero
             // Same draw animation as the dashboard time-series cards.
             Animations = new Animations { Enabled = true, Speed = 400 },
         },
-        Colors = ["#ffab00", "#42a5f5", "#66bb6a"],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even

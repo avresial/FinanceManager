@@ -27,4 +27,7 @@ public static class ColorsProvider
 
     // Neutral colour for the grouped "Other" slice so it never reads as one of the named items.
     public const string OtherColor = "#9E9E9E";
+
+    // Debt series (Liabilities card, loan accounts) share one colour so the same debt reads alike everywhere.
+    public const string LiabilityColor = "#EF5350";
 }
