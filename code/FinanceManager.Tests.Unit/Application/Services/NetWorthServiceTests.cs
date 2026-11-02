@@ -207,6 +207,165 @@ public class NetWorthServiceTests
         Assert.Equal(1030.03m, result[end]);
     }
 
+    [Fact]
+    public async Task GetNetWorth_OverRange_LongHeldBond_PreparesHistoryOnce()
+    {
+        var end = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        var start = end.AddDays(-30);
+        var entry = new BondAccountEntry(10, 1, start.AddDays(-3650), 1m, 1m, 1);
+        var details = CreateBond(1, 100m, 0.05m);
+        var account = new BondAccount(1, 10, "Long-held", nextOlderEntries: new() { [1] = entry });
+        SetBonds([account], [details]);
+
+        // Warm JIT outside measurement; each operation has a new request context.
+        await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end);
+        var beforeHistory = GC.GetAllocatedBytesForCurrentThread();
+        var history = entry.GetPrice(DateOnly.FromDateTime(end), details);
+        var historyBytes = GC.GetAllocatedBytesForCurrentThread() - beforeHistory;
+        var service = NewService();
+        var beforeRange = GC.GetAllocatedBytesForCurrentThread();
+        var pending = service.GetNetWorth(1, DefaultCurrency.PLN, start, end);
+        // All mock I/O completes synchronously, so the per-thread allocation comparison is valid.
+        Assert.True(pending.IsCompletedSuccessfully);
+        var result = await pending;
+        var rangeBytes = GC.GetAllocatedBytesForCurrentThread() - beforeRange;
+
+        Assert.Equal(31, result.Count);
+        Assert.All(result, point => Assert.Equal(Math.Round(history[DateOnly.FromDateTime(point.Key)], 2), point.Value));
+        Assert.True(rangeBytes < historyBytes * 4 + 100_000,
+            $"Range allocated {rangeBytes} bytes versus {historyBytes} for one bounded history.");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    [InlineData(12)]
+    public async Task GetNetWorth_OverRange_MatchesPointPricing_WithChangingDuplicateAndBoundaryEntries(int hour)
+    {
+        var start = new DateTime(2023, 12, 28, hour, 13, 0, DateTimeKind.Utc);
+        var end = start.AddDays(12);
+        var details = CreateBond(1, 1.23456m);
+        details.CalculationMethods =
+        [
+            new() { BondDetails = details, DateOperator = DateOperator.UntilDate, DateValue = "2024-01-02", Rate = 0.037m },
+            // An inactive method leaves a genuine gap after the last active method expires.
+            new() { BondDetails = null, DateOperator = DateOperator.UntilDate, DateValue = "2030-01-01", Rate = 1m },
+            new() { BondDetails = details, DateOperator = DateOperator.UntilDate, DateValue = "2024-01-05", Rate = 0.061m }
+        ];
+        var otherDetails = CreateBond(2, 100m, 0.02m);
+        BondAccount[] accounts =
+        [
+            new(1, 10, "A",
+            [
+                new(10, 7, start.AddDays(4).Date.AddHours(18), 3.25m, 0m, 1),
+                new(10, 8, start.AddDays(4).Date.AddHours(18), 99m, 0m, 1),
+                new(10, 9, start.AddDays(4).Date.AddHours(8), 5m, 0m, 1),
+                new(10, 10, start.AddDays(8), 0m, -3.25m, 1),
+                new(10, 11, start.AddDays(9), 2.75m, 2.75m, 1),
+                new(10, 12, start.AddDays(1), 0m, 0m, 2)
+            ], nextOlderEntries: new() { [1] = new(10, 1, start.Date.AddDays(-365), 2.12m, 0m, 1) }),
+            // Same entry id with different inputs/account must not share history.
+            new(1, 20, "A", nextOlderEntries: new() { [1] = new(20, 1, start.Date.AddDays(-730), 7.13m, 0m, 1) }),
+            new(1, 30, "Empty")
+        ];
+        SetBonds(accounts, [details, otherDetails]);
+        var expected = new Dictionary<DateTime, decimal>();
+        for (var date = end; date >= start; date = date.AddDays(-1))
+        {
+            decimal total = 0;
+            foreach (var account in accounts)
+                foreach (var id in account.GetStoredBondsIds())
+                {
+                    var entry = account.GetThisOrNextOlder(date, id);
+                    if (entry is not null)
+                        total += entry.GetPriceAt(DateOnly.FromDateTime(date), id == 1 ? details : otherDetails);
+                }
+            expected.Add(date, Math.Round(total, 2));
+        }
+
+        Assert.Equal(expected, await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end));
+        Assert.Empty(await NewService().GetNetWorth(1, DefaultCurrency.PLN, end, start));
+    }
+
+    [Fact]
+    public async Task GetNetWorth_NewOperationAndRequest_UsesCurrentEntryAndDefinitionInputs()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = start.AddDays(3);
+        var entry = new BondAccountEntry(10, 1, start.AddDays(-365), 1m, 1m, 1);
+        var account = new BondAccount(1, 10, "Bonds", nextOlderEntries: new() { [1] = entry });
+        var details = CreateBond(1, 100m, 0.05m);
+        SetBonds([account], [details]);
+        var service = NewService();
+        var original = await service.GetNetWorth(1, DefaultCurrency.PLN, start, end);
+        entry.Value = 2m;
+        entry.PostingDate = entry.PostingDate.AddDays(1);
+        var changed = await service.GetNetWorth(1, DefaultCurrency.PLN, start, end);
+        Assert.NotEqual(original[end], changed[end]);
+        Assert.Equal(Math.Round(entry.GetPriceAt(DateOnly.FromDateTime(end), details), 2), changed[end]);
+
+        details = CreateBond(2, 125m, 0.07m);
+        entry.BondDetailsId = 2;
+        SetBonds([new BondAccount(1, 10, "Bonds", nextOlderEntries: new() { [2] = entry })], [details]);
+        var fresh = await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end.AddDays(2));
+        Assert.Equal(Math.Round(entry.GetPriceAt(DateOnly.FromDateTime(end), details), 2), fresh[end]);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_MissingDefinitionOrMethods_PreservesErrors()
+    {
+        var date = new DateTime(2024, 1, 1);
+        var entry = new BondAccountEntry(10, 1, date, 0m, 0m, 1);
+        var account = new BondAccount(1, 10, "Bonds", [entry]);
+        SetBonds([account], []);
+        var missing = await Assert.ThrowsAsync<InvalidOperationException>(() => NewService().GetNetWorth(1, DefaultCurrency.PLN, date, date));
+        Assert.Equal("Bond valuation requires details for bond id 1.", missing.Message);
+        var details = CreateBond(1, 100m);
+        details.CalculationMethods.Clear();
+        SetBonds([account], [details]);
+        var methods = await Assert.ThrowsAsync<InvalidOperationException>(() => NewService().GetNetWorth(1, DefaultCurrency.PLN, date, date));
+        Assert.Equal("CalculationMethods can't be empty", methods.Message);
+    }
+
+    [Fact]
+    public async Task GetNetWorth_OverRange_BoundsHistoryByLatestSelectedDay_AndSkipsPrePostingCalculation()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var details = CreateBond(1, 100m);
+        details.CalculationMethods =
+        [
+            new() { BondDetails = details, DateValue = "2024-01-02", Rate = 0.05m },
+            // This method is never inspected while the first method covers the selected day.
+            new() { BondDetails = details, DateValue = "invalid", Rate = 1m }
+        ];
+        var old = new BondAccountEntry(10, 1, start.AddDays(-365), 1m, 1m, 1);
+        var futureDetails = CreateBond(2, 100m);
+        futureDetails.CalculationMethods.Clear();
+        var future = new BondAccountEntry(20, 3, start.AddDays(30), 1m, 1m, 2);
+        var replacement = new BondAccountEntry(10, 2, start.AddDays(2), 2m, 1m, 1);
+        SetBonds([new BondAccount(1, 10, "Old", [replacement, old])], [details]);
+        var shortRange = await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, start.AddDays(2));
+        Assert.Equal(Math.Round(old.GetPriceAt(DateOnly.FromDateTime(start), details), 2), shortRange[start]);
+
+        // A malformed boundary snapshot before posting still follows GetPriceAt's early-zero rule.
+        SetBonds([new BondAccount(1, 20, "Future", nextOlderEntries: new() { [2] = future })], [futureDetails]);
+        var prePosting = await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, start.AddDays(1));
+        Assert.All(prePosting.Values, value => Assert.Equal(0m, value));
+    }
+
+    private void SetBonds(BondAccount[] accounts, BondDetails[] details)
+    {
+        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .Returns(accounts.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(details);
+    }
+
+    private NetWorthService NewService() => new(
+        _financialAccountRepositoryMock.Object,
+        new BondDashboardContext(_bondDetailsRepositoryMock.Object),
+        _investmentValuationServiceMock.Object);
+
     private static BondDetails CreateBond(int id, decimal unitValue, decimal rate = 0m) =>
         new(
             $"Bond {id}",

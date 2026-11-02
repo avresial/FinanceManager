@@ -1,0 +1,16 @@
+Running tests from <repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
+failed FinanceManager.Tests.Unit.Application.Services.NetWorthServiceTests.GetNetWorth_OverRange_LongHeldBond_PreparesHistoryOnce (168ms)
+  from <repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64)
+  Range allocated 15895912 bytes versus 512624 for one bounded history.
+    at FinanceManager.Tests.Unit.Application.Services.NetWorthServiceTests.GetNetWorth_OverRange_LongHeldBond_PreparesHistoryOnce() in <repository>/code/FinanceManager.Tests.Unit/Application/Services/NetWorthServiceTests.cs:235
+    --- End of stack trace from previous location ---
+<repository>/code/FinanceManager.Tests.Unit/bin/Debug/net10.0/FinanceManager.Tests.Unit.dll (net10.0|arm64) failed with 1 error(s) (818ms)
+Exit code: 2
+
+Test run summary: Failed!
+  total: 1
+  failed: 1
+  succeeded: 0
+  skipped: 0
+  duration: 1s 457ms
+Test run completed with non-success exit code: 2 (see: https://aka.ms/testingplatform/exitcodes)

@@ -87,6 +87,12 @@ public class NetWorthService(
         var investmentValuesByAccount = await investmentValuationService.GetAccountValueSeriesAsync(
             investmentAccounts.Select(a => a.AccountId).ToList(), currency, start.Date, end.Date);
 
+        // Loaded entry/definition snapshots are stable throughout this synchronous loop. Histories
+        // belong only to this invocation. Descending dates prepare each selected entry through its
+        // latest selected day (at most the request end), without pricing superseded future days.
+        // No repository calls or mutable histories are shared across operations/requests.
+        var bondHistories = new Dictionary<BondAccountEntry, Dictionary<DateOnly, decimal>>(ReferenceEqualityComparer.Instance);
+
         for (DateTime date = end; date >= start; date = date.AddDays(-1))
         {
             decimal dailyTotal = 0;
@@ -104,7 +110,18 @@ public class NetWorthService(
                 {
                     var entry = account.GetThisOrNextOlder(date, detailsId);
                     if (entry is null) continue;
-                    dailyTotal += bondDashboardContext.GetOrComputePrice(account.AccountId, entry, DateOnly.FromDateTime(date));
+                    var priceDate = DateOnly.FromDateTime(date);
+                    dailyTotal += bondDashboardContext.GetOrComputePrice(account.AccountId, entry, priceDate, () =>
+                    {
+                        if (!bondHistories.TryGetValue(entry, out var history))
+                        {
+                            var details = bondDashboardContext.GetDetails(entry.BondDetailsId);
+                            if (priceDate < DateOnly.FromDateTime(entry.PostingDate)) return 0;
+                            history = entry.GetPrice(priceDate, details);
+                            bondHistories.Add(entry, history);
+                        }
+                        return history.GetValueOrDefault(priceDate);
+                    });
                 }
             }
 

@@ -10,6 +10,9 @@ internal static class Program
     {
         try
         {
+            if (args.Contains("--validate-long-bond", StringComparer.OrdinalIgnoreCase))
+                return await LongBondFixtureValidator.Run(args) ? 0 : 1;
+
             if (args.Contains("--validate", StringComparer.OrdinalIgnoreCase))
                 return await EndpointValidator.Run() ? 0 : 1;
 

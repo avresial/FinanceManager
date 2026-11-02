@@ -1,0 +1,11 @@
+{
+  "source_sha256": "c2f4978df39ff91a80d7acbaf074099ecde224fdc0e2a4da6bd1ec24b0e37867",
+  "fixture_sha256": "998db819447b30982633d76618bb7c901033e1f203aec850daededb5f641577d",
+  "account_id": 5,
+  "bond_id": 9,
+  "entry_id": 7,
+  "start": "2026-04-30 00:00:00",
+  "end": "2026-10-16 00:00:00",
+  "posting": "2016-05-02",
+  "age_days": 3650
+}

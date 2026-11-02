@@ -1,0 +1,18 @@
+Retained full/month baseline/candidate/control: PASS
+full baseline duplicate-with-missing-day: REJECTED (exit 1)
+full baseline missing-day: REJECTED (exit 1)
+full candidate duplicate-with-missing-day: REJECTED (exit 1)
+full candidate missing-day: REJECTED (exit 1)
+full control duplicate-with-missing-day: REJECTED (exit 1)
+full control missing-day: REJECTED (exit 1)
+full baseline+candidate+control duplicate-with-missing-day: REJECTED (exit 1)
+full baseline+candidate+control missing-day: REJECTED (exit 1)
+month baseline duplicate-with-missing-day: REJECTED (exit 1)
+month baseline missing-day: REJECTED (exit 1)
+month candidate duplicate-with-missing-day: REJECTED (exit 1)
+month candidate missing-day: REJECTED (exit 1)
+month control duplicate-with-missing-day: REJECTED (exit 1)
+month control missing-day: REJECTED (exit 1)
+month baseline+candidate+control duplicate-with-missing-day: REJECTED (exit 1)
+month baseline+candidate+control missing-day: REJECTED (exit 1)
+PASS: 16 corruptions rejected; retained artifacts untouched.
