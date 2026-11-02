@@ -1,0 +1,23 @@
+@* Phones label only the active step, so this caption says where the user is and what comes next.
+   d-sm-none matches the stepper's 600px breakpoint that hides the inactive step labels. *@
+<MudText Typo="Typo.caption" Class="fm-import-step-caption d-sm-none px-6 mud-text-secondary" role="status" aria-live="polite">
+    @Text(ActiveIndex, Steps)
+</MudText>
+
+@code {
+    /// <summary>Zero-based index of the active step.</summary>
+    [Parameter] public int ActiveIndex { get; set; }
+
+    /// <summary>Step titles in order, as shown by the stepper.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Steps { get; set; } = [];
+
+    /// <summary>For example "Step 1 of 3 · Map columns next"; the last step has no "next" part.</summary>
+    public static string Text(int activeIndex, IReadOnlyList<string> steps)
+    {
+        if (steps.Count == 0) return string.Empty;
+
+        var index = Math.Clamp(activeIndex, 0, steps.Count - 1);
+        var position = $"Step {index + 1} of {steps.Count}";
+        return index < steps.Count - 1 ? $"{position} · {steps[index + 1]} next" : position;
+    }
+}

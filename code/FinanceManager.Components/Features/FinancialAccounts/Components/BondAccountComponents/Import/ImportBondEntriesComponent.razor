@@ -8,8 +8,9 @@
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
         <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
+                <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
 
-                <MudStep Title="Select file" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
+                <MudStep Title="@StepTitles[0]" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
                     <ImportCsvFileStep Errors="_erorrs"
                                        RawPreview="_rawPreview"
                                        Headers="_headers"
@@ -26,7 +27,7 @@
                                        ClearDragClass="ClearDragClass" />
                 </MudStep>
 
-                <MudStep Title="Map columns" SecondaryText="Required fields" @bind-Completed="_step2Complete"
+                <MudStep Title="@StepTitles[1]" SecondaryText="Required fields" @bind-Completed="_step2Complete"
                          Disabled="@(_step1Complete == false)">
                     <MudStack Spacing="4" Class="pa-4">
                         <MudStack Spacing="0">
@@ -121,7 +122,7 @@
                     </MudStack>
                 </MudStep>
 
-                <MudStep Title="Review" SecondaryText="Resolve conflicts" Completed="@ShowImportCompletedMessage"
+                <MudStep Title="@StepTitles[2]" SecondaryText="Resolve conflicts" Completed="@ShowImportCompletedMessage"
                          Disabled="@(_step2Complete == false)">
                     <MudStack Spacing="3" Class="pa-4">
 
