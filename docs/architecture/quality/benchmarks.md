@@ -174,3 +174,7 @@ managed path instead of failing. Production behaviour on SQL Server and PostgreS
 ## Operation-local dashboard distribution evidence
 
 [Issue #1026 allocation comparison](../../performance/1026-assets-distribution/README.md) records the bounded warm SQLite baseline/candidate pair, exact seed/source hashes, correctness checks and limitations for sharing investment valuation within one overview or asset refresh. It establishes no browser or production latency improvement.
+
+## Request-local bond history evidence
+
+[Issue #1028 cold comparison](../../performance/1028-bond-history/README.md) records one sequential baseline/candidate pair on a frozen synthetic long-held-bond fixture, complete overview response parity, every daily fixture contribution, source/seed hashes and full timing/allocation artifacts. It includes the safe fixture builder and `--validate-long-bond` functional validator. Its in-process SQLite stress results do not establish typical-user, browser or production database performance.

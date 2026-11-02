@@ -1,0 +1,16 @@
+{
+  "windows": {
+    "full": {
+      "complete_response_equal": true,
+      "all_bucket_contributions_proven": 170
+    },
+    "month": {
+      "complete_response_equal": true,
+      "all_bucket_contributions_proven": 31
+    }
+  },
+  "selected_entry": 7,
+  "age_days": 3650,
+  "seed_sha256": "998db819447b30982633d76618bb7c901033e1f203aec850daededb5f641577d",
+  "seed_preserved": true
+}

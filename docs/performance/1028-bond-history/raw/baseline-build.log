@@ -1,0 +1,24 @@
+  Determining projects to restore...
+  Restored <repository>/code/FinanceManager.Domain/FinanceManager.Domain.csproj (in 60 ms).
+  Restored <repository>/code/FinanceManager.Application/FinanceManager.Application.csproj (in 332 ms).
+  Restored <repository>/code/ServiceDefaults/ServiceDefaults.csproj (in 332 ms).
+  Restored <repository>/code/FinanceManager.Components/FinanceManager.Components.csproj (in 332 ms).
+  Restored <repository>/code/FinanceManager/FinanceManager.WebUi.csproj (in 347 ms).
+  Restored <repository>/code/FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj (in 373 ms).
+  Restored <repository>/code/FinanceManager.Api/FinanceManager.Api.csproj (in 375 ms).
+  Restored <repository>/code/FinanceManager.Benchmarks/FinanceManager.Benchmarks.csproj (in 377 ms).
+  ServiceDefaults -> <repository>/code/ServiceDefaults/bin/Release/net10.0/ServiceDefaults.dll
+  FinanceManager.Domain -> <repository>/code/FinanceManager.Domain/bin/Release/net10.0/FinanceManager.Domain.dll
+  FinanceManager.Application -> <repository>/code/FinanceManager.Application/bin/Release/net10.0/FinanceManager.Application.dll
+  FinanceManager.Infrastructure -> <repository>/code/FinanceManager.Infrastructure/bin/Release/net10.0/FinanceManager.Infrastructure.dll
+  FinanceManager.Components -> <repository>/code/FinanceManager.Components/bin/Release/net10.0/FinanceManager.Components.dll
+  FinanceManager.WebUi -> <repository>/code/FinanceManager/bin/Release/net10.0/FinanceManager.WebUi.dll
+  FinanceManager.WebUi (Blazor output) -> <repository>/code/FinanceManager/bin/Release/net10.0/wwwroot
+  FinanceManager.Api -> <repository>/code/FinanceManager.Api/bin/Release/net10.0/FinanceManager.Api.dll
+  FinanceManager.Benchmarks -> <repository>/code/FinanceManager.Benchmarks/bin/Release/net10.0/FinanceManager.Benchmarks.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:19.50

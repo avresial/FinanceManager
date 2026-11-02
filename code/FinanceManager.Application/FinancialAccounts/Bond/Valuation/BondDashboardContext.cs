@@ -58,15 +58,18 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
     /// Returns the memoized price of the entry at the date, computing it only on the first request for
     /// that account/entry/date. Bond pricing is a pure function of the entry and the definition, so two
     /// dashboard paths that materialize the same account within one request share a single computation
-    /// without allowing a changed entry snapshot to reuse a stale value.
+    /// without allowing a changed entry snapshot to reuse a stale value. A range caller can supply a
+    /// lazy calculation from its operation-local history; the exact-date cache still takes precedence.
     /// </summary>
-    public decimal GetOrComputePrice(int accountId, BondAccountEntry entry, DateOnly date)
+    public decimal GetOrComputePrice(int accountId, BondAccountEntry entry, DateOnly date, Func<decimal>? calculatePrice = null)
     {
         var key = (accountId, entry.EntryId, entry.BondDetailsId, DateOnly.FromDateTime(entry.PostingDate), entry.Value, date);
         if (_prices.TryGetValue(key, out var price))
             return price;
 
-        price = entry.GetPriceAt(date, GetDetails(entry.BondDetailsId));
+        price = calculatePrice is null
+            ? entry.GetPriceAt(date, GetDetails(entry.BondDetailsId))
+            : calculatePrice();
         _prices[key] = price;
 
         return price;

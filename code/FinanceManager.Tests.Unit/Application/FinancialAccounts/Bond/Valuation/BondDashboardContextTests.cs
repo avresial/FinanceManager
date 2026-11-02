@@ -157,6 +157,49 @@ public class BondDashboardContextTests
         Assert.Equal("Bond valuation requires details for bond id 42.", exception.Message);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task GetOrComputePrice_LazyHistory_MatchesPointPricingInEveryDateOrder(int order)
+    {
+        var details = CreateDetails(1, unitValue: 1.23456m);
+        details.CalculationMethods =
+        [
+            new() { BondDetails = details, DateValue = "2023-12-31", Rate = 0.037m },
+            new() { BondDetails = null, DateValue = "2025-01-01", Rate = 1m },
+            new() { BondDetails = details, DateValue = "2024-01-05", Rate = 0.061m }
+        ];
+        var entry = new BondAccountEntry(10, 1, new DateTime(2023, 1, 1, 18, 0, 0), 7.12345m, 0m, 1);
+        var account = new BondAccount(1, 10, "Bonds", [entry], AccountLabel.Other);
+        var repository = new Mock<IBondDetailsRepository>();
+        repository.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([details]);
+        var context = new BondDashboardContext(repository.Object);
+        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
+        var posting = DateOnly.FromDateTime(entry.PostingDate);
+        int[] offsets = [-1, 0, 1, 364, 365, 366, 369, 370, 730];
+        if (order == 1) Array.Reverse(offsets);
+        if (order == 2) offsets = [370, 0, 365, -1, 730, 1, 364, 369, 366];
+        var through = posting.AddDays(369);
+        var history = entry.GetPrice(through, details);
+        foreach (var offset in offsets)
+        {
+            var date = posting.AddDays(offset);
+            var expected = entry.GetPriceAt(date, details);
+            Assert.Equal(expected, context.GetOrComputePrice(10, entry, date,
+                () => date <= through ? history.GetValueOrDefault(date) : entry.GetPriceAt(date, details)));
+            // Exact-date sharing still wins before the lazy calculation, in either call order.
+            Assert.Equal(expected, context.GetOrComputePrice(10, entry, date,
+                () => throw new InvalidOperationException("Should reuse the exact-date price")));
+            Assert.Equal(expected, context.GetOrComputePrice(10, entry, date));
+        }
+        var pointFirst = posting.AddDays(2);
+        var pointPrice = context.GetOrComputePrice(10, entry, pointFirst);
+        Assert.Equal(pointPrice, context.GetOrComputePrice(10, entry, pointFirst,
+            () => throw new InvalidOperationException("Should reuse point pricing")));
+    }
+
     private static BondDetails CreateDetails(int id, decimal unitValue = 100m) =>
         new(
             "Bond",

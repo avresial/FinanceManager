@@ -45,6 +45,9 @@ public sealed class BenchmarkEnvironment : IDisposable
     /// <summary>Ids and date window the benchmarked requests are built from.</summary>
     public BenchmarkScenario Scenario { get; }
 
+    /// <summary>Opens an isolated scope for functional fixture verification outside measurements.</summary>
+    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
+
     /// <summary>
     /// Returns the shared environment, building it on first call. Safe to await from every
     /// <c>[GlobalSetup]</c>.
