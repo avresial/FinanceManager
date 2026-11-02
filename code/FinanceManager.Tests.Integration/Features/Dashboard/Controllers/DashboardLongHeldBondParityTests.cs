@@ -1,5 +1,6 @@
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -15,6 +16,7 @@ using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Xunit;
 
@@ -110,13 +112,24 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             }
         }
 
-        entry.Value = 2m;
+        using var update = await Client.PutAsJsonAsync("api/BondEntry",
+            new UpdateBondAccountEntry(_accountId, entry.EntryId, posting, 2m, 2m, details.Id), ct);
+        update.EnsureSuccessStatusCode();
+        Assert.True(await update.Content.ReadFromJsonAsync<bool>(ct));
+        var changedEntry = await Overview(); // The PUT must invalidate the cached overview itself.
+        Assert.False(JsonNode.DeepEquals(candidate["netWorthSeries"], changedEntry["netWorthSeries"]));
+        await Invalidate();
+        _pointPricing = true;
+        Assert.True(JsonNode.DeepEquals(await Overview(), changedEntry));
+
+        // Direct definition changes have their own invalidation, independent of the entry PUT.
         details.UnitValue = 125m;
         details.CalculationMethods = [new() { BondDetails = details, DateOperator = DateOperator.UntilDate, DateValue = "2025-01-01", Rate = 0.07m }];
         await context.SaveChangesAsync(ct);
         await Invalidate();
+        _pointPricing = false;
         var changed = await Overview();
-        Assert.False(JsonNode.DeepEquals(candidate["netWorthSeries"], changed["netWorthSeries"]));
+        Assert.False(JsonNode.DeepEquals(changedEntry["netWorthSeries"], changed["netWorthSeries"]));
         await Invalidate();
         _pointPricing = true;
         Assert.True(JsonNode.DeepEquals(await Overview(), changed));
