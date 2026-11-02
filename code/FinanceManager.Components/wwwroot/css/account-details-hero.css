@@ -17,3 +17,19 @@
 .fm-hero-chart .apexcharts-svg > foreignObject {
     pointer-events: none;
 }
+
+/* The chart bleeds 24px past the page content on each side (mx-n6). Inset the legend by the
+   same amount so its last label ends at the content edge instead of overshooting it. */
+.fm-hero-chart .apexcharts-legend {
+    padding-right: 24px !important;
+}
+
+.fm-hero-chart .apexcharts-legend-series:last-child {
+    margin-right: 0 !important;
+}
+
+/* ApexCharts 4 draws legend markers as 14px circles and ignores the LegendMarkers width/height
+   options. Scale them to the 10px used by the app's other legend dots (.fm-legend-dot). */
+.fm-hero-chart .apexcharts-legend-marker path {
+    transform: translate(50%, 50%) scale(0.714) !important;
+}
