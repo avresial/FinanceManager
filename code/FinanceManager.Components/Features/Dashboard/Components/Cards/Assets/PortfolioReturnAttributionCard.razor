@@ -8,10 +8,6 @@
                 InfoAriaLabel="About return attribution"
                 Subtitle="@RangeText" />
     <MudCardContent Class="d-flex flex-column flex-grow-1 pa-4 pt-1">
-        <div class="attribution-helper">
-            Why the portfolio changed over the selected range.
-        </div>
-
         @if (HasError)
         {
             <MudAlert Severity="Severity.Error" Dense="true" Class="mb-2">Could not load return attribution.
