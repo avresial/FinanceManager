@@ -154,8 +154,9 @@ public partial class AccountDetailsHero
             ShowForSingleSeries = false,
             Position = LegendPosition.Top,
             HorizontalAlign = ApexCharts.Align.Right,
-            // Default markers touch their labels and the items run together.
-            Markers = new LegendMarkers { Width = 8, Height = 8, OffsetX = -4 },
+            // Default markers touch their labels and the items run together. Marker size is set in
+            // account-details-hero.css: ApexCharts 4 ignores the Width/Height options.
+            Markers = new LegendMarkers { OffsetX = -4 },
             ItemMargin = new LegendItemMargin { Horizontal = 10 },
         },
         // Fill types are matched to series by index. The balance area (index 0) fades out
