@@ -362,3 +362,10 @@ code {
     background-color: var(--mud-palette-action-default-hover) !important;
     border: 1px solid var(--mud-palette-lines-default);
 }
+
+/* Add/edit entry overlays (cash, bond, investment) share one width so the dialogs match. */
+.fm-entry-dialog {
+    width: min(600px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+}
