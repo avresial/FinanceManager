@@ -7,11 +7,6 @@
     gap: 4px;
 }
 
-.pc-sub {
-    color: var(--mud-palette-text-secondary);
-    line-height: 1.45;
-}
-
 .pc-hero {
     display: flex;
     align-items: baseline;

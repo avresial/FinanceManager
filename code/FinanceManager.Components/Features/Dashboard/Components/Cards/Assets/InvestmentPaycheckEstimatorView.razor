@@ -2,6 +2,7 @@
 
 <MudCard Outlined Class="rounded-lg pc-card d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="Investment paycheck"
+                Subtitle="What your portfolio could pay you each month"
                 InfoAriaLabel="About investment paycheck card"
                 InfoTooltipClass="fm-card-info-glossary">
         <InfoContent>
@@ -23,10 +24,6 @@
         </InfoContent>
     </CardHeader>
     <MudCardContent Class="pc-card-content d-flex flex-column flex-grow-1 pt-0">
-        <MudText Typo="Typo.body2" Class="pc-sub">
-            If you stopped earning today, your portfolio could pay you:
-        </MudText>
-
         @if (Source is null && IsLoading)
         {
             <div class="pc-hero">
