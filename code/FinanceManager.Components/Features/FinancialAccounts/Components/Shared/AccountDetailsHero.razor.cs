@@ -60,6 +60,7 @@ public partial class AccountDetailsHero
     private ApexChart<TimeSeriesModel>? _chart;
     private ApexChart<TimeSeriesModel>? _drawnChart;
     private List<(string Series, DateTime DateTime, decimal Value)> _drawnPoints = [];
+    private string _drawnBalanceColor = string.Empty;
     private List<TimeSeriesModel> _chartData = [];
     private List<TimeSeriesModel> _benchmarkData = [];
     private List<TimeSeriesModel> _capitalData = [];
@@ -97,12 +98,15 @@ public partial class AccountDetailsHero
             // skeleton) has just drawn the current data itself.
             _drawnChart = _chart;
             _drawnPoints = [.. points];
+            _drawnBalanceColor = BalanceColor;
             return;
         }
 
-        if (points.SequenceEqual(_drawnPoints)) return;
+        // A colour-only change (same data, different account type) also needs a redraw.
+        if (points.SequenceEqual(_drawnPoints) && BalanceColor == _drawnBalanceColor) return;
 
         _drawnPoints = [.. points];
+        _drawnBalanceColor = BalanceColor;
         await _chart.RenderAsync();
     }
 
