@@ -1,81 +1,12 @@
-@using ApexCharts
-@using FinanceManager.Components.Shared.Components
-@using FinanceManager.Domain.MoneyFlow.Entities
-@using FinanceManager.Domain.Shared.Charting
-
-<MudCard Outlined Class="rounded-lg overflow-hidden fm-phone-auto-height d-flex flex-column" Style="@($"height:{Height};")">
-    <CardHeader Title="Expense distribution" StackedAside="true"
-                InfoText="How your spending in the selected period splits across labels."
-                InfoAriaLabel="About expense distribution card">
-        <KeyFigure>
-            @if (IsLoading)
-            {
-                <StringSpinner CharactersCount="4" />
-            }
-            else if (TotalExpenses != 0)
-            {
-                <span class="ed-total">@MoneyFormatter.Format(TotalExpenses, CurrencyShortName)</span>
-            }
-        </KeyFigure>
-    </CardHeader>
-
-    <MudPaper Style="background:transparent;border-radius:inherit;" Class="@($"flex-grow-1 overflow-hidden d-flex {(IsSingleCategory ? "align-start" : "align-center")}")" Elevation="0">
-        @if (IsLoading)
-        {
-            <div style="width:100%;height:100%">
-                <ChartSpinner MaxHeight=@Height />
-            </div>
-        }
-        else if (HasError)
-        {
-            <MudAlert Severity="Severity.Error" Dense="true">Unable to load expense distribution.
-                <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
-            </MudAlert>
-        }
-        else if (Data.Any() && TotalExpenses > 0)
-        {
-            <div class="ed-body" style="@(IsSingleCategory ? "height:auto;" : null)">
-                @if (!IsSingleCategory)
-                {
-                    <div class="ed-chart-wrap">
-                        <ApexChart @ref="_chart" TItem="NameValueResult" Options="_chartOptions" Width="150" Height="150">
-                            <ApexPointSeries TItem="NameValueResult"
-                                             Items="Data"
-                                             Name="Expenses"
-                                             SeriesType="SeriesType.Pie"
-                                             XValue="e => e.Name"
-                                             YAggregate="@(e => e.Sum(x => Math.Round(x.Value, 2)))"
-                                             OrderByDescending="@(e => e.Y)" />
-                        </ApexChart>
-                    </div>
-                }
-                <div class="ed-legend@(IsSingleCategory ? " ed-legend--single" : "")" data-testid="distribution-legend">
-                    @{
-                        var sorted = Data.OrderByDescending(x => x.Value).ToList();
-                        var colors = ColorsProvider.GetColors();
-                        for (int i = 0; i < sorted.Count; i++)
-                        {
-                            var item = sorted[i];
-                            var color = colors[i % colors.Count];
-                            var pct = TotalExpenses == 0 ? 0m : Math.Round(item.Value / TotalExpenses * 100m, 1);
-                            <div class="ed-legend-row">
-                                <span class="ed-legend-dot" style="background: @color"></span>
-                                <span class="ed-legend-name">@item.Name</span>
-                                <span class="ed-legend-vals">
-                                    <span class="ed-legend-amt">@MoneyFormatter.Format(item.Value, CurrencyShortName)</span>
-                                    <span class="ed-legend-pct">@pct.ToString("0.0")%</span>
-                                </span>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="d-flex flex-grow-1 justify-center align-content-center flex-wrap">
-                <MudText Typo="Typo.button" HtmlTag="h3">No data</MudText>
-            </div>
-        }
-    </MudPaper>
-</MudCard>
+<DistributionCardView Title="Expense distribution"
+                      InfoText="How your spending in the selected period splits across labels."
+                      InfoAriaLabel="About expense distribution card"
+                      SeriesName="Expenses"
+                      ErrorText="Unable to load expense distribution."
+                      Height="@Height"
+                      HasError="HasError"
+                      IsLoading="IsLoading"
+                      OnRetry="OnRetry"
+                      CurrencyShortName="@CurrencyShortName"
+                      TypeData="Data"
+                      ShowViewToggle="false" />
