@@ -48,7 +48,7 @@
                                 <MudText Class="mud-text-secondary" Typo="Typo.body2" Style="word-break:break-word;">@_userData.Login</MudText>
                             </MudStack>
                         </MudStack>
-                        <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="flex-shrink-0">
                             <MudButton Variant="Variant.Outlined" Disabled="true">Upload photo</MudButton>
                             <MudButton Variant="Variant.Text" Disabled="true">Remove</MudButton>
                         </MudStack>
@@ -106,6 +106,7 @@
                                              ToStringFunc="@(benchmark => benchmark is null ? string.Empty : $"{benchmark.Ticker} — {benchmark.ExchangeName}")"
                                              HelperText="Leave empty to compare against Polish inflation."
                                              Placeholder="Polish inflation"
+                                             Class="fm-benchmark-field"
                                              Clearable="true"
                                              AdornmentAriaLabel="Show benchmark suggestions"
                                              MinCharacters="1"
