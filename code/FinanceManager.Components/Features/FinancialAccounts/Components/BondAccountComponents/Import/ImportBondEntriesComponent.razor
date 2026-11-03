@@ -8,9 +8,8 @@
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
         <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
-                <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
-
                 <MudStep Title="@StepTitles[0]" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
+                    <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
                     <ImportCsvFileStep Errors="_erorrs"
                                        RawPreview="_rawPreview"
                                        Headers="_headers"
@@ -29,6 +28,7 @@
 
                 <MudStep Title="@StepTitles[1]" SecondaryText="Required fields" @bind-Completed="_step2Complete"
                          Disabled="@(_step1Complete == false)">
+                    <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
                     <MudStack Spacing="4" Class="pa-4">
                         <MudStack Spacing="0">
                             <MudText Typo="Typo.subtitle2">Column mapping</MudText>
@@ -124,6 +124,7 @@
 
                 <MudStep Title="@StepTitles[2]" SecondaryText="Resolve conflicts" Completed="@ShowImportCompletedMessage"
                          Disabled="@(_step2Complete == false)">
+                    <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
                     <MudStack Spacing="3" Class="pa-4">
 
                         @if (_isImportingData)

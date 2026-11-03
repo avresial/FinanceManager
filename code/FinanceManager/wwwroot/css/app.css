@@ -167,20 +167,7 @@ code {
         display: none;
     }
 
-    /* MudStepper renders loose child content after the step content; move the step caption
-       (ImportStepCaption) up so it sits directly under the step dots. */
-    .fm-import-stepper {
-        display: flex;
-        flex-direction: column;
-    }
 
-    .fm-import-stepper > .mud-stepper-nav {
-        order: -2;
-    }
-
-    .fm-import-stepper > .fm-import-step-caption {
-        order: -1;
-    }
 }
 
 /* MudBlazor's default dialogs (delete confirmations) span the full phone width with no gutter.
