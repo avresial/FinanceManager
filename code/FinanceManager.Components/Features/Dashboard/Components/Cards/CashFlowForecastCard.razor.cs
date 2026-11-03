@@ -31,6 +31,15 @@ public partial class CashFlowForecastCard : ComponentBase
 
     [Parameter] public string Height { get; set; } = "300px";
 
+    [CascadingParameter(Name = "IsDarkMode")] public bool IsDarkMode { get; set; }
+    private string ChartAccent => BalanceChartColors.Accent(IsDarkMode);
+
+    protected override void OnParametersSet()
+    {
+        if (_model is not null && _chartOptions?.Colors?.FirstOrDefault() != ChartAccent)
+            BuildChart(_model);
+    }
+
     [Inject] public required CashFlowForecastHttpClient CashFlowForecastHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -155,7 +164,7 @@ public partial class CashFlowForecastCard : ComponentBase
                 FontFamily = "Roboto, sans-serif"
             },
             // ApexCharts parses series colors and cannot resolve CSS variables here.
-            Colors = [CardChartColors.Accent, CardChartColors.Accent],
+            Colors = [ChartAccent, ChartAccent],
             Stroke = new Stroke { Curve = Curve.Stepline },
             Fill = new Fill { Opacity = 1d },
             Markers = new Markers { Size = 0.1, StrokeWidth = 0.1 },

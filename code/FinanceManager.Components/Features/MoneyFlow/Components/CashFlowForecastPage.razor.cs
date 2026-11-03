@@ -1,5 +1,4 @@
 using ApexCharts;
-using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.Models;
@@ -26,6 +25,17 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
     private bool _hasError;
     private IReadOnlyList<ForecastActivityMonth> _activityMonths = [];
 
+    [CascadingParameter(Name = "IsDarkMode")] public bool IsDarkMode { get; set; }
+    private string ChartAccent => BalanceChartColors.Accent(IsDarkMode);
+
+    protected override void OnParametersSet() => ApplyChartTheme();
+
+    private void ApplyChartTheme()
+    {
+        _chartOptions.Colors = [ChartAccent, ChartAccent];
+        _chartOptions.Fill!.Gradient!.GradientToColors = [ChartAccent, ChartAccent];
+    }
+
     [Inject] public required CashFlowForecastHttpClient CashFlowForecastHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -34,7 +44,13 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
 
     public IReadOnlyList<int> Horizons => CashFlowForecastHorizons.All;
 
-    protected override Task OnInitializedAsync() => LoadData();
+    protected override Task OnInitializedAsync()
+    {
+        // A cached forecast can paint while the initial refresh is still awaiting the network,
+        // before OnParametersSet runs. Apply the theme before either snapshot or fresh data paints.
+        ApplyChartTheme();
+        return LoadData();
+    }
 
     private async Task SelectHorizon(int horizonDays)
     {
@@ -190,7 +206,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         },
         // Same encoding as the dashboard forecast card: the balance is amber, solid for history and dashed for
         // the forecast (the dash is set on the forecast series).
-        Colors = [CardChartColors.Accent, CardChartColors.Accent],
+        Colors = [BalanceChartColors.DarkAccent, BalanceChartColors.DarkAccent],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
@@ -204,7 +220,7 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
         {
             Type = [FillType.Gradient, FillType.Solid],
             // Both gradient ends are the accent so only the opacity fades; the default dark shade turned it grey.
-            Gradient = new FillGradient { GradientToColors = [CardChartColors.Accent, CardChartColors.Accent], OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
+            Gradient = new FillGradient { GradientToColors = [BalanceChartColors.DarkAccent, BalanceChartColors.DarkAccent], OpacityFrom = 0.45, OpacityTo = 0d, Stops = [0, 100] },
             Opacity = [1d, 1d]
         },
         Grid = new Grid

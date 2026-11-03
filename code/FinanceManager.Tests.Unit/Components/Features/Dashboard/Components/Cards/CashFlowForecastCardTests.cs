@@ -8,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -22,6 +23,37 @@ public sealed class CashFlowForecastCardTests
 {
     private const string _key = "cash-flow-forecast-card:7:0:90";
     private static readonly DateTime _asOfDate = new(2026, 9, 28);
+
+    [Fact]
+    public async Task ThemeOnlyChangeRecoloursBothForecastStrokesWithoutReloadingData()
+    {
+        var snapshots = new Mock<ISnapshotService>();
+        snapshots.Setup(service => service.GetAsync<CashFlowForecastCardSnapshot>(_key))
+            .ReturnsAsync(Snapshot(Forecast(100m)));
+        var handler = new DeferredForecastHandler();
+        await using var context = CreateContext(snapshots, handler);
+        var cut = context.Render<CascadingValue<bool>>(p => p.Add(x => x.Name, "IsDarkMode")
+            .Add(x => x.Value, false).AddChildContent<CashFlowForecastCard>());
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(5), Xunit.TestContext.Current.CancellationToken);
+
+        var content = Assert.IsType<RenderFragment>(cut.Instance.ChildContent);
+        foreach (var (dark, expected) in new[] { (false, "#D38D00"), (true, "#FFAB00"), (false, "#D38D00") })
+        {
+            var previous = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+            var changed = cut.Instance.Value != dark;
+            cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
+            cut.WaitForAssertion(() =>
+            {
+                var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+                if (changed) Assert.NotSame(previous, chart);
+                Assert.Equal(new[] { expected, expected }, chart.Options.Colors);
+                Assert.All(cut.FindComponents<ApexPointSeries<TimeSeriesModel>>(),
+                    series => Assert.Equal(expected, series.Instance.Stroke.Color));
+            });
+        }
+        snapshots.Verify(service => service.GetAsync<CashFlowForecastCardSnapshot>(_key), Times.Once);
+        handler.Complete(Forecast(100m));
+    }
 
     [Fact]
     public void RenderedModel_KeepsHistoryAndComputesHorizonDeltas()
