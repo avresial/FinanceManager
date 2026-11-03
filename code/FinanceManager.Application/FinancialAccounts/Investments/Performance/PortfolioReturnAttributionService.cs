@@ -37,22 +37,13 @@ public class PortfolioReturnAttributionService(
         if (start == default || end == default || endDate < startDate)
             return PortfolioReturnAttributionResult.InsufficientData(startDate, endDate);
 
-        List<InvestmentAccount> investmentAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<InvestmentAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            investmentAccounts.Add(account);
-
-        List<BondAccount> bondAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<BondAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            bondAccounts.Add(account);
-
-        if (investmentAccounts.Count == 0 && bondAccounts.Count == 0)
+        var accounts = await PortfolioAccounts.LoadAsync(
+            financialAccountRepository, userId, startDate, endDate, cancellationToken);
+        if (accounts.IsEmpty)
             return PortfolioReturnAttributionResult.InsufficientData(startDate, endDate);
 
-        var investmentAccountIds = investmentAccounts.Select(x => x.AccountId).ToArray();
+        var bondAccounts = accounts.BondAccounts;
+        var investmentAccountIds = accounts.InvestmentAccountIds;
         var transactionFlows = investmentAccountIds.Length == 0
             ? []
             : await investmentTransactionRepository.GetCapitalFlowInputs(
@@ -63,17 +54,15 @@ public class PortfolioReturnAttributionService(
         if (!TryBuildListingCurrencies(transactionFlows, out var listingCurrencies))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
-        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts, cancellationToken);
-        if (bondAccounts
-            .SelectMany(account => account.GetStoredBondsIds())
-            .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
+        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
+        if (!accounts.HasAllBondDetails(bondDetails))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var ledger = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
-        var ratesByCurrency = await LoadRatesAsync(
+        var ratesByCurrency = await PortfolioRates.LoadAsync(
+            currencyExchangeService,
             listingCurrencies.Values
-                .Concat(bondDetails.Values.Select(details => NormalizeCurrency(details.Currency.ShortName)))
-                .Distinct(StringComparer.OrdinalIgnoreCase),
+                .Concat(bondDetails.Values.Select(details => PortfolioRates.NormalizeCurrency(details.Currency.ShortName))),
             currency,
             startDate,
             endDate,
@@ -95,31 +84,20 @@ public class PortfolioReturnAttributionService(
                 DateOnly.FromDateTime(endDate),
                 cancellationToken);
 
-        var priceCache = new Dictionary<(long ListingId, DateTime Date), decimal>();
-        var (openingStockValue, openingStockComplete) = await GetInvestmentValueAsync(
-            openingHoldings,
-            currency,
-            startDate,
-            priceCache,
-            cancellationToken);
-        var (endingStockValue, endingStockComplete) = await GetInvestmentValueAsync(
-            endingHoldings,
-            currency,
-            endDate,
-            priceCache,
-            cancellationToken);
+        var prices = new PortfolioPriceCache(investmentPriceProvider, currency);
+        var (openingStockValue, openingStockComplete) = await prices.GetHoldingsValueAsync(openingHoldings, startDate, cancellationToken);
+        var (endingStockValue, endingStockComplete) = await prices.GetHoldingsValueAsync(endingHoldings, endDate, cancellationToken);
         if (!openingStockComplete || !endingStockComplete)
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
-        var (investmentFxEffect, investmentFxComplete) = await GetInvestmentFxEffectAsync(
+        var (investmentFxEffect, investmentFxComplete) = await PortfolioFxEffectCalculator.GetInvestmentEffectAsync(
             ledger.QuantityChanges,
             openingHoldings,
             listingCurrencies,
-            currency,
             startDate,
             endDate,
             ratesByCurrency,
-            priceCache,
+            prices,
             cancellationToken);
         if (!investmentFxComplete)
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
@@ -141,7 +119,7 @@ public class PortfolioReturnAttributionService(
         if (!openingBondComplete || !endingBondComplete)
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
-        if (!TryGetBondFxEffect(
+        if (!PortfolioFxEffectCalculator.TryGetBondEffect(
                 bondAccounts,
                 bondDetails,
                 currency,
@@ -177,7 +155,7 @@ public class PortfolioReturnAttributionService(
             if (flow.Quantity <= 0m || flow.UnitPrice < 0m || flow.Type is not (InvestmentTransactionType.Buy or InvestmentTransactionType.Sell))
                 continue;
 
-            var sourceCurrency = NormalizeCurrency(flow.Currency);
+            var sourceCurrency = PortfolioRates.NormalizeCurrency(flow.Currency);
             if (string.IsNullOrWhiteSpace(sourceCurrency))
                 return false;
 
@@ -189,29 +167,6 @@ public class PortfolioReturnAttributionService(
         }
 
         return true;
-    }
-
-    private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadRatesAsync(
-        IEnumerable<string> sourceCurrencies,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        CancellationToken cancellationToken)
-    {
-        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> result = new(StringComparer.OrdinalIgnoreCase);
-        foreach (var sourceCurrency in sourceCurrencies.Where(x => !string.IsNullOrWhiteSpace(x)))
-        {
-            var source = new Currency(0, sourceCurrency, sourceCurrency);
-            result[sourceCurrency] = await CurrencyRateSeries.LoadAsync(
-                currencyExchangeService,
-                source,
-                targetCurrency,
-                startDate,
-                endDate,
-                cancellationToken);
-        }
-
-        return result;
     }
 
     private static bool TryConvertFlows(
@@ -260,12 +215,12 @@ public class PortfolioReturnAttributionService(
                 if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
                     return (0m, false);
 
-                if (!TryGetBondPrice(entry, details, valuationDate, out var value))
+                if (!PortfolioFxEffectCalculator.TryGetBondPrice(entry, details, valuationDate, out var value))
                     return (0m, false);
                 if (value == 0m && entry.Value != 0m)
                     return (0m, false);
 
-                var sourceCurrency = NormalizeCurrency(details.Currency.ShortName);
+                var sourceCurrency = PortfolioRates.NormalizeCurrency(details.Currency.ShortName);
                 if (!TryConvert(
                         value,
                         sourceCurrency,
@@ -280,296 +235,6 @@ public class PortfolioReturnAttributionService(
         }
 
         return (total, true);
-    }
-
-    private async Task<(decimal Value, bool Complete)> GetInvestmentValueAsync(
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> holdingsByAccount,
-        Currency targetCurrency,
-        DateTime date,
-        IDictionary<(long ListingId, DateTime Date), decimal> priceCache,
-        CancellationToken cancellationToken)
-    {
-        decimal total = 0m;
-        foreach (var holdings in holdingsByAccount.Values)
-        {
-            foreach (var (listingId, quantity) in holdings)
-            {
-                if (quantity == 0m) continue;
-
-                var price = await GetCachedPriceAsync(listingId, targetCurrency, date, priceCache, cancellationToken);
-                if (price <= 0m)
-                    return (0m, false);
-
-                total += quantity * price;
-            }
-        }
-
-        return (total, true);
-    }
-
-    private async Task<(decimal Effect, bool Complete)> GetInvestmentFxEffectAsync(
-        IReadOnlyList<PortfolioQuantityChange> quantityChanges,
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> openingHoldings,
-        IReadOnlyDictionary<long, string> listingCurrencies,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        IDictionary<(long ListingId, DateTime Date), decimal> priceCache,
-        CancellationToken cancellationToken)
-    {
-        var openingQuantities = new Dictionary<long, decimal>();
-        foreach (var holdings in openingHoldings.Values)
-        {
-            foreach (var (listingId, quantity) in holdings)
-            {
-                openingQuantities[listingId] = openingQuantities.GetValueOrDefault(listingId) + quantity;
-            }
-        }
-
-        var flowsByListing = quantityChanges
-            .GroupBy(flow => flow.InstrumentId)
-            .ToDictionary(group => group.Key, group => group.OrderBy(flow => flow.Date).ThenBy(flow => flow.SourceId).ToList());
-
-        decimal fxEffect = 0m;
-        foreach (var listingId in openingQuantities.Keys.Concat(flowsByListing.Keys).Distinct())
-        {
-            if (!listingCurrencies.TryGetValue(listingId, out var sourceCurrency))
-                return (0m, false);
-            if (string.Equals(sourceCurrency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var quantity = openingQuantities.GetValueOrDefault(listingId);
-            var currentDate = startDate;
-            if (flowsByListing.TryGetValue(listingId, out var flows))
-            {
-                foreach (var flow in flows)
-                {
-                    var flowDate = flow.Date;
-                    if (flowDate > currentDate && quantity != 0m)
-                    {
-                        var interval = await GetInvestmentFxIntervalAsync(
-                            listingId,
-                            quantity,
-                            sourceCurrency,
-                            targetCurrency,
-                            currentDate,
-                            flowDate,
-                            ratesByCurrency,
-                            priceCache,
-                            cancellationToken);
-                        if (!interval.Complete)
-                            return (0m, false);
-
-                        fxEffect += interval.Effect;
-                    }
-
-                    quantity += flow.Kind == PortfolioMovementKind.Purchase ? flow.Quantity : -flow.Quantity;
-                    currentDate = flowDate;
-                }
-            }
-
-            if (endDate > currentDate && quantity != 0m)
-            {
-                var interval = await GetInvestmentFxIntervalAsync(
-                    listingId,
-                    quantity,
-                    sourceCurrency,
-                    targetCurrency,
-                    currentDate,
-                    endDate,
-                    ratesByCurrency,
-                    priceCache,
-                    cancellationToken);
-                if (!interval.Complete)
-                    return (0m, false);
-
-                fxEffect += interval.Effect;
-            }
-        }
-
-        return (fxEffect, true);
-    }
-
-    private async Task<(decimal Effect, bool Complete)> GetInvestmentFxIntervalAsync(
-        long listingId,
-        decimal quantity,
-        string sourceCurrency,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        IDictionary<(long ListingId, DateTime Date), decimal> priceCache,
-        CancellationToken cancellationToken)
-    {
-        if (!TryGetRatePair(sourceCurrency, targetCurrency, startDate, endDate, ratesByCurrency, out var startRate, out var endRate))
-            return (0m, false);
-
-        var endingTargetPrice = await GetCachedPriceAsync(
-            listingId,
-            targetCurrency,
-            endDate,
-            priceCache,
-            cancellationToken);
-        if (endingTargetPrice <= 0m)
-            return (0m, false);
-
-        var endingNativePrice = endingTargetPrice / endRate;
-        return (quantity * endingNativePrice * (endRate - startRate), true);
-    }
-
-    private static bool TryGetBondFxEffect(
-        IEnumerable<BondAccount> accounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        out decimal fxEffect)
-    {
-        fxEffect = 0m;
-        foreach (var account in accounts)
-        {
-            var entriesByBond = account.Entries
-                .Concat(account.NextOlderEntries.Values)
-                .GroupBy(entry => entry.BondDetailsId);
-
-            foreach (var bondEntries in entriesByBond)
-            {
-                if (!bondDetails.TryGetValue(bondEntries.Key, out var details))
-                    return false;
-
-                var entries = bondEntries
-                    .GroupBy(entry => entry.EntryId)
-                    .Select(group => group.First())
-                    .OrderBy(entry => entry.PostingDate)
-                    .ThenBy(entry => entry.EntryId)
-                    .ToList();
-                var previousEntry = entries.LastOrDefault(entry => entry.PostingDate.Date < startDate.Date);
-                var currentDate = startDate;
-
-                foreach (var entry in entries.Where(entry => entry.PostingDate.Date >= startDate.Date && entry.PostingDate.Date <= endDate.Date))
-                {
-                    var entryDate = DateTime.SpecifyKind(entry.PostingDate.Date, DateTimeKind.Utc);
-                    if (entryDate > currentDate && previousEntry is not null)
-                    {
-                        if (!TryAddBondFxInterval(
-                                previousEntry,
-                                details,
-                                targetCurrency,
-                                currentDate,
-                                entryDate,
-                                ratesByCurrency,
-                                ref fxEffect))
-                            return false;
-                    }
-
-                    previousEntry = entry;
-                    currentDate = entryDate;
-                }
-
-                if (previousEntry is not null && endDate > currentDate
-                    && !TryAddBondFxInterval(
-                        previousEntry,
-                        details,
-                        targetCurrency,
-                        currentDate,
-                        endDate,
-                        ratesByCurrency,
-                        ref fxEffect))
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool TryAddBondFxInterval(
-        BondAccountEntry entry,
-        BondDetails details,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        ref decimal fxEffect)
-    {
-        var sourceCurrency = NormalizeCurrency(details.Currency.ShortName);
-        if (!TryGetRatePair(sourceCurrency, targetCurrency, startDate, endDate, ratesByCurrency, out var startRate, out var endRate))
-            return false;
-
-        if (!TryGetBondPrice(entry, details, DateOnly.FromDateTime(endDate), out var endingNativeValue))
-            return false;
-        if (endingNativeValue == 0m && entry.Value != 0m)
-            return false;
-
-        fxEffect += endingNativeValue * (endRate - startRate);
-        return true;
-    }
-
-    private static bool TryGetBondPrice(
-        BondAccountEntry entry,
-        BondDetails details,
-        DateOnly date,
-        out decimal value)
-    {
-        try
-        {
-            value = entry.GetPriceAt(date, details);
-            return true;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-        {
-            value = 0m;
-            return false;
-        }
-    }
-
-    private static bool TryGetRatePair(
-        string sourceCurrency,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        out decimal startRate,
-        out decimal endRate)
-    {
-        if (string.Equals(sourceCurrency, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-        {
-            startRate = 1m;
-            endRate = 1m;
-            return true;
-        }
-
-        if (ratesByCurrency.TryGetValue(sourceCurrency, out var rates)
-            && CurrencyRateSeries.TryGet(rates, startDate, out startRate)
-            && CurrencyRateSeries.TryGet(rates, endDate, out endRate)
-            && startRate > 0m
-            && endRate > 0m)
-            return true;
-
-        startRate = 0m;
-        endRate = 0m;
-        return false;
-    }
-
-    private async Task<decimal> GetCachedPriceAsync(
-        long listingId,
-        Currency targetCurrency,
-        DateTime date,
-        IDictionary<(long ListingId, DateTime Date), decimal> priceCache,
-        CancellationToken cancellationToken)
-    {
-        var key = (listingId, date.Date);
-        if (priceCache.TryGetValue(key, out var price))
-            return price;
-
-        price = await investmentPriceProvider.GetPricePerUnitAsync(
-            listingId,
-            targetCurrency,
-            DateTime.SpecifyKind(date.Date, DateTimeKind.Utc),
-            cancellationToken);
-        priceCache[key] = price;
-        return price;
     }
 
     private static bool TryConvert(
@@ -596,13 +261,5 @@ public class PortfolioReturnAttributionService(
 
         converted = 0m;
         return false;
-    }
-
-    private static string NormalizeCurrency(string currency)
-    {
-        var trimmed = currency.Trim();
-        return DefaultCurrency.MinorQuoteUnits.TryGetValue(trimmed, out var majorCurrency)
-            ? majorCurrency
-            : trimmed;
     }
 }
