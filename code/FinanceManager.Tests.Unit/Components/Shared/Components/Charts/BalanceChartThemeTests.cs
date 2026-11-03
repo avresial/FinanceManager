@@ -17,7 +17,7 @@ public class BalanceChartThemeTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber(bool accountHero)
+    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber(bool accountHero, bool loan = false)
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -29,7 +29,9 @@ public class BalanceChartThemeTests
             p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, false);
             if (accountHero)
                 p.AddChildContent<AccountDetailsHero>(child => child
-                    .Add(x => x.AccountName, "Cash 1").Add(x => x.Currency, "PLN").Add(x => x.ChartData, points));
+                    .Add(x => x.AccountName, "Cash 1").Add(x => x.Currency, "PLN").Add(x => x.ChartData, points)
+                    .Add(x => x.BalanceColor, loan ? AccountChartColors.BalanceColor(
+                        FinanceManager.Domain.FinancialAccounts.Shared.Entities.AccountLabel.Loan) : "#FFAB00"));
             else
                 p.AddChildContent<TimeSeriesValueCard>(child => child.Add(x => x.Data, points));
         });
@@ -41,14 +43,15 @@ public class BalanceChartThemeTests
             var changed = cut.Instance.Value != dark;
             cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
             var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
-            Assert.Equal(expected, chart.Options.Colors[0]);
-            if (changed) Assert.NotSame(previous, chart);
+            Assert.Equal(loan ? ColorsProvider.LiabilityColor : expected, chart.Options.Colors[0]);
+            if (changed && !loan) Assert.NotSame(previous, chart);
             Assert.Equal(points.Select(x => x.Value), chart.Series[0].Items.Select(x => x.Value));
         }
     }
 
     [Theory]
     [InlineData(false)]
+    [InlineData(true)]
     [InlineData(true)]
     public void SemanticAndCustomColoursArePreserved(bool dark)
     {

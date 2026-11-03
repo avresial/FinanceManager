@@ -39,10 +39,13 @@ public sealed class CashFlowForecastCardTests
         var content = Assert.IsType<RenderFragment>(cut.Instance.ChildContent);
         foreach (var (dark, expected) in new[] { (false, "#D38D00"), (true, "#FFAB00"), (false, "#D38D00") })
         {
+            var previous = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+            var changed = cut.Instance.Value != dark;
             cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
             cut.WaitForAssertion(() =>
             {
                 var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+                if (changed) Assert.NotSame(previous, chart);
                 Assert.Equal(new[] { expected, expected }, chart.Options.Colors);
                 Assert.All(cut.FindComponents<ApexPointSeries<TimeSeriesModel>>(),
                     series => Assert.Equal(expected, series.Instance.Stroke.Color));
