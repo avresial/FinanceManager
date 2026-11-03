@@ -35,6 +35,9 @@ public partial class DistributionCardView
     [Parameter] public List<NameValueResult> TypeData { get; set; } = [];
     [Parameter] public List<NameValueResult> AccountData { get; set; } = [];
 
+    /// <summary>Shows the Type/Account toggle. Off for cards with a single grouping, such as expenses by label.</summary>
+    [Parameter] public bool ShowViewToggle { get; set; } = true;
+
     private bool IsAccountView => _view == DistributionViewToggle.AccountView;
 
     // A single category would render as a one-slice donut that carries no information, so the card shows only its summary row.
