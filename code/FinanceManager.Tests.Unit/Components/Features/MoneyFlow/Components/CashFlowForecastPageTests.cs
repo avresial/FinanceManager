@@ -10,6 +10,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -26,6 +27,37 @@ namespace FinanceManager.Tests.Unit.Components.Features.MoneyFlow.Components;
 public class CashFlowForecastPageTests
 {
     private const string _key = "cash-flow-forecast-page:7:0:90";
+
+    [Fact]
+    public async Task ThemeOnlyChangeRecoloursForecastAndGradientWithoutReloadingData()
+    {
+        var snapshots = Snapshots(Forecast("CACHED", 90));
+        var handler = new DeferredForecastHandler();
+        await using var context = CreateContext(handler, snapshots, stubChart: false);
+        var cut = context.Render<CascadingValue<bool>>(p => p.Add(x => x.Name, "IsDarkMode")
+            .Add(x => x.Value, false).AddChildContent<CashFlowForecastPage>());
+        await handler.Started(90);
+
+        var content = Assert.IsType<RenderFragment>(cut.Instance.ChildContent);
+        foreach (var (dark, expected) in new[] { (false, "#D38D00"), (true, "#FFAB00"), (false, "#D38D00") })
+        {
+            var previous = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+            var changed = cut.Instance.Value != dark;
+            cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
+            cut.WaitForAssertion(() =>
+            {
+                var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+                if (changed) Assert.NotSame(previous, chart);
+                var options = chart.Options;
+                Assert.All(cut.FindComponents<ApexPointSeries<TimeSeriesModel>>(),
+                    series => Assert.Equal(expected, series.Instance.Stroke.Color));
+                Assert.Equal(new[] { expected, expected }, options.Colors);
+                Assert.Equal(new[] { expected, expected }, options.Fill.Gradient.GradientToColors);
+            });
+        }
+        snapshots.Verify(service => service.GetAsync<CashFlowForecastPageSnapshot>(_key), Times.Once);
+        handler.Complete(Forecast("CACHED", 90));
+    }
 
     [Fact]
     public async Task SnapshotHit_PaintsFullForecastBeforeFetching_AndUnchangedRefreshDoesNotWrite()
@@ -377,11 +409,11 @@ public class CashFlowForecastPageTests
     private static Task ClickHorizon(IRenderedComponent<CashFlowForecastPage> cut, int horizonDays) =>
         cut.InvokeAsync(() => FindHorizon(cut, horizonDays).ClickAsync(new()));
 
-    private static BunitContext CreateContext(HttpMessageHandler handler, Mock<ISnapshotService>? snapshots = null)
+    private static BunitContext CreateContext(HttpMessageHandler handler, Mock<ISnapshotService>? snapshots = null, bool stubChart = true)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
-        context.ComponentFactories.AddStub<ApexChart<TimeSeriesModel>>();
+        if (stubChart) context.ComponentFactories.AddStub<ApexChart<TimeSeriesModel>>();
         context.Services.AddLogging();
         context.Services.AddMudServices();
 
