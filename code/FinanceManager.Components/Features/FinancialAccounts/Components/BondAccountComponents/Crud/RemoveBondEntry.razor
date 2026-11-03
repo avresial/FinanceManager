@@ -9,11 +9,11 @@
 
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="_valueChange" Label="Units change"
-                                 Variant="Variant.Text" ReadOnly />
+                                 Variant="Variant.Outlined" ReadOnly />
             </MudItem>
 
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="_date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" ReadOnly />
+                <MudDatePicker Variant="Variant.Outlined" Label="Posting date" @bind-Date="_date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" ReadOnly />
             </MudItem>
 
             <MudItem xs="12">

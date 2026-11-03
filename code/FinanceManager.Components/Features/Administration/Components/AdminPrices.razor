@@ -27,14 +27,14 @@
     {
         <MudForm @ref="_form">
             <MudStack Spacing="3">
-                <MudSelect T="long?" Label="Asset listing" @bind-Value="_listingId" Required RequiredError="Select an asset listing">
+                <MudSelect Variant="Variant.Outlined" T="long?" Label="Asset listing" @bind-Value="_listingId" Required RequiredError="Select an asset listing">
                     @foreach (var listing in _listings)
                     {
                         <MudSelectItem T="long?" Value="listing.Id">@listing.Label</MudSelectItem>
                     }
                 </MudSelect>
-                <MudDatePicker Label="Price date" @bind-Date="_date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
-                <MudNumericField T="decimal?" Label="Price" @bind-Value="_price" Immediate="true" Min="0.00000001m"
+                <MudDatePicker Variant="Variant.Outlined" Label="Price date" @bind-Date="_date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MaxDate="DateTime.Today" Required RequiredError="Select a date" />
+                <MudNumericField Variant="Variant.Outlined" T="decimal?" Label="Price" @bind-Value="_price" Immediate="true" Min="0.00000001m"
                                  Required RequiredError="Enter a price" Adornment="Adornment.End" AdornmentText="@SelectedCurrency" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_isSaving" OnClick="Save">
                     @(_isSaving ? "Saving…" : "Save price")

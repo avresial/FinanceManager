@@ -15,24 +15,24 @@
         </MudItem>
 
         <MudItem xs="12" sm="6">
-            <MudTextField T="string" Label="Name" @bind-Value="_name" Required="true"
+            <MudTextField Variant="Variant.Outlined" T="string" Label="Name" @bind-Value="_name" Required="true"
                           RequiredError="Name is required" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudAutocomplete T="string" Label="Issuer" @bind-Value="_issuer" SearchFunc="SearchIssuer"
+            <MudAutocomplete Variant="Variant.Outlined" T="string" Label="Issuer" @bind-Value="_issuer" SearchFunc="SearchIssuer"
                              ResetValueOnEmptyText="false" CoerceText="false" CoerceValue="false"
                              Required="true" RequiredError="Issuer is required" />
         </MudItem>
 
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="Start emission date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
+            <MudDatePicker Variant="Variant.Outlined" Label="Start emission date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudDatePicker Label="End emission date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
+            <MudDatePicker Variant="Variant.Outlined" Label="End emission date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
         </MudItem>
 
         <MudItem xs="12" sm="6">
-            <MudSelect T="BondType" Label="Type" @bind-Value="_selectedType">
+            <MudSelect Variant="Variant.Outlined" T="BondType" Label="Type" @bind-Value="_selectedType">
                 @foreach (var bondType in _bondTypes)
                 {
                     <MudSelectItem T="BondType" Value="@bondType">@bondType</MudSelectItem>
@@ -40,7 +40,7 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudSelect T="FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency" Label="Currency"
+            <MudSelect Variant="Variant.Outlined" T="FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency" Label="Currency"
                        @bind-Value="_selectedCurrency" ToStringFunc="@(c => c?.ShortName)">
                 @foreach (var currency in _currencies)
                 {
@@ -51,11 +51,11 @@
             </MudItem>
 
             <MudItem xs="12" sm="6">
-                <MudNumericField T="decimal?" Label="Unit value" @bind-Value="_unitValue" Variant="Variant.Text" />
+                <MudNumericField T="decimal?" Label="Unit value" @bind-Value="_unitValue" Variant="Variant.Outlined" />
             </MudItem>
 
             <MudItem xs="12" sm="6">
-                <MudSelect T="Capitalization" Label="Capitalization" @bind-Value="_selectedCapitalization" Disabled="true">
+                <MudSelect Variant="Variant.Outlined" T="Capitalization" Label="Capitalization" @bind-Value="_selectedCapitalization" Disabled="true">
                     @foreach (var cap in _capitalizations)
                     {
                         <MudSelectItem T="Capitalization" Value="@cap">@cap</MudSelectItem>
@@ -98,7 +98,7 @@
             </MudItem>
 
             <MudItem xs="12" sm="3">
-                <MudSelect T="DateOperator" Label="Date operator" @bind-Value="_methodDateOperator">
+                <MudSelect Variant="Variant.Outlined" T="DateOperator" Label="Date operator" @bind-Value="_methodDateOperator">
                     @foreach (var op in _dateOperators)
                     {
                         <MudSelectItem T="DateOperator" Value="@op">@op</MudSelectItem>
@@ -107,10 +107,10 @@
             </MudItem>
 
             <MudItem xs="12" sm="3">
-                <MudDatePicker Label="Date" @bind-Date="_methodDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
+                <MudDatePicker Variant="Variant.Outlined" Label="Date" @bind-Date="_methodDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudNumericField T="decimal?" Label="Rate" @bind-Value="_methodRate" Variant="Variant.Text" />
+                <MudNumericField T="decimal?" Label="Rate" @bind-Value="_methodRate" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" sm="3">
                 <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.FlexStart" Style="height:100%;">

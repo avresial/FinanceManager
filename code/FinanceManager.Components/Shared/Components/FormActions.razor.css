@@ -1,0 +1,26 @@
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.form-actions-main,
+.form-actions-destructive {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-actions-main {
+    justify-content: flex-end;
+    margin-inline-start: auto;
+}
+
+@media (max-width: 600px) {
+    .form-actions-destructive {
+        flex-basis: 100%;
+    }
+}

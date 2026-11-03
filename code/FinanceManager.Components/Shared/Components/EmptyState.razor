@@ -1,0 +1,21 @@
+<div class="d-flex flex-column align-center text-center gap-2 pa-6" @attributes="AdditionalAttributes">
+    <MudIcon Class="mud-text-secondary" Icon="@Icon" Size="Size.Large" />
+    <MudText Typo="Typo.h6">@Title</MudText>
+    <MudText Class="mud-text-secondary" Typo="Typo.body2">@Description</MudText>
+    <MudButton Href="@Href" OnClick="OnAction" Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add" Class="mt-2" Disabled="@Disabled"
+               aria-label="@ActionAriaLabel" data-testid="@ActionTestId">@ActionLabel</MudButton>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ActionLabel { get; set; } = string.Empty;
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnAction { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? ActionAriaLabel { get; set; }
+    [Parameter] public string? ActionTestId { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+}

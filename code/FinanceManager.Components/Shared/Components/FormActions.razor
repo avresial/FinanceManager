@@ -1,0 +1,12 @@
+<div class="form-actions">
+    @if (DestructiveActions is not null)
+    {
+        <div class="form-actions-destructive">@DestructiveActions</div>
+    }
+    <div class="form-actions-main">@ChildContent</div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? DestructiveActions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
