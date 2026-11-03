@@ -115,6 +115,19 @@ public class NetWorthServiceTests
     }
 
     [Fact]
+    public async Task GetNetWorth_OverRange_KeysEachPointByCalendarDay()
+    {
+        // The dashboard passes "now" as the end, so the walk back carries the time of day.
+        // Keying by date keeps the series on the same day grid as the other dashboard series.
+        var start = new DateTime(2024, 3, 3, 0, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2024, 3, 6, 20, 23, 14, DateTimeKind.Utc);
+
+        var result = await _netWorthService.GetNetWorth(1, DefaultCurrency.PLN, start, end);
+
+        Assert.Equal([start, start.AddDays(1), start.AddDays(2), start.AddDays(3)], result.Keys.Order());
+    }
+
+    [Fact]
     public async Task GetNetWorth_OverRange_FetchesAllInvestmentAccountsInOneBatchedCall()
     {
         // The per-account fan-out is replaced by a single batched valuation call that carries every
@@ -280,7 +293,7 @@ public class NetWorthServiceTests
                     if (entry is not null)
                         total += entry.GetPriceAt(DateOnly.FromDateTime(date), id == 1 ? details : otherDetails);
                 }
-            expected.Add(date, Math.Round(total, 2));
+            expected.Add(date.Date, Math.Round(total, 2));
         }
 
         Assert.Equal(expected, await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end));
