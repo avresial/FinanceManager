@@ -21,6 +21,27 @@ public sealed class FinancialAlertsCardViewTests
         Assert.DoesNotContain("configured", cut.Markup);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task LoadingOrErrorWithoutSummary_PreservesManageLink(bool isLoading, bool hasError)
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<FinancialAlertsCardView>(parameters => parameters
+            .Add(p => p.ConfiguredCount, 0)
+            .Add(p => p.IsLoading, isLoading)
+            .Add(p => p.HasError, hasError));
+
+        Assert.Equal("Alerts", cut.Find("a[aria-label='Manage alerts']").GetAttribute("href"));
+        Assert.Empty(cut.FindAll("[data-testid=alerts-create-button]"));
+
+        cut.Render(parameters => parameters.Add(p => p.IsLoading, false).Add(p => p.HasError, false));
+
+        Assert.Empty(cut.FindAll("a[aria-label='Manage alerts']"));
+        Assert.Equal("Alerts", cut.Find("[data-testid=alerts-create-button]").GetAttribute("href"));
+    }
+
     private static void AssertPhoneAutoHeight(Bunit.IRenderedComponent<FinancialAlertsCardView> cut)
     {
         var card = cut.Find("[data-testid=financial-alerts-card]");

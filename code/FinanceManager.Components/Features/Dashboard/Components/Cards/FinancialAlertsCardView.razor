@@ -6,7 +6,7 @@
                 InfoText="Configured financial conditions that are currently triggered."
                 InfoAriaLabel="About financial alerts card"
                 Leading="@(SelectedAlert is null ? null : BackButton)"
-                Actions="@(SelectedAlert is null && ConfiguredCount > 0 ? ManageAlertsButton : null)">
+                Actions="@(SelectedAlert is null && (IsLoading || HasError || ConfiguredCount > 0) ? ManageAlertsButton : null)">
         <SubtitleContent>
             @if (SelectedAlert is null)
             {

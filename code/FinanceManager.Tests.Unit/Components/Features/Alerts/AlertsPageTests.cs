@@ -36,11 +36,14 @@ public sealed class AlertsPageTests
         cut.Find("button[aria-label='Delete Fresh alert']").Click();
         cut.WaitForAssertion(() => Assert.Contains("No alerts yet", cut.Markup));
         var evaluations = handler.EvaluateCount;
-        var focusCalls = context.JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+        var alertName = cut.FindComponents<MudTextField<string>>().Single(field => field.Instance.Label == "Alert name");
+        var expectedTarget = alertName.Instance.InputReference!.ElementReference;
+        var invocationCount = context.JSInterop.Invocations.Count;
 
         cut.Find("[data-testid=alerts-empty-create]").Click();
 
-        Assert.Equal(focusCalls + 1, context.JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase)));
+        var focus = Assert.Single(context.JSInterop.Invocations.Skip(invocationCount), invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus");
+        Assert.Equal(expectedTarget, Assert.IsType<Microsoft.AspNetCore.Components.ElementReference>(focus.Arguments[0]));
         Assert.Equal(evaluations, handler.EvaluateCount);
         Assert.Single(cut.FindAll("label"), label => label.TextContent.Contains("Alert name", StringComparison.Ordinal));
     }
