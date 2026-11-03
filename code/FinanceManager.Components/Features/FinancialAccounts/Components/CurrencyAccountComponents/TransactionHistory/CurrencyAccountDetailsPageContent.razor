@@ -16,7 +16,8 @@ else if (IsLoading || AccountHistoryState.HasTransactionHistory(Account))
                         <AccountDetailsHero AccountName="@Account.Name" AccountTypeLabel="@_accountTypeLabel" Currency="@_currency.ShortName"
                         Balance="@_currentBalance" BalanceChange="@_balanceChange" BalanceChangePercent="@_balanceChangePercent"
                         SelectedRange="@_selectedRange" RangeStart="@_dateStart" RangeEnd="@_dateEnd" IsChartLoading="@_isChartLoading"
-                        ChartData="@ChartData" IsMobile="@_isMobile" />
+                        ChartData="@ChartData" IsMobile="@_isMobile"
+                        BalanceColor="@AccountChartColors.BalanceColor(Account.AccountType)" />
 
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudGrid Spacing="3">
