@@ -43,9 +43,13 @@ public class InvestmentPriceProviderTests
 
     private InvestmentPriceProvider CreateSut() => new(
         _listingRepository.Object,
-        _symbolRepository.Object,
         _priceQuoteRepository,
-        _priceSource.Object,
+        new PriceQuoteIngestionService(
+            _symbolRepository.Object,
+            _priceQuoteRepository,
+            _priceSource.Object,
+            _currencyRepository.Object,
+            LoggerFactory.Create(_ => { }).CreateLogger<PriceQuoteIngestionService>()),
         _currencyRepository.Object,
         _currencyExchangeService.Object,
         _cache,

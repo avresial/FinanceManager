@@ -1,4 +1,3 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
@@ -9,36 +8,26 @@ using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
+using static FinanceManager.Application.Assets.Pricing.PriceQuoteCoverage;
 
 namespace FinanceManager.Application.Assets.Pricing;
 
 /// <summary>
 /// Prices an <see cref="AssetListing"/> on the new asset model. Serves cached
-/// <see cref="PriceQuote"/> rows first, fetches from the listing's primary enabled
-/// <see cref="MarketDataSymbol"/> through the existing <see cref="IStockPriceSource"/> fallback
-/// chain when data is missing, normalises the raw quote with the listing's
-/// <see cref="AssetListing.PriceMultiplier"/> (e.g. GBX → GBP) and converts to the target currency.
+/// <see cref="PriceQuote"/> rows first, asks <see cref="IPriceQuoteIngestionService"/> to fetch
+/// when data is missing, and converts the stored quote to the target currency.
 /// </summary>
 public class InvestmentPriceProvider(
     IAssetListingRepository listingRepository,
-    IMarketDataSymbolRepository symbolRepository,
     IPriceQuoteRepository priceQuoteRepository,
-    IStockPriceSource priceSource,
+    IPriceQuoteIngestionService quoteIngestion,
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService,
     IMemoryCache cache,
     ILogger<InvestmentPriceProvider> logger,
     IGuestSessionAccessor? guestSessionAccessor = null) : IInvestmentPriceProvider
 {
-    private const int _fetchLookbackDays = 7;
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(60);
-    private static readonly TimeSpan _failedFetchCooldown = TimeSpan.FromMinutes(15);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _fetchLocks = new();
-
-    // Minor "pence"-style quote units collapse to their major currency once PriceMultiplier is
-    // applied (1 GBX = 0.01 GBP), so FX conversion can use a currency the rate provider knows.
-    private static readonly IReadOnlyDictionary<string, string> _minorToMajorCurrency = DefaultCurrency.MinorQuoteUnits;
 
     public async Task<decimal> GetPricePerUnitAsync(long assetListingId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default) =>
         (await GetPricePerUnitResultAsync(assetListingId, targetCurrency, asOf, ct)).Price ?? 0m;
@@ -69,7 +58,7 @@ public class InvestmentPriceProvider(
         var quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(priceDate), cancellationToken: ct);
         if (quote is null)
         {
-            await TryFetchAndStoreAsync(listing, priceDate.AddDays(-_fetchLookbackDays), priceDate, ct);
+            await quoteIngestion.FetchAndStoreAsync(listing, priceDate.AddDays(-FetchLookbackDays), priceDate, ct);
             quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(priceDate), cancellationToken: ct);
         }
 
@@ -107,7 +96,7 @@ public class InvestmentPriceProvider(
         var existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
         if (NeedsFetch(existing, startDate, endDate))
         {
-            await TryFetchAndStoreAsync(listing, startDate, endDate, ct);
+            await quoteIngestion.FetchAndStoreAsync(listing, startDate, endDate, ct);
             existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
         }
 
@@ -209,7 +198,7 @@ public class InvestmentPriceProvider(
         if (!NeedsFetch(existing, startDate, endDate))
             return existing.Count > 0;
 
-        await TryFetchAndStoreAsync(listing, startDate, endDate, ct);
+        await quoteIngestion.FetchAndStoreAsync(listing, startDate, endDate, ct);
 
         existing = await priceQuoteRepository.GetRange(assetListingId, DayStart(startDate), DayEnd(endDate), ct);
         return existing.Count > 0;
@@ -279,176 +268,4 @@ public class InvestmentPriceProvider(
             ? (price * usdRateResult.Value!.Value, false, null)
             : (0m, false, null);
     }
-
-    private async Task TryFetchAndStoreAsync(AssetListing listing, DateTime start, DateTime end, CancellationToken ct)
-    {
-        // Trim the window to trading days before touching the provider chain: a window that is all
-        // weekend has nothing to return, and a weekend edge only widens the request for free.
-        if (!MarketCalendar.HasMarketDay(start, end))
-        {
-            logger.LogDebug(
-                "Skipping price fetch for listing {ListingId}: {Start:yyyy-MM-dd}..{End:yyyy-MM-dd} contains no trading day.",
-                listing.Id, start.Date, end.Date);
-            return;
-        }
-
-        start = MarketCalendar.NextMarketDay(start);
-        end = MarketCalendar.LastMarketDay(end);
-
-        var symbols = listing.MarketDataSymbols
-            .Where(s => s.IsEnabled)
-            .OrderBy(s => priceSource.SupportsProviderSelection ? priceSource.GetPriority(s.Provider) : 0)
-            .ThenByDescending(s => s.IsPrimary)
-            .ThenBy(s => s.Id)
-            .ToList();
-
-        if (symbols.Count == 0)
-        {
-            logger.LogDebug("Listing {ListingId} has no enabled market-data symbol; cannot fetch prices", listing.Id);
-            return;
-        }
-
-        if (!priceSource.SupportsProviderSelection)
-            symbols = [symbols[0]];
-
-        // One lock per listing serialises every provider symbol for the same instrument.
-        var fetchKey = $"INVEST_FETCH_{listing.Id}";
-        var fetchLock = _fetchLocks.GetOrAdd(fetchKey, _ => new SemaphoreSlim(1, 1));
-        await fetchLock.WaitAsync(ct);
-        try
-        {
-            // Re-check after acquiring the lock so a concurrent fetch isn't repeated.
-            var existing = await priceQuoteRepository.GetRange(listing.Id, DayStart(start), DayEnd(end), ct);
-            if (!NeedsFetch(existing, start.Date, end.Date))
-                return;
-
-            foreach (var symbol in symbols)
-            {
-                if (symbol.LastError is not null && DateTimeOffset.UtcNow - symbol.UpdatedAt < _failedFetchCooldown)
-                {
-                    logger.LogDebug(
-                        "Skipping price fetch for listing {ListingId} provider {Provider}: last attempt failed at {UpdatedAt}.",
-                        listing.Id, symbol.Provider, symbol.UpdatedAt);
-                    continue;
-                }
-
-                var rawCurrencyName = string.IsNullOrWhiteSpace(symbol.Currency) ? listing.TradingCurrency : symbol.Currency;
-                if (string.IsNullOrWhiteSpace(rawCurrencyName))
-                {
-                    logger.LogWarning(
-                        "Skipping price fetch for listing {ListingId} provider {Provider}: neither symbol nor listing currency is configured.",
-                        listing.Id,
-                        symbol.Provider);
-                    continue;
-                }
-
-                var rawCurrency = await currencyRepository.GetOrAdd(rawCurrencyName, rawCurrencyName, ct);
-
-                IReadOnlyList<Domain.FinancialAccounts.Investments.Entities.StockPrice> prices;
-                try
-                {
-                    prices = priceSource.SupportsProviderSelection
-                        ? await priceSource.GetDailySeries(symbol.Provider, symbol.Symbol, string.Empty, start, end, rawCurrency, ct)
-                        : await priceSource.GetDailySeries(symbol.Symbol, string.Empty, start, end, rawCurrency, ct);
-                }
-                catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
-                {
-                    logger.LogDebug(ex, "Price fetch cancelled for listing {ListingId} provider {Provider} symbol {Symbol}.",
-                        listing.Id, symbol.Provider, symbol.Symbol);
-                    throw;
-                }
-                catch (OperationCanceledException ex)
-                {
-                    logger.LogDebug(ex, "Price fetch cancelled or timed out for listing {ListingId} provider {Provider} symbol {Symbol}; trying the next source.",
-                        listing.Id, symbol.Provider, symbol.Symbol);
-                    await symbolRepository.RecordFetchResult(symbol.Id, null, ex.Message, ct);
-                    continue;
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    logger.LogWarning(ex, "Price fetch failed for listing {ListingId} provider {Provider} symbol {Symbol}",
-                        listing.Id, symbol.Provider, symbol.Symbol);
-                    await symbolRepository.RecordFetchResult(symbol.Id, null, ex.Message, ct);
-                    continue;
-                }
-
-                if (prices.Count == 0)
-                {
-                    await symbolRepository.RecordFetchResult(symbol.Id, null, "No price data returned", ct);
-                    continue;
-                }
-
-                var normalizedCurrencyName = NormalizedCurrencyName(rawCurrencyName, listing.PriceMultiplier);
-                var quotes = prices
-                    .Where(price => price.PricePerUnit > 0)
-                    .Select(price => new PriceQuote
-                    {
-                        AssetListingId = listing.Id,
-                        MarketDataSymbolId = symbol.Id,
-                        Provider = symbol.Provider,
-                        Price = price.PricePerUnit * listing.PriceMultiplier,
-                        Currency = normalizedCurrencyName,
-                        PriceTime = DayStart(price.Date),
-                        QuoteType = PriceQuoteType.EndOfDay,
-                        RawPrice = price.PricePerUnit,
-                        RawCurrency = rawCurrencyName,
-                        FetchedAt = DateTimeOffset.UtcNow
-                    })
-                    .ToList();
-
-                if (quotes.Count == 0)
-                    continue;
-
-                await priceQuoteRepository.UpsertRange(quotes, ct);
-                await symbolRepository.RecordFetchResult(symbol.Id, DateTimeOffset.UtcNow, null, ct);
-                return;
-            }
-        }
-        finally
-        {
-            fetchLock.Release();
-        }
-    }
-
-    // Normalise from the currency the prices were actually fetched in (symbol currency, falling
-    // back to the listing's trading currency), so PriceQuote.Currency matches RawCurrency.
-    private static string NormalizedCurrencyName(string rawCurrencyName, decimal priceMultiplier)
-    {
-        if (priceMultiplier == 1m)
-            return rawCurrencyName;
-
-        return _minorToMajorCurrency.TryGetValue(rawCurrencyName, out var major)
-            ? major
-            : rawCurrencyName;
-    }
-
-    private static bool NeedsFetch(IReadOnlyList<PriceQuote> existing, DateTime start, DateTime end)
-    {
-        // A weekend-only window can never become covered — providers publish no Saturday or Sunday
-        // close — so reporting it as missing would re-request it on every single call.
-        if (!MarketCalendar.HasMarketDay(start, end)) return false;
-
-        if (existing is null || existing.Count == 0) return true;
-
-        var existingDates = existing.Select(x => x.PriceTime.Date).ToHashSet();
-
-        // Boundary-coverage check using the 7-day lookback tolerance, measured from the first and
-        // last *trading* day in the window: ensure data exists within [start, start+7d] and
-        // [end-7d, end]. This allows for market holidays and weekends without triggering a full
-        // refetch, while genuine gaps at boundaries do.
-        var marketStart = MarketCalendar.NextMarketDay(start);
-        var marketEnd = MarketCalendar.LastMarketDay(end);
-
-        var startBoundary = marketStart.AddDays(_fetchLookbackDays);
-        var hasStartCoverage = existingDates.Any(d => d >= marketStart && d <= startBoundary);
-
-        var endBoundary = marketEnd.AddDays(-_fetchLookbackDays);
-        var hasEndCoverage = existingDates.Any(d => d >= endBoundary && d <= marketEnd);
-
-        return !hasStartCoverage || !hasEndCoverage;
-    }
-
-    private static DateTimeOffset DayStart(DateTime date) => new(date.Date, TimeSpan.Zero);
-
-    private static DateTimeOffset DayEnd(DateTime date) => new DateTimeOffset(date.Date, TimeSpan.Zero).AddDays(1).AddTicks(-1);
 }

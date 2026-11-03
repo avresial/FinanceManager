@@ -82,6 +82,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<AccountDetailsSnapshotStore>()
                 .AddScoped<InvestmentAccountDetailsSnapshotStore>()
                 .AddScoped<AccountChartSnapshotStore>()
+                .AddScoped<InvestmentAccountChartLoader>()
                 .AddScoped<LiabilitiesSnapshotStore>()
                 .AddScoped<DashboardCardsSnapshotStore>()
                 .AddScoped<DiversificationSnapshotStore>()

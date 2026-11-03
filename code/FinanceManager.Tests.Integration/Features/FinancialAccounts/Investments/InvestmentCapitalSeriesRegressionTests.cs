@@ -127,12 +127,12 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         await context.SaveChangesAsync(ct);
         var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
         var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
-        var before = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
 
         listing.TradingCurrency = "EUR";
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        var after = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
 
         Assert.Equal(24216.418720m, before[_accountId][end]);
         Assert.Equal(before[_accountId].OrderBy(x => x.Key), after[_accountId].OrderBy(x => x.Key));
@@ -160,13 +160,13 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             TradeDate = DateOnly.FromDateTime(date)
         });
         await context.SaveChangesAsync(ct);
-        var before = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
+        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
 
         listing.TradingCurrency = "GBX";
         listing.PriceMultiplier = 0.01m;
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        var after = await CreateValuationService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
+        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
 
         Assert.Equal(10m, before[_accountId][date]); // 2 * 100 GBX / 100 * 5 PLN/GBP.
         Assert.Equal(before[_accountId][date], after[_accountId][date]);
@@ -178,7 +178,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         await SeedProductionFixture();
         var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
         var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
-        var valuationService = CreateValuationService();
+        var valuationService = CreateCapitalSeriesService();
 
         var usd = await valuationService.GetCapitalSeriesAsync(
             [_accountId], DefaultCurrency.USD, start, end, TestContext.Current.CancellationToken);
@@ -297,7 +297,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         await SeedProductionFixture();
         var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
         var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
-        var valuationService = CreateValuationService();
+        var valuationService = CreateCapitalSeriesService();
 
         _january12UsdToPlnRate = 4m;
         var baseline = await valuationService.GetCapitalSeriesAsync(
@@ -425,10 +425,8 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         Authorize("testuser", _userId, UserRole.User);
     }
 
-    private InvestmentValuationService CreateValuationService() => new(
+    private InvestmentCapitalSeriesService CreateCapitalSeriesService() => new(
         new InvestmentTransactionRepository(_testDatabase!.Context),
-        Mock.Of<IInvestmentPriceProvider>(),
-        Mock.Of<IInflationIndexProvider>(),
         _currencyExchangeService!.Object);
 
     private async Task SeedAccountAndListings()
