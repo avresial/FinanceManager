@@ -6,12 +6,12 @@
 <AccountFormContainer>
     <PageHeader Title="Add account" />
     <MudForm Spacing="3" @bind-IsValid="@_success" @bind-Errors="@_errors">
-        <MudTextField T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
+        <MudTextField Variant="Variant.Outlined" T="string" @bind-Value=_accountName Label="Account name" Required="true" RequiredError="User name is required!"
                       Validation="@(new Func<string, IEnumerable<string>>(AccountNameValidation))" data-testid="account-name" />
 
             <MudStack>
                 <MudSelect @bind-Value="_selectedAccountType"
-                           Variant="Variant.Text"
+                           Variant="Variant.Outlined"
                            Label="Account type" Required data-testid="account-type">
                     @foreach (var state in _accountTypes)
                     {
@@ -22,7 +22,7 @@
 
             @if (_selectedAccountType == "Currency account")
             {
-                <MudSelect T="int" @bind-Value="_currencyId" Label="Currency" Required data-testid="account-currency">
+                <MudSelect Variant="Variant.Outlined" T="int" @bind-Value="_currencyId" Label="Currency" Required data-testid="account-currency">
                     @foreach (var currency in _currencies)
                     {
                         <MudSelectItem Value="@currency.Id">@currency.ShortName</MudSelectItem>
@@ -30,13 +30,15 @@
                 </MudSelect>
             }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success || _isAdding)" Class="ml-auto" @onclick=Add data-testid="account-submit">
-            @if (_isAdding)
-            {
-                <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
-            }
-            Add
-        </MudButton>
+        <FormActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success || _isAdding)" @onclick=Add data-testid="account-submit">
+                @if (_isAdding)
+                {
+                    <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                }
+                Add
+            </MudButton>
+        </FormActions>
         @if (_addedAccountId is not null)
         {
             <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="my-3">

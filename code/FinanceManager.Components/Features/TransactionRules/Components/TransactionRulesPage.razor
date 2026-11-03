@@ -12,8 +12,11 @@
     <PageHeader Title="Transaction automation"
                 Subtitle="Rules run from top to bottom. Each rule sees changes made by earlier rules.">
         <Actions>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+            @if (_rules.Count > 0 || _isCreating || _error is not null)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
                        Disabled="@(_isLoading || IsBusy)" OnClick="BeginCreate" aria-label="Create a new rule">Create rule</MudButton>
+            }
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@(_isLoading || IsBusy)" OnClick="RefreshAsync">Refresh</MudButton>
         </Actions>
@@ -30,11 +33,11 @@
     }
     else if (_rules.Count == 0 && _error is null && !_isCreating)
     {
-        <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.AutoFixHigh" Size="Size.Large" />
-            <MudText Typo="Typo.h6" Class="mt-2">No automation rules yet</MudText>
-            <MudText Class="mud-text-secondary" Typo="Typo.body2">Create your first rule to keep new and imported transactions tidy.</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="BeginCreate" Class="mt-3">Create your first rule</MudButton>
+        <MudPaper Outlined>
+            <EmptyState Icon="@Icons.Material.Filled.AutoFixHigh" Title="No automation rules yet"
+                        Description="Create your first rule to keep new and imported transactions tidy."
+                        ActionLabel="Create rule" ActionAriaLabel="Create a new rule" OnAction="BeginCreate"
+                        Disabled="@IsBusy" />
         </MudPaper>
     }
     else if (_rules.Count > 0)
