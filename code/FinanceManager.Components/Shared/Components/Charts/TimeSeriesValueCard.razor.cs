@@ -46,6 +46,9 @@ public partial class TimeSeriesValueCard
     /// <summary>Series + readout accent colour. Defaults to the brand gold.</summary>
     [Parameter] public string Accent { get; set; } = ColorsProvider.GetColors().First();
 
+    [CascadingParameter(Name = "IsDarkMode")] public bool IsDarkMode { get; set; }
+    private string ChartAccent => BalanceChartColors.ForTheme(Accent, IsDarkMode);
+
     /// <summary>
     /// When true a falling series is "good" (liabilities): the delta chip turns green while
     /// the line drops. The triangle/sign still follow the real direction of change.
@@ -150,7 +153,7 @@ public partial class TimeSeriesValueCard
 
     protected override void OnParametersSet()
     {
-        if (_options is null || _builtForAccent != Accent || _builtForCurrency != CurrencyShortName)
+        if (_options is null || _builtForAccent != ChartAccent || _builtForCurrency != CurrencyShortName)
             BuildOptions();
 
         ApplyYScale();
@@ -222,7 +225,7 @@ public partial class TimeSeriesValueCard
 
     private void BuildOptions()
     {
-        _builtForAccent = Accent;
+        _builtForAccent = ChartAccent;
         _builtForCurrency = CurrencyShortName;
 
         _options = new ApexChartOptions<TimeSeriesModel>
@@ -235,7 +238,7 @@ public partial class TimeSeriesValueCard
                 FontFamily = "Roboto, sans-serif",
                 Animations = new Animations { Enabled = true, Speed = 400 },
             },
-            Colors = [Accent],
+            Colors = [ChartAccent],
             Stroke = new Stroke { Curve = Curve.Stepline, Width = 2.5, LineCap = LineCap.Round },
             DataLabels = new DataLabels { Enabled = false },
             Legend = new Legend { Show = false },
@@ -265,7 +268,7 @@ public partial class TimeSeriesValueCard
                 // display:none approach also hid the hover dot.
                 Size = 0.1,
                 StrokeWidth = 0.1,
-                Colors = [Accent],
+                Colors = [ChartAccent],
                 StrokeColors = "#23232a",
                 Hover = new MarkersHover { Size = 5 },
             },

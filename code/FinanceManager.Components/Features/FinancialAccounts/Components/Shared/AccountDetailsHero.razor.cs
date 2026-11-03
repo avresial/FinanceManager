@@ -42,6 +42,9 @@ public partial class AccountDetailsHero
     /// <summary>Colour of the balance series; see <see cref="AccountChartColors.BalanceColor"/>.</summary>
     [Parameter] public string BalanceColor { get; set; } = AccountChartColors.DefaultBalanceColor;
 
+    [CascadingParameter(Name = "IsDarkMode")] public bool IsDarkMode { get; set; }
+    private string ChartBalanceColor => BalanceChartColors.ForTheme(BalanceColor, IsDarkMode);
+
     private const int _yAxisTickCount = 5;
 
     /// <summary>Legend/series name for the account's own balance series.</summary>
@@ -74,7 +77,7 @@ public partial class AccountDetailsHero
         _chartData = aligned[0];
         _benchmarkData = aligned[1];
         _capitalData = aligned[2];
-        _heroChartOptions.Colors = [BalanceColor, "#42a5f5", "#66bb6a"];
+        _heroChartOptions.Colors = [ChartBalanceColor, "#42a5f5", "#66bb6a"];
         ApplyYScale();
     }
 
@@ -98,15 +101,15 @@ public partial class AccountDetailsHero
             // skeleton) has just drawn the current data itself.
             _drawnChart = _chart;
             _drawnPoints = [.. points];
-            _drawnBalanceColor = BalanceColor;
+            _drawnBalanceColor = ChartBalanceColor;
             return;
         }
 
         // A colour-only change (same data, different account type) also needs a redraw.
-        if (points.SequenceEqual(_drawnPoints) && BalanceColor == _drawnBalanceColor) return;
+        if (points.SequenceEqual(_drawnPoints) && ChartBalanceColor == _drawnBalanceColor) return;
 
         _drawnPoints = [.. points];
-        _drawnBalanceColor = BalanceColor;
+        _drawnBalanceColor = ChartBalanceColor;
         await _chart.RenderAsync();
     }
 

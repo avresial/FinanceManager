@@ -45,14 +45,14 @@
                 </MudText>
             </div>
             <div class="cash-flow-forecast-chart">
-                <ApexChart @key="_forecast" TItem="TimeSeriesModel" Options="_chartOptions" Height="360">
+                <ApexChart @key="(_forecast, ChartAccent)" TItem="TimeSeriesModel" Options="_chartOptions" Height="360">
                     @if (_forecast.HistoricalSeries.Count > 0)
                     {
                         <ApexPointSeries TItem="TimeSeriesModel" Items="_forecast.HistoricalSeries"
                                          Name="Historical balance" SeriesType="SeriesType.Area"
                                          XValue="@(point => point.DateTime.ToLocalTime())"
                                          YValue="@(point => point.Value)"
-                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = CardChartColors.Accent })" />
+                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 0, Color = ChartAccent })" />
                     }
                     @if (_forecast.ForecastSeries.Count > 0)
                     {
@@ -60,7 +60,7 @@
                                          Name="Forecast balance" SeriesType="SeriesType.Line"
                                          XValue="@(point => point.DateTime.ToLocalTime())"
                                          YValue="@(point => point.Value)"
-                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = CardChartColors.Accent })" />
+                                         Stroke="@(new SeriesStroke { Width = 2, DashSpace = 5, Color = ChartAccent })" />
                     }
                 </ApexChart>
             </div>

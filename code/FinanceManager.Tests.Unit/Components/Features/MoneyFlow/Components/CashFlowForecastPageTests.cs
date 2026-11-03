@@ -10,6 +10,7 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -26,6 +27,32 @@ namespace FinanceManager.Tests.Unit.Components.Features.MoneyFlow.Components;
 public class CashFlowForecastPageTests
 {
     private const string _key = "cash-flow-forecast-page:7:0:90";
+
+    [Fact]
+    public async Task ThemeOnlyChangeRecoloursForecastAndGradientWithoutReloadingData()
+    {
+        var snapshots = Snapshots(Forecast("CACHED", 90));
+        var handler = new DeferredForecastHandler();
+        await using var context = CreateContext(handler, snapshots);
+        var cut = context.Render<CascadingValue<bool>>(p => p.Add(x => x.Name, "IsDarkMode")
+            .Add(x => x.Value, false).AddChildContent<CashFlowForecastPage>());
+        await handler.Started(90);
+
+        var content = Assert.IsType<RenderFragment>(cut.Instance.ChildContent);
+        foreach (var (dark, expected) in new[] { (false, "#D38D00"), (true, "#FFAB00"), (false, "#D38D00") })
+        {
+            cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
+            cut.WaitForAssertion(() =>
+            {
+                var chart = cut.FindComponent<Stub<ApexChart<TimeSeriesModel>>>().Instance;
+                var options = chart.Parameters.Get(x => x.Options);
+                Assert.Equal(new[] { expected, expected }, options.Colors);
+                Assert.Equal(new[] { expected, expected }, options.Fill.Gradient.GradientToColors);
+            });
+        }
+        snapshots.Verify(service => service.GetAsync<CashFlowForecastPageSnapshot>(_key), Times.Once);
+        handler.Complete(Forecast("CACHED", 90));
+    }
 
     [Fact]
     public async Task SnapshotHit_PaintsFullForecastBeforeFetching_AndUnchangedRefreshDoesNotWrite()
