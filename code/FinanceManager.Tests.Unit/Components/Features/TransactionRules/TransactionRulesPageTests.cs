@@ -50,6 +50,8 @@ public sealed class TransactionRulesPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("No automation rules yet", cut.Markup);
+            var create = Assert.Single(cut.FindAll("button"), button => button.TextContent.Trim() == "Create rule");
+            Assert.Contains("mud-button-filled", create.ClassList);
             Assert.DoesNotContain("Apply to existing currency transactions", cut.Markup);
             Assert.DoesNotContain("Test the full sequence", cut.Markup);
         });

@@ -27,6 +27,25 @@ public sealed class AlertsPageTests
     private static readonly Guid _alertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
+    public async Task EmptyStateCreateAction_FocusesExistingAlertNameWithoutSubmitting()
+    {
+        var handler = new AlertsHandler();
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Fresh alert", cut.Markup));
+        cut.Find("button[aria-label='Delete Fresh alert']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("No alerts yet", cut.Markup));
+        var evaluations = handler.EvaluateCount;
+        var focusCalls = context.JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+
+        cut.Find("[data-testid=alerts-empty-create]").Click();
+
+        Assert.Equal(focusCalls + 1, context.JSInterop.Invocations.Count(invocation => invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase)));
+        Assert.Equal(evaluations, handler.EvaluateCount);
+        Assert.Single(cut.FindAll("label"), label => label.TextContent.Contains("Alert name", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SnapshotHit_PaintsBeforeEvaluationAndKeepsItOnFailure()
     {
         var handler = new AlertsHandler { DelayEvaluation = true };

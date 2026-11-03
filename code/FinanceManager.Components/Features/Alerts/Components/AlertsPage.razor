@@ -45,7 +45,7 @@
            flagging the now-empty required name as an error. *@
         <MudGrid Spacing="2" Class="mx-0 w-100" @key="_formVersion">
             <MudItem xs="12" md="6">
-                <MudTextField T="string" @bind-Value="_form.Title" Label="Alert name" Required="true" ShrinkLabel="true"
+                <MudTextField @ref="_alertNameField" T="string" @bind-Value="_form.Title" Label="Alert name" Required="true" ShrinkLabel="true"
                               Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" Disabled="@_isSaving" />
             </MudItem>
             <MudItem xs="12" md="6">
@@ -125,10 +125,10 @@
     }
     else if (_alerts.Count == 0)
     {
-        <MudPaper Outlined Class="pa-8 text-center">
-            <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Large" />
-            <MudText Typo="Typo.h6" Class="mt-2">No alerts yet</MudText>
-            <MudText Class="mud-text-secondary" Typo="Typo.body2">Create a watchlist condition above to start monitoring your finances.</MudText>
+        <MudPaper Outlined>
+            <EmptyState Icon="@Icons.Material.Filled.NotificationsNone" Title="No alerts yet"
+                        Description="Get notified when a balance or spending condition is met."
+                        ActionLabel="Create alert" ActionTestId="alerts-empty-create" OnAction="FocusAlertFormAsync" />
         </MudPaper>
     }
     else

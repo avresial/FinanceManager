@@ -12,19 +12,19 @@
                 <MudText Typo="Typo.subtitle1">@BondAccount.Name</MudText>
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudDatePicker Label="Posting date" @bind-Date="_postingDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
+                <MudDatePicker Variant="Variant.Outlined" Label="Posting date" @bind-Date="_postingDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
                                Validation="@(new NotInFutureAttribute())" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTimePicker Label="Time" @bind-Time="_time"
+                <MudTimePicker Variant="Variant.Outlined" Label="Time" @bind-Time="_time"
                                Validation="@(new NotInFutureAttributeTime(_postingDate))" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField Required="true" HideSpinButtons="true" @bind-Value="ValueChange" Label="Units change"
-                                 Variant="Variant.Text" />
+                                 Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudSelect T="BondDetails" Label="Bond" @bind-Value="_selectedBond" ToStringFunc="@(b => b?.Name)">
+                <MudSelect Variant="Variant.Outlined" T="BondDetails" Label="Bond" @bind-Value="_selectedBond" ToStringFunc="@(b => b?.Name)">
                     @foreach (var bond in _possibleBonds)
                     {
                         <MudSelectItem T="BondDetails" Value="@bond">@bond.Name</MudSelectItem>
@@ -39,7 +39,7 @@
                     </MudItem>
                 }
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue"
+                    <MudSelect Variant="Variant.Outlined" T="string" Label="Label" MultiSelection="true" @bind-Value="_labelValue"
                                @bind-SelectedValues="_selectedLabels">
                         @foreach (var state in _possibleLabels.Select(x => x.Name))
                         {
@@ -48,19 +48,20 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add Disabled="@_isAdding">
-                        @if (_isAdding)
+                    <FormActions>
+                        @if (CustomButton is not null)
                         {
-                            <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                            @CustomButton
                         }
-                        Add
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Cancel
-                               Class="mx-2">Cancel</MudButton>
-                    @if (CustomButton is not null)
-                    {
-                        @CustomButton
-                    }
+                        <MudButton Variant="Variant.Text" Color="Color.Default" DropShadow="false" OnClick=Cancel>Cancel</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Add Disabled="@_isAdding">
+                            @if (_isAdding)
+                            {
+                                <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                            }
+                            Add
+                        </MudButton>
+                    </FormActions>
                 </MudItem>
 
                 @if (_errors.Any())

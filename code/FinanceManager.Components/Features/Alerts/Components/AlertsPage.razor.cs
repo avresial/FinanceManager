@@ -24,6 +24,8 @@ public partial class AlertsPage : ComponentBase
     private List<FinancialAlertDto> _alerts = [];
     private AlertFormModel _form = new();
     private int _formVersion;
+    private MudTextField<string>? _alertNameField;
+
     private Guid? _editingId;
     private bool _isLoading = true;
     private bool _isRefreshing;
@@ -49,6 +51,11 @@ public partial class AlertsPage : ComponentBase
         _currencyCode = SettingsService.GetCurrency().ShortName;
         var refresh = RefreshAsync();
         await Task.WhenAll(refresh, LoadFormOptionsAsync());
+    }
+
+    private async Task FocusAlertFormAsync()
+    {
+        if (_alertNameField is not null) await _alertNameField.FocusAsync();
     }
 
     private async Task LoadFormOptionsAsync()

@@ -25,10 +25,10 @@
                     </MudItem>
                 }
                 <MudItem xs="8">
-                    <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Text" />
+                    <MudTextField @bind-Value="AccountName" T="string" Label="Account name" Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="4">
-                    <MudSelect @bind-Value="AccountType" Label="Type">
+                    <MudSelect Variant="Variant.Outlined" @bind-Value="AccountType" Label="Type">
                         @foreach (var type in Enum.GetValues(typeof(AccountLabel)).Cast<AccountLabel>())
                         {
                             <MudSelectItem Value="type">@type</MudSelectItem>
@@ -36,7 +36,7 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudSelect T="int" @bind-Value="CurrencyId" Label="Currency" Disabled="_hasEntries">
+                    <MudSelect Variant="Variant.Outlined" T="int" @bind-Value="CurrencyId" Label="Currency" Disabled="_hasEntries">
                         @foreach (var currency in _currencies)
                         {
                             <MudSelectItem Value="@currency.Id">@currency.ShortName</MudSelectItem>
@@ -48,12 +48,16 @@
                     }
                 </MudItem>
                 <MudItem xs="12">
-                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" DropShadow="false" OnClick=Recalculate Disabled="_isRecalculating" StartIcon="@Icons.Material.Filled.Calculate">Recalculate balance</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" href="@($"AccountDetails/{AccountId}")">Cancel</MudButton>
-                    </MudStack>
+                    <FormActions>
+                        <DestructiveActions>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Error" DropShadow="false" OnClick=Remove>Delete</MudButton>
+                        </DestructiveActions>
+                        <ChildContent>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" DropShadow="false" OnClick=Recalculate Disabled="_isRecalculating" StartIcon="@Icons.Material.Filled.Calculate">Recalculate balance</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Default" href="@($"AccountDetails/{AccountId}")">Cancel</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" DropShadow="false" OnClick=Update>Update</MudButton>
+                        </ChildContent>
+                    </FormActions>
                 </MudItem>
             </MudGrid>
         </div>

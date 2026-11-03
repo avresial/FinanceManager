@@ -23,7 +23,7 @@ else
         <MudItem xs="12" md="@(_showSuggestions ? 7 : 12)">
             <MudStack Spacing="2">
                 <div class="admin-toolbar d-flex flex-wrap align-center gap-2">
-                    <MudTextField T="string" Value="@_searchText" ValueChanged="OnSearchChanged"
+                    <MudTextField Variant="Variant.Outlined" T="string" Value="@_searchText" ValueChanged="OnSearchChanged"
                                   Placeholder="Search by name" Immediate="true" Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" Class="admin-search flex-grow-1" />
                     <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add label" Href="Admin/AddLabel"
