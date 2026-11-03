@@ -71,7 +71,7 @@ The `development` GitHub environment identifies the deployment destination. It d
 
 ## 7.3 Runtime configuration and security prerequisites
 
-[API configuration](../../code/FinanceManager.Api/ApiConfigurationExtensions.cs) fails startup outside Development when the JWT key, allowed CORS origins, or trusted proxy addresses/networks are missing. The proxy must preserve the public scheme and original client address; [Program](../../code/FinanceManager.Api/Program.cs) applies forwarded headers before scheme/IP-sensitive middleware. A code comment mentions Cloudflare, but this is not verification of live proxy topology.
+[API security configuration](../../code/FinanceManager.Api/ApiSecurityExtensions.cs) fails startup outside Development when the JWT key, allowed CORS origins, or trusted proxy addresses/networks are missing. The proxy must preserve the public scheme and original client address; [Program](../../code/FinanceManager.Api/Program.cs) applies forwarded headers before scheme/IP-sensitive middleware. A code comment mentions Cloudflare, but this is not verification of live proxy topology.
 
 For enabled MCP OAuth, hosted environments additionally require a consistent public HTTPS issuer/resource/login URL, registered redirect URIs, and persistent signing/encryption certificates. Local Development uses development certificates; Test uses ephemeral keys. Follow the runbook's reconnect/revocation procedure when rotating certificates: the current configuration exposes one active certificate pair and does not promise seamless rotation.
 

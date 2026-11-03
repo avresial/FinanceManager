@@ -2,6 +2,7 @@
 @using FinanceManager.Application.Alerts.Models
 @using FinanceManager.Domain.Alerts.Dtos
 @using FinanceManager.Domain.Alerts.Enums
+@using static FinanceManager.Components.Features.Alerts.Components.AlertPresentation
 
 <PageTitle>Alerts and watchlists</PageTitle>
 
@@ -153,12 +154,12 @@
                 <MudTd DataLabel="Condition">
                     <div class="alerts-cell">
                         <MudText Typo="Typo.body2">@TypeLabel(context.AlertType)</MudText>
-                        <MudText Typo="Typo.caption">@GetConditionLabel(context)</MudText>
+                        <MudText Typo="Typo.caption">@ConditionLabel(context)</MudText>
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Status">
-                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context)" Variant="Variant.Outlined">
-                        @(context.IsEnabled ? StatusLabel(context) : "Disabled")
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context, _outcomes.GetValueOrDefault(context.Id))" Variant="Variant.Outlined">
+                        @(context.IsEnabled ? StatusLabel(context, _outcomes.GetValueOrDefault(context.Id)) : "Disabled")
                     </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Observed">
