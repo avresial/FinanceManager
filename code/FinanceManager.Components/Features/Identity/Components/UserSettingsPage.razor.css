@@ -17,6 +17,20 @@
     font-weight: 500;
 }
 
+/* The theme darkens primary text in light mode for contrast, so a primary label changed colour
+   between themes. The normal text colour reads the same way in both; the tint marks selection. */
+.settings-nav ::deep .mud-list-item.mud-selected-item,
+.settings-nav ::deep .mud-list-item.mud-selected-item .mud-typography {
+    color: var(--mud-palette-text-primary) !important;
+}
+
+/* With no benchmark chosen the placeholder is the active default (Polish inflation), so draw it
+   as a value rather than in the faded placeholder grey. */
+.settings-section ::deep .fm-benchmark-field input::placeholder {
+    color: var(--mud-palette-text-primary);
+    opacity: 1;
+}
+
 /* Keep helper text flush with the field edge instead of MudBlazor's 14px outlined indent. */
 .settings-section ::deep .mud-input-helper-text-contained {
     margin-left: 0;
