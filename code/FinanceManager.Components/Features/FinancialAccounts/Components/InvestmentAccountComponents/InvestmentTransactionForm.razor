@@ -6,7 +6,7 @@
     <MudPaper Class="pa-4 pa-sm-6 fm-entry-dialog" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
         <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
         <MudStack Spacing="3">
-            <MudAutocomplete T="InvestmentInstrumentOptionDto" Label="Instrument"
+            <MudAutocomplete Variant="Variant.Outlined" T="InvestmentInstrumentOptionDto" Label="Instrument"
                              Value="_selectedInstrument"
                              ValueChanged="OnInstrumentSelectedAsync"
                              TextChanged="OnInstrumentTextChanged"
@@ -54,12 +54,12 @@
             {
                 <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
             }
-            <MudSelect T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
+            <MudSelect Variant="Variant.Outlined" T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
                 <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
             </MudSelect>
-            <MudNumericField T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-            <MudNumericField T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.0001M"
+            <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
+            <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.0001M"
                              Disabled="@(_selectedInstrument is null || _isPriceLoading)" />
             @if (_isPriceLoading)
             {
@@ -71,7 +71,7 @@
             }
             @if (RequiresManualCurrencySelection)
             {
-                <MudSelect T="string" Label="Currency" @bind-Value="_formCurrency" Dense="true">
+                <MudSelect Variant="Variant.Outlined" T="string" Label="Currency" @bind-Value="_formCurrency" Dense="true">
                     @foreach (var currencyCode in _availableCurrencies)
                     {
                         <MudSelectItem T="string" Value="@currencyCode">@currencyCode</MudSelectItem>
@@ -80,15 +80,15 @@
             }
             else
             {
-                <MudTextField T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
+                <MudTextField Variant="Variant.Outlined" T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
             }
-            <MudDatePicker Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
-            <MudNumericField T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
-            <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
-            <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+            <MudDatePicker Variant="Variant.Outlined" Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
+            <MudNumericField Variant="Variant.Outlined" T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
+            <MudTextField Variant="Variant.Outlined" T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
+            <FormActions>
                 <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseAsync" Disabled="@_saving">Cancel</MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>
-            </MudStack>
+            </FormActions>
         </MudStack>
     </MudPaper>
 </MudOverlay>

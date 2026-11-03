@@ -26,12 +26,12 @@ else if (_userData is not null)
             <MudText Typo="Typo.h6">Change Password</MudText>
             <MudForm @ref="_passwordForm" @bind-IsValid="@_success" Spacing="3">
 
-                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="_passwordField"
+                <MudTextField Variant="Variant.Outlined" T="string" Label="Password" HelperText="Choose a strong password" @ref="_passwordField"
                     @bind-Value="_password" Immediate
                     InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))"
                     Required RequiredError="Password is required!" />
 
-                <MudTextField T="string" @bind-Value="_confirmPassword" Immediate Required Label="Repeat password"
+                <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="_confirmPassword" Immediate Required Label="Repeat password"
                     HelperText="Repeat the password" InputType="InputType.Password"
                     Validation="@(new Func<string, string?>(PasswordMatch))" />
 

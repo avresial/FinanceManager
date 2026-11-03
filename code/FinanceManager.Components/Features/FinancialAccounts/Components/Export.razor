@@ -18,9 +18,9 @@
                         Available range: @DateFormatter.FormatRange(_availableStartDate!.Value, _availableEndDate!.Value)
                     </MudText>
 
-                    <MudDatePicker Label="Start date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
+                    <MudDatePicker Variant="Variant.Outlined" Label="Start date" @bind-Date="_startDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
-                    <MudDatePicker Label="End date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
+                    <MudDatePicker Variant="Variant.Outlined" Label="End date" @bind-Date="_endDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" MinDate="_availableStartDate"
                                    MaxDate="_availableEndDate" />
                 }
                 else if (AccountDescriptor?.Kind == FinancialAccountKind.Stock)
@@ -32,25 +32,25 @@
                     <MudAlert Severity="Severity.Info">This account has no entries available to export.</MudAlert>
                 }
 
-                <MudStack Row="true" Spacing="2" Class="mt-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanDownload || _isDownloading)"
-                               OnClick="DownloadSelected">
-                        @if (_isDownloading)
-                        {
-                            <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
-                        }
-                        Export
-                    </MudButton>
-
-                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                               Disabled="@(!HasAvailableDateRange || _isDownloading)" OnClick="DownloadAll">
-                        Export all
-                    </MudButton>
-
-                    <MudButton Variant="Variant.Text" Color="Color.Secondary" href="@($"/AccountDetails/{AccountId}")">
-                        Cancel
-                    </MudButton>
-                </MudStack>
+                <div class="mt-4">
+                    <FormActions>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   Disabled="@(!HasAvailableDateRange || _isDownloading)" OnClick="DownloadAll">
+                            Export all
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Default" href="@($"/AccountDetails/{AccountId}")">
+                            Cancel
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanDownload || _isDownloading)"
+                                   OnClick="DownloadSelected">
+                            @if (_isDownloading)
+                            {
+                                <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+                            }
+                            Export
+                        </MudButton>
+                    </FormActions>
+                </div>
             </MudStack>
         </MudPaper>
     </AccountFormContainer>

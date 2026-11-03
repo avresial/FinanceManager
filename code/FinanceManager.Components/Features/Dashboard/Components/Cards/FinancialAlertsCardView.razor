@@ -6,7 +6,7 @@
                 InfoText="Configured financial conditions that are currently triggered."
                 InfoAriaLabel="About financial alerts card"
                 Leading="@(SelectedAlert is null ? null : BackButton)"
-                Actions="@(SelectedAlert is null ? ManageAlertsButton : null)">
+                Actions="@(SelectedAlert is null && (IsLoading || HasError || ConfiguredCount > 0) ? ManageAlertsButton : null)">
         <SubtitleContent>
             @if (SelectedAlert is null)
             {
@@ -43,13 +43,10 @@
             }
             else if (ConfiguredCount == 0)
             {
-                <div class="d-flex flex-column align-center text-center gap-2 pa-4" data-testid="alerts-empty-state">
-                    <MudIcon Class="mud-text-secondary" Icon="@Icons.Material.Filled.NotificationsNone" />
-                    <MudText Typo="Typo.subtitle1">No alerts yet</MudText>
-                    <MudText Class="mud-text-secondary" Typo="Typo.body2">Get notified when a balance or spending condition is met.</MudText>
-                    <MudButton Href="Alerts" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Add" data-testid="alerts-create-button">Create alert</MudButton>
-                </div>
+                <EmptyState Icon="@Icons.Material.Filled.NotificationsNone" Title="No alerts yet"
+                            Description="Get notified when a balance or spending condition is met."
+                            ActionLabel="Create alert" Href="Alerts" ActionTestId="alerts-create-button"
+                            data-testid="alerts-empty-state" />
             }
             else if (Triggered.Count == 0)
             {

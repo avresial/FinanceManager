@@ -27,6 +27,28 @@ public sealed class AlertsPageTests
     private static readonly Guid _alertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
+    public async Task EmptyStateCreateAction_FocusesExistingAlertNameWithoutSubmitting()
+    {
+        var handler = new AlertsHandler();
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Fresh alert", cut.Markup));
+        cut.Find("button[aria-label='Delete Fresh alert']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("No alerts yet", cut.Markup));
+        var evaluations = handler.EvaluateCount;
+        var alertName = cut.FindComponents<MudTextField<string>>().Single(field => field.Instance.Label == "Alert name");
+        var expectedTarget = alertName.Instance.InputReference!.ElementReference;
+        var invocationCount = context.JSInterop.Invocations.Count;
+
+        cut.Find("[data-testid=alerts-empty-create]").Click();
+
+        var focus = Assert.Single(context.JSInterop.Invocations.Skip(invocationCount), invocation => invocation.Identifier == "Blazor._internal.domWrapper.focus");
+        Assert.Equal(expectedTarget, Assert.IsType<Microsoft.AspNetCore.Components.ElementReference>(focus.Arguments[0]));
+        Assert.Equal(evaluations, handler.EvaluateCount);
+        Assert.Single(cut.FindAll("label"), label => label.TextContent.Contains("Alert name", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SnapshotHit_PaintsBeforeEvaluationAndKeepsItOnFailure()
     {
         var handler = new AlertsHandler { DelayEvaluation = true };

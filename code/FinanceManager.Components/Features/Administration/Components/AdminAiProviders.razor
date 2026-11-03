@@ -219,7 +219,7 @@ else
                 <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
                     <MudSelect T="string" Value="@context.ProviderName"
                                ValueChanged="@(v => OnFallbackProviderChanged(context, v))"
-                               Variant="Variant.Text" Dense>
+                               Variant="Variant.Outlined" Dense>
                         @foreach (var p in _providers)
                         {
                             <MudSelectItem Value="@p.ProviderName">@p.ProviderName</MudSelectItem>
@@ -229,7 +229,7 @@ else
                 <MudTd Style="@(isDisabled ? "opacity:0.4;" : "")">
                     <MudSelect T="string" Value="@context.Model"
                                ValueChanged="@(v => context.Model = v)"
-                               Variant="Variant.Text" Dense>
+                               Variant="Variant.Outlined" Dense>
                         @foreach (var m in ModelsForProvider(context.ProviderName))
                         {
                             <MudSelectItem Value="@m.ModelName">@m.ModelName</MudSelectItem>
