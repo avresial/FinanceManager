@@ -158,7 +158,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             if (!owner._pointPricing) return await inner.GetNetWorth(userId, currency, start, end);
             var result = new Dictionary<DateTime, decimal>();
             for (var date = end; date >= start; date = date.AddDays(-1))
-                result.Add(date, (await inner.GetNetWorth(userId, currency, date))!.Value);
+                result.Add(date.Date, (await inner.GetNetWorth(userId, currency, date))!.Value); // Keyed by day like the range path.
             return result;
         }
     }

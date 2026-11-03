@@ -134,7 +134,9 @@ public class NetWorthService(
                 }
             }
 
-            result.Add(date, Math.Round(dailyTotal, 2));
+            // Valued at the walk-back instant (so today includes today's entries) but keyed by
+            // calendar day, so the series shares the day grid of the other dashboard series.
+            result.Add(date.Date, Math.Round(dailyTotal, 2));
         }
         return result;
     }
