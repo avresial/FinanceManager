@@ -17,6 +17,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 public class InvestmentValuationController(
     IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentValuationService valuationService,
+    IInvestmentBenchmarkService benchmarkService,
     IInvestmentTransactionValuationService transactionValuationService,
     ICurrencyRepository currencyRepository,
     IAssetListingRepository assetListingRepository) : ControllerBase
@@ -96,7 +97,7 @@ public class InvestmentValuationController(
         if (listingId is long id && await assetListingRepository.Get(id, cancellationToken) is null)
             return NotFound("Investment benchmark not found.");
 
-        return Ok(await valuationService.GetBenchmarkSeriesAsync(
+        return Ok(await benchmarkService.GetBenchmarkSeriesAsync(
             listingId, accountId, currency, startDate, endDate, cancellationToken));
     }
 

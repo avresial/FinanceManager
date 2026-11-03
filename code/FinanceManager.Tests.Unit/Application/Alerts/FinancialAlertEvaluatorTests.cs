@@ -1,5 +1,6 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Application.Alerts.Services;
+using FinanceManager.Application.Alerts.Services.Conditions;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
@@ -12,7 +13,14 @@ namespace FinanceManager.Tests.Unit.Application.Alerts;
 [Trait("Category", "Unit")]
 public class FinancialAlertEvaluatorTests
 {
-    private readonly FinancialAlertEvaluator _evaluator = new();
+    private readonly FinancialAlertEvaluator _evaluator = new(
+    [
+        new AccountBalanceConditionEvaluator(),
+        new CategorySpendingConditionEvaluator(),
+        new MerchantSpendingConditionEvaluator(),
+        new LargeTransactionConditionEvaluator(),
+        new SubscriptionPriceChangeConditionEvaluator(),
+    ]);
     private readonly DateTime _evaluationDate = new(2026, 9, 11, 14, 0, 0, DateTimeKind.Utc);
 
     [Fact]

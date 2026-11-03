@@ -66,42 +66,4 @@ public interface IInvestmentValuationService
         DateTime start,
         DateTime end,
         CancellationToken ct = default);
-
-    /// <summary>
-    /// Remaining weighted-average cost basis for each investment account over [<paramref name="start"/>,
-    /// <paramref name="end"/>]. Buy rows add their purchase cost and fee; Sell rows remove only the
-    /// historical cost of the quantity sold, never the sale proceeds. Activity before the range is
-    /// replayed into the first visible point, so a sale price or a historical edit cannot create an
-    /// unrelated capital jump. The current investment model has no standalone deposit, withdrawal,
-    /// or transfer rows; unsupported future transaction types are ignored.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetCapitalSeriesAsync(
-        IReadOnlyCollection<int> accountIds,
-        Currency targetCurrency,
-        DateTime start,
-        DateTime end,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Daily value of a shadow portfolio that receives the same contributions as
-    /// <paramref name="accountId"/> but invests them in the benchmark instead, in
-    /// <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>].
-    /// A null <paramref name="assetListingId"/> selects the default Polish inflation index.
-    /// </summary>
-    /// <remarks>
-    /// Rebasing onto a single opening value would compare the account against a fixed sum while the
-    /// account itself also grows by contributions, so the benchmark could never keep up and simply
-    /// hugged the bottom of the chart. Instead, holdings carried in from before the range open the
-    /// shadow portfolio at their value on the first day, and every later trade moves the same amount
-    /// of money in or out of the benchmark on its own trade date. Both series therefore reflect the
-    /// same cash flows and the gap between them is the account's real over- or under-performance.
-    /// Days the shadow portfolio is worth nothing are omitted, as in the account's own value series.
-    /// </remarks>
-    Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
-        long? assetListingId,
-        int accountId,
-        Currency targetCurrency,
-        DateTime start,
-        DateTime end,
-        CancellationToken ct = default);
 }
