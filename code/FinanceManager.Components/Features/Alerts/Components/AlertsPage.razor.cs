@@ -12,7 +12,6 @@ using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
-using System.Text.Json;
 
 namespace FinanceManager.Components.Features.Alerts.Components;
 
@@ -186,31 +185,6 @@ public partial class AlertsPage : ComponentBase
         return new AlertsPageModel(alerts, outcomes);
     }
 
-    private sealed class AlertsPageContentComparer : IEqualityComparer<AlertsPageModel>
-    {
-        public static readonly AlertsPageContentComparer Instance = new();
-
-        public bool Equals(AlertsPageModel? x, AlertsPageModel? y) =>
-            ReferenceEquals(x, y) || x is not null && y is not null && RenderedContent(x) == RenderedContent(y);
-
-        public int GetHashCode(AlertsPageModel model) => RenderedContent(model).GetHashCode(StringComparison.Ordinal);
-
-        private static string RenderedContent(AlertsPageModel model) => JsonSerializer.Serialize(new
-        {
-            model.Alerts,
-            Outcomes = model.Outcomes.Select(outcome => new
-            {
-                outcome.AlertId,
-                outcome.Status,
-                outcome.IsTriggered,
-                outcome.CurrentValue,
-                outcome.Message,
-                outcome.MatchingTransactions,
-                outcome.MatchingTransactionCount,
-            })
-        });
-    }
-
     private async Task RefreshAfterMutationAsync()
     {
         _refreshGate.Claim();
@@ -223,41 +197,24 @@ public partial class AlertsPage : ComponentBase
     {
         if (_isSaving || (_editingId is Guid pendingId && _pendingAlertIds.Contains(pendingId))) return;
         _errors.Clear();
-        if (string.IsNullOrWhiteSpace(_form.Title))
+        if (!_form.HasTitle)
         {
             _errors.Add("Alert name is required.");
             return;
         }
 
-        var accountId = _form.AlertType == AlertType.AccountBalance ? _form.AccountId : null;
-        if (accountId is not null && (_isLoadingAccounts || _accountOptionsFailed))
+        if (_form.TargetAccountId is not null && (_isLoadingAccounts || _accountOptionsFailed))
         {
             _errors.Add("Load account options before saving this alert.");
             return;
         }
-
-        var labelName = _form.AlertType == AlertType.CategorySpending ? NullIfWhiteSpace(_form.LabelName) : null;
-        var merchantName = _form.AlertType == AlertType.MerchantSpending ? NullIfWhiteSpace(_form.MerchantName) : null;
 
         _isSaving = true;
         try
         {
             if (_editingId is Guid id)
             {
-                var updated = await HttpClient.UpdateAsync(
-                    id,
-                    new UpdateFinancialAlert(
-                        _form.Title.Trim(),
-                        _form.AlertType,
-                        _form.IsEnabled,
-                        _form.ComparisonOperator,
-                        _form.Threshold,
-                        _form.EvaluationPeriod,
-                        accountId,
-                        null,
-                        labelName,
-                        merchantName,
-                        null));
+                var updated = await HttpClient.UpdateAsync(id, _form.ToUpdateCommand());
                 if (updated is null)
                 {
                     _errors.Add("Unable to update this alert.");
@@ -266,18 +223,7 @@ public partial class AlertsPage : ComponentBase
             }
             else
             {
-                var created = await HttpClient.CreateAsync(
-                    new CreateFinancialAlert(
-                        _form.Title.Trim(),
-                        _form.AlertType,
-                        _form.ComparisonOperator,
-                        _form.Threshold,
-                        _form.EvaluationPeriod,
-                        accountId,
-                        null,
-                        labelName,
-                        merchantName,
-                        null));
+                var created = await HttpClient.CreateAsync(_form.ToCreateCommand());
                 if (created is null)
                 {
                     _errors.Add("Unable to create this alert.");
@@ -355,18 +301,7 @@ public partial class AlertsPage : ComponentBase
     {
         if (_isSaving || _pendingAlertIds.Contains(alert.Id)) return;
         _editingId = alert.Id;
-        _form = new AlertFormModel
-        {
-            Title = alert.Title,
-            AlertType = alert.AlertType,
-            IsEnabled = alert.IsEnabled,
-            ComparisonOperator = alert.ComparisonOperator,
-            Threshold = alert.Threshold,
-            EvaluationPeriod = alert.EvaluationPeriod,
-            AccountId = alert.AccountId,
-            LabelName = alert.LabelName ?? string.Empty,
-            MerchantName = alert.MerchantName ?? string.Empty,
-        };
+        _form = AlertFormModel.FromDto(alert);
     }
 
     private void CancelEdit()
@@ -381,72 +316,5 @@ public partial class AlertsPage : ComponentBase
         _form = new AlertFormModel();
         _formVersion++;
         _errors.Clear();
-    }
-
-    private static string? NullIfWhiteSpace(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private static string TypeLabel(AlertType type) => type switch
-    {
-        AlertType.AccountBalance => "Account balance",
-        AlertType.CategorySpending => "Category spending",
-        AlertType.MerchantSpending => "Merchant spending",
-        AlertType.LargeTransaction => "Large transaction",
-        AlertType.SubscriptionPriceChange => "Subscription price change",
-        _ => type.ToString()
-    };
-
-    private static string ComparisonLabel(AlertComparisonOperator comparison) => comparison switch
-    {
-        AlertComparisonOperator.GreaterThan => ">",
-        AlertComparisonOperator.GreaterThanOrEqual => "≥",
-        AlertComparisonOperator.LessThan => "<",
-        AlertComparisonOperator.LessThanOrEqual => "≤",
-        AlertComparisonOperator.Equal => "=",
-        AlertComparisonOperator.NotEqual => "≠",
-        _ => comparison.ToString()
-    };
-
-    private static string PeriodLabel(AlertEvaluationPeriod period) => period switch
-    {
-        AlertEvaluationPeriod.CurrentMonth => "Current month",
-        AlertEvaluationPeriod.Last30Days => "Last 30 days",
-        AlertEvaluationPeriod.Last7Days => "Last 7 days",
-        AlertEvaluationPeriod.AllTime => "All time",
-        _ => period.ToString()
-    };
-
-    private static string GetConditionLabel(FinancialAlertDto alert) =>
-        $"{ComparisonLabel(alert.ComparisonOperator)} {MoneyFormatter.FormatNumber(alert.Threshold)}";
-
-    private string StatusLabel(FinancialAlertDto alert) =>
-        _outcomes.TryGetValue(alert.Id, out var outcome)
-            ? outcome.Status switch
-            {
-                AlertTriggerStatus.Triggered => "Triggered",
-                AlertTriggerStatus.Error => "Error",
-                _ => "Healthy"
-            }
-            : alert.LastStatus == AlertTriggerStatus.Triggered ? "Triggered" : "Healthy";
-
-    private Color StatusColor(FinancialAlertDto alert) =>
-        StatusLabel(alert) switch
-        {
-            "Triggered" => Color.Warning,
-            "Error" => Color.Error,
-            _ => Color.Success
-        };
-
-    private sealed class AlertFormModel
-    {
-        public string Title { get; set; } = string.Empty;
-        public AlertType AlertType { get; set; } = AlertType.AccountBalance;
-        public bool IsEnabled { get; set; } = true;
-        public AlertComparisonOperator ComparisonOperator { get; set; } = AlertComparisonOperator.GreaterThan;
-        public decimal Threshold { get; set; }
-        public AlertEvaluationPeriod EvaluationPeriod { get; set; } = AlertEvaluationPeriod.CurrentMonth;
-        public int? AccountId { get; set; }
-        public string LabelName { get; set; } = string.Empty;
-        public string MerchantName { get; set; } = string.Empty;
     }
 }
