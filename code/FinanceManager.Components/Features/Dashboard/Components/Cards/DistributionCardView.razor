@@ -2,17 +2,14 @@
 @using FinanceManager.Components.Features.Dashboard.Models
 @using FinanceManager.Components.Shared.Components
 
-@* Shared body of the Assets and Liabilities distribution cards: a donut with the total in its centre,
+@* Shared body of the Assets, Liabilities and Expense distribution cards: a donut with the total in its centre,
    linked to a legend with proportion bars. Each card keeps its own data loading and snapshots. *@
 <MudCard Outlined Class="fm-phone-auto-height rounded-lg overflow-hidden d-flex flex-column" Style="@($"height:{Height};")">
     <CardHeader Title="@Title" StackedAside="true"
                 InfoText="@InfoText"
                 InfoAriaLabel="@InfoAriaLabel"
-                KeyFigure="@(IsLoading ? LoadingFigure : null)">
-        <Actions>
-            <DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />
-        </Actions>
-    </CardHeader>
+                KeyFigure="@(IsLoading ? LoadingFigure : null)"
+                Actions="@(ShowViewToggle ? ViewToggle : null)" />
 
     @if (HasError)
     {
@@ -113,6 +110,8 @@
 
 @code {
     private RenderFragment LoadingFigure => @<StringSpinner CharactersCount="4" />;
+
+    private RenderFragment ViewToggle => @<DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />;
 
     private RenderFragment RowContent(DistributionSlice slice) =>
         @<text>

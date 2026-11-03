@@ -4,6 +4,7 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
 using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Shared.Components;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,22 +108,23 @@ public class DistributionOverviewCardViewTests
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single));
 
         AssertSingleCategoryFigure(cut);
-        Assert.Single(cut.FindAll(".ed-legend-row"));
-        Assert.Contains("Mortgage", cut.Find(".ed-legend-name").TextContent);
-        Assert.Matches("100[.,]00", cut.Find(".ed-legend-amt").TextContent);
-        Assert.StartsWith("100", cut.Find(".ed-legend-pct").TextContent);
-        Assert.Empty(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Single(cut.FindAll(".fm-legend-row"));
+        Assert.Contains("Mortgage", cut.Find(".fm-legend-name").TextContent);
+        Assert.Matches("100[.,]00", cut.Find(".fm-legend-amt").TextContent);
+        Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
+        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
     }
 
     [Fact]
-    public async Task Expense_TwoCategories_ShowsChart()
+    public async Task Expense_TwoCategories_ShowsDonutWithTotalInCentre()
     {
         await using var context = CreateContext();
         var cut = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _two));
 
-        Assert.Single(cut.FindComponents<ApexChart<NameValueResult>>());
+        Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
         Assert.Empty(cut.FindAll("[class*=legend--single]"));
-        Assert.Equal(2, cut.FindAll(".ed-legend-row").Count);
+        Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
+        Assert.Matches("100[.,]00", cut.Find("[data-testid=distribution-chart] [data-testid=distribution-total]").TextContent);
     }
 
     [Theory]
@@ -237,14 +239,16 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task Expense_HeaderHasNoActionsContainer()
+    public async Task Expense_HeaderHasNoToggleOrFigure_LikeTheOtherDistributionCards()
     {
         await using var context = CreateContext();
-        var expenses = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _single));
+        var expenses = context.Render<ExpenseDistributionOverviewCardView>(p => p.Add(x => x.Data, _two));
 
+        // Expenses are grouped by label only, so there is no Type/Account toggle; the total sits in the donut.
         Assert.Contains("fm-card-header--stacked-aside", expenses.Find("[data-testid=card-header]").ClassList);
+        Assert.Empty(expenses.FindComponents<DistributionViewToggle>());
         Assert.Empty(expenses.FindAll(".fm-card-header-actions"));
-        Assert.Single(expenses.FindAll(".fm-card-header-figure"));
+        Assert.Empty(expenses.FindAll(".fm-card-header-figure"));
     }
 
     [Fact]
