@@ -2,7 +2,6 @@ using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
@@ -25,24 +24,10 @@ public partial class FinancialLabelsListCardView
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public EventCallback OnRetry { get; set; }
 
-    // Human-readable period for the header subtitle. A single calendar month renders as
-    // "May 2026"; ranges collapse to "MMM – MMM yyyy" (same year) or "MMM yyyy – MMM yyyy".
-    private string PeriodLabel
-    {
-        get
-        {
-            var end = EndDateTime;
-            if (StartDateTime == default)
-                return end.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-
-            var start = StartDateTime;
-            if (start.Year == end.Year && start.Month == end.Month)
-                return end.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-            if (start.Year == end.Year)
-                return $"{start.ToString("MMM", CultureInfo.InvariantCulture)} – {end.ToString("MMM yyyy", CultureInfo.InvariantCulture)}";
-            return $"{start.ToString("MMM yyyy", CultureInfo.InvariantCulture)} – {end.ToString("MMM yyyy", CultureInfo.InvariantCulture)}";
-        }
-    }
+    // Same range text as the dashboard date picker and every other card subtitle.
+    private string PeriodLabel => StartDateTime == default
+        ? DateFormatter.Format(EndDateTime)
+        : DateFormatter.FormatRange(StartDateTime, EndDateTime);
 
     protected override void OnParametersSet() => BuildGroups();
 

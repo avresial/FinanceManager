@@ -7,7 +7,6 @@ using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
@@ -35,20 +34,9 @@ public partial class NetCashFlowOverviewCard
     [Inject] public required ISnapshotRefreshCoordinator Coordinator { get; set; }
 
     // The hero shows the period total, so the caption frames it as a range sum rather
-    // than a single month (which the hover state already covers).
-    private string PeriodCaption
-    {
-        get
-        {
-            var start = DateFormatter.FormatMonthYear(StartDateTime.ToLocalTime());
-            var end = DateFormatter.FormatMonthYear(EndDateTime.ToLocalTime());
-            // Glyphs as code points so the source stays pure-ASCII (U+00B7 middle dot,
-            // U+2013 en dash), matching the convention in TimeSeriesValueCard.
-            var dot = (char)0x00B7;
-            var dash = (char)0x2013;
-            return start == end ? $"Total {dot} {start}" : $"Total {dot} {start} {dash} {end}";
-        }
-    }
+    // than a single point (which the hover state already covers). Same range text as the
+    // dashboard date picker; U+00B7 is a middle dot, kept as a code point for pure-ASCII source.
+    private string PeriodCaption => $"Total {(char)0x00B7} {DateFormatter.FormatRange(StartDateTime, EndDateTime)}";
 
     protected override Task OnParametersSetAsync() => Reload();
 
