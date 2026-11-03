@@ -5,6 +5,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Shared;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
 using FinanceManager.Domain.TransactionRules.Dtos;
@@ -88,13 +89,13 @@ public sealed class TransactionRuleService(
         foreach (var account in accounts)
         {
             var months = (await entryRepository.GetPostingDates(account.AccountId))
-                .Select(date => new DateTime(date.Year, date.Month, 1, 0, 0, 0, date.Kind))
+                .Select(date => CalendarMonth.Of(date).Start(date.Kind))
                 .Distinct()
                 .OrderDescending();
 
             foreach (var monthStart in months)
             {
-                var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+                var monthEnd = CalendarMonth.Of(monthStart).EndInclusive(monthStart.Kind);
                 await foreach (var entry in entryRepository.Get(account.AccountId, monthStart, monthEnd, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();

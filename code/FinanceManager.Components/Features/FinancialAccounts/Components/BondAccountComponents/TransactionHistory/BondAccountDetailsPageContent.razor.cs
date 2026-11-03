@@ -13,6 +13,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -325,7 +326,7 @@ public partial class BondAccountDetailsPageContent : ComponentBase, IAsyncDispos
                             series,
                             currentBalance,
                             balanceChange,
-                            startBalance == 0 ? null : balanceChange / startBalance * 100m,
+                            Percentage.Of(balanceChange, startBalance),
                             capitalSeries);
                     },
                     onSnapshotPainted: ApplyChartModel,
