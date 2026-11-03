@@ -13,6 +13,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -158,7 +159,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
         _balanceChange = filteredEntries.Sum(e => e.ValueChange);
 
         var startBalance = _currentBalance - _balanceChange;
-        _balanceChangePercent = startBalance == 0 ? null : _balanceChange / startBalance * 100m;
+        _balanceChangePercent = Percentage.Of(_balanceChange, startBalance);
 
         _availableLabels = Account.Entries
             .SelectMany(e => e.Labels ?? [])

@@ -5,6 +5,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
@@ -64,8 +65,7 @@ internal class InvestmentTransactionValuationService(
             var hasCurrentPrice = currentPrice > 0m;
             var currentValuation = hasCurrentPrice ? transaction.Quantity * currentPrice : 0m;
 
-            var gainLoss = hasCurrentPrice ? currentValuation - purchaseValue : 0m;
-            var gainLossPercent = hasCurrentPrice && purchaseValue != 0m ? (currentValuation / purchaseValue - 1m) * 100m : 0m;
+            var gainLoss = hasCurrentPrice ? new GainLoss(purchaseValue, currentValuation) : default;
 
             results.Add(new InvestmentTransactionValuationDto(
                 transaction.Id,
@@ -73,8 +73,8 @@ internal class InvestmentTransactionValuationService(
                 purchaseValue,
                 currentPrice,
                 currentValuation,
-                gainLoss,
-                gainLossPercent,
+                gainLoss.Amount,
+                gainLoss.Percent,
                 displayCurrency.ShortName,
                 converted,
                 hasCurrentPrice));

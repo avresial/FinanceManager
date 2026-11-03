@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
@@ -65,8 +66,9 @@ public partial class BondTransactionRow
             _valueNow = valueNow;
             _unitPriceAtPosting = valueAtPosting / Entry.Value;
             _unitPriceNow = valueNow / Entry.Value;
-            _gainLoss = valueNow - valueAtPosting;
-            _gainLossPercent = (valueNow / valueAtPosting - 1m) * 100m;
+            var gainLoss = new GainLoss(valueAtPosting, valueNow);
+            _gainLoss = gainLoss.Amount;
+            _gainLossPercent = gainLoss.Percent;
             _valuationCurrency = BondDetails.Currency.ShortName;
             _showValuation = true;
         }

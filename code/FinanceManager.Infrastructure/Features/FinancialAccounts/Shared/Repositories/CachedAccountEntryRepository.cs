@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using System.Runtime.CompilerServices;
@@ -161,8 +162,8 @@ public class CachedAccountEntryRepository<T>(
         if (await userResolver.GetUserId(orderedIds[0]) is not int userId)
             return await inner.GetValueRange(orderedIds, startDate, endDate);
 
-        var bucketStart = new DateTime(startDate.Year, startDate.Month, 1, 0, 0, 0, startDate.Kind);
-        var bucketEnd = MonthBucket.MonthEndInclusive(new DateTime(endDate.Year, endDate.Month, 1, 0, 0, 0, endDate.Kind));
+        var bucketStart = CalendarMonth.Of(startDate).Start(startDate.Kind);
+        var bucketEnd = CalendarMonth.Of(endDate).EndInclusive();
         var cacheKey = $"{Tag(userId)}:{typeof(T).Name}:values:{string.Join('-', orderedIds)}:{bucketStart:yyyyMM}:{bucketEnd:yyyyMM}";
         var options = new HybridCacheEntryOptions
         {
