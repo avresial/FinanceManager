@@ -39,6 +39,8 @@ public partial class AccountDetailsHero
     [Parameter] public List<TimeSeriesModel> CapitalData { get; set; } = [];
     [Parameter] public string BenchmarkName { get; set; } = "Benchmark";
     [Parameter] public bool IsMobile { get; set; }
+    /// <summary>Colour of the balance series; see <see cref="AccountChartColors.BalanceColor"/>.</summary>
+    [Parameter] public string BalanceColor { get; set; } = AccountChartColors.DefaultBalanceColor;
 
     private const int _yAxisTickCount = 5;
 
@@ -58,6 +60,7 @@ public partial class AccountDetailsHero
     private ApexChart<TimeSeriesModel>? _chart;
     private ApexChart<TimeSeriesModel>? _drawnChart;
     private List<(string Series, DateTime DateTime, decimal Value)> _drawnPoints = [];
+    private string _drawnBalanceColor = string.Empty;
     private List<TimeSeriesModel> _chartData = [];
     private List<TimeSeriesModel> _benchmarkData = [];
     private List<TimeSeriesModel> _capitalData = [];
@@ -71,6 +74,7 @@ public partial class AccountDetailsHero
         _chartData = aligned[0];
         _benchmarkData = aligned[1];
         _capitalData = aligned[2];
+        _heroChartOptions.Colors = [BalanceColor, "#42a5f5", "#66bb6a"];
         ApplyYScale();
     }
 
@@ -94,12 +98,15 @@ public partial class AccountDetailsHero
             // skeleton) has just drawn the current data itself.
             _drawnChart = _chart;
             _drawnPoints = [.. points];
+            _drawnBalanceColor = BalanceColor;
             return;
         }
 
-        if (points.SequenceEqual(_drawnPoints)) return;
+        // A colour-only change (same data, different account type) also needs a redraw.
+        if (points.SequenceEqual(_drawnPoints) && BalanceColor == _drawnBalanceColor) return;
 
         _drawnPoints = [.. points];
+        _drawnBalanceColor = BalanceColor;
         await _chart.RenderAsync();
     }
 
@@ -141,7 +148,6 @@ public partial class AccountDetailsHero
             // Same draw animation as the dashboard time-series cards.
             Animations = new Animations { Enabled = true, Speed = 400 },
         },
-        Colors = ["#ffab00", "#42a5f5", "#66bb6a"],
         Stroke = new Stroke { Curve = Curve.Stepline, Width = 2, LineCap = LineCap.Round },
         DataLabels = new DataLabels { Enabled = false },
         // ApexCharts' default 2px white marker stroke draws a stray dot at the plot origin even
@@ -154,8 +160,9 @@ public partial class AccountDetailsHero
             ShowForSingleSeries = false,
             Position = LegendPosition.Top,
             HorizontalAlign = ApexCharts.Align.Right,
-            // Default markers touch their labels and the items run together.
-            Markers = new LegendMarkers { Width = 8, Height = 8, OffsetX = -4 },
+            // Default markers touch their labels and the items run together. Marker size is set in
+            // account-details-hero.css: ApexCharts 4 ignores the Width/Height options.
+            Markers = new LegendMarkers { OffsetX = -4 },
             ItemMargin = new LegendItemMargin { Horizontal = 10 },
         },
         // Fill types are matched to series by index. The balance area (index 0) fades out
