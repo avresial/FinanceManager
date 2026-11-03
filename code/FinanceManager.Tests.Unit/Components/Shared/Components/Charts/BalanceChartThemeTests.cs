@@ -15,9 +15,10 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
 public class BalanceChartThemeTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber(bool accountHero, bool loan = false)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber(bool accountHero, bool loan)
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -51,7 +52,6 @@ public class BalanceChartThemeTests
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true)]
     [InlineData(true)]
     public void SemanticAndCustomColoursArePreserved(bool dark)
     {
