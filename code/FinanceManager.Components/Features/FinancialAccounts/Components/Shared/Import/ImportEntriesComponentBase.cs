@@ -29,6 +29,9 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
     protected int _totalRowCount;
     protected bool _isImportingData;
     protected int _stepIndex;
+
+    /// <summary>Titles of the three import steps, shared by the stepper and its phone caption.</summary>
+    protected static readonly IReadOnlyList<string> StepTitles = ["Select file", "Map columns", "Review"];
     protected bool _step1Complete;
     protected bool _step2Complete;
     protected bool _step3Complete;
