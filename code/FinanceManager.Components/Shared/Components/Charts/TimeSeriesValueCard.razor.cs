@@ -99,7 +99,7 @@ public partial class TimeSeriesValueCard
         ShowSummary && !string.IsNullOrEmpty(SummaryCaption)
             ? SummaryCaption!
             : $"{(IsHovering ? "Value on" : "Current value")} {(char)0x00B7} " +
-              Shown.DateTime.ToLocalTime().ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+              DateFormatter.Format(Shown.DateTime.ToLocalTime());
 
     // The delta chip compares the shown point to the range start; that pairing is
     // meaningless next to a summary hero (a period sum), so it's hidden whenever a

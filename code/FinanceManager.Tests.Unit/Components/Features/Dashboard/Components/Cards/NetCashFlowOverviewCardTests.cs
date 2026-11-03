@@ -183,6 +183,16 @@ public class NetCashFlowOverviewCardTests
     }
 
     [Fact]
+    public void PeriodCaption_UsesTheSharedRangeFormat()
+    {
+        using var context = Context(new NetCashFlowHandler());
+        var cut = Render(context);
+
+        var stub = cut.FindComponent<Bunit.TestDoubles.Stub<TimeSeriesValueCard>>();
+        Assert.Equal("Total \u00B7 1 Sep \u2013 1 Oct 2026", stub.Instance.Parameters.Get(x => x.SummaryCaption));
+    }
+
+    [Fact]
     public async Task SuppliedModel_RendersDirectly_WithoutRequestOrSnapshot()
     {
         var handler = new NetCashFlowHandler();

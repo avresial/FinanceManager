@@ -5,9 +5,11 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
     <PageHeader Title="Subscriptions">
         <Actions>
+            @* Shift the 12px touch-target padding outside the content edge so the icon lines up with the cards. A relative offset, unlike a negative margin, does not shrink the header row and wrap the label. *@
             <MudCheckBox T="bool" @bind-Value="_showInactive"
                          Label="Show muted and cancelled"
-                         Color="Color.Primary" />
+                         Color="Color.Primary"
+                         Style="position: relative; left: -12px;" />
         </Actions>
     </PageHeader>
 
