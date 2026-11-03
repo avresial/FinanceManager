@@ -3,7 +3,7 @@
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 
 <MudOverlay Visible="@Visible" DarkBackground="true" ZIndex="1300">
-    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(460px, 92vw); max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
+    <MudPaper Class="pa-4 pa-sm-6 fm-entry-dialog" role="dialog" aria-modal="true" aria-label="@(_editingId is null ? "Add transaction" : "Edit transaction")">
         <MudText Typo="Typo.h6" Class="mb-3">@(_editingId is null ? "Add transaction" : "Edit transaction")</MudText>
         <MudStack Spacing="3">
             <MudAutocomplete T="InvestmentInstrumentOptionDto" Label="Instrument"
