@@ -5,6 +5,8 @@
 @using FinanceManager.Domain.TransactionRules.Conditions
 @using FinanceManager.Domain.TransactionRules.Dtos
 @using FinanceManager.Domain.TransactionRules.Models
+@using FinanceManager.Components.Features.TransactionRules.Services
+@using static FinanceManager.Components.Features.TransactionRules.Services.TransactionRuleText
 
 <PageTitle>Transaction automation</PageTitle>
 
@@ -59,7 +61,7 @@
                         <span class="rule-number">@number</span>
                         <span class="rule-row-copy">
                             <span class="rule-name">@rule.Name</span>
-                            <span class="rule-summary">@DescribeConditions(rule) → @DescribeActions(rule)</span>
+                            <span class="rule-summary">@DescribeConditions(rule, _accountLabels) → @DescribeActions(rule)</span>
                         </span>
                         <span class="rule-state @(rule.IsEnabled ? "enabled" : null)">@(rule.IsEnabled ? "Enabled" : "Disabled")</span>
                         <span class="rule-chevron" aria-hidden="true">@(isExpanded ? "−" : "+")</span>
@@ -72,14 +74,14 @@
                                     <MudText Typo="Typo.overline" Class="mud-text-secondary">Rule @number · @(rule.IsEnabled ? "Enabled" : "Disabled")</MudText>
                                     <MudText Typo="Typo.h6" Class="rule-name">@rule.Name</MudText>
                                 </div>
-                                @if (_editingId != rule.Id)
+                                @if (_draft.EditingId != rule.Id)
                                 {
                                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="@(() => BeginEdit(rule))" aria-label="@($"Edit {rule.Name}")">Edit fields</MudButton>
                                 }
                             </div>
-                            <div class="@(_editingId == rule.Id ? "rule-workspace rule-workspace--editing" : "rule-workspace")">
+                            <div class="@(_draft.EditingId == rule.Id ? "rule-workspace rule-workspace--editing" : "rule-workspace")">
                                 <div class="rule-definition">
-                                    @if (_editingId == rule.Id)
+                                    @if (_draft.EditingId == rule.Id)
                                     {
                                         @RuleEditor
                                     }
@@ -92,7 +94,7 @@
                                                 <ul class="condition-list">
                                                     @foreach (var condition in rule.Conditions)
                                                     {
-                                                        <li>@DescribeCondition(condition, true)</li>
+                                                        <li>@DescribeCondition(condition, true, _accountLabels)</li>
                                                     }
                                                 </ul>
                                             </div>
@@ -167,11 +169,11 @@
                 </MudItem>
                 <MudItem xs="12" sm="3">
                     <MudSelect T="int?" @bind-Value="_previewAccountId" @bind-Value:after="InvalidatePreview" Label="Account" Required="true"
-                               ToStringFunc="@(accountId => accountId is int id ? GetAccountLabel(id) : string.Empty)"
+                               ToStringFunc="@(accountId => accountId is int id ? _accountLabels.Get(id) : string.Empty)"
                                Variant="Variant.Outlined" Margin="Margin.Dense">
                         @foreach (var account in _accounts)
                         {
-                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@GetAccountLabel(account)</MudSelectItem>
+                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@_accountLabels.Get(account)</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -231,8 +233,8 @@
 <MudForm @ref="_ruleForm" FieldChanged="OnEditorChanged">
         <MudPaper Outlined Class="pa-4 rule-editor">
             <div class="d-flex justify-space-between align-center mb-3">
-                <MudText Typo="Typo.h6">@(_editingId is null ? "Create a rule" : "Edit rule")</MudText>
-                @if (_editingId is not null || _isCreating)
+                <MudText Typo="Typo.h6">@(_draft.EditingId is null ? "Create a rule" : "Edit rule")</MudText>
+                @if (_draft.EditingId is not null || _isCreating)
                 {
                     <MudButton Variant="Variant.Text" OnClick="ResetForm">Cancel</MudButton>
                 }
@@ -240,14 +242,14 @@
 
         <MudGrid Spacing="2" Class="mx-0 w-100">
             <MudItem xs="12" md="6">
-                <MudTextField T="string" @bind-Value="_name" Label="Rule name"
+                <MudTextField T="string" @bind-Value="_draft.Name" Label="Rule name"
                               Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="200" />
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudSwitch T="bool" @bind-Value="_enabled" Color="Color.Primary" Label="Enabled" />
+                <MudSwitch T="bool" @bind-Value="_draft.Enabled" Color="Color.Primary" Label="Enabled" />
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudSwitch T="bool" @bind-Value="_stopProcessing" Color="Color.Primary" Label="Stop after match" />
+                <MudSwitch T="bool" @bind-Value="_draft.StopProcessing" Color="Color.Primary" Label="Stop after match" />
             </MudItem>
         </MudGrid>
         <MudText Typo="Typo.caption">Stop after match takes effect after this rule's actions, only when all conditions match.</MudText>
@@ -258,15 +260,15 @@
                 Add condition
             </MudButton>
         </div>
-        @for (var index = 0; index < _conditions.Count; index++)
+        @for (var index = 0; index < _draft.Conditions.Count; index++)
         {
-            var condition = _conditions[index];
+            var condition = _draft.Conditions[index];
             var conditionIndex = index;
             <MudPaper Outlined Class="pa-3 mb-3" @key="condition">
                 <div class="d-flex justify-space-between align-center mb-2">
                     <MudText Typo="Typo.subtitle2">Condition @(conditionIndex + 1)</MudText>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                   Disabled="@(_conditions.Count == 1)" OnClick="@(() => RemoveCondition(condition))"
+                                   Disabled="@(_draft.Conditions.Count == 1)" OnClick="@(() => RemoveCondition(condition))"
                                    aria-label="@(string.Concat("Remove condition ", conditionIndex + 1))" />
                 </div>
                 <MudGrid Spacing="2" Class="mx-0 w-100">
@@ -301,15 +303,15 @@
                     {
                         <MudItem xs="12" sm="8">
                             <MudSelect T="int" @bind-SelectedValues="condition.AccountIds" Label="Accounts" MultiSelection="true"
-                                       ToStringFunc="GetAccountLabel"
+                                       ToStringFunc="_accountLabels.Get"
                                        Variant="Variant.Outlined" Margin="Margin.Dense">
                                 @foreach (var account in _accounts)
                                 {
-                                    <MudSelectItem T="int" Value="@account.AccountId">@GetAccountLabel(account)</MudSelectItem>
+                                    <MudSelectItem T="int" Value="@account.AccountId">@_accountLabels.Get(account)</MudSelectItem>
                                 }
-                                @foreach (var accountId in condition.AccountIds.Where(IsMissingAccount))
+                                @foreach (var accountId in condition.AccountIds.Where(_accountLabels.IsMissing))
                                 {
-                                    <MudSelectItem T="int" Value="@accountId">@GetMissingAccountLabel(accountId)</MudSelectItem>
+                                    <MudSelectItem T="int" Value="@accountId">@TransactionRuleAccountLabels.Missing(accountId)</MudSelectItem>
                                 }
                             </MudSelect>
                         </MudItem>
@@ -366,15 +368,15 @@
                 Add action
             </MudButton>
         </div>
-        @for (var index = 0; index < _actions.Count; index++)
+        @for (var index = 0; index < _draft.Actions.Count; index++)
         {
-            var action = _actions[index];
+            var action = _draft.Actions[index];
             var actionIndex = index;
             <MudPaper Outlined Class="pa-3 mb-3" @key="action">
                 <div class="d-flex justify-space-between align-center mb-2">
                     <MudText Typo="Typo.subtitle2">Action @(actionIndex + 1)</MudText>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                   Disabled="@(_actions.Count == 1)" OnClick="@(() => RemoveAction(action))"
+                                   Disabled="@(_draft.Actions.Count == 1)" OnClick="@(() => RemoveAction(action))"
                                    aria-label="@(string.Concat("Remove action ", actionIndex + 1))" />
                 </div>
                 <MudGrid Spacing="2" Class="mx-0 w-100">
@@ -409,7 +411,7 @@
                     @(_isTesting ? "Testing..." : "Test")
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@IsBusy" OnClick="SaveAsync">
-                    @(_editingId is null ? "Create rule" : "Save changes")
+                    @(_draft.EditingId is null ? "Create rule" : "Save changes")
                 </MudButton>
             </div>
 
@@ -420,7 +422,7 @@
     private RenderFragment RuleTestResults => @<aside class="rule-preview" aria-label="Transaction preview">
         <div class="d-flex flex-wrap justify-space-between align-center gap-2 mb-3">
             <MudText Typo="Typo.h6">Transaction preview</MudText>
-            @if (_editingId is null && !_isCreating && ExpandedRule is TransactionRuleDto rule)
+            @if (_draft.EditingId is null && !_isCreating && ExpandedRule is TransactionRuleDto rule)
             {
                 <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@IsBusy" OnClick="@(() => TestSavedRuleAsync(rule))">@(_isTesting ? "Testing..." : "Test this rule")</MudButton>
             }
@@ -433,7 +435,7 @@
         else
         {
             <div role="status" aria-live="polite">
-                <MudText Typo="Typo.subtitle2" Class="mt-3">@(_editingId is not null || _isCreating ? "Draft test results" : "Test results")</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mt-3">@(_draft.EditingId is not null || _isCreating ? "Draft test results" : "Test results")</MudText>
                 @if (!_testEnabled)
                 {
                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">Disabled rule: no actions are applied.</MudAlert>

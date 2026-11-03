@@ -71,6 +71,7 @@ sequenceDiagram
     participant Value as InvestmentValuationService
     participant Trades as InvestmentTransactionRepository
     participant Price as InvestmentPriceProvider
+    participant Ingest as PriceQuoteIngestionService
     participant Cache as IMemoryCache
     participant Quotes as PriceQuoteRepository
     participant Source as Provider-specific price source
@@ -91,10 +92,11 @@ sequenceDiagram
             Price->>Price: Read listing and choose market day
             Price->>Quotes: GetLatestOnOrBefore(listing, day end)
             alt No stored quote
-                Price->>Price: Lock listing, recheck coverage and enabled symbols
-                Price->>Source: GetDailySeries(provider, symbol, range)
-                Source-->>Price: Prices or empty result
-                Price->>Quotes: Upsert normalized quotes if returned
+                Price->>Ingest: FetchAndStoreAsync(listing, lookback range)
+                Ingest->>Ingest: Lock listing, recheck coverage and enabled symbols
+                Ingest->>Source: GetDailySeries(provider, symbol, range)
+                Source-->>Ingest: Prices or empty result
+                Ingest->>Quotes: Upsert normalized quotes if returned
                 Price->>Quotes: GetLatestOnOrBefore again
             end
             opt Quote exists and currency differs
@@ -113,7 +115,9 @@ sequenceDiagram
     Client-->>UI: Render result
 ```
 
-Evidence: [typed client](../../code/FinanceManager.Components/Features/FinancialAccounts/HttpClients/InvestmentValuationHttpClient.cs), [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/InvestmentValuationController.cs), [valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs), [price provider](../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs), [quote repository](../../code/FinanceManager.Infrastructure/Features/Assets/Repositories/PriceQuoteRepository.cs).
+Evidence: [typed client](../../code/FinanceManager.Components/Features/FinancialAccounts/HttpClients/InvestmentValuationHttpClient.cs), [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/InvestmentValuationController.cs), [valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs), [price provider](../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs), [quote ingestion](../../code/FinanceManager.Application/Assets/Pricing/PriceQuoteIngestionService.cs), [quote repository](../../code/FinanceManager.Infrastructure/Features/Assets/Repositories/PriceQuoteRepository.cs).
+
+Capital (remaining cost basis) and benchmark series are separate services beside account valuation: [capital series](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentCapitalSeriesService.cs) and [contribution-matched benchmark](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentBenchmarkService.cs).
 
 Historical purchase valuation follows a separate currency boundary: [transaction valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentTransactionValuationService.cs), remaining-buy cost and capital flows convert the recorded transaction amounts using their transaction currency. Filling an incomplete listing's currency later changes quote metadata, not historical trade denominations. Missing-price recovery requests a price in the transaction currency before saving it back to the trade. [Financial semantics](08-crosscutting-concepts.md#81-domain-and-financial-semantics).
 

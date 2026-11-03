@@ -1,5 +1,6 @@
 using FinanceManager.Application.Administration;
 using FinanceManager.Application.Alerts.Services;
+using FinanceManager.Application.Alerts.Services.Conditions;
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Identity;
@@ -41,6 +42,11 @@ public static class ServiceCollectionExtension
             .AddIdentityApplication()
             .AddFinancialAccountsApplication()
             .AddLabelsApplication()
+            .AddSingleton<IAlertConditionEvaluator, AccountBalanceConditionEvaluator>()
+            .AddSingleton<IAlertConditionEvaluator, CategorySpendingConditionEvaluator>()
+            .AddSingleton<IAlertConditionEvaluator, MerchantSpendingConditionEvaluator>()
+            .AddSingleton<IAlertConditionEvaluator, LargeTransactionConditionEvaluator>()
+            .AddSingleton<IAlertConditionEvaluator, SubscriptionPriceChangeConditionEvaluator>()
             .AddScoped<IFinancialAlertEvaluator, FinancialAlertEvaluator>()
             .AddScoped<IFinancialAlertService, FinancialAlertService>()
             .AddInsightsApplication()

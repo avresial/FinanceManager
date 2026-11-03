@@ -26,7 +26,8 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Balance;
 /// </remarks>
 internal class InvestmentBalanceService(
     IFinancialAccountRepository financialAccountRepository,
-    IInvestmentValuationService investmentValuationService) : IBalanceServiceTyped
+    IInvestmentValuationService investmentValuationService,
+    IInvestmentCapitalSeriesService capitalSeriesService) : IBalanceServiceTyped
 {
     // Cash flow is intentionally empty for investment accounts to avoid double counting against the
     // cash account that books the investment outflow. See the class remarks.
@@ -69,7 +70,7 @@ internal class InvestmentBalanceService(
 
         if (investmentAccountIds.Count == 0) return [];
 
-        var seriesByAccount = await investmentValuationService.GetCapitalSeriesAsync(
+        var seriesByAccount = await capitalSeriesService.GetCapitalSeriesAsync(
             investmentAccountIds, currency, start.Date, end.Date);
         if (seriesByAccount.Count == 0) return [];
 

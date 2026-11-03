@@ -21,7 +21,13 @@ public class InvestmentValuationServiceTests
     private readonly Mock<ICurrencyExchangeService> _currencyExchangeService = new();
 
     private InvestmentValuationService CreateSut() =>
-        new(_transactionRepository.Object, _priceProvider.Object, _inflationIndexProvider.Object, _currencyExchangeService.Object);
+        new(_transactionRepository.Object, _priceProvider.Object);
+
+    private InvestmentCapitalSeriesService CreateCapitalSut() =>
+        new(_transactionRepository.Object, _currencyExchangeService.Object);
+
+    private InvestmentBenchmarkService CreateBenchmarkSut() =>
+        new(_transactionRepository.Object, _priceProvider.Object, _inflationIndexProvider.Object);
 
     private static InvestmentTransaction Tx(
         long listingId,
@@ -380,7 +386,7 @@ public class InvestmentValuationServiceTests
             Tx(1, InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 2), unitPrice: 5m),
             Tx(1, InvestmentTransactionType.Sell, 1m, new DateOnly(2024, 1, 3), unitPrice: 15m, fee: 1m));
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(128m, series[_accountId][start]);
@@ -415,7 +421,7 @@ public class InvestmentValuationServiceTests
                 (end, (decimal?)3m)
             ]);
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(400m, series[_accountId][start]);
@@ -443,7 +449,7 @@ public class InvestmentValuationServiceTests
                 1, _accountId, 1, DateOnly.FromDateTime(date), InvestmentTransactionType.Buy,
                 2m, 100m, null, minorCurrency, 1m)]);
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], new Currency(0, majorCurrency, majorCurrency), date, date, TestContext.Current.CancellationToken);
 
         Assert.Equal(2m, series[_accountId][date]);
@@ -458,7 +464,7 @@ public class InvestmentValuationServiceTests
             Tx(1, InvestmentTransactionType.Buy, 10m, new DateOnly(2024, 1, 1), unitPrice: 100m, id: 1),
             Tx(1, InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 1, 2), unitPrice: 1_000m, fee: 50m, id: 2));
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[_accountId][start]);
@@ -473,7 +479,7 @@ public class InvestmentValuationServiceTests
         var date = new DateTime(2024, 1, 1);
         SetupTransactions(Tx(1, InvestmentTransactionType.Buy, quantity, DateOnly.FromDateTime(date), unitPrice: 100m, fee: 10m));
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, date, date, TestContext.Current.CancellationToken);
 
         Assert.Equal(0m, series[_accountId][date]);
@@ -489,12 +495,12 @@ public class InvestmentValuationServiceTests
         var transactions = new List<InvestmentTransaction> { firstBuy, secondBuy };
         SetupCapitalFlowInputs(transactions);
 
-        var initial = await CreateSut().GetCapitalSeriesAsync(
+        var initial = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, start, end, TestContext.Current.CancellationToken);
 
         firstBuy.UnitPrice = 200m;
         transactions.Remove(secondBuy);
-        var rebuilt = await CreateSut().GetCapitalSeriesAsync(
+        var rebuilt = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, initial[_accountId][start]);
@@ -511,7 +517,7 @@ public class InvestmentValuationServiceTests
             Tx(1, InvestmentTransactionType.Sell, 2m, date, unitPrice: 1_000m, id: 10),
             Tx(1, InvestmentTransactionType.Buy, 10m, date, unitPrice: 100m, id: 20));
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, date.ToDateTime(TimeOnly.MinValue), date.ToDateTime(TimeOnly.MinValue), TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[_accountId][date.ToDateTime(TimeOnly.MinValue)]);
@@ -526,7 +532,7 @@ public class InvestmentValuationServiceTests
         };
         SetupTransactions(transactions);
 
-        var series = await CreateSut().GetCapitalSeriesAsync(
+        var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             [_accountId], _usd, new DateTime(2024, 1, 1), new DateTime(2024, 1, 2), TestContext.Current.CancellationToken);
 
         Assert.Empty(series);
@@ -549,7 +555,7 @@ public class InvestmentValuationServiceTests
                 [end] = 105m
             });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[start]);
@@ -574,7 +580,7 @@ public class InvestmentValuationServiceTests
                 [end] = 110m
             });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         // Before the purchase the shadow portfolio holds nothing, so the day is omitted entirely.
@@ -597,7 +603,7 @@ public class InvestmentValuationServiceTests
             .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 100m });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[start]);
@@ -616,7 +622,7 @@ public class InvestmentValuationServiceTests
             .Setup(x => x.GetIndexSeriesAsync(start, end, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100m });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(3, series.Count);
@@ -632,7 +638,7 @@ public class InvestmentValuationServiceTests
         SetupPrices(1, new Dictionary<DateTime, decimal> { [start] = 100m, [end] = 100m });
         SetupPrices(42, new Dictionary<DateTime, decimal> { [start] = 50m, [end] = 60m });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             42, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(1_000m, series[start]);
@@ -653,7 +659,7 @@ public class InvestmentValuationServiceTests
         SetupTransactions(Tx(42, InvestmentTransactionType.Buy, 10m, new DateOnly(2023, 12, 1)));
         SetupPrices(42, new Dictionary<DateTime, decimal> { [start] = 50m, [end] = 60m });
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             42, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Equal(500m, series[start]);
@@ -670,7 +676,7 @@ public class InvestmentValuationServiceTests
         var end = new DateTime(2024, 1, 2);
         SetupTransactions();
 
-        var series = await CreateSut().GetBenchmarkSeriesAsync(
+        var series = await CreateBenchmarkSut().GetBenchmarkSeriesAsync(
             null, _accountId, _usd, start, end, TestContext.Current.CancellationToken);
 
         Assert.Empty(series);

@@ -14,11 +14,12 @@ public class InvestmentBalanceServiceTests
 
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepository = new();
     private readonly Mock<IInvestmentValuationService> _valuationService = new();
+    private readonly Mock<IInvestmentCapitalSeriesService> _capitalSeriesService = new();
     private readonly InvestmentBalanceService _service;
 
     public InvestmentBalanceServiceTests()
     {
-        _service = new InvestmentBalanceService(_financialAccountRepository.Object, _valuationService.Object);
+        _service = new InvestmentBalanceService(_financialAccountRepository.Object, _valuationService.Object, _capitalSeriesService.Object);
     }
 
     [Fact]
@@ -70,7 +71,7 @@ public class InvestmentBalanceServiceTests
         _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                    .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
 
-        _valuationService.Setup(x => x.GetCapitalSeriesAsync(
+        _capitalSeriesService.Setup(x => x.GetCapitalSeriesAsync(
                 It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)),
                 DefaultCurrency.PLN,
                 start.Date,
