@@ -1,11 +1,12 @@
 @using FinanceManager.Components.Shared.Components.Charts
+@using FinanceManager.Domain.Shared.Charting
 
 <TimeSeriesValueCard Title="Liabilities over time"
                      Data="ChartData"
                      IsLoading="_isLoading"
                      HasError="_hasError"
                      OnRetry="Reload"
-                     Accent="#EF5350"
+                     Accent="@ColorsProvider.LiabilityColor"
                      IsDebt="true"
                      CurrencyShortName="@_currency"
                      Height="@Height" />
