@@ -6,26 +6,29 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Performance;
 
 /// <summary>
-/// The investment and bond accounts a portfolio return calculation covers, with the bond details
-/// their entries reference.
+/// The investment and bond accounts a portfolio return calculation covers. Bond details load
+/// separately so each service keeps its own repository-call order.
 /// </summary>
 internal sealed record PortfolioAccounts(
     IReadOnlyList<InvestmentAccount> InvestmentAccounts,
-    IReadOnlyList<BondAccount> BondAccounts,
-    IReadOnlyDictionary<int, BondDetails> BondDetails)
+    IReadOnlyList<BondAccount> BondAccounts)
 {
     public bool IsEmpty => InvestmentAccounts.Count == 0 && BondAccounts.Count == 0;
 
     public int[] InvestmentAccountIds => [.. InvestmentAccounts.Select(account => account.AccountId)];
 
-    /// <summary>False when a stored bond entry references details that could not be loaded.</summary>
-    public bool HasAllBondDetails => BondAccounts
+    public Task<IReadOnlyDictionary<int, BondDetails>> LoadBondDetailsAsync(
+        BondDashboardContext bondDashboardContext,
+        CancellationToken cancellationToken) =>
+        bondDashboardContext.LoadReferencedDetailsAsync(BondAccounts, cancellationToken);
+
+    /// <summary>False when a stored bond entry references details missing from <paramref name="bondDetails"/>.</summary>
+    public bool HasAllBondDetails(IReadOnlyDictionary<int, BondDetails> bondDetails) => BondAccounts
         .SelectMany(account => account.GetStoredBondsIds())
-        .All(BondDetails.ContainsKey);
+        .All(bondDetails.ContainsKey);
 
     public static async Task<PortfolioAccounts> LoadAsync(
         IFinancialAccountRepository financialAccountRepository,
-        BondDashboardContext bondDashboardContext,
         int userId,
         DateTime startDate,
         DateTime endDate,
@@ -43,10 +46,6 @@ internal sealed record PortfolioAccounts(
                            .WithCancellation(cancellationToken))
             bondAccounts.Add(account);
 
-        if (investmentAccounts.Count == 0 && bondAccounts.Count == 0)
-            return new(investmentAccounts, bondAccounts, new Dictionary<int, BondDetails>());
-
-        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts, cancellationToken);
-        return new(investmentAccounts, bondAccounts, bondDetails);
+        return new(investmentAccounts, bondAccounts);
     }
 }

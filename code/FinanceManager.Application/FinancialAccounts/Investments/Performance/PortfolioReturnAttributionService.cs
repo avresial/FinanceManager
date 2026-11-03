@@ -38,12 +38,11 @@ public class PortfolioReturnAttributionService(
             return PortfolioReturnAttributionResult.InsufficientData(startDate, endDate);
 
         var accounts = await PortfolioAccounts.LoadAsync(
-            financialAccountRepository, bondDashboardContext, userId, startDate, endDate, cancellationToken);
+            financialAccountRepository, userId, startDate, endDate, cancellationToken);
         if (accounts.IsEmpty)
             return PortfolioReturnAttributionResult.InsufficientData(startDate, endDate);
 
         var bondAccounts = accounts.BondAccounts;
-        var bondDetails = accounts.BondDetails;
         var investmentAccountIds = accounts.InvestmentAccountIds;
         var transactionFlows = investmentAccountIds.Length == 0
             ? []
@@ -55,7 +54,8 @@ public class PortfolioReturnAttributionService(
         if (!TryBuildListingCurrencies(transactionFlows, out var listingCurrencies))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
-        if (!accounts.HasAllBondDetails)
+        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
+        if (!accounts.HasAllBondDetails(bondDetails))
             return PortfolioReturnAttributionResult.Unavailable(startDate, endDate);
 
         var ledger = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate);

@@ -39,12 +39,11 @@ public class PortfolioMoneyWeightedReturnService(
             return Result(null, MoneyWeightedReturnStatus.InsufficientData, startDate, endDate);
 
         var accounts = await PortfolioAccounts.LoadAsync(
-            financialAccountRepository, bondDashboardContext, userId, startDate, endDate, cancellationToken);
+            financialAccountRepository, userId, startDate, endDate, cancellationToken);
         if (accounts.IsEmpty)
             return Result(null, MoneyWeightedReturnStatus.InsufficientData, startDate, endDate);
 
         var bondAccounts = accounts.BondAccounts;
-        var bondDetails = accounts.BondDetails;
         var investmentAccountIds = accounts.InvestmentAccountIds;
         var transactionFlows = investmentAccountIds.Length == 0
             ? []
@@ -53,7 +52,8 @@ public class PortfolioMoneyWeightedReturnService(
                 DateOnly.FromDateTime(endDate),
                 cancellationToken);
 
-        if (!accounts.HasAllBondDetails)
+        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
+        if (!accounts.HasAllBondDetails(bondDetails))
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
         var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate).Movements;
