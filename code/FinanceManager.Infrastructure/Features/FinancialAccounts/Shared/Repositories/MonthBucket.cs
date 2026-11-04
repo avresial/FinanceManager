@@ -1,16 +1,16 @@
+using FinanceManager.Domain.Shared;
+
 namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 
 internal static class MonthBucket
 {
-    internal static DateTime MonthStart(DateTime date) =>
-        new(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    internal static DateTime MonthStart(DateTime date) => CalendarMonth.Of(date).Start();
 
     internal static DateTime NextMonthStart(DateTime date) =>
         MonthStart(date).AddMonths(1);
 
     // Inclusive upper bound for DB queries using >= / <= semantics.
-    internal static DateTime MonthEndInclusive(DateTime monthStart) =>
-        NextMonthStart(monthStart).AddTicks(-1);
+    internal static DateTime MonthEndInclusive(DateTime monthStart) => CalendarMonth.Of(monthStart).EndInclusive();
 
     internal static string BucketKey(int userId, int accountId, DateTime monthStart) =>
         $"global:u{userId}:a{accountId}:m{monthStart:yyyyMM}";

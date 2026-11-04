@@ -1,4 +1,5 @@
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Components.Features.MoneyFlow.Models;
 
@@ -17,7 +18,7 @@ public static class ForecastActivityGrouper
 
         foreach (var month in transactions
                      .OrderBy(transaction => transaction.Date)
-                     .GroupBy(transaction => new DateTime(transaction.Date.Year, transaction.Date.Month, 1)))
+                     .GroupBy(transaction => CalendarMonth.Of(transaction.Date).Start(DateTimeKind.Unspecified)))
         {
             var rows = new List<ForecastActivityRow>();
             foreach (var transaction in month)

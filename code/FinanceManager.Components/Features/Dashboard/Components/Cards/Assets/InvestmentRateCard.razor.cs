@@ -10,6 +10,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -80,7 +81,7 @@ public partial class InvestmentRateCard : IDisposable
     {
         var version = _gate.Claim();
         var asOf = AsOfDate;
-        var month = new DateOnly(asOf.Year, asOf.Month, 1);
+        var month = CalendarMonth.Of(asOf).FirstDay;
         _isLoading = !_hasDisplayedModel;
         if (_scope is { } knownScope && (knownScope.Year != month.Year || knownScope.Month != month.Month))
             ClearDisplayedModel();
@@ -182,8 +183,9 @@ public partial class InvestmentRateCard : IDisposable
         var requests = Enumerable.Range(0, _horizonMonths).Select(async offset =>
         {
             var month = firstMonth.AddMonths(offset);
-            var start = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var end = start.AddMonths(1).AddTicks(-1);
+            var calendarMonth = CalendarMonth.Of(month);
+            var start = calendarMonth.Start();
+            var end = calendarMonth.EndInclusive();
             if (offset == _horizonMonths - 1 && end > asOf) end = asOf;
             var results = await MoneyFlowHttpClient.GetInvestmentRate(userId, currency, start, end).ToListAsync();
             var rate = results.FirstOrDefault();
@@ -200,11 +202,11 @@ public partial class InvestmentRateCard : IDisposable
     private Task ShowModel(InvestmentRateCardModel model)
     {
         var selectedMonth = SelectedMonthRate is { } selected
-            ? new DateOnly(selected.Start.Year, selected.Start.Month, 1)
+            ? CalendarMonth.Of(selected.Start).FirstDay
             : (DateOnly?)null;
         MonthlyInvestmentRates = [.. model.Months.Select(rate => new InvestmentRate
         {
-            Start = new DateTime(rate.Month.Year, rate.Month.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            Start = CalendarMonth.Of(rate.Month).Start(),
             Salary = rate.Salary,
             InvestmentsChange = rate.InvestmentsChange,
         })];

@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Alerts.Enums;
+using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Application.Alerts.Services.Conditions;
 
@@ -6,9 +7,7 @@ internal static class AlertPeriod
 {
     public static (DateTime Start, DateTime End) GetRange(AlertEvaluationPeriod period, DateTime evaluationDate) => period switch
     {
-        AlertEvaluationPeriod.CurrentMonth => (
-            new DateTime(evaluationDate.Year, evaluationDate.Month, 1, 0, 0, 0, DateTimeKind.Utc),
-            evaluationDate),
+        AlertEvaluationPeriod.CurrentMonth => (CalendarMonth.Of(evaluationDate).Start(), evaluationDate),
         AlertEvaluationPeriod.Last30Days => (evaluationDate.Date.AddDays(-30), evaluationDate),
         AlertEvaluationPeriod.Last7Days => (evaluationDate.Date.AddDays(-7), evaluationDate),
         AlertEvaluationPeriod.AllTime => (DateTime.MinValue, evaluationDate),
