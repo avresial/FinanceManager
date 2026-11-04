@@ -2,6 +2,7 @@ using Bunit;
 using FinanceManager.Components.Shared.Components;
 using Microsoft.AspNetCore.Components;
 using MudBlazor.Services;
+using System.Text.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Components;
 
@@ -25,7 +26,10 @@ public class LazyMountTests
         Assert.Single(cut.FindAll("[data-testid=lazy-mount-placeholder]"));
         Assert.Empty(cut.FindAll("#card"));
         var invocation = Assert.Single(observe.Invocations);
-        Assert.Equal(LazyMount.PreloadMargin, invocation.Arguments[2]);
+        var options = JsonSerializer.SerializeToElement(invocation.Arguments[2]);
+        Assert.Equal(LazyMount.PreloadMargin, options.GetProperty("margin").GetString());
+        Assert.Equal(LazyMount.AutoHeightMediaQuery, options.GetProperty("autoHeightMediaQuery").GetString());
+        Assert.Equal(LazyMount.AutoHeightPreloadMargin, options.GetProperty("autoHeightMargin").GetString());
 
         await cut.InvokeAsync(cut.Instance.Reveal);
 

@@ -223,8 +223,15 @@ static async Task RevealLazyContent(IPage page, NetworkTracker network)
         var placeholder = await page.QuerySelectorAsync(selector);
         if (placeholder is null)
             break;
-        await placeholder.ScrollIntoViewIfNeededAsync();
-        await placeholder.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 10000 });
+        try
+        {
+            await placeholder.ScrollIntoViewIfNeededAsync();
+            await placeholder.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 10000 });
+        }
+        catch (PlaywrightException exception) when (exception.Message.Contains("not attached", StringComparison.OrdinalIgnoreCase))
+        {
+            // The card mounted and removed this placeholder mid-scroll; the next pass finds the remaining ones.
+        }
     }
     await network.WaitForIdle();
     await page.EvaluateAsync("() => window.scrollTo(0, 0)");

@@ -181,4 +181,9 @@ Dashboard wraps each card in
 snapshot paint and refresh therefore start when it is first revealed, not when the page opens. The overview
 request still runs once on page load; cards fed by it receive the current model when they mount. Mounting
 every card at once cost several seconds of blocked main thread on slow devices, mostly first-time chart setup.
+
+Below the md breakpoint cards size to their content, so a card can mount shorter or taller than its
+placeholder and move the cards below it. The preload margin grows to 150% of the viewport there, so that
+shift happens off screen even on fast scrolls, at the cost of mounting a few more cards on load.
+
 Full-page screenshots in `scripts/Screenshot.cs` scroll each placeholder into view before capturing.

@@ -13,6 +13,12 @@ public partial class LazyMount : IAsyncDisposable
     // How far outside the viewport content starts to render, so it is usually ready before it scrolls in.
     public const string PreloadMargin = "200px 0px";
 
+    // Below md, cards size to their content (.fm-phone-auto-height in cardStyle.css), so a card can be
+    // shorter or taller than its placeholder and moves the cards below it when it mounts. Rendering further
+    // ahead keeps that shift off screen, including on fast scrolls, at the cost of mounting more cards on load.
+    public const string AutoHeightMediaQuery = "(max-width: 959.98px)";
+    public const string AutoHeightPreloadMargin = "150% 0px";
+
     private ElementReference _placeholder;
     private DotNetObjectReference<LazyMount>? _selfReference;
     private bool _isRevealed;
@@ -30,7 +36,8 @@ public partial class LazyMount : IAsyncDisposable
             return;
 
         _selfReference = DotNetObjectReference.Create(this);
-        await JSRuntime.InvokeVoidAsync("financeManager.observeLazyMount", _placeholder, _selfReference, PreloadMargin);
+        await JSRuntime.InvokeVoidAsync("financeManager.observeLazyMount", _placeholder, _selfReference,
+            new { margin = PreloadMargin, autoHeightMediaQuery = AutoHeightMediaQuery, autoHeightMargin = AutoHeightPreloadMargin });
     }
 
     /// <summary>Called by the browser observer once the placeholder is near the viewport.</summary>

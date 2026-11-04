@@ -19,6 +19,7 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using Moq;
 using MudBlazor.Services;
 using System.Net;
@@ -184,6 +185,37 @@ public class DashboardRefreshIndicatorTests
         Assert.Equal(1, handler.Count);
     }
 
+    [Fact]
+    public async Task CardRevealedAfterRefresh_ReceivesRefreshedModelAndPeriod()
+    {
+        var handler = new OverviewHandler();
+        using var context = CreateContext(handler, renderCardsImmediately: false);
+        var cut = context.Render<DashboardComponent>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+        handler.Complete(0, Overview(cut.Instance.StartDate, cut.Instance.EndDate));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<LazyMount>()), _timeout);
+        Assert.Empty(cut.FindComponents<Stub<AssetsDistributionOverviewCard>>());
+
+        var (start, end) = NewRange();
+        await ChangeRange(cut, start, end);
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.Count), _timeout);
+        var fresh = Overview(start, end);
+        fresh.AssetsPerType = [new("Stock", 420m)];
+        handler.Complete(1, fresh);
+        cut.WaitForAssertion(() => Assert.Equal(start, cut.Instance.StartDate), _timeout);
+        await cut.InvokeAsync(async () => await Task.Delay(50));
+        Assert.Empty(cut.FindComponents<Stub<AssetsDistributionOverviewCard>>());
+
+        // Reveal the cards the way the browser observer would, through the reference each placeholder registered.
+        foreach (var invocation in context.JSInterop.Invocations["financeManager.observeLazyMount"])
+            await cut.InvokeAsync(((DotNetObjectReference<LazyMount>)invocation.Arguments[1]!).Value.Reveal);
+
+        var assets = cut.FindComponent<Stub<AssetsDistributionOverviewCard>>().Instance.Parameters;
+        Assert.Equal(420m, assets.Get(x => x.Model)!.TypeData.Single().Value);
+        Assert.Equal(start, assets.Get(x => x.StartDateTime));
+        Assert.Equal(end, assets.Get(x => x.EndDateTime));
+    }
+
     private static (DateTime Start, DateTime End) NewRange(int days = 10)
     {
         var end = DateTime.UtcNow.Date.AddDays(-days);
@@ -232,7 +264,7 @@ public class DashboardRefreshIndicatorTests
         };
     }
 
-    private static BunitContext CreateContext(OverviewHandler handler)
+    private static BunitContext CreateContext(OverviewHandler handler, bool renderCardsImmediately = true)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -254,8 +286,9 @@ public class DashboardRefreshIndicatorTests
         AddCardStub<TransactionLogCard>(context, DashboardCards.TransactionLog);
         context.ComponentFactories.AddStub<DashboardDatePicker>();
         context.ComponentFactories.AddStub<DashboardRowFiller>();
-        // These tests cover refresh behaviour, so every card renders at once instead of waiting for the viewport.
-        context.ComponentFactories.AddStub<LazyMount>(parameters => parameters.Get(x => x.ChildContent) ?? (_ => { }));
+        // Most tests cover refresh behaviour, so every card renders at once instead of waiting for the viewport.
+        if (renderCardsImmediately)
+            context.ComponentFactories.AddStub<LazyMount>(parameters => parameters.Get(x => x.ChildContent) ?? (_ => { }));
 
         var login = new Mock<ILoginService>();
         login.Setup(x => x.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = 1, UserName = "tester", Password = "", UserRole = UserRole.User });
