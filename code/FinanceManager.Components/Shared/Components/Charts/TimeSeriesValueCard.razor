@@ -73,7 +73,7 @@
                    overflow:hidden clips it, leaving the gradient flush with the bottom border. *@
                 <div style="position:absolute;top:0;left:0;right:0;bottom:-30px;">
                     <ApexChart @key="ChartAccent" @ref="_chart" TItem="TimeSeriesModel" Options="_options" Height="@("100%")"
-                               OnDataPointEnter="OnPointEnter" OnDataPointLeave="OnPointLeave">
+                              >
                         <ApexPointSeries TItem="TimeSeriesModel"
                                          Items="Data"
                                          Name="@Title"

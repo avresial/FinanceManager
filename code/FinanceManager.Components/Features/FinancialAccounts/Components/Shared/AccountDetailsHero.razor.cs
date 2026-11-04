@@ -78,6 +78,8 @@ public partial class AccountDetailsHero
         _benchmarkData = aligned[1];
         _capitalData = aligned[2];
         _heroChartOptions.Colors = [ChartBalanceColor, "#42a5f5", "#66bb6a"];
+        // Without its own formatter the tooltip reuses the compact axis ticks ("26k").
+        _heroChartOptions.Tooltip!.Y = new TooltipY { Formatter = ChartHelper.GetCurrencyFormatter(Currency) };
         ApplyYScale();
     }
 

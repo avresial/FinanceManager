@@ -173,6 +173,9 @@ public partial class CashFlowForecastPage : ComponentBase, IDisposable
             model.Forecast.ExpectedTransactions,
             ForecastActivityGrouper.StartingBalance(model.Forecast));
         _currency = model.Currency;
+        // The chart is re-keyed on each forecast, so it picks up the currency for this model.
+        if (_chartOptions.Tooltip is Tooltip tooltip)
+            tooltip.Y = new TooltipY { Formatter = ChartHelper.GetCurrencyFormatter(model.Currency) };
         // A flat series (e.g. no accounts yet) gives ApexCharts a zero range, which it labels
         // "0.0k" over "0" on top of the line; the scale says nothing then, so hide it.
         var values = model.Forecast.HistoricalSeries.Concat(model.Forecast.ForecastSeries).Select(point => point.Value).ToList();
