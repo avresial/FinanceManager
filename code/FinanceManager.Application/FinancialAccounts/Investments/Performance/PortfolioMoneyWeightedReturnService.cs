@@ -38,22 +38,13 @@ public class PortfolioMoneyWeightedReturnService(
         if (start == default || end == default || endDate < startDate)
             return Result(null, MoneyWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        List<InvestmentAccount> investmentAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<InvestmentAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            investmentAccounts.Add(account);
-
-        List<BondAccount> bondAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<BondAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            bondAccounts.Add(account);
-
-        if (investmentAccounts.Count == 0 && bondAccounts.Count == 0)
+        var accounts = await PortfolioAccounts.LoadAsync(
+            financialAccountRepository, userId, startDate, endDate, cancellationToken);
+        if (accounts.IsEmpty)
             return Result(null, MoneyWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        var investmentAccountIds = investmentAccounts.Select(x => x.AccountId).ToArray();
+        var bondAccounts = accounts.BondAccounts;
+        var investmentAccountIds = accounts.InvestmentAccountIds;
         var transactionFlows = investmentAccountIds.Length == 0
             ? []
             : await investmentTransactionRepository.GetCapitalFlowInputs(
@@ -61,16 +52,14 @@ public class PortfolioMoneyWeightedReturnService(
                 DateOnly.FromDateTime(endDate),
                 cancellationToken);
 
-        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts, cancellationToken);
-        if (bondAccounts
-            .SelectMany(account => account.GetStoredBondsIds())
-            .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
+        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
+        if (!accounts.HasAllBondDetails(bondDetails))
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
         var movements = PortfolioPeriodLedger.Build(transactionFlows, bondAccounts, bondDetails, startDate, endDate).Movements;
-        var ratesByCurrency = await LoadRatesAsync(
-            movements,
-            bondDetails.Values,
+        var ratesByCurrency = await PortfolioRates.LoadAsync(
+            currencyExchangeService,
+            movements.Select(flow => flow.Currency).Concat(bondDetails.Values.Select(details => details.Currency.ShortName)),
             currency,
             startDate,
             endDate,
@@ -92,19 +81,9 @@ public class PortfolioMoneyWeightedReturnService(
                 DateOnly.FromDateTime(endDate),
                 cancellationToken);
 
-        var priceCache = new Dictionary<(long ListingId, DateTime Date), decimal>();
-        var (openingStockValue, openingStockComplete) = await GetInvestmentValueAsync(
-            openingHoldings,
-            currency,
-            startDate,
-            priceCache,
-            cancellationToken);
-        var (endingStockValue, endingStockComplete) = await GetInvestmentValueAsync(
-            endingHoldings,
-            currency,
-            endDate,
-            priceCache,
-            cancellationToken);
+        var prices = new PortfolioPriceCache(investmentPriceProvider, currency);
+        var (openingStockValue, openingStockComplete) = await prices.GetHoldingsValueAsync(openingHoldings, startDate, cancellationToken);
+        var (endingStockValue, endingStockComplete) = await prices.GetHoldingsValueAsync(endingHoldings, endDate, cancellationToken);
         if (!openingStockComplete || !endingStockComplete)
             return Result(null, MoneyWeightedReturnStatus.Unavailable, startDate, endDate);
 
@@ -134,37 +113,6 @@ public class PortfolioMoneyWeightedReturnService(
             cashFlows.Add(new XirrCashFlow(endDate, endingValue));
 
         return XirrCalculator.Calculate(cashFlows, startDate, endDate);
-    }
-
-    private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadRatesAsync(
-        IReadOnlyCollection<PortfolioMovement> movements,
-        IEnumerable<BondDetails> bondDetails,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        CancellationToken cancellationToken)
-    {
-        var currencies = movements
-            .Select(flow => flow.Currency)
-            .Concat(bondDetails.Select(details => details.Currency.ShortName))
-            .Where(currency => !string.IsNullOrWhiteSpace(currency))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> result = new(StringComparer.OrdinalIgnoreCase);
-        foreach (var sourceCurrency in currencies)
-        {
-            var source = new Currency(0, sourceCurrency, sourceCurrency);
-            result[sourceCurrency] = await CurrencyRateSeries.LoadAsync(
-                currencyExchangeService,
-                source,
-                targetCurrency,
-                startDate,
-                endDate,
-                cancellationToken);
-        }
-
-        return result;
     }
 
     private static bool TryConvertFlows(
@@ -219,41 +167,6 @@ public class PortfolioMoneyWeightedReturnService(
                     return (0m, false);
 
                 total += converted;
-            }
-        }
-
-        return (total, true);
-    }
-
-    private async Task<(decimal Value, bool Complete)> GetInvestmentValueAsync(
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> holdingsByAccount,
-        Currency targetCurrency,
-        DateTime date,
-        IDictionary<(long ListingId, DateTime Date), decimal> priceCache,
-        CancellationToken cancellationToken)
-    {
-        decimal total = 0m;
-        foreach (var holdings in holdingsByAccount.Values)
-        {
-            foreach (var (listingId, quantity) in holdings)
-            {
-                if (quantity == 0m) continue;
-
-                var key = (listingId, date.Date);
-                if (!priceCache.TryGetValue(key, out var price))
-                {
-                    price = await investmentPriceProvider.GetPricePerUnitAsync(
-                        listingId,
-                        targetCurrency,
-                        DateTime.SpecifyKind(date.Date, DateTimeKind.Utc),
-                        cancellationToken);
-                    priceCache[key] = price;
-                }
-
-                if (price <= 0m)
-                    return (0m, false);
-
-                total += quantity * price;
             }
         }
 

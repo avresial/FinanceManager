@@ -1,3 +1,5 @@
+using FinanceManager.Domain.Shared;
+
 namespace FinanceManager.Components.Shared.Helpers;
 
 public static class DateRangeHelper
@@ -27,7 +29,7 @@ public static class DateRangeHelper
 
         var start = selection switch
         {
-            "Month" => new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            "Month" => CalendarMonth.Of(now).Start(),
             "1M" => now.AddMonths(-1),
             "3M" => now.AddMonths(-3),
             "6M" => now.AddMonths(-6),
@@ -42,10 +44,8 @@ public static class DateRangeHelper
 
     public static (DateTime Start, DateTime End) GetCurrentMonthRange()
     {
-        var now = DateTime.UtcNow;
-        var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var end = start.AddMonths(1).AddTicks(-1);
-        return (start, end);
+        var month = CalendarMonth.Of(DateTime.UtcNow);
+        return (month.Start(), month.EndInclusive());
     }
 
     /// <summary>

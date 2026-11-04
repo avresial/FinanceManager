@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
@@ -213,8 +214,7 @@ internal class AssetsServiceInvestment(
             string? warning = price <= 0
                 ? "No price available for this instrument."
                 : missingExchangeRate ? "No exchange rate available for the transaction date." : null;
-            var unrealized = currentValue - costBasis;
-            var unrealizedPercent = costBasis == 0m ? 0m : unrealized / costBasis * 100m;
+            var gainLoss = new GainLoss(costBasis, currentValue);
 
             results.Add(new UnrealizedGainLossInstrumentResult(
                 account.AccountId,
@@ -224,8 +224,8 @@ internal class AssetsServiceInvestment(
                 holding,
                 costBasis,
                 currentValue,
-                unrealized,
-                unrealizedPercent,
+                gainLoss.Amount,
+                gainLoss.Percent,
                 asOfDate,
                 excluded,
                 warning));
@@ -244,16 +244,15 @@ internal class AssetsServiceInvestment(
         var included = instruments.Where(x => !x.IsExcludedFromTotals).ToList();
         var costBasis = included.Sum(x => x.CostBasis);
         var currentValue = included.Sum(x => x.CurrentValue);
-        var unrealized = currentValue - costBasis;
-        var unrealizedPercent = costBasis == 0m ? 0m : unrealized / costBasis * 100m;
+        var gainLoss = new GainLoss(costBasis, currentValue);
 
         return new UnrealizedGainLossAccountResult(
             accountId,
             accountName,
             costBasis,
             currentValue,
-            unrealized,
-            unrealizedPercent,
+            gainLoss.Amount,
+            gainLoss.Percent,
             asOfDate,
             instruments.Count(x => x.IsExcludedFromTotals));
     }

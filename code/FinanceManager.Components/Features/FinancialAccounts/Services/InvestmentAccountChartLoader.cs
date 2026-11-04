@@ -6,6 +6,7 @@ using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 
@@ -87,7 +88,7 @@ public sealed class InvestmentAccountChartLoader(
             capitalValue,
             currentValue,
             balanceChange,
-            capitalValue == 0m ? null : balanceChange / capitalValue * 100m,
+            Percentage.Of(balanceChange, capitalValue),
             BuildHoldings(holdingMetadata, holdings, dateEnd),
             capitalSeries);
     }

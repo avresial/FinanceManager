@@ -4,6 +4,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 
@@ -85,8 +86,7 @@ internal class BondUnrealizedGainLossCalculator(ICurrencyExchangeService currenc
 
         var currentValueRaw = latestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
         var currentValue = currentValueRaw * exchangeRate;
-        var unrealized = currentValue - costBasis;
-        var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+        var gainLoss = new GainLoss(costBasis, currentValue);
 
         return new UnrealizedGainLossInstrumentResult(
             account.AccountId,
@@ -96,8 +96,8 @@ internal class BondUnrealizedGainLossCalculator(ICurrencyExchangeService currenc
             quantity,
             costBasis,
             currentValue,
-            unrealized,
-            unrealizedPercent,
+            gainLoss.Amount,
+            gainLoss.Percent,
             asOfDate,
             false,
             null

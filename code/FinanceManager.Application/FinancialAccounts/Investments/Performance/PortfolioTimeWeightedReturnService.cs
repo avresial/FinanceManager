@@ -36,22 +36,13 @@ public class PortfolioTimeWeightedReturnService(
         if (start == default || end == default || endDate < startDate)
             return Result(null, TimeWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        List<InvestmentAccount> investmentAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<InvestmentAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            investmentAccounts.Add(account);
-
-        List<BondAccount> bondAccounts = [];
-        await foreach (var account in financialAccountRepository
-                           .GetAccounts<BondAccount>(userId, startDate, endDate)
-                           .WithCancellation(cancellationToken))
-            bondAccounts.Add(account);
-
-        if (investmentAccounts.Count == 0 && bondAccounts.Count == 0)
+        var accounts = await PortfolioAccounts.LoadAsync(
+            financialAccountRepository, userId, startDate, endDate, cancellationToken);
+        if (accounts.IsEmpty)
             return Result(null, TimeWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        var investmentAccountIds = investmentAccounts.Select(x => x.AccountId).ToArray();
+        var bondAccounts = accounts.BondAccounts;
+        var investmentAccountIds = accounts.InvestmentAccountIds;
         IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows = investmentAccountIds.Length == 0
             ? []
             : await investmentTransactionRepository.GetCapitalFlowInputs(
@@ -66,16 +57,14 @@ public class PortfolioTimeWeightedReturnService(
                 DateOnly.FromDateTime(endDate),
                 cancellationToken);
 
-        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts, cancellationToken);
-        if (bondAccounts
-            .SelectMany(account => account.GetStoredBondsIds())
-            .Any(detailsId => !bondDetails.ContainsKey(detailsId)))
+        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
+        if (!accounts.HasAllBondDetails(bondDetails))
             return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
 
         var pendingFlows = BuildPendingFlows(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
-        var ratesByCurrency = await LoadRatesAsync(
-            pendingFlows,
-            bondDetails.Values,
+        var ratesByCurrency = await PortfolioRates.LoadAsync(
+            currencyExchangeService,
+            pendingFlows.Select(flow => flow.Currency).Concat(bondDetails.Values.Select(details => details.Currency.ShortName)),
             currency,
             startDate,
             endDate,
@@ -85,7 +74,8 @@ public class PortfolioTimeWeightedReturnService(
 
         try
         {
-            var investmentValues = await BuildInvestmentValuesAsync(
+            var investmentValues = await PortfolioDailyValuation.BuildInvestmentValuesAsync(
+                investmentPriceProvider,
                 valuationInputs,
                 currency,
                 startDate,
@@ -94,7 +84,7 @@ public class PortfolioTimeWeightedReturnService(
             if (!investmentValues.Complete)
                 return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
 
-            var bondValues = BuildBondValues(
+            var bondValues = PortfolioDailyValuation.BuildBondValues(
                 bondAccounts,
                 bondDetails,
                 ratesByCurrency,
@@ -118,182 +108,9 @@ public class PortfolioTimeWeightedReturnService(
         }
     }
 
-    private async Task<ValuationSeries> BuildInvestmentValuesAsync(
-        IInvestmentTransactionRepository.AccountValuationInputs inputs,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        CancellationToken cancellationToken)
-    {
-        var openingHoldings = inputs.OpeningPositions
-            .GroupBy(position => (position.AccountId, position.AssetListingId))
-            .ToDictionary(group => group.Key, group => group.Sum(position => position.Quantity));
-        var tradesByDate = inputs.InWindowTrades
-            .GroupBy(trade => trade.TradeDate)
-            .ToDictionary(
-                group => group.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                group => group
-                    .GroupBy(trade => (trade.AccountId, trade.AssetListingId))
-                    .ToDictionary(tradeGroup => tradeGroup.Key, tradeGroup => tradeGroup.Sum(trade => trade.SignedQuantity)));
-
-        var listingIds = openingHoldings.Keys
-            .Select(key => key.AssetListingId)
-            .Concat(tradesByDate.Values.SelectMany(day => day.Keys).Select(key => key.AssetListingId))
-            .Distinct()
-            .ToList();
-        var priceSeries = new Dictionary<long, IReadOnlyDictionary<DateTime, decimal>>();
-        foreach (var listingId in listingIds)
-        {
-            priceSeries[listingId] = await investmentPriceProvider.GetPricePerUnitSeriesAsync(
-                listingId,
-                targetCurrency,
-                startDate,
-                endDate,
-                cancellationToken);
-        }
-
-        decimal openingValue = 0m;
-        foreach (var (key, quantity) in openingHoldings)
-        {
-            if (quantity == 0m) continue;
-            if (!TryGetPrice(priceSeries, key.AssetListingId, startDate, out var price))
-                return new(new Dictionary<DateTime, decimal>(), 0m, false);
-
-            openingValue += quantity * price;
-        }
-
-        var holdings = openingHoldings.ToDictionary();
-        Dictionary<DateTime, decimal> values = [];
-        for (var date = startDate; date <= endDate; date = date.AddDays(1))
-        {
-            if (tradesByDate.TryGetValue(date, out var dailyTrades))
-            {
-                foreach (var (key, quantity) in dailyTrades)
-                    holdings[key] = holdings.GetValueOrDefault(key) + quantity;
-            }
-
-            decimal value = 0m;
-            foreach (var (key, quantity) in holdings)
-            {
-                if (quantity == 0m) continue;
-                if (!TryGetPrice(priceSeries, key.AssetListingId, date, out var price))
-                    return new(new Dictionary<DateTime, decimal>(), 0m, false);
-
-                value += quantity * price;
-            }
-
-            values[date] = value;
-        }
-
-        return new(values, openingValue, true);
-    }
-
-    private static ValuationSeries BuildBondValues(
-        IReadOnlyList<BondAccount> accounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate)
-    {
-        var entriesByAccount = accounts
-            .Select(account => account.Entries
-                .Concat(account.NextOlderEntries.Values)
-                .GroupBy(entry => entry.BondDetailsId)
-                .ToDictionary(
-                    group => group.Key,
-                    group => (IReadOnlyList<BondAccountEntry>)group
-                        .OrderByDescending(entry => entry.PostingDate)
-                        .ThenByDescending(entry => entry.EntryId)
-                        .ToList()))
-            .ToList();
-
-        decimal openingValue = 0m;
-        foreach (var entries in entriesByAccount)
-        {
-            var result = GetBondValueAt(
-                entries,
-                bondDetails,
-                ratesByCurrency,
-                targetCurrency,
-                DateOnly.FromDateTime(startDate),
-                includeDate: false);
-            if (!result.Complete)
-                return new(new Dictionary<DateTime, decimal>(), 0m, false);
-
-            openingValue += result.Value;
-        }
-
-        Dictionary<DateTime, decimal> values = [];
-        for (var date = startDate; date <= endDate; date = date.AddDays(1))
-        {
-            decimal value = 0m;
-            foreach (var entries in entriesByAccount)
-            {
-                var result = GetBondValueAt(
-                    entries,
-                    bondDetails,
-                    ratesByCurrency,
-                    targetCurrency,
-                    DateOnly.FromDateTime(date),
-                    includeDate: true);
-                if (!result.Complete)
-                    return new(new Dictionary<DateTime, decimal>(), 0m, false);
-
-                value += result.Value;
-            }
-
-            values[date] = value;
-        }
-
-        return new(values, openingValue, true);
-    }
-
-    private static (decimal Value, bool Complete) GetBondValueAt(
-        IReadOnlyDictionary<int, IReadOnlyList<BondAccountEntry>> entriesByBond,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        Currency targetCurrency,
-        DateOnly valuationDate,
-        bool includeDate)
-    {
-        decimal total = 0m;
-        foreach (var entries in entriesByBond.Values)
-        {
-            var entry = entries
-                .Where(candidate =>
-                {
-                    var postingDate = DateOnly.FromDateTime(candidate.PostingDate);
-                    return includeDate ? postingDate <= valuationDate : postingDate < valuationDate;
-                })
-                .FirstOrDefault();
-            if (entry is null || entry.Value == 0m) continue;
-
-            if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
-                return (0m, false);
-
-            var value = entry.GetPriceAt(valuationDate, details);
-            if (value <= 0m)
-                return (0m, false);
-
-            if (!TryConvert(
-                    value,
-                    details.Currency.ShortName,
-                    valuationDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                    targetCurrency,
-                    ratesByCurrency,
-                    out var converted))
-                return (0m, false);
-
-            total += converted;
-        }
-
-        return (total, true);
-    }
-
     private static List<TimeWeightedReturnPeriod> BuildPeriods(
-        ValuationSeries investmentValues,
-        ValuationSeries bondValues,
+        PortfolioValuationSeries investmentValues,
+        PortfolioValuationSeries bondValues,
         IReadOnlyDictionary<DateTime, decimal> externalFlowsByDate,
         DateTime startDate,
         DateTime endDate)
@@ -374,37 +191,6 @@ public class PortfolioTimeWeightedReturnService(
         return result;
     }
 
-    private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadRatesAsync(
-        IReadOnlyCollection<PendingFlow> pendingFlows,
-        IEnumerable<BondDetails> bondDetails,
-        Currency targetCurrency,
-        DateTime startDate,
-        DateTime endDate,
-        CancellationToken cancellationToken)
-    {
-        var currencies = pendingFlows
-            .Select(flow => flow.Currency)
-            .Concat(bondDetails.Select(details => details.Currency.ShortName))
-            .Where(currency => !string.IsNullOrWhiteSpace(currency))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        Dictionary<string, IReadOnlyDictionary<DateTime, decimal>> result = new(StringComparer.OrdinalIgnoreCase);
-        foreach (var sourceCurrency in currencies)
-        {
-            var source = new Currency(0, sourceCurrency, sourceCurrency);
-            result[sourceCurrency] = await CurrencyRateSeries.LoadAsync(
-                currencyExchangeService,
-                source,
-                targetCurrency,
-                startDate,
-                endDate,
-                cancellationToken);
-        }
-
-        return result;
-    }
-
     private static bool TryConvertFlows(
         IEnumerable<PendingFlow> pendingFlows,
         Currency targetCurrency,
@@ -414,7 +200,7 @@ public class PortfolioTimeWeightedReturnService(
         externalFlowsByDate = [];
         foreach (var flow in pendingFlows.OrderBy(x => x.Date).ThenBy(x => x.Sequence))
         {
-            if (!TryConvert(flow.Amount, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var amount))
+            if (!PortfolioDailyValuation.TryConvert(flow.Amount, flow.Currency, flow.Date, targetCurrency, ratesByCurrency, out var amount))
             {
                 externalFlowsByDate.Clear();
                 return false;
@@ -426,44 +212,6 @@ public class PortfolioTimeWeightedReturnService(
         return true;
     }
 
-    private static bool TryGetPrice(
-        IReadOnlyDictionary<long, IReadOnlyDictionary<DateTime, decimal>> priceSeries,
-        long listingId,
-        DateTime date,
-        out decimal price)
-    {
-        price = 0m;
-        return priceSeries.TryGetValue(listingId, out var listingPrices)
-               && listingPrices.TryGetValue(date.Date, out price)
-               && price > 0m;
-    }
-
-    private static bool TryConvert(
-        decimal amount,
-        string sourceCurrency,
-        DateTime date,
-        Currency targetCurrency,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        out decimal converted)
-    {
-        if (string.Equals(sourceCurrency.Trim(), targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-        {
-            converted = amount;
-            return true;
-        }
-
-        if (ratesByCurrency.TryGetValue(sourceCurrency.Trim(), out var rates)
-            && CurrencyRateSeries.TryGet(rates, date, out var rate)
-            && rate > 0m)
-        {
-            converted = amount * rate;
-            return true;
-        }
-
-        converted = 0m;
-        return false;
-    }
-
     private static TimeWeightedReturnResult Result(
         decimal? totalReturn,
         TimeWeightedReturnStatus status,
@@ -472,9 +220,4 @@ public class PortfolioTimeWeightedReturnService(
         new(totalReturn, status, startDate, endDate);
 
     private sealed record PendingFlow(DateTime Date, decimal Amount, string Currency, long Sequence);
-
-    private sealed record ValuationSeries(
-        IReadOnlyDictionary<DateTime, decimal> Values,
-        decimal OpeningValue,
-        bool Complete);
 }

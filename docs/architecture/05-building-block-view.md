@@ -75,6 +75,8 @@ Domain and ServiceDefaults have no project references. Application references Do
 
 Feature organization is similar across projects but not identical: Domain/Application primarily use named feature folders; API/Infrastructure/Components use `Features/`. Shared infrastructure concerns use `Shared/`, `Persistence/`, and bootstrap registrations. Folder names are navigation aids, not independently isolated bounded contexts.
 
+Small calculation rules that several layers need are Domain value types, so Application, Infrastructure and Components share one definition instead of re-deriving it: [CalendarMonth](../../code/FinanceManager.Domain/Shared/CalendarMonth.cs) (month start and inclusive month end, UTC unless the caller passes a kind), [Percentage](../../code/FinanceManager.Domain/Shared/Percentage.cs) (`null` for a zero base) and [GainLoss](../../code/FinanceManager.Domain/FinancialAccounts/Shared/ValueObjects/GainLoss.cs) (amount and percent against cost basis, 0% without one).
+
 | Feature/refinement | Principal model and implementation responsibilities | Evidence |
 |---|---|---|
 | Identity | Users, roles, gift codes, lockout, rotating refresh sessions, development login, guest sandbox lifecycle | [Domain Identity](../../code/FinanceManager.Domain/Identity), [Application Identity](../../code/FinanceManager.Application/Identity), [API Identity](../../code/FinanceManager.Api/Features/Identity) |

@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
@@ -127,16 +128,15 @@ public class AssetsServiceBond(
 
             var costBasis = included.Sum(x => x.CostBasis);
             var currentValue = included.Sum(x => x.CurrentValue);
-            var unrealized = currentValue - costBasis;
-            var unrealizedPercent = costBasis == 0 ? 0 : unrealized / costBasis * 100;
+            var gainLoss = new GainLoss(costBasis, currentValue);
 
             results.Add(new UnrealizedGainLossAccountResult(
                 accountGroup.Key.AccountId,
                 accountGroup.Key.AccountName,
                 costBasis,
                 currentValue,
-                unrealized,
-                unrealizedPercent,
+                gainLoss.Amount,
+                gainLoss.Percent,
                 asOfDate,
                 excludedCount
             ));

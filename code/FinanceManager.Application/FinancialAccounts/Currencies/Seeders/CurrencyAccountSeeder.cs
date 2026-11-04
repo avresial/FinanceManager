@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
@@ -96,7 +97,7 @@ public class CurrencyAccountSeeder(
         // account books the matching debt (see SeedLoanAccount).
         account.AddEntry(new AddCurrencyEntryDto(start, GuestInvestmentPlan.LoanPrincipal, "Loan disbursement", null, loanLabels), false);
 
-        var currentMonth = new DateTime(start.Year, start.Month, 1);
+        var currentMonth = CalendarMonth.Of(start);
         decimal negativesThisMonth = 0m;
         var randomAmountsByMerchant = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 
@@ -104,10 +105,10 @@ public class CurrencyAccountSeeder(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var monthStart = new DateTime(date.Year, date.Month, 1);
-            if (monthStart != currentMonth)
+            var month = CalendarMonth.Of(date);
+            if (month != currentMonth)
             {
-                currentMonth = monthStart;
+                currentMonth = month;
                 negativesThisMonth = 0m;
             }
 
