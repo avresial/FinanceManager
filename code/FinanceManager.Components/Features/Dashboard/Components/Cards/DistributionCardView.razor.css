@@ -24,6 +24,10 @@
     height: 160px;
 }
 
+.fm-distribution-chart ::deep > div {
+    height: 100%;
+}
+
 .fm-distribution-chart ::deep .apexcharts-canvas {
     background: transparent !important;
 }
@@ -135,6 +139,63 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+    /* Centres the auto-height variants (single category, error) in the card without clipping them when they overflow. */
+    margin-block: auto;
+}
+
+/* Wide fixed-height desktop cards have height to spare: a larger donut, and the amount fits beside the name.
+   Below 960px cards are auto-height, so a larger donut would only make them taller. */
+@media (min-width: 960px) {
+    @container (min-width: 481px) {
+        .fm-distribution-chart {
+            flex-basis: 200px;
+            width: 200px;
+            height: 200px;
+        }
+    }
+
+    @container (min-width: 560px) {
+        .fm-distribution-chart {
+            flex-basis: 240px;
+            width: 240px;
+            height: 240px;
+        }
+
+        .fm-distribution-total-value {
+            font-size: 16px;
+        }
+
+        .fm-distribution-total-label {
+            font-size: 12px;
+        }
+
+        .fm-distribution-body .fm-legend-vals {
+            flex-direction: row;
+            align-items: baseline;
+            gap: 6px;
+        }
+    }
+}
+
+/* On fixed-height desktop cards a lone figure is the only content, so it scales with the card. */
+@media (min-width: 960px) {
+    .fm-distribution-body--single .fm-legend--single .fm-legend-row {
+        max-width: 440px;
+        gap: 6px;
+        padding: 28px 20px;
+    }
+
+    .fm-distribution-body--single .fm-legend--single .fm-legend-name {
+        font-size: 1rem;
+    }
+
+    .fm-distribution-body--single .fm-legend--single .fm-legend-amt {
+        font-size: clamp(1.5rem, 8cqi, 2.5rem);
+    }
+
+    .fm-distribution-body--single .fm-legend--single .fm-legend-pct {
+        font-size: 1rem;
+    }
 }
 
 /* Beside each other the legend gets too narrow for name and amount on one line, so stack the donut
@@ -143,8 +204,9 @@
     .fm-distribution-body {
         flex-direction: column;
         align-items: stretch;
+        justify-content: center;
         gap: 8px;
-        padding-top: 0;
+        padding-block: 8px;
     }
 
     .fm-distribution-chart {
@@ -153,7 +215,7 @@
     }
 
     .fm-distribution-body .fm-legend {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         min-height: 0;
     }
 

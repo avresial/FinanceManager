@@ -250,12 +250,14 @@
 }
 
 /* ---- Default face: scrollable middle + pinned footer ---- */
+/* space-evenly spreads spare card height between the sections and falls back to the top when they overflow. */
 .diversification-card__main {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    justify-content: space-evenly;
     gap: 12px;
 }
 
@@ -376,6 +378,24 @@
         flex: 1;
         border-left: 1px solid var(--mud-palette-divider);
         padding-left: 22px;
+    }
+}
+
+/* Wide desktop cards have height to spare, so the gauge takes more of it. */
+@media (min-width: 960px) {
+    @container (min-width: 480px) {
+        .diversification-card__gaugewrap {
+            max-width: 200px;
+        }
+
+        .diversification-card__gauge {
+            flex-basis: 200px;
+            width: 200px;
+        }
+
+        .diversification-card__score {
+            font-size: 2.75rem;
+        }
     }
 }
 
