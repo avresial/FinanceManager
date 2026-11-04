@@ -1,0 +1,10 @@
+@if (_isRevealed)
+{
+    @ChildContent
+}
+else
+{
+    <div @ref="_placeholder" data-testid="lazy-mount-placeholder">
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="@Height" />
+    </div>
+}
