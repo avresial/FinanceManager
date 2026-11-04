@@ -381,19 +381,21 @@
     }
 }
 
-/* Wide cards have height to spare, so the gauge takes more of it. */
-@container (min-width: 480px) {
-    .diversification-card__gaugewrap {
-        max-width: 200px;
-    }
+/* Wide desktop cards have height to spare, so the gauge takes more of it. */
+@media (min-width: 960px) {
+    @container (min-width: 480px) {
+        .diversification-card__gaugewrap {
+            max-width: 200px;
+        }
 
-    .diversification-card__gauge {
-        flex-basis: 200px;
-        width: 200px;
-    }
+        .diversification-card__gauge {
+            flex-basis: 200px;
+            width: 200px;
+        }
 
-    .diversification-card__score {
-        font-size: 2.75rem;
+        .diversification-card__score {
+            font-size: 2.75rem;
+        }
     }
 }
 

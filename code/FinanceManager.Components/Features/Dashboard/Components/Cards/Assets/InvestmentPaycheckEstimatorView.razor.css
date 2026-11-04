@@ -194,8 +194,8 @@
     color: var(--mud-palette-warning);
 }
 
-/* Fixed-height desktop cards have room for larger preset text; phones keep the compact size. */
-@media (min-width: 601px) {
+/* Fixed-height desktop cards have room for larger preset text; smaller screens keep the compact size. */
+@media (min-width: 960px) {
     .pc-slider-block {
         margin-bottom: 12px;
     }

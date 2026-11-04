@@ -125,31 +125,32 @@
     text-align: center;
 }
 
-@media (min-width: 600px) {
-    .fee-drag-card__body {
+/* Fixed-height desktop cards have height to spare, so the key figures take more of it.
+   The missing expense ratio warning uses that spare height, so the card stays compact with it. */
+@media (min-width: 960px) {
+    .fee-drag-card__body:not(.fee-drag-card__body--with-warning) {
         gap: 10px;
     }
-}
 
-/* Wider cards have height to spare, so the key figures take more of it. */
-@container (min-width: 420px) {
-    .fee-drag-card__hero-value {
-        font-size: 3rem;
+    @container (min-width: 420px) {
+        .fee-drag-card__body:not(.fee-drag-card__body--with-warning) .fee-drag-card__hero-value {
+            font-size: 3rem;
+        }
+
+        .fee-drag-card__body:not(.fee-drag-card__body--with-warning) .fee-drag-card__hero-currency {
+            font-size: 1.35rem;
+        }
     }
 
-    .fee-drag-card__hero-currency {
-        font-size: 1.35rem;
-    }
-}
+    @container (min-width: 520px) {
+        .fee-drag-card__body:not(.fee-drag-card__body--with-warning) .fee-drag-card__projection {
+            gap: 4px;
+            padding: 12px 14px;
+        }
 
-@container (min-width: 520px) {
-    .fee-drag-card__projection {
-        gap: 4px;
-        padding: 12px 14px;
-    }
-
-    .fee-drag-card__projection ::deep .mud-typography-body1 {
-        font-size: 1.25rem;
+        .fee-drag-card__body:not(.fee-drag-card__body--with-warning) .fee-drag-card__projection ::deep .mud-typography-body1 {
+            font-size: 1.25rem;
+        }
     }
 }
 

@@ -41,7 +41,7 @@
         }
         else
         {
-            <div class="fee-drag-card__body">
+            <div class="@($"fee-drag-card__body{(_analysis.MissingTerCount > 0 ? " fee-drag-card__body--with-warning" : "")}")">
                 @* Without any expense ratio the cost is unknown, not zero: the warning below explains it, so the card
                    shows no figure instead of a confident 0.00 or a lone dash. *@
                 @if (!IsFeeUnknown)

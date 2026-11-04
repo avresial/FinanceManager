@@ -141,10 +141,12 @@
     overflow-wrap: anywhere;
 }
 
-/* Fixed-height desktop cards have room for larger text; phones keep the compact size. */
-@media (min-width: 600px) {
+/* Fixed-height desktop cards have room for larger text; smaller screens keep the compact size. */
+@media (min-width: 960px) {
     .ins-insight-title {
+        flex-shrink: 0;
         font-size: 1.25rem;
+        -webkit-line-clamp: 3;
     }
 
     .ins-insight-msg {
