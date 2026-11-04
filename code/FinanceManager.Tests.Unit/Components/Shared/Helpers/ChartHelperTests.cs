@@ -236,4 +236,20 @@ public class ChartHelperTests
     {
         Assert.Equal(expected, ChartHelper.GetYTargetBands(height));
     }
+
+    [Fact]
+    public void GetDataPointLabelFormatter_EmbedsLabelsAsJsonAndIndexesByDataPoint()
+    {
+        var formatter = ChartHelper.GetDataPointLabelFormatter(["June 2026", "Bob's \"rate\""]);
+
+        Assert.StartsWith("function(value, opts)", formatter);
+        Assert.Contains("[\"June 2026\",\"Bob\\u0027s \\u0022rate\\u0022\"]", formatter);
+        Assert.Contains("opts.dataPointIndex", formatter);
+    }
+
+    [Fact]
+    public void GetConstantTextFormatter_ReturnsJsonEncodedText()
+    {
+        Assert.Equal("function(){ return \"Savings rate:\"; }", ChartHelper.GetConstantTextFormatter("Savings rate:"));
+    }
 }

@@ -170,7 +170,11 @@ public partial class CashFlowForecastCard : ComponentBase
             Markers = new Markers { Size = 0.1, StrokeWidth = 0.1 },
             DataLabels = new DataLabels { Enabled = false },
             Legend = new Legend { Show = false },
-            Tooltip = new Tooltip { X = new TooltipX { Format = "MMM dd" } },
+            Tooltip = new Tooltip
+            {
+                X = new TooltipX { Format = "MMM dd" },
+                Y = new TooltipY { Formatter = ChartHelper.GetCurrencyFormatter(model.Currency) },
+            },
             Grid = new Grid { Show = false, Padding = new Padding { Left = 8, Right = 12, Top = 12, Bottom = 0 } },
             Xaxis = new XAxis
             {

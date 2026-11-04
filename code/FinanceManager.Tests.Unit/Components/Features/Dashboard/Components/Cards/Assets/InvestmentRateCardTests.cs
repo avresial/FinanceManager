@@ -392,6 +392,28 @@ public class InvestmentRateCardTests
         Assert.Equal(50m, card.Instance.Series[0].Percentage);
     }
 
+    [Fact]
+    public async Task TooltipLabels_NameFullMonthAndReportUnclampedRate()
+    {
+        await using var context = CreateContext(new InvestmentRateHandler(_ => Response([])));
+        var card = Render(context);
+        card.Instance.MonthlyInvestmentRates =
+        [
+            new InvestmentRate { Start = new DateTime(2026, 6, 1), Salary = 1000m, InvestmentsChange = 5000m },
+            new InvestmentRate { Start = new DateTime(2026, 7, 1), Salary = 0m, InvestmentsChange = 100m },
+        ];
+
+        card.Instance.BuildDerivedState();
+
+        Assert.Equal(300m, card.Instance.Series[0].Percentage);
+        var months = card.Instance.BuildTooltipMonthLabels();
+        var rates = card.Instance.BuildTooltipRateLabels();
+        Assert.Equal(12, months.Count);
+        Assert.Equal(12, rates.Count);
+        Assert.Equal(["June 2026", "July 2026"], months[..2]);
+        Assert.Equal(["500.0%", "No salary"], rates[..2]);
+    }
+
     private void Stored(decimal investmentChange)
     {
         StoredForMonth(investmentChange, new DateOnly(2026, 7, 1));

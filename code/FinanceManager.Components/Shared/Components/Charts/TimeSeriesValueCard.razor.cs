@@ -9,8 +9,8 @@ namespace FinanceManager.Components.Shared.Components.Charts;
 
 /// <summary>
 /// Shared dashboard time-series card: a MudCard with a value/delta readout header and a
-/// full-bleed ApexCharts gradient-area chart (axes, gridlines, hover tooltip). Hovering a
-/// point syncs the header to that point. The four time-series cards (assets, net worth,
+/// full-bleed ApexCharts gradient-area chart (axes, gridlines, hover tooltip). Hovering
+/// anywhere over the plot shows the nearest point's date and value in the tooltip. The four time-series cards (assets, net worth,
 /// liabilities, investment type) are thin wrappers that load data and feed it in here.
 /// </summary>
 public partial class TimeSeriesValueCard
@@ -19,7 +19,6 @@ public partial class TimeSeriesValueCard
 
     private ApexChart<TimeSeriesModel>? _chart;
     private ApexChartOptions<TimeSeriesModel>? _options;
-    private int? _hoverIndex;
     private string? _builtForAccent;
     private string? _builtForCurrency;
 
@@ -67,14 +66,13 @@ public partial class TimeSeriesValueCard
     [Parameter] public string CurrencyShortName { get; set; } = "PLN";
 
     /// <summary>
-    /// Optional hero value shown in the header while not hovering. When set it overrides the
-    /// latest-point value (e.g. a period total for the net cash flow card); hovering a point
-    /// still reveals that point's value. When null the latest point is shown (net worth,
-    /// closing balance, …).
+    /// Optional hero value shown in the header. When set it overrides the latest-point value
+    /// (e.g. a period total for the net cash flow card); hovering still reveals each point's
+    /// value in the tooltip. When null the latest point is shown (net worth, closing balance, …).
     /// </summary>
     [Parameter] public decimal? SummaryValue { get; set; }
 
-    /// <summary>Caption shown beside <see cref="SummaryValue"/> while not hovering.</summary>
+    /// <summary>Caption shown beside <see cref="SummaryValue"/>.</summary>
     [Parameter] public string? SummaryCaption { get; set; }
 
     /// <summary>Card height; fills its grid cell. Default 250px (issue #284).</summary>
@@ -82,7 +80,7 @@ public partial class TimeSeriesValueCard
 
     private string InfoText =>
         $"{(string.IsNullOrWhiteSpace(Title) ? "The value of this series" : $"The {Title}")} for the selected period. " +
-        "Hover a point to see its value on that date.";
+        "Hover the chart to see the value on any date.";
 
     private LoadState State =>
         IsLoading ? LoadState.Loading
@@ -90,18 +88,15 @@ public partial class TimeSeriesValueCard
         : Data.Count == 0 ? LoadState.Empty
         : LoadState.Ready;
 
-    private bool IsHovering => _hoverIndex is not null;
-
-    // At rest an optional summary (e.g. a period total) overrides the latest-point hero;
-    // hovering always falls back to the hovered point so the chart stays explorable.
-    private bool ShowSummary => SummaryValue is not null && !IsHovering;
+    // An optional summary (e.g. a period total) overrides the latest-point hero.
+    private bool ShowSummary => SummaryValue is not null;
 
     private decimal HeaderValue => ShowSummary ? SummaryValue!.Value : Shown.Value;
 
     private string CaptionText =>
         ShowSummary && !string.IsNullOrEmpty(SummaryCaption)
             ? SummaryCaption!
-            : $"{(IsHovering ? "Value on" : "Current value")} {(char)0x00B7} " +
+            : $"Current value {(char)0x00B7} " +
               DateFormatter.Format(Shown.DateTime.ToLocalTime());
 
     // The delta chip compares the shown point to the range start; that pairing is
@@ -109,11 +104,13 @@ public partial class TimeSeriesValueCard
     // summary value is supplied.
     private bool ShowDelta => HasDelta && SummaryValue is null;
 
-    // The point reflected in the header: hovered, else the latest.
+    // The point reflected in the header: the latest. Hovered points are read from the
+    // tooltip; the header cannot follow them reliably because Blazor-ApexCharts' mouse-move
+    // event reports the previously hovered index.
     private TimeSeriesModel Shown =>
         Data.Count == 0
             ? new TimeSeriesModel(DateTime.Today, 0m)
-            : Data[Math.Clamp(_hoverIndex ?? Data.Count - 1, 0, Data.Count - 1)];
+            : Data[^1];
 
     // Percent change is only meaningful when the range opens with a non-zero
     // baseline; from a zero baseline the change is undefined (division by zero),
@@ -157,18 +154,13 @@ public partial class TimeSeriesValueCard
             BuildOptions();
 
         ApplyYScale();
-
-        // Drop a stale hover index if the series shrank (or emptied) between loads.
-        if (_hoverIndex is int i && i >= Data.Count)
-            _hoverIndex = null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (State != LoadState.Ready || _chart is null) return;
 
-        // Hover raises StateHasChanged, so this runs often: compare lazily and only
-        // materialize the points when they are actually stored.
+        // Compare lazily and only materialize the points when they are actually stored.
         var points = Data.Select(p => (p.DateTime, p.Value));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
@@ -202,23 +194,6 @@ public partial class TimeSeriesValueCard
 
         if (axis.Labels is YAxisLabels labels)
             labels.Formatter = ChartHelper.GetYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount);
-    }
-
-    private void OnPointEnter(HoverData<TimeSeriesModel> hoverData)
-    {
-        var idx = hoverData.DataPointIndex;
-        if (idx >= 0 && idx < Data.Count)
-        {
-            _hoverIndex = idx;
-            StateHasChanged();
-        }
-    }
-
-    private void OnPointLeave(HoverData<TimeSeriesModel> hoverData)
-    {
-        if (_hoverIndex is null) return;
-        _hoverIndex = null;
-        StateHasChanged();
     }
 
     private string FormatMoney(decimal value) => MoneyFormatter.Format(value, CurrencyShortName);
@@ -333,18 +308,24 @@ public partial class TimeSeriesValueCard
             Tooltip = new Tooltip
             {
                 Enabled = true,
+                // Track the nearest point under the cursor. Intersect mode (ApexCharts' default
+                // for a single series) only fires on the marker itself, and the markers are
+                // 0.1px at rest, so hovering never showed a tooltip.
+                Shared = true,
+                Intersect = false,
                 Theme = Mode.Dark,
                 // Pin the tooltip to the plot's top-left corner. The card is
                 // overflow:hidden (it clips the pushed-out x-axis label row), which
                 // would also clip a cursor-following tooltip near the chart edges. A
                 // fixed tooltip always renders inside the visible plot area while the
                 // crosshair + marker dot still track the hovered point. Content stays
-                // per-point: month title + formatted value.
+                // per-point: date title + formatted value.
                 Fixed = new TooltipFixed { Enabled = true, Position = TooltipPosition.TopLeft, OffsetX = 8, OffsetY = 8 },
-                X = new TooltipX { Format = "MMMM yyyy" },
+                // Points are daily, so the date names the day being inspected.
+                X = new TooltipX { Format = "dd MMM yyyy" },
                 Y = new TooltipY
                 {
-                    // Same shape as the header readout (MoneyFormatter): "12,480.00 PLN".
+                    // Same shape as the header value (MoneyFormatter): "12,480.00 PLN".
                     Formatter = ChartHelper.GetCurrencyFormatter(CurrencyShortName),
                 },
                 Marker = new TooltipMarker { Show = true },

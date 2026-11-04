@@ -1,4 +1,5 @@
 using FinanceManager.Domain.MoneyFlow.Entities;
+using System.Text.Json;
 
 namespace FinanceManager.Components.Shared.Helpers;
 
@@ -111,6 +112,20 @@ public static class ChartHelper
     public static string GetCurrencyFormatter(string currency) =>
         "function(value){ if (value === undefined || value === null) { return ''; } " +
         "return Number(value).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' " + currency + "'; }";
+
+    /// <summary>
+    /// ApexCharts tooltip formatter that ignores the raw value and returns the label prepared for the
+    /// hovered data point. Use it when the plotted value is not what the tooltip should say, for
+    /// example a single-letter category that should read as a full month, or a bar clamped for
+    /// display whose real value must still be inspectable. Labels are JSON-encoded so any text is safe.
+    /// </summary>
+    public static string GetDataPointLabelFormatter(IEnumerable<string> labels) =>
+        "function(value, opts){ var labels = " + JsonSerializer.Serialize(labels) + "; " +
+        "var i = opts ? opts.dataPointIndex : -1; return i >= 0 && i < labels.length ? labels[i] : ''; }";
+
+    /// <summary>ApexCharts formatter that always returns <paramref name="text"/>, e.g. a tooltip series title.</summary>
+    public static string GetConstantTextFormatter(string text) =>
+        "function(){ return " + JsonSerializer.Serialize(text) + "; }";
 
     /// <summary>
     /// Pads a series' displayed value range by 5% on both ends so small changes stay visible
