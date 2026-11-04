@@ -7,6 +7,15 @@
     padding: 16px 18px;
 }
 
+/* A plain element because MudCardContent does not receive this file's scoped CSS attribute. */
+.fee-drag-card__body {
+    container-type: inline-size;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .fee-drag-card__hero {
     align-items: baseline;
     display: flex;
@@ -66,11 +75,16 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 2px;
     margin-bottom: 12px;
+    /* The tiles absorb the card's spare height instead of leaving a gap above the footer. */
+    flex: 1 1 auto;
 }
 
 .fee-drag-card__projections--unknown {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.875rem;
+    text-align: center;
 }
 
 .fee-drag-card__projection {
@@ -78,11 +92,12 @@
     border-radius: 8px;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     min-width: 0;
     padding: 8px 10px;
 }
 
-.fee-drag-card__projection .mud-typography-body1 {
+.fee-drag-card__projection ::deep .mud-typography-body1 {
     font-variant-numeric: tabular-nums;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -108,6 +123,34 @@
     min-height: 0;
     padding: 12px;
     text-align: center;
+}
+
+@media (min-width: 600px) {
+    .fee-drag-card__body {
+        gap: 10px;
+    }
+}
+
+/* Wider cards have height to spare, so the key figures take more of it. */
+@container (min-width: 420px) {
+    .fee-drag-card__hero-value {
+        font-size: 3rem;
+    }
+
+    .fee-drag-card__hero-currency {
+        font-size: 1.35rem;
+    }
+}
+
+@container (min-width: 520px) {
+    .fee-drag-card__projection {
+        gap: 4px;
+        padding: 12px 14px;
+    }
+
+    .fee-drag-card__projection ::deep .mud-typography-body1 {
+        font-size: 1.25rem;
+    }
 }
 
 @media (max-width: 599.98px) {

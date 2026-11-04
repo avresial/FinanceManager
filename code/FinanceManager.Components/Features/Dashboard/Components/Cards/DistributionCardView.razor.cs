@@ -10,7 +10,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
 public partial class DistributionCardView
 {
-    private const string _chartSize = "160";
+    // The chart fills .fm-distribution-chart, whose size the card's stylesheet sets by card width.
+    private const string _chartSize = "100%";
 
     private string _view = DistributionViewToggle.TypeView;
     private List<DistributionSlice> _slices = [];

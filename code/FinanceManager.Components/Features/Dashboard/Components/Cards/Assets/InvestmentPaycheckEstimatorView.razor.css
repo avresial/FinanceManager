@@ -73,6 +73,7 @@
 .pc-slider-block {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: 6px;
     margin-top: 4px;
 }
@@ -105,12 +106,15 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin-top: 4px;
+    /* The presets absorb the card's spare height instead of leaving a gap above the footer. */
+    flex: 1 1 auto;
 }
 
 .pc-named-chip {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
     padding: 6px 10px;
     /* Tinted from the text colour so the tile shows on both card surfaces (white-alpha vanished in light mode). */
     background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
@@ -188,6 +192,21 @@
 
 .pc-foot-meta--warn {
     color: var(--mud-palette-warning);
+}
+
+/* Fixed-height desktop cards have room for larger preset text; phones keep the compact size. */
+@media (min-width: 601px) {
+    .pc-slider-block {
+        margin-bottom: 12px;
+    }
+
+    .pc-named-chip-label {
+        font-size: 13px;
+    }
+
+    .pc-named-chip-rate {
+        font-size: 12px;
+    }
 }
 
 @media (max-width: 600px) {

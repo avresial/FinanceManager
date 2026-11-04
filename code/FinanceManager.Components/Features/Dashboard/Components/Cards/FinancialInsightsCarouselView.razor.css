@@ -100,6 +100,8 @@
     flex-direction: column;
     flex: 0 1 auto;
     min-height: 0;
+    /* Centres a short insight in the card; a long one still shrinks and scrolls its message. */
+    margin-block: auto;
     overflow: hidden;
     opacity: 1;
 }
@@ -137,6 +139,18 @@
     min-height: 0;
     overflow-y: auto;
     overflow-wrap: anywhere;
+}
+
+/* Fixed-height desktop cards have room for larger text; phones keep the compact size. */
+@media (min-width: 600px) {
+    .ins-insight-title {
+        font-size: 1.25rem;
+    }
+
+    .ins-insight-msg {
+        font-size: 1rem;
+        margin-top: 12px;
+    }
 }
 
 /* ---- Tags ---- */
@@ -241,6 +255,7 @@
 /* ---- Empty state ---- */
 .ins-empty {
     flex: 0 1 auto;
+    margin-block: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
