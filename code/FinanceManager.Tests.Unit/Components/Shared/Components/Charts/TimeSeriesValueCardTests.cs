@@ -52,6 +52,33 @@ public class TimeSeriesValueCardTests
     }
 
     [Fact]
+    public async Task Tooltip_TracksTheNearestDayAnywhereOverThePlot()
+    {
+        var options = await RenderedOptionsAsync(Points(1, 2, 3), "250px");
+
+        // Intersect mode would only fire on the invisible 0.1px markers.
+        Assert.True(options.Tooltip!.Enabled);
+        Assert.True(options.Tooltip.Shared);
+        Assert.False(options.Tooltip.Intersect);
+        Assert.Equal("dd MMM yyyy", options.Tooltip.X!.Format);
+    }
+
+    [Fact]
+    public async Task Chart_HasNoDataPointHoverHandlersThatForceIntersectMode()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, Points(1, 2, 3)));
+        var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+
+        Assert.False(chart.OnDataPointEnter.HasDelegate);
+        Assert.False(chart.OnDataPointLeave.HasDelegate);
+    }
+
+    [Fact]
     public async Task XAxis_LabelsAreLiftedIntoTheClippedRow()
     {
         var options = await RenderedOptionsAsync(Points(1, 2, 3), "250px");

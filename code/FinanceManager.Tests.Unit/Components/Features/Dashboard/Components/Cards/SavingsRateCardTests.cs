@@ -361,6 +361,25 @@ public class SavingsRateCardTests
     }
 
     [Fact]
+    public async Task TooltipLabels_NameFullMonthAndRate()
+    {
+        await using var context = CreateContext(new SavingsRateHandler(_ => Response([])));
+        var card = Render(context);
+        card.Instance.MonthlySavingsRates =
+        [
+            new SavingsRate { Start = new DateTime(2026, 6, 1), Salary = 1000m, Spending = 875m },
+            new SavingsRate { Start = new DateTime(2026, 7, 1), Salary = 0m, Spending = 100m },
+        ];
+
+        var months = card.Instance.BuildTooltipMonthLabels();
+        var rates = card.Instance.BuildTooltipRateLabels();
+
+        Assert.Equal(12, months.Count);
+        Assert.Equal(["June 2026", "July 2026"], months[..2]);
+        Assert.Equal(["12.5%", "No salary"], rates[..2]);
+    }
+
+    [Fact]
     public async Task SelectMonth_UpdatesSelectionAndIgnoresPlaceholderBars()
     {
         await using var context = CreateContext(new SavingsRateHandler(_ => Response([])));

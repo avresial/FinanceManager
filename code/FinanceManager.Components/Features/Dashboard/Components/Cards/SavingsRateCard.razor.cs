@@ -13,6 +13,7 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards;
 
@@ -305,7 +306,19 @@ public partial class SavingsRateCard : IDisposable
                 Padding = new Padding { Top = 0, Right = 0, Bottom = 0, Left = 0 },
             },
             Legend = new Legend { Show = false },
-            Tooltip = new Tooltip { Enabled = false },
+            // Bars are labelled with single letters and may be clamped, so the tooltip reads the
+            // month and the real rate from per-bar labels instead of the plotted value.
+            Tooltip = new Tooltip
+            {
+                Enabled = true,
+                X = new TooltipX { Formatter = ChartHelper.GetDataPointLabelFormatter(BuildTooltipMonthLabels()) },
+                Y = new TooltipY
+                {
+                    Formatter = ChartHelper.GetDataPointLabelFormatter(BuildTooltipRateLabels()),
+                    Title = new TooltipYTitle { Formatter = ChartHelper.GetConstantTextFormatter("Savings rate:") },
+                },
+                Marker = new TooltipMarker { Show = false },
+            },
             Stroke = new Stroke { Show = false },
             Xaxis = new XAxis
             {
@@ -349,6 +362,17 @@ public partial class SavingsRateCard : IDisposable
             };
         }
     }
+
+    internal List<string> BuildTooltipMonthLabels() =>
+        [.. Enumerable.Range(0, 12).Select(i => i < MonthlySavingsRates.Count
+            ? MonthlySavingsRates[i].Start.ToString("MMMM yyyy", CultureInfo.InvariantCulture)
+            : string.Empty)];
+
+    // Unclamped, so a bar capped for display still reports its real rate on hover.
+    internal List<string> BuildTooltipRateLabels() =>
+        [.. Enumerable.Range(0, 12).Select(i => i < MonthlySavingsRates.Count && MonthlySavingsRates[i].GetPercentage() is decimal percentage
+            ? (percentage * 100m).ToString("0.0", CultureInfo.InvariantCulture) + "%"
+            : "No salary")];
 
     private Task OnBarSelected(SelectedData<MonthBar> selection) => ChooseMonth(selection.DataPointIndex);
 
