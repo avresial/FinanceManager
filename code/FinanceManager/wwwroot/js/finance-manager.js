@@ -57,6 +57,38 @@ window.financeManager.unobserveScrollFade = function (element) {
     }
 };
 
+// Tells a LazyMount component once its placeholder comes within `margin` of the viewport, then stops watching.
+window.financeManager.observeLazyMount = function (element, dotNetRef, margin) {
+    if (!element) {
+        return;
+    }
+
+    const reveal = () => dotNetRef.invokeMethodAsync('Reveal').catch(() => { /* component already disposed */ });
+    if (!('IntersectionObserver' in window)) {
+        reveal();
+        return;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) {
+            return;
+        }
+        observer.disconnect();
+        delete element._fmLazyMountObserver;
+        reveal();
+    }, { rootMargin: margin });
+
+    observer.observe(element);
+    element._fmLazyMountObserver = observer;
+};
+
+window.financeManager.unobserveLazyMount = function (element) {
+    element?._fmLazyMountObserver?.disconnect();
+    if (element) {
+        delete element._fmLazyMountObserver;
+    }
+};
+
 // Page readiness for testing agents: <html data-fm-ready="true"> once the routed page has had no API request in
 // flight for a short quiet period and has painted. Driven by the PageReadinessSignal component.
 (function () {

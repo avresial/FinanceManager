@@ -47,6 +47,9 @@
             </MudGrid>
         </LoadingContent>
         <CardContent Context="cardId">
+            @* Cards render only as they near the viewport: setting up every chart at once blocked the
+               browser for seconds on slower devices. *@
+            <LazyMount Height="@DashboardCardGrid.CardHeight">
             <RefreshingCardFrame IsRefreshing="@(IsRefreshing && IsRangeDependent(cardId))">
             @switch (cardId)
             {
@@ -98,6 +101,7 @@
                     break;
             }
             </RefreshingCardFrame>
+            </LazyMount>
         </CardContent>
     </DashboardCardGrid>
 </MudContainer>

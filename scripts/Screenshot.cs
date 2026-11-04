@@ -152,6 +152,8 @@ foreach (var colorScheme in themes)
                 }
 
                 var path = Path.GetFullPath(Path.Combine(outDirectory, $"{feature.Id}-{viewport.Name}-{colorScheme}.png"));
+                if (fullPage)
+                    await RevealLazyContent(page, network);
                 await WaitForAnimations(page);
                 await page.ScreenshotAsync(new() { Path = path, FullPage = fullPage });
                 var warning = await page.IsVisibleAsync("#blazor-error-ui") ? "  (warning: Blazor error bar is visible)" : "";
@@ -203,10 +205,29 @@ static async Task WaitForAnimations(IPage page)
 {
     const string script = """
         () => Promise.all(document.getAnimations()
-            .filter(animation => animation.playState === 'running')
+            // Looping animations, such as skeleton pulses, never finish.
+            .filter(animation => animation.playState === 'running'
+                && animation.effect?.getComputedTiming().iterations !== Infinity)
             .map(animation => animation.finished.catch(() => null)))
         """;
     await page.EvaluateAsync(script);
+}
+
+// Cards wrapped in LazyMount render only near the viewport, so a full-page shot would show their skeletons.
+// Scroll each remaining placeholder into view until all have rendered, then return to the top.
+static async Task RevealLazyContent(IPage page, NetworkTracker network)
+{
+    const string selector = "[data-testid=lazy-mount-placeholder]";
+    for (var attempt = 0; attempt < 50 && await page.Locator(selector).CountAsync() > 0; attempt++)
+    {
+        var placeholder = await page.QuerySelectorAsync(selector);
+        if (placeholder is null)
+            break;
+        await placeholder.ScrollIntoViewIfNeededAsync();
+        await placeholder.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 10000 });
+    }
+    await network.WaitForIdle();
+    await page.EvaluateAsync("() => window.scrollTo(0, 0)");
 }
 
 // Replaces {account:<name>} with the id of the account of that name, read from the nav menu links.

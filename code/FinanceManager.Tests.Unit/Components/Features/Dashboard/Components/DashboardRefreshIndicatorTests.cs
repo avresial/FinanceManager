@@ -9,6 +9,7 @@ using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Shared.Components;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -253,6 +254,8 @@ public class DashboardRefreshIndicatorTests
         AddCardStub<TransactionLogCard>(context, DashboardCards.TransactionLog);
         context.ComponentFactories.AddStub<DashboardDatePicker>();
         context.ComponentFactories.AddStub<DashboardRowFiller>();
+        // These tests cover refresh behaviour, so every card renders at once instead of waiting for the viewport.
+        context.ComponentFactories.AddStub<LazyMount>(parameters => parameters.Get(x => x.ChildContent) ?? (_ => { }));
 
         var login = new Mock<ILoginService>();
         login.Setup(x => x.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = 1, UserName = "tester", Password = "", UserRole = UserRole.User });
