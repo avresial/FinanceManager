@@ -84,6 +84,7 @@ public sealed class TransactionRuleService(
         if (constrainedAccountIds.Count > 0)
             accounts = accounts.Where(account => constrainedAccountIds.Contains(account.AccountId)).ToList();
         var availableLabels = await LoadLabelsAsync(cancellationToken);
+        var application = new TransactionRuleApplication([rule], availableLabels);
         var results = new List<TransactionRuleTestResultDto>(5);
 
         foreach (var account in accounts)
@@ -99,14 +100,14 @@ public sealed class TransactionRuleService(
                 await foreach (var entry in entryRepository.Get(account.AccountId, monthStart, monthEnd, cancellationToken))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var before = ToFacts(entry);
+                    var before = TransactionRuleApplication.ToFacts(entry);
                     if (!rule.Matches(before))
                         continue;
 
                     var sandboxEntry = entry.GetCopy();
                     sandboxEntry.Labels = entry.Labels.ToList();
-                    _ = ApplyToEntry(sandboxEntry, [rule], availableLabels);
-                    var after = ToFacts(sandboxEntry);
+                    _ = application.ApplyTo(sandboxEntry);
+                    var after = TransactionRuleApplication.ToFacts(sandboxEntry);
                     results.Add(new(
                         entry.AccountId,
                         account.Name,
@@ -236,42 +237,4 @@ public sealed class TransactionRuleService(
         return labels;
     }
 
-    internal static bool ApplyToEntry(CurrencyAccountEntry entry, IReadOnlyCollection<TransactionRule> rules, IReadOnlyCollection<FinancialLabel> availableLabels)
-    {
-        var facts = ToFacts(entry);
-        var result = TransactionRuleEngine.Run(rules, facts);
-        if (!result.HasChanges) return false;
-
-        var existingByName = entry.Labels
-            .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        var availableByName = availableLabels
-            .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        var resolvedLabels = result.FinalFacts.Labels
-            .Where(name => existingByName.ContainsKey(name) || availableByName.ContainsKey(name))
-            .Select(name => existingByName.GetValueOrDefault(name) ?? availableByName[name])
-            .DistinctBy(label => label.Id)
-            .ToList();
-        var finalContractor = string.IsNullOrWhiteSpace(result.FinalFacts.Contractor) ? null : result.FinalFacts.Contractor;
-        var contractorChanged = !string.Equals(entry.ContractorDetails, finalContractor, StringComparison.Ordinal);
-        var descriptionChanged = !string.Equals(entry.Description, result.FinalFacts.Description, StringComparison.Ordinal);
-        var labelsChanged = !entry.Labels.Select(label => label.Id).SequenceEqual(resolvedLabels.Select(label => label.Id));
-        if (!contractorChanged && !descriptionChanged && !labelsChanged)
-            return false;
-
-        entry.ContractorDetails = finalContractor;
-        entry.Description = result.FinalFacts.Description;
-        entry.Labels = resolvedLabels;
-        return true;
-    }
-
-    private static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
-        new(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
-            Math.Abs(entry.ValueChange), entry.ValueChange switch
-            {
-                > 0 => TransactionDirection.Income,
-                < 0 => TransactionDirection.Expense,
-                _ => TransactionDirection.Transfer
-            }, entry.Labels.Select(label => label.Name).ToList());
 }
