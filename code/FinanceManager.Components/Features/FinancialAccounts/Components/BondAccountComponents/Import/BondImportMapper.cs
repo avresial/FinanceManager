@@ -16,17 +16,19 @@ public static class BondImportMapper
         "yyyy/MM/dd HH:mm:ss"
     ];
 
-    public static IEnumerable<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName)> MapEntries(
+    public static IEnumerable<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName, string Description)> MapEntries(
         string postingDateHeader,
         string valueChangeHeader,
         string bondHeader,
         List<string> headers,
         List<List<string>> rows,
-        IReadOnlyCollection<BondDetails> possibleBonds)
+        IReadOnlyCollection<BondDetails> possibleBonds,
+        string? descriptionHeader = null)
     {
         var postingIndex = FindRequiredHeader(headers, postingDateHeader);
         var valueIndex = FindRequiredHeader(headers, valueChangeHeader);
         var bondIndex = FindRequiredHeader(headers, bondHeader);
+        var descriptionIndex = string.IsNullOrEmpty(descriptionHeader) ? -1 : FindRequiredHeader(headers, descriptionHeader);
 
         foreach (var row in rows)
         {
@@ -50,7 +52,8 @@ public static class BondImportMapper
             if (resolvedBond is null)
                 throw new Exception($"Could not map bond '{bond}' to existing bond details (id or name).");
 
-            yield return (new DateTime(date.Ticks, DateTimeKind.Utc), valueChange, resolvedBond.Id, resolvedBond.Name);
+            yield return (new DateTime(date.Ticks, DateTimeKind.Utc), valueChange, resolvedBond.Id, resolvedBond.Name,
+                descriptionIndex >= 0 ? GetCell(row, descriptionIndex).Trim() : string.Empty);
         }
     }
 
