@@ -10,6 +10,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     private async Task<List<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel>> ResolveLabels(
         ICollection<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel> labels, CancellationToken cancellationToken)
     {
+        if (labels.Count == 0) return [];
+
         var ids = labels.Select(x => x.Id).Distinct().ToArray();
         return await context.FinancialLabels.Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
     }
@@ -42,7 +44,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountId <= 0 || transactionIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
@@ -57,7 +58,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0 || count <= 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .Where(x => accountIds.Contains(x.AccountId))
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
@@ -67,7 +67,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .Where(x => x.UserId == userId && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
@@ -301,7 +300,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             query = query.Where(x => x.PostingDate < date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) || (x.PostingDate == date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.EntryId < id));
 
         return await query
-            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)

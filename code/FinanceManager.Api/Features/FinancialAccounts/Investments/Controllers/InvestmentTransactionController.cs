@@ -269,7 +269,11 @@ public class InvestmentTransactionController(
         if (existing is null || existing.AccountId != request.AccountId) return NotFound();
 
         if (!await AreLabelsValid(request.LabelIds, cancellationToken)) return BadRequest("Unknown label ID.");
-        var result = await transactionRepository.Update(request.ToEntity(), cancellationToken);
+        var transaction = request.ToEntity();
+        // Omitted LabelIds leaves labels unchanged, so older clients can't clear them by accident; an empty list clears them.
+        if (request.LabelIds is null)
+            transaction.Labels = existing.Labels;
+        var result = await transactionRepository.Update(transaction, cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         if (result)
             await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
