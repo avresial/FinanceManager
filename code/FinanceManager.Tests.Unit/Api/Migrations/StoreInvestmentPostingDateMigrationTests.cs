@@ -25,18 +25,14 @@ public class StoreInvestmentPostingDateMigrationTests
         Assert.DoesNotContain("DROP COLUMN", down);
         Assert.Contains(sqlServer ? "ALTER COLUMN [TradeDate] datetime2 NOT NULL" : """("TradeDate"::timestamp AT TIME ZONE 'UTC')""", up);
         Assert.Contains(sqlServer ? "ALTER COLUMN [PostingDate] date NOT NULL" : """("PostingDate" AT TIME ZONE 'UTC')::date""", down);
-        foreach (var script in new[] { up, down })
+        Assert.Matches(sqlServer ? @"sp_rename.*TradeDate.*PostingDate" : """RENAME COLUMN "TradeDate" TO "PostingDate" """.TrimEnd(), up);
+        Assert.Matches(sqlServer ? @"sp_rename.*PostingDate.*TradeDate" : """RENAME COLUMN "PostingDate" TO "TradeDate" """.TrimEnd(), down);
+        foreach (var index in new[] { "IX_InvestmentTransactions_AccountId_PostingDate_Id", "IX_InvestmentTransactions_UserId_PostingDate" })
+            Assert.Matches($@"CREATE INDEX [""\[]{index}[""\]]", up);
+        foreach (var index in new[] { "IX_InvestmentTransactions_AccountId_TradeDate_Id", "IX_InvestmentTransactions_UserId_TradeDate" })
         {
-            Assert.Contains("DROP INDEX", script);
-            Assert.Contains("CREATE INDEX", script);
-        }
-        if (Environment.GetEnvironmentVariable("FM_MIGRATION_SCRIPTS") is string directory)
-        {
-            Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory, sqlServer ? "sql-up.sql" : "pg-up.sql"), up);
-            File.WriteAllText(Path.Combine(directory, sqlServer ? "sql-down.sql" : "pg-down.sql"), down);
-            if (!sqlServer)
-                File.WriteAllText(Path.Combine(directory, "pg-baseline.sql"), migrator.GenerateScript("0", "WidenEntryIdsToLong"));
+            Assert.Matches($@"DROP INDEX .*{index}", up);
+            Assert.Matches($@"CREATE INDEX [""\[]{index}[""\]]", down);
         }
     }
 }
