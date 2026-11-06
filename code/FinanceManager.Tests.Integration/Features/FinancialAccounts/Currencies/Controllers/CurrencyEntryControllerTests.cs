@@ -223,6 +223,26 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
     }
 
     [Fact]
+    public async Task DeleteEntry_IdBeyondIntRange_DeletesEntry()
+    {
+        // arrange
+        await SeedAccount();
+        const long entryId = 5_000_000_000;
+        await SeedEntry(entryId, DateTime.UtcNow.Date.AddDays(-7), 300m, 150m);
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new CurrencyEntryHttpClient(Client);
+
+        // act
+        var result = await client.DeleteEntryAsync(_testAccountId, entryId);
+
+        // assert
+        Assert.True(result);
+        var exists = await _testDatabase!.Context.CurrencyEntries.AsNoTracking()
+            .AnyAsync(e => e.EntryId == entryId, TestContext.Current.CancellationToken);
+        Assert.False(exists);
+    }
+
+    [Fact]
     public async Task UpdateEntry_UpdatesEntry_Successfully()
     {
         // arrange

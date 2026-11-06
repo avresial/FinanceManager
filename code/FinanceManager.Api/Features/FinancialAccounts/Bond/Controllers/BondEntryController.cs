@@ -94,7 +94,7 @@ public class BondEntryController(
         return Ok(savedEntry);
     }
 
-    [HttpDelete("{accountId:int}/{entryId:int}")]
+    [HttpDelete("{accountId:int}/{entryId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteEntry(int accountId, long entryId)

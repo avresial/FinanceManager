@@ -102,7 +102,7 @@ public class CurrencyEntryController(
         return Ok(result);
     }
 
-    [HttpDelete("{accountId:int}/{entryId:int}")]
+    [HttpDelete("{accountId:int}/{entryId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> DeleteEntry(int accountId, long entryId)
