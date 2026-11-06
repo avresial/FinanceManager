@@ -106,6 +106,20 @@ public sealed class SqliteInvestmentRunningValueTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_TrackedEntityWithListingAlreadyChanged_RecalculatesOldListing()
+    {
+        var moved = await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);
+        await Add(1, 10, InvestmentTransactionType.Buy, 3, 2);
+
+        var tracked = await _context.InvestmentTransactions.FirstAsync(x => x.EntryId == moved.EntryId, Ct);
+        tracked.AssetListingId = 20;
+        await _repository.Update(tracked, Ct);
+
+        Assert.Equal([3m], await Values(1, 10));
+        Assert.Equal([5m], await Values(1, 20));
+    }
+
+    [Fact]
     public async Task Delete_RecalculatesRemainingTradesOfThatListingOnly()
     {
         await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);
