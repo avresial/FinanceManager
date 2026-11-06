@@ -183,6 +183,34 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
+    public void EfModel_ValueIsMappedOnEveryEntryWithTheDocumentedPrecision()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
+        using var context = new AppDbContext(options.Options);
+
+        foreach (var (type, precision, scale) in new[] { (typeof(CurrencyAccountEntry), 18, 2), (typeof(BondAccountEntry), 18, 2), (typeof(InvestmentTransaction), 18, 8) })
+        {
+            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(AccountEntryBase.Value));
+            Assert.NotNull(property);
+            Assert.Equal("Value", property.GetColumnName());
+            Assert.Equal(precision, property.GetPrecision());
+            Assert.Equal(scale, property.GetScale());
+        }
+    }
+
+    [Fact]
+    public void InvestmentTransaction_ValueIsStoredButNotSerialized()
+    {
+        // No endpoint returns the entity (controllers map to DTOs), and its JSON predates Value.
+        var entry = new InvestmentTransaction { AccountId = 1, Value = 12.5m };
+
+        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(12.5m, entry.Value);
+        Assert.DoesNotContain("\"value\"", json);
+    }
+
+    [Fact]
     public void EfModel_DoesNotMapAccountEntryBaseAndKeepsIdColumn()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");

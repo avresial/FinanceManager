@@ -821,6 +821,10 @@ namespace FinanceManager.Api.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
                     b.HasKey("EntryId");
 
                     b.HasIndex("AccountId");
