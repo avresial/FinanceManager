@@ -795,12 +795,12 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<DateTime>("PostingDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 8)
                         .HasColumnType("numeric(18,8)");
-
-                    b.Property<DateOnly>("TradeDate")
-                        .HasColumnType("date");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -825,9 +825,9 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasIndex("UserId", "AssetListingId");
 
-                    b.HasIndex("UserId", "TradeDate");
+                    b.HasIndex("UserId", "PostingDate");
 
-                    b.HasIndex("AccountId", "TradeDate", "EntryId");
+                    b.HasIndex("AccountId", "PostingDate", "EntryId");
 
                     b.ToTable("InvestmentTransactions");
                 });

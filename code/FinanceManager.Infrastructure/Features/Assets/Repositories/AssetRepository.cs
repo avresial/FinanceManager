@@ -59,7 +59,7 @@ public class AssetRepository(AppDbContext context) : IAssetRepository
                 x.Listing == null ? null : x.Listing.ExchangeMic,
                 x.Listing == null ? null : x.Listing.TradingCurrency,
                 x.Listing == null ? 0 : context.InvestmentTransactions
-                    .Where(t => t.AssetListingId == x.Listing.Id && t.TradeDate <= today)
+                    .Where(t => t.AssetListingId == x.Listing.Id && t.PostingDate <= today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
                     .GroupBy(t => t.UserId)
                     .Where(g => g.Sum(t => t.Type == InvestmentTransactionType.Buy ? t.Quantity : -t.Quantity) > 0).Count(),
                 x.Listing == null ? null : x.Listing.MarketDataSymbols.Where(s => s.IsEnabled && s.LastError != null && s.LastError != "")
