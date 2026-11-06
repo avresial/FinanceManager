@@ -78,6 +78,44 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         services.AddSingleton(_twelveDataResolver.Object);
     }
 
+    [Fact]
+    public async Task Labels_AddReplaceClearAndReload_RejectUnknownAndForeignTransactions()
+    {
+        await SeedAccount();
+        await SeedListing();
+        var ct = TestContext.Current.CancellationToken;
+        var first = new FinancialLabel { Name = "Long term" };
+        var second = new FinancialLabel { Name = "Retirement" };
+        _testDatabase!.Context.FinancialLabels.AddRange(first, second);
+        await _testDatabase.Context.SaveChangesAsync(ct);
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+        var added = await client.AddAsync(AddRequest(_testAccountId) with { LabelIds = [first.Id] });
+        Assert.NotNull(added);
+        Assert.Equal(first.Id, Assert.Single(added.Labels!).Id);
+        var update = new UpdateInvestmentTransactionRequest(added.Id, _testAccountId, _listingId,
+            InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), LabelIds: [second.Id]);
+        Assert.True(await client.UpdateAsync(update));
+        var reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
+        Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
+        var invalid = await Client.PutAsJsonAsync("api/InvestmentTransaction/Update", update with { LabelIds = [int.MaxValue] }, ct);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        var invalidAdd = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", AddRequest(_testAccountId) with { LabelIds = [int.MaxValue] }, ct);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidAdd.StatusCode);
+        Assert.True(await client.UpdateAsync(update with { LabelIds = null }));
+        reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
+        Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
+        Assert.True(await client.UpdateAsync(update with { LabelIds = [] }));
+        reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
+        Assert.Empty(reloaded!.Labels!);
+        Authorize("foreign", _testUserId + 1, UserRole.User);
+        var forbidden = await Client.PutAsJsonAsync("api/InvestmentTransaction/Update", update, ct);
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        forbidden = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", AddRequest(_testAccountId) with { LabelIds = [first.Id] }, ct);
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.Empty((await _testDatabase.Context.InvestmentTransactions.Include(x => x.Labels).SingleAsync(x => x.EntryId == added.Id, ct)).Labels);
+    }
+
     private async Task SeedAccount()
     {
         if (_testDatabase is null) return;

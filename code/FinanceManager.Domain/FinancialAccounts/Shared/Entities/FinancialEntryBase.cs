@@ -1,4 +1,4 @@
-﻿
+
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -11,9 +11,6 @@ public class FinancialEntryBase(int accountId, long entryId, DateTime postingDat
 
     [JsonPropertyOrder(5)]
     public override decimal ValueChange { get; set; } = valueChange;
-
-    [JsonPropertyOrder(6)]
-    public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     public virtual void Update(FinancialEntryBase financialEntryBase)
     {

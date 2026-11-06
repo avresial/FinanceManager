@@ -7,8 +7,18 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.R
 
 public class InvestmentTransactionRepository(AppDbContext context) : IInvestmentTransactionRepository
 {
+    private async Task<List<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel>> ResolveLabels(
+        ICollection<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel> labels, CancellationToken cancellationToken)
+    {
+        if (labels.Count == 0) return [];
+
+        var ids = labels.Select(x => x.Id).Distinct().ToArray();
+        return await context.FinancialLabels.Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
+    }
+
     public Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default) =>
         context.InvestmentTransactions
+            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
@@ -17,6 +27,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
+            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
@@ -67,6 +78,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (transaction.CreatedAt == default) transaction.CreatedAt = now;
         transaction.UpdatedAt = now;
 
+        transaction.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
         context.InvestmentTransactions.Add(transaction);
         await context.SaveChangesAsync(cancellationToken);
         return transaction;
@@ -77,6 +89,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         var existing = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == transaction.EntryId, cancellationToken);
         if (existing is null) return false;
 
+        await context.Entry(existing).Collection(x => x.Labels).LoadAsync(cancellationToken);
+        existing.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
         existing.AssetListingId = transaction.AssetListingId;
         existing.Type = transaction.Type;
         existing.Quantity = transaction.Quantity;
@@ -236,6 +250,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 .First());
 
         return await context.InvestmentTransactions.AsNoTracking()
+            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
@@ -309,6 +324,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (pageSize <= 0) return ([], false);
 
         var query = context.InvestmentTransactions.AsNoTracking()
+            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
