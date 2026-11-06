@@ -164,4 +164,16 @@ public class AccountEntryBaseTests
         Assert.Equal("Id", entryId.GetColumnName());
         Assert.Equal(typeof(long), entryId.ClrType);
     }
+
+    [Fact]
+    public void InvestmentTransaction_JsonRoundTrip_PreservesEntryId()
+    {
+        const long entryId = 5_000_000_000;
+        var transaction = new InvestmentTransaction { EntryId = entryId, AccountId = 3 };
+
+        var roundTripped = JsonSerializer.Deserialize<InvestmentTransaction>(JsonSerializer.Serialize(transaction));
+
+        Assert.Equal(entryId, roundTripped!.EntryId);
+        Assert.Equal(3, roundTripped.AccountId);
+    }
 }

@@ -28,6 +28,7 @@ public abstract class AccountEntryBase
     /// Entry identifier. Assigned by the persistence layer, so the setter stays restricted to the Domain assembly
     /// (EF Core and the entry repositories set it through reflection, which ignores accessibility).
     /// </summary>
+    [JsonInclude]
     [JsonPropertyOrder(1)]
     public long EntryId { get; internal set; }
 
