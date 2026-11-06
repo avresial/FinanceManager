@@ -20,6 +20,7 @@ public class FinancialEntryBase(int accountId, long entryId, DateTime postingDat
         if (EntryId != financialEntryBase.EntryId) throw new Exception("Entry id can not be changed.");
 
         PostingDate = financialEntryBase.PostingDate;
+        Description = financialEntryBase.Description;
         var valueChangeChange = financialEntryBase.ValueChange - ValueChange;
         Value += valueChangeChange;
 

@@ -70,7 +70,7 @@ public class TransactionLogService(
                 e.EntryId,
                 e.PostingDate,
                 e.ValueChange,
-                bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond", "units")));
+                GetBondDescription(e, bondNames), "units")));
         }
 
         Dictionary<int, string> investmentAccounts = [];
@@ -148,7 +148,7 @@ public class TransactionLogService(
             var bondNames = await GetBondNames(entries, cancellationToken);
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
-                e.ValueChange, bondNames.TryGetValue(e.BondDetailsId, out var name) && name is not null ? name : "Bond", "units")));
+                e.ValueChange, GetBondDescription(e, bondNames), "units")));
         }
 
         // Investment dates represent midnight. A non-midnight start excludes that day's trades.
@@ -240,6 +240,12 @@ public class TransactionLogService(
 
     private static string GetCurrencyDescription(CurrencyAccountEntry entry) =>
         !string.IsNullOrWhiteSpace(entry.Description) ? entry.Description : entry.ContractorDetails ?? string.Empty;
+
+    // A bond entry's own description wins over the bond name, which stays the fallback.
+    private static string GetBondDescription(BondAccountEntry entry, IReadOnlyDictionary<int, string?> bondNames) =>
+        !string.IsNullOrWhiteSpace(entry.Description)
+            ? entry.Description
+            : bondNames.TryGetValue(entry.BondDetailsId, out var name) && name is not null ? name : "Bond";
 
     private static string GetInvestmentDescription(InvestmentTransaction transaction) =>
         $"{transaction.Type} {transaction.Quantity:0.####} {transaction.AssetListing?.Ticker}".TrimEnd();

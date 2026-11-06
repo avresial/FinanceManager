@@ -72,6 +72,27 @@ public class TransactionLogSearchTests
     [InlineData("Sqlite")]
     [InlineData("PostgreSql")]
     [InlineData("SqlServer")]
+    public async Task BondSearchMatchesEntryDescriptionCaseInsensitively(string provider)
+    {
+        await using var database = await SearchDatabase.Create(provider);
+        var context = database.Context;
+        context.Bonds.Add(new BondDetails("Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
+        context.BondEntries.AddRange(
+            new BondAccountEntry(1, 1, _day, 1, 1, 1) { Description = "Quarterly Top-Up" },
+            new BondAccountEntry(1, 2, _day, 1, 1, 1),
+            new BondAccountEntry(1, 3, _day, 1, 1, 1) { Description = "something else" });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(new long[] { 1L }, await Page(context, "Bond", 10, null, " top-up ", []));
+        // The bond name still matches every entry of that bond.
+        Assert.Equal(new long[] { 3L, 2L, 1L }, await Page(context, "Bond", 10, null, "treasury", []));
+    }
+
+    [Theory]
+    [InlineData("InMemory")]
+    [InlineData("Sqlite")]
+    [InlineData("PostgreSql")]
+    [InlineData("SqlServer")]
     public async Task SearchTreatsWildcardCharactersLiterally(string provider)
     {
         await using var database = await SearchDatabase.Create(provider);

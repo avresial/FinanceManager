@@ -78,7 +78,10 @@ public class BondEntryController(
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
         var newEntry = new BondAccountEntry(addEntry.AccountId, addEntry.EntryId,
-            addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId);
+            addEntry.PostingDate, addEntry.Value, addEntry.ValueChange, addEntry.BondDetailsId)
+        {
+            Description = addEntry.Description ?? string.Empty,
+        };
 
         await bondAccountEntryRepository.Add(newEntry);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
@@ -141,6 +144,7 @@ public class BondEntryController(
         entryToUpdate.Value = updateEntry.Value;
         entryToUpdate.ValueChange = updateEntry.ValueChange;
         entryToUpdate.PostingDate = updateEntry.PostingDate;
+        entryToUpdate.Description = updateEntry.Description ?? string.Empty;
 
         var result = await bondAccountEntryRepository.Update(entryToUpdate);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);

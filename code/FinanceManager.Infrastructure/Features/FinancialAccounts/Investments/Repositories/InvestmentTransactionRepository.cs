@@ -84,7 +84,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         existing.Currency = transaction.Currency;
         existing.TradeDate = transaction.TradeDate;
         existing.Fee = transaction.Fee;
-        existing.Notes = transaction.Notes;
+        existing.Description = transaction.Description;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return true;
@@ -340,7 +340,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 .Replace("_", "\\_", StringComparison.Ordinal);
             var likePattern = $"%{escapedQuery}%";
             query = query.Where(x =>
-                (x.Notes != null && EF.Functions.Like(x.Notes.ToUpper(), likePattern, "\\")) ||
+                EF.Functions.Like(x.Description.ToUpper(), likePattern, "\\") ||
                 EF.Functions.Like(x.Currency.ToUpper(), likePattern, "\\") ||
                 EF.Functions.Like(x.AssetListing.Ticker.ToUpper(), likePattern, "\\") ||
                 EF.Functions.Like(x.AssetListing.ExchangeName.ToUpper(), likePattern, "\\") ||

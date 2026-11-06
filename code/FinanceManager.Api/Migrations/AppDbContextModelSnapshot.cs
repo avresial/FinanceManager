@@ -528,6 +528,11 @@ namespace FinanceManager.Api.Migrations
                     b.Property<int>("BondDetailsId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -787,13 +792,14 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<decimal?>("Fee")
                         .HasPrecision(18, 8)
                         .HasColumnType("numeric(18,8)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
 
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");

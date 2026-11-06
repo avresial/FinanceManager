@@ -70,6 +70,26 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
+    public void BondEntry_SerializesDescriptionAfterBondDetailsId()
+    {
+        var entry = new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3) { Description = "Quarterly top-up" };
+
+        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(
+            """{"bondDetailsId":3,"description":"Quarterly top-up","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            json);
+    }
+
+    [Fact]
+    public void Description_DefaultsToEmptyOnEveryEntryType()
+    {
+        AccountEntryBase[] entries = [new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m), new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3), new InvestmentTransaction()];
+
+        Assert.All(entries, entry => Assert.Equal(string.Empty, entry.Description));
+    }
+
+    [Fact]
     public void BondEntry_SerializesWithUnchangedPropertyOrder()
     {
         var entry = new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3);
@@ -77,7 +97,7 @@ public class AccountEntryBaseTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"bondDetailsId":3,"entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            """{"bondDetailsId":3,"description":"","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
             json);
     }
 
@@ -128,7 +148,7 @@ public class AccountEntryBaseTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"notes":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1,"postingDate":"2026-05-17T00:00:00Z"}""",
+            """{"description":"","userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1,"postingDate":"2026-05-17T00:00:00Z"}""",
             json);
     }
 

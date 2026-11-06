@@ -30,6 +30,8 @@ public partial class AddBondEntry : ComponentBase
     private BondDetails? _selectedBond;
     private List<BondDetails> _possibleBonds = [];
 
+    private string _description = string.Empty;
+
     private string _labelValue = "Nothing selected";
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
@@ -98,6 +100,7 @@ public partial class AddBondEntry : ComponentBase
 
             BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
             {
+                Description = _description?.Trim() ?? string.Empty,
                 Labels = GetLabels().ToList()
             };
             try

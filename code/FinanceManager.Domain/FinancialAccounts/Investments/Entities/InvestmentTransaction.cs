@@ -51,9 +51,6 @@ public class InvestmentTransaction : AccountEntryBase
     /// <summary>Optional broker fee. Retained because fees affect the real cost basis.</summary>
     public decimal? Fee { get; set; }
 
-    /// <summary>Optional note entered by the user.</summary>
-    public string? Notes { get; set; }
-
     /// <summary>Timestamp when the record was created in this system.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 
