@@ -58,7 +58,7 @@ public partial class InvestmentTransactionForm : ComponentBase
     {
         if (Visible && (!_wasVisible || _initializedTransactionId != Transaction?.Id))
         {
-            _possibleLabels = await LabelHttpClient.Get(0, int.MaxValue);
+            await LoadLabelsAsync();
             _selectedLabelIds = Transaction?.Labels?.Select(x => x.Id).ToArray() ?? [];
             await EnsureCurrenciesLoadedAsync();
             await ResetFormAsync();
@@ -66,6 +66,24 @@ public partial class InvestmentTransactionForm : ComponentBase
 
         _wasVisible = Visible;
     }
+
+    private async Task LoadLabelsAsync()
+    {
+        try
+        {
+            _possibleLabels = await LabelHttpClient.Get(0, int.MaxValue);
+        }
+        catch (Exception ex)
+        {
+            // Labels are optional, so a failed load must not stop the form from opening or saving.
+            Logger.LogWarning(ex, "Could not load labels for InvestmentTransactionForm");
+            _possibleLabels = [];
+        }
+    }
+
+    // A transaction painted from a snapshot may have no label data. Sending null then leaves its stored labels unchanged.
+    private int[]? GetLabelIdsForUpdate() =>
+        Transaction?.Labels is null && _selectedLabelIds.Count == 0 ? null : [.. _selectedLabelIds];
 
     private async Task EnsureCurrenciesLoadedAsync()
     {
@@ -306,7 +324,7 @@ public partial class InvestmentTransactionForm : ComponentBase
             if (_editingId is long id)
             {
                 var updated = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, _selectedLabelIds.ToArray()));
+                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
                 if (!updated)
                 {
                     _error = "Could not save the transaction.";

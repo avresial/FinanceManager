@@ -104,6 +104,9 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(HttpStatusCode.BadRequest, invalidAdd.StatusCode);
         Assert.True(await client.UpdateAsync(update with { LabelIds = null }));
         reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
+        Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
+        Assert.True(await client.UpdateAsync(update with { LabelIds = [] }));
+        reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
         Assert.Empty(reloaded!.Labels!);
         Authorize("foreign", _testUserId + 1, UserRole.User);
         var forbidden = await Client.PutAsJsonAsync("api/InvestmentTransaction/Update", update, ct);
