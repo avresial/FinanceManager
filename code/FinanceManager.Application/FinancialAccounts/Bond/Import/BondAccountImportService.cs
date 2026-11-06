@@ -90,7 +90,10 @@ public class BondAccountImportService(
                         if (import.PostingDate.Kind != DateTimeKind.Utc)
                             throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                        var newEntry = new BondAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId);
+                        var newEntry = new BondAccountEntry(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange, import.BondDetailsId)
+                        {
+                            Description = import.Description
+                        };
                         entriesToInsert.Add(newEntry);
                     }
                     catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
