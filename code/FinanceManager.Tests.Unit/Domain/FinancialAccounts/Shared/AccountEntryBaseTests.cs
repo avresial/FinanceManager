@@ -81,6 +81,73 @@ public class AccountEntryBaseTests
             json);
     }
 
+    [Theory]
+    [InlineData(InvestmentTransactionType.Buy, 2.5, 2.5)]
+    [InlineData(InvestmentTransactionType.Sell, 2.5, -2.5)]
+    public void InvestmentValueChange_ReturnsSignedQuantity(InvestmentTransactionType type, decimal quantity, decimal expected)
+    {
+        AccountEntryBase entry = new InvestmentTransaction { Type = type, Quantity = quantity };
+
+        Assert.Equal(expected, entry.ValueChange);
+    }
+
+    [Theory]
+    [InlineData(InvestmentTransactionType.Buy)]
+    [InlineData(InvestmentTransactionType.Sell)]
+    public void InvestmentValueChange_SetterRoundTripsAndPreservesDirectionAtZero(InvestmentTransactionType initialType)
+    {
+        var transaction = new InvestmentTransaction { Type = initialType, Quantity = 3m };
+        AccountEntryBase entry = transaction;
+
+        foreach (var value in new[] { 0m, -2.5m, 0m, 4.25m, 0m, -1m })
+        {
+            var previousType = transaction.Type;
+            entry.ValueChange = value;
+
+            Assert.Equal(value, entry.ValueChange);
+            Assert.Equal(Math.Abs(value), transaction.Quantity);
+            Assert.Equal(value == 0 ? previousType : value > 0 ? InvestmentTransactionType.Buy : InvestmentTransactionType.Sell, transaction.Type);
+        }
+    }
+
+    [Fact]
+    public void InvestmentEntry_SerializesWithUnchangedPropertiesAndOrder()
+    {
+        var entry = new InvestmentTransaction
+        {
+            AccountId = 1,
+            UserId = 2,
+            AssetListingId = 3,
+            Type = InvestmentTransactionType.Sell,
+            Quantity = 2.5m,
+            UnitPrice = 10m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2026, 5, 17)
+        };
+
+        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(
+            """{"userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","tradeDate":"2026-05-17","fee":null,"notes":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1}""",
+            json);
+    }
+
+    [Fact]
+    public void EfModel_ValueChangeIsMappedOnlyForFinancialEntries()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
+        using var context = new AppDbContext(options.Options);
+
+        Assert.Null(context.Model.FindEntityType(typeof(InvestmentTransaction))!.FindProperty(nameof(AccountEntryBase.ValueChange)));
+        foreach (var type in new[] { typeof(CurrencyAccountEntry), typeof(BondAccountEntry) })
+        {
+            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(AccountEntryBase.ValueChange));
+            Assert.NotNull(property);
+            Assert.Equal("ValueChange", property.GetColumnName());
+            Assert.Equal(typeof(decimal), property.ClrType);
+        }
+    }
+
     [Fact]
     public void EfModel_DoesNotMapAccountEntryBaseAndKeepsIdColumn()
     {

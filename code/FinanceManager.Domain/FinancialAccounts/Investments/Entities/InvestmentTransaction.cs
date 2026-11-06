@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
@@ -45,6 +46,19 @@ public class InvestmentTransaction : AccountEntryBase
 
     /// <summary>Timestamp when the record was last updated in this system.</summary>
     public DateTimeOffset UpdatedAt { get; set; }
+
+    /// <summary>Signed change in investment units, derived from the trade.</summary>
+    [JsonIgnore]
+    public override decimal ValueChange
+    {
+        get => SignedQuantity;
+        set
+        {
+            Quantity = Math.Abs(value);
+            if (value > 0) Type = InvestmentTransactionType.Buy;
+            else if (value < 0) Type = InvestmentTransactionType.Sell;
+        }
+    }
 
     /// <summary>Signed quantity delta this transaction contributes to a holding (+ for Buy, - for Sell).</summary>
     public decimal SignedQuantity => Type switch
