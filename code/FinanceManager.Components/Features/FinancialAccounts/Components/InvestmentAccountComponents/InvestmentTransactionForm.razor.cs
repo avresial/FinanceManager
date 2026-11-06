@@ -1,8 +1,10 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -26,6 +28,10 @@ public partial class InvestmentTransactionForm : ComponentBase
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required ILogger<InvestmentTransactionForm> Logger { get; set; }
+
+    [Inject] public FinancialLabelHttpClient LabelHttpClient { get; set; } = default!;
+    private List<FinancialLabel> _possibleLabels = [];
+    private IReadOnlyCollection<int> _selectedLabelIds = [];
 
     private bool _wasVisible;
     private long? _initializedTransactionId;
@@ -52,6 +58,8 @@ public partial class InvestmentTransactionForm : ComponentBase
     {
         if (Visible && (!_wasVisible || _initializedTransactionId != Transaction?.Id))
         {
+            _possibleLabels = await LabelHttpClient.Get(0, int.MaxValue);
+            _selectedLabelIds = Transaction?.Labels?.Select(x => x.Id).ToArray() ?? [];
             await EnsureCurrenciesLoadedAsync();
             await ResetFormAsync();
         }
@@ -298,7 +306,7 @@ public partial class InvestmentTransactionForm : ComponentBase
             if (_editingId is long id)
             {
                 var updated = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes));
+                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, _selectedLabelIds.ToArray()));
                 if (!updated)
                 {
                     _error = "Could not save the transaction.";
@@ -320,7 +328,7 @@ public partial class InvestmentTransactionForm : ComponentBase
                     tradeDate,
                     _formFee,
                     _formNotes,
-                    _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null));
+                    _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null, _selectedLabelIds.ToArray()));
                 if (added is null)
                 {
                     _error = "Could not save the transaction.";

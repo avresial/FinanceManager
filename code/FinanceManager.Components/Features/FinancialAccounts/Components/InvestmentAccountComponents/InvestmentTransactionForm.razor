@@ -84,6 +84,12 @@
             }
             <MudDatePicker Variant="Variant.Outlined" Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
             <MudNumericField Variant="Variant.Outlined" T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
+            <MudSelect Variant="Variant.Outlined" T="int" Label="Labels (optional)" MultiSelection="true" @bind-SelectedValues="_selectedLabelIds">
+                @foreach (var label in _possibleLabels)
+                {
+                    <MudSelectItem T="int" Value="label.Id">@label.Name</MudSelectItem>
+                }
+            </MudSelect>
             <MudTextField Variant="Variant.Outlined" T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
             <FormActions>
                 <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseAsync" Disabled="@_saving">Cancel</MudButton>

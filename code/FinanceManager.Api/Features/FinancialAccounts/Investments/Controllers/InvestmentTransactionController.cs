@@ -32,7 +32,8 @@ public class InvestmentTransactionController(
     IInvestmentInstrumentSearchService instrumentSearchService,
     IInvestmentPriceProvider priceProvider,
     ILogger<InvestmentTransactionController> logger,
-    IFinancialAlertService financialAlertService) : ControllerBase
+    IFinancialAlertService financialAlertService,
+    FinanceManager.Domain.Labels.Repositories.IFinancialLabelsRepository labelsRepository) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -231,6 +232,8 @@ public class InvestmentTransactionController(
         if (account is null) return NotFound();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
 
+        if (!await AreLabelsValid(request.LabelIds, cancellationToken)) return BadRequest("Unknown label ID.");
+
         try
         {
             var result = await transactionService.AddAsync(request, account.UserId, cancellationToken);
@@ -265,6 +268,7 @@ public class InvestmentTransactionController(
         var existing = await transactionRepository.Get(request.Id, cancellationToken);
         if (existing is null || existing.AccountId != request.AccountId) return NotFound();
 
+        if (!await AreLabelsValid(request.LabelIds, cancellationToken)) return BadRequest("Unknown label ID.");
         var result = await transactionRepository.Update(request.ToEntity(), cancellationToken);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         if (result)
@@ -339,6 +343,14 @@ public class InvestmentTransactionController(
         var priceDate = asOf?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow;
         var result = await priceProvider.GetPricePerUnitResultAsync(listingId, currency, priceDate, cancellationToken);
         return Ok(new ListingPriceDto(result.Price > 0 ? result.Price : null, listing.TradingCurrency, result.Message, result.RetryAtUtc));
+    }
+
+    private async Task<bool> AreLabelsValid(IReadOnlyCollection<int>? ids, CancellationToken cancellationToken)
+    {
+        if (ids is null || ids.Count == 0) return true;
+        var available = new HashSet<int>();
+        await foreach (var label in labelsRepository.GetLabels(cancellationToken)) available.Add(label.Id);
+        return ids.All(available.Contains);
     }
 
     private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>

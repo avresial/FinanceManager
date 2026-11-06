@@ -209,6 +209,7 @@ public class InvestmentTransactionFormTests
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
         context.Services.AddSingleton(new InvestmentTransactionHttpClient(httpClient));
         context.Services.AddSingleton(new CurrencyHttpClient(httpClient));
+        context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(new HttpClient(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel>())))) { BaseAddress = new Uri("https://localhost/") }));
         var settingsService = new Mock<ISettingsService>();
         settingsService.Setup(x => x.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settingsService.Object);

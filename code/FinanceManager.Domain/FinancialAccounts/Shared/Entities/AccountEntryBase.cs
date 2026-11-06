@@ -46,6 +46,9 @@ public abstract class AccountEntryBase
     [JsonPropertyOrder(-1)]
     public string Description { get; set; } = string.Empty;
 
+    [JsonPropertyOrder(6)]
+    public ICollection<FinancialLabel> Labels { get; set; } = [];
+
     /// <summary>Financial account this entry belongs to.</summary>
     [JsonPropertyOrder(2)]
     public int AccountId { get; set; }
