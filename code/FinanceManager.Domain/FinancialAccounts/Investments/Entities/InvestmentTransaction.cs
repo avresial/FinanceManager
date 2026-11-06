@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
@@ -7,19 +8,10 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 /// dividends, splits, transfers and tax records are intentionally deferred to later work.
 /// Each transaction references the exact <see cref="AssetListing"/> traded (not just the asset).
 /// </summary>
-public class InvestmentTransaction
+public class InvestmentTransaction : AccountEntryBase
 {
-    /// <summary>Internal database identifier.</summary>
-    public long EntryId { get; set; }
-
     /// <summary>User who owns this transaction.</summary>
     public long UserId { get; set; }
-
-    /// <summary>
-    /// Financial account this transaction belongs to. Added on top of the issue's minimal model so
-    /// the existing account-based architecture (dashboards, net worth, money flow) keeps working.
-    /// </summary>
-    public int AccountId { get; set; }
 
     /// <summary>Listing that was traded, e.g. CSPX on the London Stock Exchange in USD.</summary>
     public long AssetListingId { get; set; }
