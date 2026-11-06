@@ -111,7 +111,7 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
-    public void InvestmentEntry_SerializesWithUnchangedPropertiesAndOrder()
+    public void InvestmentEntry_SerializesPostingDateAndIgnoresComputedTradeDate()
     {
         var entry = new InvestmentTransaction
         {
@@ -128,8 +128,22 @@ public class AccountEntryBaseTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","tradeDate":"2026-05-17","fee":null,"notes":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1}""",
+            """{"userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"notes":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1,"postingDate":"2026-05-17T00:00:00Z"}""",
             json);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Utc)]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public void InvestmentPostingDate_NormalizesCalendarDateToUtcMidnight(DateTimeKind kind)
+    {
+        var entry = new InvestmentTransaction { PostingDate = new DateTime(2026, 5, 17, 23, 42, 0, kind) };
+        Assert.Equal(new DateOnly(2026, 5, 17), entry.TradeDate);
+        Assert.Equal(DateTimeKind.Utc, entry.PostingDate.Kind);
+        Assert.Equal(TimeSpan.Zero, entry.PostingDate.TimeOfDay);
+        entry.TradeDate = new DateOnly(2024, 2, 29);
+        Assert.Equal(new DateTime(2024, 2, 29, 0, 0, 0, DateTimeKind.Utc), entry.PostingDate);
     }
 
     [Fact]

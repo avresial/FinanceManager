@@ -4,7 +4,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 /// <summary>
 /// Minimal common parent of every per-account transaction entity (currency, bond and investment entries).
-/// It holds the identity and signed value change shared by all of them.
+/// It holds the identity, posting date and signed value change shared by all of them.
 /// <para>
 /// Entries are serialized directly by some controllers. System.Text.Json writes derived-type members first and
 /// base-type members last, so the explicit <see cref="JsonPropertyOrderAttribute"/> values on this type and on
@@ -18,8 +18,9 @@ public abstract class AccountEntryBase
     {
     }
 
-    protected AccountEntryBase(int accountId, long entryId)
+    protected AccountEntryBase(int accountId, long entryId, DateTime postingDate)
     {
+        PostingDate = postingDate;
         AccountId = accountId;
         EntryId = entryId;
     }
@@ -31,6 +32,9 @@ public abstract class AccountEntryBase
     [JsonInclude]
     [JsonPropertyOrder(1)]
     public long EntryId { get; internal set; }
+
+    [JsonPropertyOrder(3)]
+    public virtual DateTime PostingDate { get; set; }
 
     /// <summary>Signed change in the account units (currency amount, bond count or investment quantity).</summary>
     public abstract decimal ValueChange { get; set; }

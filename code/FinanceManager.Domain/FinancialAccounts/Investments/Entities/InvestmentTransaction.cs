@@ -33,7 +33,20 @@ public class InvestmentTransaction : AccountEntryBase
     public string Currency { get; set; } = null!;
 
     /// <summary>Date when the transaction happened.</summary>
-    public DateOnly TradeDate { get; set; }
+    [JsonIgnore]
+    public DateOnly TradeDate
+    {
+        get => DateOnly.FromDateTime(PostingDate);
+        set => PostingDate = value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    }
+
+    // Trades have a calendar date, not an instant: preserve its day even for Local/Unspecified inputs.
+    [JsonPropertyOrder(3)]
+    public override DateTime PostingDate
+    {
+        get => DateTime.SpecifyKind(base.PostingDate, DateTimeKind.Utc);
+        set => base.PostingDate = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
+    }
 
     /// <summary>Optional broker fee. Retained because fees affect the real cost basis.</summary>
     public decimal? Fee { get; set; }

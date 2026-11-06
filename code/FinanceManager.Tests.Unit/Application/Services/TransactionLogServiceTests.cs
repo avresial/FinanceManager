@@ -337,6 +337,24 @@ public class TransactionLogServiceTests
     }
 
     [Fact]
+    public async Task GetPage_IntradayCursorIncludesSameDayInvestmentRegardlessOfId()
+    {
+        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+        SetupCurrencyAccount(10, "Bank", [new(10, 1, day.AddHours(1), 0, 1)]);
+        SetupInvestmentAccount(30, "Broker", [
+            new() { EntryId = 100, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
+            new() { EntryId = 101, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)) }]);
+        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), 1);
+        var first = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
+        Assert.Equal(AccountType.Currency, Assert.Single(first.Items).AccountType);
+        var second = await _service.GetPage(_userId, query with { Cursor = first.NextCursor }, TestContext.Current.CancellationToken);
+        Assert.Equal(100, Assert.Single(second.Items).EntryId);
+        var third = await _service.GetPage(_userId, query with { Cursor = second.NextCursor }, TestContext.Current.CancellationToken);
+        Assert.Equal(101, Assert.Single(third.Items).EntryId);
+        Assert.Null(third.NextCursor);
+    }
+
+    [Fact]
     public async Task GetPage_NoAccounts_ReturnsEmptyWithoutEntryQueries()
     {
         var page = await _service.GetPage(_userId, new(DateTime.MinValue, DateTime.MaxValue), TestContext.Current.CancellationToken);

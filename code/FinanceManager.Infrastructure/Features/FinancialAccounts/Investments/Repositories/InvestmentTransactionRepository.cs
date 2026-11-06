@@ -22,7 +22,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
+            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
@@ -38,7 +38,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId && transactionIds.Contains(x.EntryId))
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
+            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
     }
 
@@ -49,7 +49,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .Where(x => accountIds.Contains(x.AccountId))
-            .OrderByDescending(x => x.TradeDate).ThenByDescending(x => x.EntryId)
+            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .Take(count)
             .ToListAsync(cancellationToken);
     }
@@ -57,8 +57,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
-            .Where(x => x.UserId == userId && x.TradeDate >= startDate && x.TradeDate <= endDate)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
+            .Where(x => x.UserId == userId && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
@@ -105,7 +105,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return new Dictionary<long, decimal>();
 
         var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= asOf)
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => x.AssetListingId)
             .Select(g => new
             {
@@ -127,7 +127,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
 
         var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= asOf)
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => new { x.AccountId, x.AssetListingId })
             .Select(g => new
             {
@@ -156,7 +156,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             return new IInvestmentTransactionRepository.AccountValuationInputs([], []);
 
         var openingRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate < startDate)
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate < startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => new { x.AccountId, x.AssetListingId })
             .Select(g => new
             {
@@ -170,13 +170,13 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToListAsync(cancellationToken);
 
         var tradeRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate >= startDate && x.TradeDate <= endDate)
-            .GroupBy(x => new { x.AccountId, x.AssetListingId, x.TradeDate })
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .GroupBy(x => new { x.AccountId, x.AssetListingId, x.PostingDate })
             .Select(g => new
             {
                 g.Key.AccountId,
                 g.Key.AssetListingId,
-                g.Key.TradeDate,
+                g.Key.PostingDate,
                 SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
                     ? t.Quantity
                     : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
@@ -189,7 +189,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToList();
 
         var trades = tradeRows
-            .Select(x => new IInvestmentTransactionRepository.ValuationTradeInput(x.AccountId, x.AssetListingId, x.TradeDate, x.SignedQuantity))
+            .Select(x => new IInvestmentTransactionRepository.ValuationTradeInput(x.AccountId, x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))
             .ToList();
 
         return new IInvestmentTransactionRepository.AccountValuationInputs(openingPositions, trades);
@@ -203,13 +203,13 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= toDate)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
                 x.EntryId,
                 x.AccountId,
                 x.AssetListingId,
-                x.TradeDate,
+                DateOnly.FromDateTime(x.PostingDate),
                 x.Type,
                 x.Quantity,
                 x.UnitPrice,
@@ -227,10 +227,10 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountId <= 0) return [];
 
         var latestIds = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId == accountId && x.TradeDate <= asOf)
+            .Where(x => x.AccountId == accountId && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => x.AssetListingId)
             .Select(group => group
-                .OrderByDescending(x => x.TradeDate)
+                .OrderByDescending(x => x.PostingDate)
                 .ThenByDescending(x => x.EntryId)
                 .Select(x => x.EntryId)
                 .First());
@@ -270,7 +270,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0 || take <= 0) return [];
 
         var query = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate >= startDate && x.TradeDate <= endDate);
+            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -282,14 +282,14 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         }
 
         if (cursorTradeDate is DateOnly date && cursorId is long id)
-            query = query.Where(x => x.TradeDate < date || (x.TradeDate == date && x.EntryId < id));
+            query = query.Where(x => x.PostingDate < date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) || (x.PostingDate == date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.EntryId < id));
 
         return await query
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
-            .OrderByDescending(x => x.TradeDate)
+            .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .Take(take)
             .ToListAsync(cancellationToken);
@@ -319,14 +319,14 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         {
             var cd = cursorTradeDate.Value;
             var cid = cursorId.Value;
-            query = query.Where(x => x.TradeDate < cd || (x.TradeDate == cd && x.EntryId < cid));
+            query = query.Where(x => x.PostingDate < cd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) || (x.PostingDate == cd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.EntryId < cid));
         }
 
         if (startDate.HasValue)
-            query = query.Where(x => x.TradeDate >= startDate.Value);
+            query = query.Where(x => x.PostingDate >= startDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
         if (endDate.HasValue)
-            query = query.Where(x => x.TradeDate <= endDate.Value);
+            query = query.Where(x => x.PostingDate <= endDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
         if (type.HasValue)
             query = query.Where(x => x.Type == type.Value);
@@ -349,7 +349,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         }
 
         var rows = await query
-            .OrderByDescending(x => x.TradeDate)
+            .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .Take(pageSize + 1)
             .ToListAsync(cancellationToken);
