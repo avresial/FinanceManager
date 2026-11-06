@@ -105,7 +105,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         var matchingTransactions = new Dictionary<Guid, List<CurrencyAccountEntry>>();
         foreach (var row in await evaluationQuery.ToListAsync(cancellationToken))
         {
-            if (row.MatchingEntryId is int)
+            if (row.MatchingEntryId is long)
             {
                 matchingTransactions.TryAdd(row.AlertId, []);
                 matchingTransactions[row.AlertId].Add(row.ToMatchingTransaction());
@@ -351,14 +351,14 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         public decimal TotalSpend { get; init; }
         public int TransactionCount { get; init; }
         public int? LargestAccountId { get; init; }
-        public int? LargestEntryId { get; init; }
+        public long? LargestEntryId { get; init; }
         public DateTime? LargestPostingDate { get; init; }
         public decimal? LargestValue { get; init; }
         public decimal? LargestValueChange { get; init; }
         public string? LargestDescription { get; init; }
         public string? LargestContractorDetails { get; init; }
         public int? MatchingAccountId { get; init; }
-        public int? MatchingEntryId { get; init; }
+        public long? MatchingEntryId { get; init; }
         public DateTime? MatchingPostingDate { get; init; }
         public decimal? MatchingValue { get; init; }
         public decimal? MatchingValueChange { get; init; }
@@ -369,7 +369,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         {
             CurrencyAccountEntry? largestTransaction = null;
             if (LargestAccountId is int accountId
-                && LargestEntryId is int entryId
+                && LargestEntryId is long entryId
                 && LargestPostingDate is DateTime postingDate
                 && LargestValue is decimal value
                 && LargestValueChange is decimal valueChange)
@@ -387,7 +387,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         public CurrencyAccountEntry ToMatchingTransaction()
         {
             if (MatchingAccountId is not int accountId
-                || MatchingEntryId is not int entryId
+                || MatchingEntryId is not long entryId
                 || MatchingPostingDate is not DateTime postingDate
                 || MatchingValue is not decimal value
                 || MatchingValueChange is not decimal valueChange)

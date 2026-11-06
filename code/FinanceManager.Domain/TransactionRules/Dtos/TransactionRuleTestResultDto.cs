@@ -5,7 +5,7 @@ namespace FinanceManager.Domain.TransactionRules.Dtos;
 public sealed record TransactionRuleTestResultDto(
     int AccountId,
     string AccountName,
-    int TransactionId,
+    long TransactionId,
     DateTime Date,
     decimal Amount,
     TransactionFacts Before,

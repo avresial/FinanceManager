@@ -56,7 +56,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private Currency _currency = DefaultCurrency.PLN;
     private string _accountTypeLabel = "Cash account";
     private UserSession? _user;
-    private int? _highlightedEntryId;
+    private long? _highlightedEntryId;
     private bool _isChartLoading;
     private readonly RefreshVersionGate _chartGate = new();
 
@@ -67,7 +67,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     public List<TimeSeriesModel> ChartData { get; set; } = [];
 
     [Parameter] public required int AccountId { get; set; }
-    [Parameter] public int? HighlightedEntryId { get; set; }
+    [Parameter] public long? HighlightedEntryId { get; set; }
     [Parameter] public bool OpenAddEntry { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
@@ -479,7 +479,7 @@ public partial class CurrencyAccountDetailsPageContent : ComponentBase, IAsyncDi
     private async Task ConfigureHighlightedEntryAsync()
     {
         _highlightedEntryId = null;
-        if (HighlightedEntryId is not int entryId || entryId <= 0)
+        if (HighlightedEntryId is not long entryId || entryId <= 0)
             return;
 
         var entry = await CurrencyEntryHttpClient.GetEntry(AccountId, entryId);

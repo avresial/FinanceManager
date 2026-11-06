@@ -7,7 +7,7 @@ public interface ILabelSetterAiService
     /// asks the AI to assign existing label names to each entry.
     /// Returns a mapping of entryId → label name (only existing labels are returned).
     /// </summary>
-    Task<Dictionary<int, string>> AssignLabels(
-        IReadOnlyCollection<int> entryIds,
+    Task<Dictionary<long, string>> AssignLabels(
+        IReadOnlyCollection<long> entryIds,
         CancellationToken cancellationToken = default);
 }

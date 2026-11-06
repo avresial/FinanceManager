@@ -122,7 +122,7 @@ public sealed class InvestmentTransactionService(
                     var transaction = await transactionRepository.Add(
                         request.ToEntity(userId, listingId),
                         transactionCancellationToken);
-                    var saved = await transactionRepository.Get(transaction.Id, transactionCancellationToken);
+                    var saved = await transactionRepository.Get(transaction.EntryId, transactionCancellationToken);
                     if (saved is null)
                         throw new InvalidOperationException("The created transaction could not be reloaded.");
 

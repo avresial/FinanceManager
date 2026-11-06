@@ -13,7 +13,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.EntryId == id, cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
@@ -22,7 +22,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.AccountId == accountId)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
@@ -37,8 +37,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => x.AccountId == accountId && transactionIds.Contains(x.Id))
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .Where(x => x.AccountId == accountId && transactionIds.Contains(x.EntryId))
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
     }
 
@@ -49,7 +49,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .Where(x => accountIds.Contains(x.AccountId))
-            .OrderByDescending(x => x.TradeDate).ThenByDescending(x => x.Id)
+            .OrderByDescending(x => x.TradeDate).ThenByDescending(x => x.EntryId)
             .Take(count)
             .ToListAsync(cancellationToken);
     }
@@ -58,7 +58,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .Where(x => x.UserId == userId && x.TradeDate >= startDate && x.TradeDate <= endDate)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
@@ -74,7 +74,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<bool> Update(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
-        var existing = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.Id == transaction.Id, cancellationToken);
+        var existing = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == transaction.EntryId, cancellationToken);
         if (existing is null) return false;
 
         existing.AssetListingId = transaction.AssetListingId;
@@ -92,7 +92,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)
     {
-        var entity = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        var entity = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == id, cancellationToken);
         if (entity is null) return false;
 
         context.InvestmentTransactions.Remove(entity);
@@ -204,9 +204,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
         return await context.InvestmentTransactions.AsNoTracking()
             .Where(x => accountIds.Contains(x.AccountId) && x.TradeDate <= toDate)
-            .OrderBy(x => x.TradeDate).ThenBy(x => x.Id)
+            .OrderBy(x => x.TradeDate).ThenBy(x => x.EntryId)
             .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
-                x.Id,
+                x.EntryId,
                 x.AccountId,
                 x.AssetListingId,
                 x.TradeDate,
@@ -231,8 +231,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .GroupBy(x => x.AssetListingId)
             .Select(group => group
                 .OrderByDescending(x => x.TradeDate)
-                .ThenByDescending(x => x.Id)
-                .Select(x => x.Id)
+                .ThenByDescending(x => x.EntryId)
+                .Select(x => x.EntryId)
                 .First());
 
         return await context.InvestmentTransactions.AsNoTracking()
@@ -240,7 +240,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => latestIds.Contains(x.Id))
+            .Where(x => latestIds.Contains(x.EntryId))
             .OrderBy(x => x.AssetListingId)
             .ToListAsync(cancellationToken);
     }
@@ -282,7 +282,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         }
 
         if (cursorTradeDate is DateOnly date && cursorId is long id)
-            query = query.Where(x => x.TradeDate < date || (x.TradeDate == date && x.Id < id));
+            query = query.Where(x => x.TradeDate < date || (x.TradeDate == date && x.EntryId < id));
 
         return await query
             .Include(x => x.AssetListing)
@@ -290,7 +290,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
             .OrderByDescending(x => x.TradeDate)
-            .ThenByDescending(x => x.Id)
+            .ThenByDescending(x => x.EntryId)
             .Take(take)
             .ToListAsync(cancellationToken);
     }
@@ -319,7 +319,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         {
             var cd = cursorTradeDate.Value;
             var cid = cursorId.Value;
-            query = query.Where(x => x.TradeDate < cd || (x.TradeDate == cd && x.Id < cid));
+            query = query.Where(x => x.TradeDate < cd || (x.TradeDate == cd && x.EntryId < cid));
         }
 
         if (startDate.HasValue)
@@ -350,7 +350,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
         var rows = await query
             .OrderByDescending(x => x.TradeDate)
-            .ThenByDescending(x => x.Id)
+            .ThenByDescending(x => x.EntryId)
             .Take(pageSize + 1)
             .ToListAsync(cancellationToken);
 

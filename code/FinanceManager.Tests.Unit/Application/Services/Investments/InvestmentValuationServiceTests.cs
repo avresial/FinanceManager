@@ -40,7 +40,7 @@ public class InvestmentValuationServiceTests
         long id = 0) =>
         new()
         {
-            Id = id,
+            EntryId = id,
             AccountId = accountId,
             AssetListingId = listingId,
             Type = type,
@@ -740,9 +740,9 @@ public class InvestmentValuationServiceTests
         DateOnly toDate) =>
         transactions
             .Where(t => accounts.Contains(t.AccountId) && t.TradeDate <= toDate)
-            .OrderBy(t => t.TradeDate).ThenBy(t => t.Id)
+            .OrderBy(t => t.TradeDate).ThenBy(t => t.EntryId)
             .Select(t => new IInvestmentTransactionRepository.CapitalFlowInput(
-                t.Id,
+                t.EntryId,
                 t.AccountId,
                 t.AssetListingId,
                 t.TradeDate,

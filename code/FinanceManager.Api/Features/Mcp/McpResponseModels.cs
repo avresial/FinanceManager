@@ -82,7 +82,7 @@ internal static class McpResponseMapper
         [.. entry.Labels.Select(label => label.Name).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)]);
 
     public static McpTransaction Transaction(InvestmentTransaction transaction, string accountName) => new(
-        transaction.Id,
+        transaction.EntryId,
         transaction.AccountId,
         accountName,
         "investment",

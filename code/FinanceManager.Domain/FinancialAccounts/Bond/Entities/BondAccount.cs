@@ -84,7 +84,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         }
     }
 
-    public override void Remove(int id)
+    public override void Remove(long id)
     {
         var entry = Entries.FirstOrDefault(x => x.EntryId == id);
         if (entry is null) return;

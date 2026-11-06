@@ -30,7 +30,7 @@ public class BondEntryHttpClient(HttpClient httpClient)
         throw new Exception(await response.Content.ReadAsStringAsync());
     }
 
-    public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
+    public async Task<bool> DeleteEntryAsync(int accountId, long entryId)
     {
         var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondEntry/{accountId}/{entryId}");
         return response.IsSuccessStatusCode;

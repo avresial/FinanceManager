@@ -85,7 +85,7 @@ public class TransactionLogService(
                     t.AccountId,
                     investmentAccounts[t.AccountId],
                     AccountType.Stock,
-                    t.Id,
+                    t.EntryId,
                     t.TradeDate.ToDateTime(TimeOnly.MinValue),
                     t.SignedQuantity * t.UnitPrice,
                     GetInvestmentDescription(t), t.Currency)));
@@ -128,9 +128,9 @@ public class TransactionLogService(
         {
             var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
             var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
-            var boundary = GetPageBoundary(query.Cursor, AccountType.Currency, int.MaxValue);
+            var boundary = GetPageBoundary(query.Cursor, AccountType.Currency);
             var entries = await currencyEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
+                [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
                 e.ValueChange, GetCurrencyDescription(e), currencies[e.AccountId])));
@@ -142,9 +142,9 @@ public class TransactionLogService(
         if (bondAccounts.Count != 0)
         {
             var names = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-            var boundary = GetPageBoundary(query.Cursor, AccountType.Bond, int.MaxValue);
+            var boundary = GetPageBoundary(query.Cursor, AccountType.Bond);
             var entries = await bondEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, (int?)boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
+                [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             var bondNames = await GetBondNames(entries, cancellationToken);
             result.AddRange(entries.Select(e => new TransactionLogEntryDto(
                 e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
@@ -168,13 +168,13 @@ public class TransactionLogService(
                 var names = accounts.ToDictionary(a => a.AccountId, a => a.AccountName);
                 // An intraday cursor is later than every trade on that date, regardless of ID.
                 var boundary = query.Cursor is TransactionLogCursor stockCursor && stockCursor.Date.TimeOfDay == TimeSpan.Zero
-                    ? GetPageBoundary(stockCursor, AccountType.Stock, long.MaxValue)
+                    ? GetPageBoundary(stockCursor, AccountType.Stock)
                     : default;
                 var transactions = await investmentTransactionRepository.GetHistoryPage(
                     [.. names.Keys], startDate, endDate, take,
                     boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
                 result.AddRange(transactions.Select(t => new TransactionLogEntryDto(
-                    t.AccountId, names[t.AccountId], AccountType.Stock, t.Id, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                    t.AccountId, names[t.AccountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                     t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency)));
             }
         }
@@ -197,15 +197,15 @@ public class TransactionLogService(
         ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
         : date.ToUniversalTime();
 
-    private static (DateTime? Date, long? Id) GetPageBoundary(TransactionLogCursor? cursor, AccountType type, long maximumId)
+    private static (DateTime? Date, long? Id) GetPageBoundary(TransactionLogCursor? cursor, AccountType type)
     {
         if (cursor is null)
             return default;
 
         // Later streams retain the equal date/ID row. Translate that inclusive ID to the
-        // repositories' exclusive boundary; IDs beyond a table's range need only the capped end date.
+        // repositories' exclusive boundary; the maximum ID has no exclusive successor, so it needs only the capped end date.
         var includeEqualId = AccountTypeOrder(type) > AccountTypeOrder(cursor.AccountType);
-        if (cursor.EntryId > maximumId || (includeEqualId && cursor.EntryId == maximumId))
+        if (includeEqualId && cursor.EntryId == long.MaxValue)
             return default;
         return (cursor.Date, cursor.EntryId + (includeEqualId ? 1 : 0));
     }

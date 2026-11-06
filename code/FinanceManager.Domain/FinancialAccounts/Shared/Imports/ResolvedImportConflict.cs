@@ -9,7 +9,7 @@ public class ResolvedImportConflict
     // Parameterless ctor required for model binding / deserialization
     public ResolvedImportConflict() { }
 
-    public ResolvedImportConflict(int accountId, bool importIsPicked, CurrencyEntryImport? importData, bool existingIsPicked, int? existingId)
+    public ResolvedImportConflict(int accountId, bool importIsPicked, CurrencyEntryImport? importData, bool existingIsPicked, long? existingId)
     {
         if (importData is not null && existingId is not null && importIsPicked == existingIsPicked)
             throw new Exception("Cannot pick both import entry and existing entry or neither.");
@@ -29,7 +29,7 @@ public class ResolvedImportConflict
 
     // Existing entry side
     public bool LeaveExisting { get; set; }
-    public int? ExistingId { get; set; }
+    public long? ExistingId { get; set; }
 
     public CurrencyAccountEntry ToEntry(string description = "", ICollection<FinancialLabel>? labels = null)
     {

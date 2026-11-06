@@ -13,7 +13,7 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
 {
     private readonly Dictionary<int, BondDetails> _details = [];
     private readonly HashSet<int> _requestedIds = [];
-    private readonly Dictionary<(int AccountId, int EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value, DateOnly Date), decimal> _prices = [];
+    private readonly Dictionary<(int AccountId, long EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value, DateOnly Date), decimal> _prices = [];
 
     /// <summary>
     /// Loads the bond definitions referenced by the accounts (in-range entries plus next-older boundary

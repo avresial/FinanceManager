@@ -73,7 +73,7 @@ public class DiversificationService(
         return [.. transactions
             .GroupBy(t => t.AssetListingId)
             .Where(g => g.Sum(t => t.SignedQuantity) > 0)
-            .Select(g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.Id).First().AssetListing?.Ticker)
+            .Select(g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.EntryId).First().AssetListing?.Ticker)
             .Where(ticker => !string.IsNullOrWhiteSpace(ticker))
             .Select(ticker => ticker!)
             .Distinct(StringComparer.OrdinalIgnoreCase)];

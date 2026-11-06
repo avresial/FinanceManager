@@ -105,14 +105,14 @@ public class MultiAccountHistoryPageTests
         var ct = TestContext.Current.CancellationToken;
 
         var lookahead = await repository.GetHistoryPage([1, 2, 1], start, end, 3, cancellationToken: ct);
-        Assert.Equal([5L, 4L, 3L], lookahead.Select(t => t.Id));
+        Assert.Equal([5L, 4L, 3L], lookahead.Select(t => t.EntryId));
         Assert.Equal("History asset", lookahead[0].AssetListing.Asset.Name);
         var first = await repository.GetHistoryPage([1, 2], start, end, 1, cancellationToken: ct);
-        var second = await repository.GetHistoryPage([1, 2], start, end, 2, first[^1].TradeDate, first[^1].Id, ct);
-        var third = await repository.GetHistoryPage([1, 2], start, end, 2, second[^1].TradeDate, second[^1].Id, ct);
-        var exhausted = await repository.GetHistoryPage([1, 2], start, end, 2, third[^1].TradeDate, third[^1].Id, ct);
+        var second = await repository.GetHistoryPage([1, 2], start, end, 2, first[^1].TradeDate, first[^1].EntryId, ct);
+        var third = await repository.GetHistoryPage([1, 2], start, end, 2, second[^1].TradeDate, second[^1].EntryId, ct);
+        var exhausted = await repository.GetHistoryPage([1, 2], start, end, 2, third[^1].TradeDate, third[^1].EntryId, ct);
 
-        Assert.Equal([5L, 4L, 3L, 2L], first.Concat(second).Concat(third).Select(t => t.Id));
+        Assert.Equal([5L, 4L, 3L, 2L], first.Concat(second).Concat(third).Select(t => t.EntryId));
         Assert.Empty(exhausted);
         Assert.Empty(context.ChangeTracker.Entries());
     }
@@ -176,7 +176,7 @@ public class MultiAccountHistoryPageTests
         using var context = CreateContext(false);
         AssertIndex<CurrencyAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
         AssertIndex<BondAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
-        AssertIndex<InvestmentTransaction>(context, "AccountId", "TradeDate", "Id");
+        AssertIndex<InvestmentTransaction>(context, "AccountId", "TradeDate", "EntryId");
     }
 
     private static void AssertIndex<T>(AppDbContext context, params string[] properties) =>
@@ -202,7 +202,7 @@ public class MultiAccountHistoryPageTests
 
     private static InvestmentTransaction Trade(long id, int accountId, DateOnly date) => new()
     {
-        Id = id,
+        EntryId = id,
         AccountId = accountId,
         UserId = 1,
         AssetListingId = 1,
@@ -215,7 +215,7 @@ public class MultiAccountHistoryPageTests
 
     private static async Task<IReadOnlyList<FinancialEntryBase>> EntryPage(
         AppDbContext context, bool bonds, IReadOnlyCollection<int> accountIds, int take,
-        DateTime? cursorDate = null, int? cursorId = null, DateTime? start = null, DateTime? end = null)
+        DateTime? cursorDate = null, long? cursorId = null, DateTime? start = null, DateTime? end = null)
     {
         var ct = TestContext.Current.CancellationToken;
         return bonds

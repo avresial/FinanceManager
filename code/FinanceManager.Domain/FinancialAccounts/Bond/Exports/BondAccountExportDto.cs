@@ -2,7 +2,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 
 public record BondAccountExportDto(
-    int Id,
+    long Id,
     DateTime PostingDate,
     decimal Value,
     decimal ValueChange,

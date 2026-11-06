@@ -106,8 +106,8 @@ public sealed class TransactionTools(
             case "currency":
                 {
                     var account = (await currencyAccounts.GetAll(userId)).SingleOrDefault(item => item.UserId == userId && item.AccountId == accountId);
-                    if (account is null || transactionId is < int.MinValue or > int.MaxValue) return null;
-                    var entry = await currencyEntries.Get(accountId, (int)transactionId);
+                    if (account is null) return null;
+                    var entry = await currencyEntries.Get(accountId, transactionId);
                     return entry is null || entry.AccountId != accountId
                         ? null
                         : McpResponseMapper.Transaction(entry, account.Name);
@@ -115,8 +115,8 @@ public sealed class TransactionTools(
             case "bond":
                 {
                     var account = (await bondAccounts.GetAll(userId)).SingleOrDefault(item => item.UserId == userId && item.AccountId == accountId);
-                    if (account is null || transactionId is < int.MinValue or > int.MaxValue) return null;
-                    var entry = await bondEntries.Get(accountId, (int)transactionId);
+                    if (account is null) return null;
+                    var entry = await bondEntries.Get(accountId, transactionId);
                     if (entry is null || entry.AccountId != accountId) return null;
                     var name = (await bondDetails.GetByIdAsync(entry.BondDetailsId, cancellationToken))?.Name ?? "Bond";
                     return McpResponseMapper.Transaction(entry, account.Name, name);

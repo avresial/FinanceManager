@@ -19,8 +19,8 @@ internal sealed class LabelSetterAiService(
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
     private const string _modelId = "gpt-5-mini";
 
-    public async Task<Dictionary<int, string>> AssignLabels(
-        IReadOnlyCollection<int> entryIds,
+    public async Task<Dictionary<long, string>> AssignLabels(
+        IReadOnlyCollection<long> entryIds,
         CancellationToken cancellationToken = default)
     {
         if (entryIds.Count == 0)

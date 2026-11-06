@@ -39,7 +39,7 @@ public class CachedAccountEntryRepositoryRangeTests
         return m.Object;
     }
 
-    private static CurrencyAccountEntry Entry(int entryId, DateTime date, decimal value = 100m) =>
+    private static CurrencyAccountEntry Entry(long entryId, DateTime date, decimal value = 100m) =>
         new(_accountId, entryId, date, value, value);
 
     // Long TTLs prevent expiry during tests; a large horizon (120 months) keeps the fixed 2025 test

@@ -590,7 +590,7 @@ public sealed class McpEndpointTests : IDisposable
         string ticker,
         decimal quantity) => new()
         {
-            Id = listingId,
+            EntryId = listingId,
             UserId = userId,
             AccountId = accountId,
             AssetListingId = listingId,

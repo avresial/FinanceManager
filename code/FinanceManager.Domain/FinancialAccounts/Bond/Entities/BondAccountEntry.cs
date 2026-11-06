@@ -3,7 +3,7 @@ using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-public class BondAccountEntry(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
+public class BondAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
 {
     public int BondDetailsId { get; set; } = bondDetailsId;
 

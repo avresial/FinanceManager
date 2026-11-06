@@ -56,7 +56,7 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId = 1)
+    private async Task SeedEntry(long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId = 1)
     {
         if (_testDatabase is null) return;
         _testDatabase.Context.BondEntries.Add(new BondAccountEntry(_testAccountId, entryId, postingDate, value, valueChange, bondDetailsId));

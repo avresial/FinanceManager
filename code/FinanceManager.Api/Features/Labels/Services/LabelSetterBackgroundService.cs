@@ -88,7 +88,7 @@ public sealed class LabelSetterBackgroundService(
                     }
 
                     // Build list of valid label assignments
-                    var validAssignments = new List<(int entryId, int labelId)>();
+                    var validAssignments = new List<(long entryId, int labelId)>();
                     foreach (var (entryId, labelName) in assignments)
                     {
                         if (!labelsById.TryGetValue(labelName, out var labelId))

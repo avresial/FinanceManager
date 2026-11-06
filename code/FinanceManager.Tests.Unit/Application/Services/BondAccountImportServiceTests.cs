@@ -202,7 +202,7 @@ public class BondAccountImportServiceTests
                     typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, id++);
             })
             .ReturnsAsync(true);
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var result = await _service.ImportEntries(userId, accountId, domainEntries, ct);
@@ -275,7 +275,7 @@ public class BondAccountImportServiceTests
         Assert.Equal(0, result.Imported);
         Assert.Equal(2, result.Failed);
         Assert.Equal(2, result.Errors.Count);
-        _mockBondEntryRepository.Verify(x => x.RecalculateValues(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockBondEntryRepository.Verify(x => x.RecalculateValues(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class BondAccountImportServiceTests
                     typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 50);
             })
             .ReturnsAsync(true);
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var result = await _service.ImportEntries(userId, accountId, domainEntries, ct);
@@ -351,7 +351,7 @@ public class BondAccountImportServiceTests
                     typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 42);
             })
             .ReturnsAsync(true);
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         var result = await _service.ImportEntries(userId, accountId, domainEntries, ct);
@@ -395,9 +395,9 @@ public class BondAccountImportServiceTests
             .ReturnsAsync(true);
 
         // Internal OperationCanceledException (not from caller token)
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>()))
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>()))
             .ThrowsAsync(new OperationCanceledException());
-        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<int>(), CancellationToken.None))
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), CancellationToken.None))
             .Returns(Task.CompletedTask);
 
 #pragma warning disable xUnit1051

@@ -1,9 +1,9 @@
 ﻿
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
-public class FinancialEntryBase(int accountId, int entryId, DateTime postingDate, decimal value, decimal valueChange)
+public class FinancialEntryBase(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange)
 {
-    public int EntryId { get; internal set; } = entryId;
+    public long EntryId { get; internal set; } = entryId;
     public int AccountId { get; set; } = accountId;
     public DateTime PostingDate { get; set; } = postingDate;
 

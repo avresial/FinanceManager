@@ -14,7 +14,7 @@ public partial class TransactionRow
     private bool _detailsRendered;
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
-    private int? _loadedEntryId;
+    private long? _loadedEntryId;
     private bool? _loadedInitiallyExpanded;
 
     [Parameter] public required CurrencyAccount Account { get; set; }

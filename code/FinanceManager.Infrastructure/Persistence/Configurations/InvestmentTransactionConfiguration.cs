@@ -9,8 +9,8 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
 {
     public void Configure(EntityTypeBuilder<InvestmentTransaction> builder)
     {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedOnAdd();
+        builder.HasKey(x => x.EntryId);
+        builder.Property(x => x.EntryId).HasColumnName("Id").ValueGeneratedOnAdd();
 
         builder.Property(x => x.Quantity).HasPrecision(18, 8);
         builder.Property(x => x.UnitPrice).HasPrecision(18, 8);
@@ -30,7 +30,7 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.AssetListingId);
         builder.HasIndex(x => x.AccountId);
-        builder.HasIndex(x => new { x.AccountId, x.TradeDate, x.Id });
+        builder.HasIndex(x => new { x.AccountId, x.TradeDate, x.EntryId });
         builder.HasIndex(x => new { x.UserId, x.TradeDate });
         builder.HasIndex(x => new { x.UserId, x.AssetListingId });
     }

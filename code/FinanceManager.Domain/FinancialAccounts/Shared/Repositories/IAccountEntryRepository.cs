@@ -19,8 +19,8 @@ public interface IAccountEntryRepository<T>
     /// two queries: one to project dates, one to fetch the range.
     /// </summary>
     Task<(List<T> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0);
-    Task<T?> Get(int accountId, int entryId);
-    Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default);
+    Task<T?> Get(int accountId, long entryId);
+    Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
     /// <summary>
     /// Returns the most recent <paramref name="count"/> entries across the supplied accounts in one
     /// bounded database query, ordered by posting date descending and entry id descending. Implementations
@@ -42,15 +42,15 @@ public interface IAccountEntryRepository<T>
         DateTime endDate,
         int take,
         DateTime? cursorPostingDate = null,
-        int? cursorId = null,
+        long? cursorId = null,
         CancellationToken cancellationToken = default,
         string? search = null,
         IReadOnlyCollection<int>? searchAccountIds = null);
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
-    Task<T?> GetNextYounger(int accountId, int entryId);
+    Task<T?> GetNextYounger(int accountId, long entryId);
     Task<T?> GetNextYounger(int accountId, DateTime date);
-    Task<T?> GetNextOlder(int accountId, int entryId);
+    Task<T?> GetNextOlder(int accountId, long entryId);
     Task<T?> GetNextOlder(int accountId, DateTime date);
     Task<T?> GetOldest(int accountId);
     Task<int> GetCount(int accountId);
@@ -88,8 +88,8 @@ public interface IAccountEntryRepository<T>
     /// </summary>
     Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
-    Task RecalculateValues(int accountId, int entryId);
-    Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken);
+    Task RecalculateValues(int accountId, long entryId);
+    Task RecalculateValues(int accountId, long entryId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Recomputes the running <c>Value</c> of every entry in the account from its <c>ValueChange</c>
@@ -103,11 +103,11 @@ public interface IAccountEntryRepository<T>
     Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate, CancellationToken cancellationToken);
-    Task<bool> AddLabel(int entryId, int labelId);
-    Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
+    Task<bool> AddLabel(long entryId, int labelId);
+    Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
-    Task<bool> Delete(int accountId, int entryId);
-    Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken);
+    Task<bool> Delete(int accountId, long entryId);
+    Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken);
     Task<bool> Delete(int accountId);
     Task<bool> Delete(int accountId, CancellationToken cancellationToken);
 }

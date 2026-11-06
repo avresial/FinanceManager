@@ -112,7 +112,7 @@ public class InvestmentTransactionController(
         if (hasMore && items.Count > 0)
         {
             var last = items[^1];
-            nextCursor = InvestmentHistoryCursor.Create(last.TradeDate, last.Id).ToString();
+            nextCursor = InvestmentHistoryCursor.Create(last.TradeDate, last.EntryId).ToString();
         }
 
         var dtos = items.Select(x => x.ToDto()).ToList();

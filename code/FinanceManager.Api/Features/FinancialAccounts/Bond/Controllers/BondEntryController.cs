@@ -26,7 +26,7 @@ public class BondEntryController(
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(BondAccountEntryDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] int entryId)
+    public async Task<IActionResult> GetEntry([FromQuery] int accountId, [FromQuery] long entryId)
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
@@ -97,7 +97,7 @@ public class BondEntryController(
     [HttpDelete("{accountId:int}/{entryId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteEntry(int accountId, int entryId)
+    public async Task<IActionResult> DeleteEntry(int accountId, long entryId)
     {
         var account = await bondAccountRepository.Get(accountId);
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();

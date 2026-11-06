@@ -291,7 +291,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("testuser", _testUserId, UserRole.User);
         var buyId = await _testDatabase!.Context.InvestmentTransactions
             .Where(x => x.AccountId == _testAccountId && x.Type == InvestmentTransactionType.Buy)
-            .Select(x => x.Id)
+            .Select(x => x.EntryId)
             .SingleAsync(TestContext.Current.CancellationToken);
         var client = new InvestmentValuationHttpClient(Client);
 

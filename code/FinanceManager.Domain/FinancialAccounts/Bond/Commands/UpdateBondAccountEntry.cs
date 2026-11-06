@@ -5,7 +5,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 
 public record UpdateBondAccountEntry(
     [Range(1, int.MaxValue)] int AccountId,
-    [Range(1, int.MaxValue)] int EntryId,
+    [Range(1, long.MaxValue)] long EntryId,
     [ReasonableDate] DateTime PostingDate,
     decimal Value,
     decimal ValueChange,

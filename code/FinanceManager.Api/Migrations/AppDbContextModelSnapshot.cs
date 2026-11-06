@@ -24,8 +24,8 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("CurrencyAccountEntryFinancialLabel", b =>
                 {
-                    b.Property<int>("CurrencyAccountEntryEntryId")
-                        .HasColumnType("integer");
+                    b.Property<long>("CurrencyAccountEntryEntryId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("LabelsId")
                         .HasColumnType("integer");
@@ -516,11 +516,11 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccountEntry", b =>
                 {
-                    b.Property<int>("EntryId")
+                    b.Property<long>("EntryId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("bigint");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
                     b.Property<int>("AccountId")
                         .HasColumnType("integer");
@@ -646,11 +646,11 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry", b =>
                 {
-                    b.Property<int>("EntryId")
+                    b.Property<long>("EntryId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("bigint");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EntryId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
                     b.Property<int>("AccountId")
                         .HasColumnType("integer");
@@ -766,11 +766,12 @@ namespace FinanceManager.Api.Migrations
 
             modelBuilder.Entity("FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction", b =>
                 {
-                    b.Property<long>("Id")
+                    b.Property<long>("EntryId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("Id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
                     b.Property<int>("AccountId")
                         .HasColumnType("integer");
@@ -814,7 +815,7 @@ namespace FinanceManager.Api.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.HasKey("Id");
+                    b.HasKey("EntryId");
 
                     b.HasIndex("AccountId");
 
@@ -826,7 +827,7 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasIndex("UserId", "TradeDate");
 
-                    b.HasIndex("AccountId", "TradeDate", "Id");
+                    b.HasIndex("AccountId", "TradeDate", "EntryId");
 
                     b.ToTable("InvestmentTransactions");
                 });
@@ -870,8 +871,8 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("BondAccountEntryEntryId")
-                        .HasColumnType("integer");
+                    b.Property<long?>("BondAccountEntryEntryId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Name")
                         .IsRequired()

@@ -201,7 +201,7 @@ public sealed class TransactionRuleService(
         foreach (var account in accounts)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (command.EntryId is int requestedEntryId)
+            if (command.EntryId is long requestedEntryId)
             {
                 var entry = await entryRepository.Get(account.AccountId, requestedEntryId);
                 if (entry is not null)

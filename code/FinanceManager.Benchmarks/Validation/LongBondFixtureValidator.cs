@@ -45,7 +45,7 @@ internal static class LongBondFixtureValidator
                 if (account is null) throw new InvalidOperationException("Synthetic fixture account is absent.");
                 var bondId = account.GetStoredBondsIds().Single();
                 var details = (await scope.ServiceProvider.GetRequiredService<IBondDetailsRepository>().GetByIdsAsync([bondId])).Single();
-                int? entryId = null;
+                long? entryId = null;
                 var count = 0;
                 decimal startPrice = 0, endPrice = 0;
                 var prices = new Dictionary<DateTime, decimal>();

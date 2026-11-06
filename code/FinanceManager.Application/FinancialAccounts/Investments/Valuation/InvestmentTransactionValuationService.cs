@@ -68,7 +68,7 @@ internal class InvestmentTransactionValuationService(
             var gainLoss = hasCurrentPrice ? new GainLoss(purchaseValue, currentValuation) : default;
 
             results.Add(new InvestmentTransactionValuationDto(
-                transaction.Id,
+                transaction.EntryId,
                 purchaseUnitPrice,
                 purchaseValue,
                 currentPrice,

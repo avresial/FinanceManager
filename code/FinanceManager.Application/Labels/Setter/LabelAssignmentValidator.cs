@@ -5,13 +5,13 @@ namespace FinanceManager.Application.Labels.Setter;
 
 internal sealed class LabelAssignmentValidator(ILogger<LabelAssignmentValidator> logger)
 {
-    public Dictionary<int, string> Validate(
+    public Dictionary<long, string> Validate(
         IReadOnlyCollection<LabelAssignment> assignments,
-        IReadOnlyCollection<int> requestedEntryIds,
+        IReadOnlyCollection<long> requestedEntryIds,
         IReadOnlySet<string> knownLabelNames)
     {
-        var result = new Dictionary<int, string>();
-        var entryIdSet = new HashSet<int>(requestedEntryIds);
+        var result = new Dictionary<long, string>();
+        var entryIdSet = new HashSet<long>(requestedEntryIds);
         var hasNoMatchSentinel = knownLabelNames.Contains(WellKnownFinancialLabels.NoMatch);
 
         foreach (var assignment in assignments)

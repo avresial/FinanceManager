@@ -100,12 +100,12 @@ public class InvestmentTransactionServiceTests
             .Returns((Func<CancellationToken, Task<InvestmentTransactionDto>> operation, CancellationToken ct) => operation(ct));
         _transactionRepository
             .Setup(x => x.Add(It.IsAny<InvestmentTransaction>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.Id = 7; return transaction; });
+            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.EntryId = 7; return transaction; });
         _transactionRepository
             .Setup(x => x.Get(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentTransaction
             {
-                Id = 7,
+                EntryId = 7,
                 AccountId = 1,
                 AssetListingId = 42,
                 AssetListing = new AssetListing
@@ -173,12 +173,12 @@ public class InvestmentTransactionServiceTests
             .Returns((Func<CancellationToken, Task<InvestmentTransactionDto>> operation, CancellationToken ct) => operation(ct));
         _transactionRepository
             .Setup(x => x.Add(It.IsAny<InvestmentTransaction>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.Id = 88; return transaction; });
+            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.EntryId = 88; return transaction; });
         _transactionRepository
             .Setup(x => x.Get(88, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentTransaction
             {
-                Id = 88,
+                EntryId = 88,
                 AccountId = 1,
                 AssetListingId = 55,
                 AssetListing = new AssetListing
@@ -279,12 +279,12 @@ public class InvestmentTransactionServiceTests
             .Returns((Func<CancellationToken, Task<InvestmentTransactionDto>> operation, CancellationToken ct) => operation(ct));
         _transactionRepository
             .Setup(x => x.Add(It.IsAny<InvestmentTransaction>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.Id = 99; return transaction; });
+            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { transaction.EntryId = 99; return transaction; });
         _transactionRepository
             .Setup(x => x.Get(99, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentTransaction
             {
-                Id = 99,
+                EntryId = 99,
                 AccountId = 1,
                 AssetListingId = 77,
                 AssetListing = existingIncomplete,

@@ -30,7 +30,7 @@ public class CachedAccountEntryRepositoryTests
         return resolver.Object;
     }
 
-    private static CurrencyAccountEntry Entry(int entryId = 1, decimal value = 100m) =>
+    private static CurrencyAccountEntry Entry(long entryId = 1, decimal value = 100m) =>
         new(_accountId, entryId, _date, value, value);
 
     private static CachedAccountEntryRepository<CurrencyAccountEntry> CreateSut(
@@ -277,7 +277,7 @@ public class CachedAccountEntryRepositoryTests
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         inner.Setup(r => r.AddLabel(11, 3)).ReturnsAsync(true);
-        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([Entry(11)]);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
@@ -291,8 +291,8 @@ public class CachedAccountEntryRepositoryTests
     public async Task AddLabels_ResolvesOwnersFromEntries_AndInvalidates()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.AddLabels(It.IsAny<IEnumerable<(int, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
-        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+        inner.Setup(r => r.AddLabels(It.IsAny<IEnumerable<(long, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
+        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([Entry(11), Entry(12)]);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
@@ -332,7 +332,7 @@ public class CachedAccountEntryRepositoryTests
     [InlineData(true)]
     public async Task RecalculateValues_BustsCachedPointReads_NextReadHitsInnerAgain(bool fromEntry)
     {
-        const int entryId = 1;
+        const long entryId = 1;
         var cache = CreateCache();
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         inner.SetupSequence(r => r.GetYoungest(_accountId))

@@ -53,7 +53,7 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
             Add(entry, recalculateValues);
     }
 
-    public virtual void Remove(int id)
+    public virtual void Remove(long id)
     {
         var entry = Entries.FirstOrDefault(x => x.EntryId == id);
         if (entry is null) return;
@@ -66,7 +66,7 @@ public class FinancialAccountBase<T> : BasicAccountInformation where T : Financi
 
         RecalculateEntryValues(indexToRemove - 1);
     }
-    public int? GetMaxId() => Entries.Count == 0 ? null : Entries.Max(x => x.EntryId);
+    public long? GetMaxId() => Entries.Count == 0 ? null : Entries.Max(x => x.EntryId);
     public virtual void RecalculateEntryValues(int? startingIndex)
     {
         if (Entries.Count == 0) return;

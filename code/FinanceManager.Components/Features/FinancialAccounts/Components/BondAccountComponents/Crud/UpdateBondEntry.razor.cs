@@ -14,7 +14,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.BondAc
 public partial class UpdateBondEntry
 {
 
-    private int? _loadedEntryId = null;
+    private long? _loadedEntryId = null;
     private Currency _currency = DefaultCurrency.PLN;
     private bool _success;
     private string[] _errors = [];

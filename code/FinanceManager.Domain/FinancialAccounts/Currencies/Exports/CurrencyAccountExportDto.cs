@@ -4,7 +4,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 
 public record CurrencyAccountExportDto(
-    int Id,
+    long Id,
     DateTime PostingDate,
     decimal Value,
     decimal ValueChange,

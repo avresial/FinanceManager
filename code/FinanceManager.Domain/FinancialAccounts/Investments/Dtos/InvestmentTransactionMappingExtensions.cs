@@ -6,7 +6,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 public static class InvestmentTransactionMappingExtensions
 {
     public static InvestmentTransactionDto ToDto(this InvestmentTransaction transaction) => new(
-        transaction.Id,
+        transaction.EntryId,
         transaction.UserId,
         transaction.AccountId,
         transaction.AssetListingId,
@@ -40,7 +40,7 @@ public static class InvestmentTransactionMappingExtensions
     /// <summary>Map an update request onto the editable fields the repository copies by id.</summary>
     public static InvestmentTransaction ToEntity(this UpdateInvestmentTransactionRequest request) => new()
     {
-        Id = request.Id,
+        EntryId = request.Id,
         AccountId = request.AccountId,
         AssetListingId = request.AssetListingId,
         Type = request.Type,

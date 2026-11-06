@@ -7,7 +7,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class CurrencyEntryHttpClient(HttpClient httpClient)
 {
-    public async Task<CurrencyAccountEntry?> GetEntry(int accountId, int entryId)
+    public async Task<CurrencyAccountEntry?> GetEntry(int accountId, long entryId)
     {
         try
         {
@@ -59,7 +59,7 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
         throw new Exception(await response.Content.ReadAsStringAsync());
     }
 
-    public async Task<bool> DeleteEntryAsync(int accountId, int entryId)
+    public async Task<bool> DeleteEntryAsync(int accountId, long entryId)
     {
         var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/CurrencyEntry/{accountId}/{entryId}");
         return response.IsSuccessStatusCode;

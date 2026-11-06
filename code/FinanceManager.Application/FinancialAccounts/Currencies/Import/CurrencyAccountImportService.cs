@@ -233,7 +233,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is int existingId)
+                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is long existingId)
                     if (cancellationToken.CanBeCanceled)
                         await currencyAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId, cancellationToken);
                     else

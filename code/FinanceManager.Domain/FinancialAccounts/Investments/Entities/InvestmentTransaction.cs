@@ -10,7 +10,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 public class InvestmentTransaction
 {
     /// <summary>Internal database identifier.</summary>
-    public long Id { get; set; }
+    public long EntryId { get; set; }
 
     /// <summary>User who owns this transaction.</summary>
     public long UserId { get; set; }

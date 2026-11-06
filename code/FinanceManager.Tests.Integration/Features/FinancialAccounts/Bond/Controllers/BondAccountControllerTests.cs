@@ -151,7 +151,7 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
         var account = await client.GetAccountWithEntriesAsync(_testAccountId, startDate, endDate, minimumEntryCount: 3);
 
         Assert.NotNull(account);
-        Assert.Equal(new[] { 3, 2, 1 }, account!.Entries.Select(x => x.EntryId));
+        Assert.Equal(new[] { 3L, 2L, 1L }, account!.Entries.Select(x => x.EntryId));
         Assert.Empty(account.NextOlderEntries);
     }
 
@@ -167,7 +167,7 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
         var account = await client.GetInitialTransactionHistoryAsync(_testAccountId, startDate, endDate, minimumEntryCount: 3);
 
         Assert.NotNull(account);
-        Assert.Equal(new[] { 3, 2, 1 }, account!.Entries.Select(x => x.EntryId));
+        Assert.Equal(new[] { 3L, 2L, 1L }, account!.Entries.Select(x => x.EntryId));
         Assert.Empty(account.NextOlderEntries);
     }
 
@@ -181,7 +181,7 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
 
         Assert.NotNull(account);
         Assert.Equal(2, account!.Entries.Count());
-        Assert.Equal(new[] { 3, 2 }, account.Entries.Select(x => x.EntryId));
+        Assert.Equal(new[] { 3L, 2L }, account.Entries.Select(x => x.EntryId));
         Assert.NotNull(account.NextOlderEntries);
         Assert.True(account.NextOlderEntries.ContainsKey(101));
         Assert.Equal(1, account.NextOlderEntries[101].EntryId);

@@ -18,7 +18,7 @@ public class LabelAssignmentValidatorTests
     {
         var result = _validator.Validate([new LabelAssignment(1, "Groceries")], [1, 2], _labelsWithSentinel);
 
-        Assert.Equal(new Dictionary<int, string> { [1] = "Groceries" }, result);
+        Assert.Equal(new Dictionary<long, string> { [1] = "Groceries" }, result);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class LabelAssignmentValidatorTests
     {
         var result = _validator.Validate([new LabelAssignment(1, labelName)], [1], _labelsWithSentinel);
 
-        Assert.Equal(new Dictionary<int, string> { [1] = WellKnownFinancialLabels.NoMatch }, result);
+        Assert.Equal(new Dictionary<long, string> { [1] = WellKnownFinancialLabels.NoMatch }, result);
     }
 
     [Fact]

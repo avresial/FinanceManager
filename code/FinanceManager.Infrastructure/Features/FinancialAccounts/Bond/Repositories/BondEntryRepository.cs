@@ -161,10 +161,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToList();
     }
 
-    public Task<bool> Delete(int accountId, int entryId) =>
+    public Task<bool> Delete(int accountId, long entryId) =>
         Delete(accountId, entryId, CancellationToken.None);
 
-    public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken)
     {
         var entryToDelete = await context.BondEntries
             .FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId, cancellationToken);
@@ -282,7 +282,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToList();
     }
 
-    public async Task<BondAccountEntry?> Get(int accountId, int entryId) => await context.BondEntries
+    public async Task<BondAccountEntry?> Get(int accountId, long entryId) => await context.BondEntries
             .AsNoTracking()
             .Include(entry => entry.Labels)
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
@@ -302,7 +302,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
     }
 
-    public async Task<BondAccountEntry?> GetNextOlder(int accountId, int entryId)
+    public async Task<BondAccountEntry?> GetNextOlder(int accountId, long entryId)
     {
         var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
@@ -320,7 +320,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
-    public async Task<BondAccountEntry?> GetNextYounger(int accountId, int entryId)
+    public async Task<BondAccountEntry?> GetNextYounger(int accountId, long entryId)
     {
         var existingEntry = await context.BondEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
@@ -458,10 +458,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return true;
     }
 
-    public Task RecalculateValues(int accountId, int entryId) =>
+    public Task RecalculateValues(int accountId, long entryId) =>
         RecalculateValues(accountId, entryId, CancellationToken.None);
 
-    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task RecalculateValues(int accountId, long entryId, CancellationToken cancellationToken)
     {
         var startDate = await context.BondEntries
             .AsNoTracking()
@@ -496,7 +496,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     private async Task RecalculateValues(int accountId, DateTime startDate, CancellationToken cancellationToken)
         => await _valueCalculator.Recalculate(accountId, startDate, cancellationToken);
 
-    public async Task<bool> AddLabel(int entryId, int labelId)
+    public async Task<bool> AddLabel(long entryId, int labelId)
     {
         var entry = await context.BondEntries
             .Include(e => e.Labels)
@@ -514,7 +514,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return true;
     }
 
-    public async Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
+    public async Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
     {
         var assignments = labelAssignments.ToList();
         if (assignments.Count == 0) return 0;
@@ -556,7 +556,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         return addedCount;
     }
 
-    public async Task<IReadOnlyList<BondAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<BondAccountEntry>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
     {
         if (entryIds.Count == 0)
             return [];
@@ -573,7 +573,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         DateTime endDate,
         int take,
         DateTime? cursorPostingDate = null,
-        int? cursorId = null,
+        long? cursorId = null,
         CancellationToken cancellationToken = default,
         string? search = null,
         IReadOnlyCollection<int>? searchAccountIds = null)
@@ -599,7 +599,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
                     select entry;
         }
 
-        if (cursorPostingDate is DateTime date && cursorId is int id)
+        if (cursorPostingDate is DateTime date && cursorId is long id)
             query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));
 
         return await query

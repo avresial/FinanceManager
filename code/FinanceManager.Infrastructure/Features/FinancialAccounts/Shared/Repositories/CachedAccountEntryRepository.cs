@@ -187,15 +187,15 @@ public class CachedAccountEntryRepository<T>(
 
     public Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) =>
         inner.Get(accountId, date, count, olderThenDate);
-    public Task<T?> Get(int accountId, int entryId) => inner.Get(accountId, entryId);
-    public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
+    public Task<T?> Get(int accountId, long entryId) => inner.Get(accountId, entryId);
+    public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
     public Task<IReadOnlyList<T>> GetHistoryPage(
         IReadOnlyCollection<int> accountIds,
         DateTime startDate,
         DateTime endDate,
         int take,
         DateTime? cursorPostingDate = null,
-        int? cursorId = null,
+        long? cursorId = null,
         CancellationToken cancellationToken = default,
         string? search = null,
         IReadOnlyCollection<int>? searchAccountIds = null) =>
@@ -203,18 +203,18 @@ public class CachedAccountEntryRepository<T>(
 
     public Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default) => inner.GetMostRecentByAccounts(accountIds, count, cancellationToken);
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
-    public Task<T?> GetNextYounger(int accountId, int entryId) => inner.GetNextYounger(accountId, entryId);
+    public Task<T?> GetNextYounger(int accountId, long entryId) => inner.GetNextYounger(accountId, entryId);
     public Task<T?> GetNextYounger(int accountId, DateTime date) =>
         inner.GetNextYounger(accountId, date);
-    public Task<T?> GetNextOlder(int accountId, int entryId) => inner.GetNextOlder(accountId, entryId);
+    public Task<T?> GetNextOlder(int accountId, long entryId) => inner.GetNextOlder(accountId, entryId);
     public Task<T?> GetNextOlder(int accountId, DateTime date) =>
         inner.GetNextOlder(accountId, date);
     public Task<Dictionary<int, T>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextOlder(accountIds, date);
     public Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date) => inner.GetNextYounger(accountIds, date);
     public Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) => inner.GetEntriesCountPerUser(userIds, cancellationToken);
-    public Task RecalculateValues(int accountId, int entryId) => RecalculateValues(accountId, entryId, CancellationToken.None);
+    public Task RecalculateValues(int accountId, long entryId) => RecalculateValues(accountId, entryId, CancellationToken.None);
 
-    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task RecalculateValues(int accountId, long entryId, CancellationToken cancellationToken)
     {
         try
         {
@@ -282,9 +282,9 @@ public class CachedAccountEntryRepository<T>(
         return result;
     }
 
-    public Task<bool> Delete(int accountId, int entryId) => Delete(accountId, entryId, CancellationToken.None);
+    public Task<bool> Delete(int accountId, long entryId) => Delete(accountId, entryId, CancellationToken.None);
 
-    public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken)
     {
         try
         {
@@ -310,16 +310,16 @@ public class CachedAccountEntryRepository<T>(
         }
     }
 
-    public async Task<bool> AddLabel(int entryId, int labelId)
+    public async Task<bool> AddLabel(long entryId, int labelId)
     {
         var result = await inner.AddLabel(entryId, labelId);
         await InvalidateEntries([entryId]);
         return result;
     }
 
-    public async Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
+    public async Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
     {
-        var assignments = labelAssignments as IList<(int entryId, int labelId)> ?? labelAssignments.ToList();
+        var assignments = labelAssignments as IList<(long entryId, int labelId)> ?? labelAssignments.ToList();
         var result = await inner.AddLabels(assignments, cancellationToken);
         // Decouple the post-write cache bust from the caller's token: once the write has committed the
         // cache must be invalidated even if the request is being cancelled, or stale entries would linger.
@@ -416,7 +416,7 @@ public class CachedAccountEntryRepository<T>(
         }
     }
 
-    private async Task InvalidateEntries(IEnumerable<int> entryIds, CancellationToken cancellationToken = default)
+    private async Task InvalidateEntries(IEnumerable<long> entryIds, CancellationToken cancellationToken = default)
     {
         // Label writes only carry entry ids; resolve the owning accounts so the per-user tag can be built.
         var ids = entryIds.Distinct().ToList();

@@ -109,9 +109,9 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             TradingCurrency = "PLN"
         });
         db.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { Id = 1, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
-            new InvestmentTransaction { Id = 97, AccountId = 97, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
-            new InvestmentTransaction { Id = 2, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
+            new InvestmentTransaction { EntryId = 1, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
+            new InvestmentTransaction { EntryId = 97, AccountId = 97, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
+            new InvestmentTransaction { EntryId = 2, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         Authorize("owner", 641, UserRole.User);

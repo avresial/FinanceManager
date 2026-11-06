@@ -273,7 +273,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         throw new NotSupportedException($"Account {id} type not supported for getting start date.");
     }
-    public async Task RemoveEntry(int entryId, int accountId)
+    public async Task RemoveEntry(long entryId, int accountId)
     {
         if (await AccountExists<CurrencyAccount>(accountId))
             await currencyEntryHttpClient.DeleteEntryAsync(accountId, entryId);

@@ -13,7 +13,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Curren
 public partial class UpdateCurrencyEntry
 {
 
-    private int? _loadedEntryId = null;
+    private long? _loadedEntryId = null;
     private Currency _currency = DefaultCurrency.PLN;
     private bool _isResolvingCurrency = true;
     private bool _isUpdating;

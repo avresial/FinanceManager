@@ -712,7 +712,7 @@ public class CurrencyAccountImportServiceTests
         await _service.ApplyResolvedConflicts(new[] { resolvedConflict }, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
         _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -774,7 +774,7 @@ public class CurrencyAccountImportServiceTests
         await _service.ApplyResolvedConflicts(conflicts, TestContext.Current.CancellationToken);
 
         // Assert
-        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _mockAccountEntryRepository.Verify(x => x.Delete(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _mockAccountEntryRepository.Verify(x => x.Add(It.IsAny<CurrencyAccountEntry>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 

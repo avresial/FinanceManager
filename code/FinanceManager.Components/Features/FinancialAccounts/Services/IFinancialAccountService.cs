@@ -20,6 +20,6 @@ public interface IFinancialAccountService
 
     public Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase;
     public Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase;
-    public Task RemoveEntry(int accountEntryId, int accountId);
+    public Task RemoveEntry(long accountEntryId, int accountId);
     public void InitializeMock();
 }

@@ -79,6 +79,6 @@ public class CachedBondEntryRepositoryTests
         ICacheInvalidator invalidator,
         HybridCache cache) => new CachedBondEntryRepository(inner, resolver, invalidator, cache, new EntryRangeCacheOptions());
 
-    private static BondAccountEntry Entry(int entryId, int bondDetailsId) =>
+    private static BondAccountEntry Entry(long entryId, int bondDetailsId) =>
         new(_accountId, entryId, _firstDate, 100m, 10m, bondDetailsId);
 }

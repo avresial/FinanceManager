@@ -195,7 +195,7 @@ public class BondAccountImportService(
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is int existingId)
+                if (!resolvedConflict.LeaveExisting && resolvedConflict.ExistingId is long existingId)
                 {
                     if (cancellationToken.CanBeCanceled)
                         await bondAccountEntryRepository.Delete(resolvedConflict.AccountId, existingId, cancellationToken);
@@ -229,7 +229,7 @@ public class BondAccountImportService(
             ? Task.CompletedTask
             : bondAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, CancellationToken.None);
 
-    private async Task RecalculateBonds(int accountId, int anchorEntryId, DateTime minDay, DateTime maxDay, CancellationToken cancellationToken)
+    private async Task RecalculateBonds(int accountId, long anchorEntryId, DateTime minDay, DateTime maxDay, CancellationToken cancellationToken)
     {
         if (anchorEntryId != 0)
         {

@@ -162,10 +162,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToList();
     }
 
-    public Task<bool> Delete(int accountId, int entryId) =>
+    public Task<bool> Delete(int accountId, long entryId) =>
         Delete(accountId, entryId, CancellationToken.None);
 
-    public async Task<bool> Delete(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken)
     {
         var entryToDelete = await context.CurrencyEntries.FirstOrDefaultAsync(
             e => e.AccountId == accountId && e.EntryId == entryId,
@@ -307,7 +307,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToListAsync();
     }
 
-    public async Task<CurrencyAccountEntry?> Get(int accountId, int entryId) => await context.CurrencyEntries
+    public async Task<CurrencyAccountEntry?> Get(int accountId, long entryId) => await context.CurrencyEntries
             .AsNoTracking()
             .Include(entry => entry.Labels)
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
@@ -327,7 +327,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
     }
 
-    public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, int entryId)
+    public async Task<CurrencyAccountEntry?> GetNextOlder(int accountId, long entryId)
     {
         var existingEntry = await context.CurrencyEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
@@ -345,7 +345,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
              .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
              .FirstOrDefaultAsync();
 
-    public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, int entryId)
+    public async Task<CurrencyAccountEntry?> GetNextYounger(int accountId, long entryId)
     {
         var existingEntry = await context.CurrencyEntries.AsNoTracking().FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId);
         if (existingEntry is null) return default;
@@ -446,7 +446,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         return true;
     }
 
-    public async Task<bool> AddLabel(int entryId, int labelId)
+    public async Task<bool> AddLabel(long entryId, int labelId)
     {
         var entry = await context.CurrencyEntries
             .Include(e => e.Labels)
@@ -463,7 +463,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         return true;
     }
-    public async Task<int> AddLabels(IEnumerable<(int entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
+    public async Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
     {
         var assignments = labelAssignments.ToList();
         if (assignments.Count == 0) return 0;
@@ -504,10 +504,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         return addedCount;
     }
-    public Task RecalculateValues(int accountId, int entryId) =>
+    public Task RecalculateValues(int accountId, long entryId) =>
         RecalculateValues(accountId, entryId, CancellationToken.None);
 
-    public async Task RecalculateValues(int accountId, int entryId, CancellationToken cancellationToken)
+    public async Task RecalculateValues(int accountId, long entryId, CancellationToken cancellationToken)
     {
         var startDate = await context.CurrencyEntries
             .AsNoTracking()
@@ -542,7 +542,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     private async Task RecalculateValues(int accountId, DateTime startDate, CancellationToken cancellationToken)
         => await _valueCalculator.Recalculate(accountId, startDate, cancellationToken);
 
-    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetByIds(IReadOnlyCollection<int> entryIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
     {
         if (entryIds.Count == 0)
             return [];
@@ -561,7 +561,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         DateTime endDate,
         int take,
         DateTime? cursorPostingDate = null,
-        int? cursorId = null,
+        long? cursorId = null,
         CancellationToken cancellationToken = default,
         string? search = null,
         IReadOnlyCollection<int>? searchAccountIds = null)
@@ -584,7 +584,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
                 (e.ContractorDetails != null && e.ContractorDetails.ToUpper().Contains(term)));
         }
 
-        if (cursorPostingDate is DateTime date && cursorId is int id)
+        if (cursorPostingDate is DateTime date && cursorId is long id)
             query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));
 
         return await query

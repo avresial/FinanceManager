@@ -59,7 +59,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task SeedEntry(int entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry", string? contractorDetails = null)
+    private async Task SeedEntry(long entryId, DateTime postingDate, decimal value, decimal valueChange, string description = "Test entry", string? contractorDetails = null)
     {
         if (_testDatabase is null) return;
         _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(_testAccountId, entryId, postingDate, value, valueChange)
@@ -152,7 +152,7 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
     [InlineData(-1)]
     [InlineData(0)]
     [InlineData(100)]
-    public async Task AddEntry_AddsEntry_WithServerGeneratedId(int requestedEntryId)
+    public async Task AddEntry_AddsEntry_WithServerGeneratedId(long requestedEntryId)
     {
         // arrange
         await SeedAccount();

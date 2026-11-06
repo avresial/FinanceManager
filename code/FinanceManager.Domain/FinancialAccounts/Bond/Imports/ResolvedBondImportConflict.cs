@@ -7,7 +7,7 @@ public class ResolvedBondImportConflict
     // Parameterless ctor required for model binding / deserialization
     public ResolvedBondImportConflict() { }
 
-    public ResolvedBondImportConflict(int accountId, bool importIsPicked, BondEntryImport? importData, bool existingIsPicked, int? existingId)
+    public ResolvedBondImportConflict(int accountId, bool importIsPicked, BondEntryImport? importData, bool existingIsPicked, long? existingId)
     {
         if (importData is not null && existingId is not null && importIsPicked == existingIsPicked)
             throw new Exception("Cannot pick both import entry and existing entry or neither.");
@@ -27,7 +27,7 @@ public class ResolvedBondImportConflict
 
     // Existing entry side
     public bool LeaveExisting { get; set; }
-    public int? ExistingId { get; set; }
+    public long? ExistingId { get; set; }
 
     public BondAccountEntry ToEntry()
     {

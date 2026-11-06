@@ -270,7 +270,7 @@ public sealed class McpToolsTests
 
     private static InvestmentTransaction InvestmentTransaction(int userId, int accountId, long listingId, string ticker, decimal quantity) => new()
     {
-        Id = listingId,
+        EntryId = listingId,
         UserId = userId,
         AccountId = accountId,
         AssetListingId = listingId,

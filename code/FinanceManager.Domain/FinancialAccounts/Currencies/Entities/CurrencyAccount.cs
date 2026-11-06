@@ -78,7 +78,7 @@ public class CurrencyAccount : FinancialAccountBase<CurrencyAccountEntry>
             RecalculateEntryValues(index);
     }
 
-    public int GetNextFreeId()
+    public long GetNextFreeId()
     {
         var currentMaxId = GetMaxId();
         if (currentMaxId is not null)

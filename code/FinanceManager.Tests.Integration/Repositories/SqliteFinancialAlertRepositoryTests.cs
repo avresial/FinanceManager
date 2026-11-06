@@ -165,7 +165,7 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
         Assert.Equal(6, summary[alert.Id].TransactionCount);
         Assert.Equal(5, summary[alert.Id].MatchingTransactions!.Count);
         Assert.Equal(6, detailed[alert.Id].MatchingTransactions!.Count);
-        Assert.Equal(Enumerable.Range(1, 6).Reverse(), detailed[alert.Id].MatchingTransactions!.Select(entry => entry.EntryId));
+        Assert.Equal(Enumerable.Range(1, 6).Reverse().Select(id => (long)id), detailed[alert.Id].MatchingTransactions!.Select(entry => entry.EntryId));
     }
 
     public void Dispose()

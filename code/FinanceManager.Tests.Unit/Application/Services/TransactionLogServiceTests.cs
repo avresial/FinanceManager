@@ -62,7 +62,7 @@ public class TransactionLogServiceTests
 
         SetupInvestmentAccount(accountId: 30, "Broker", [new InvestmentTransaction
         {
-            Id = 4,
+            EntryId = 4,
             AccountId = 30,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2,
@@ -110,7 +110,7 @@ public class TransactionLogServiceTests
             .ReturnsAsync(new Dictionary<int, string>());
         SetupInvestmentAccount(30, "Broker", [new InvestmentTransaction
         {
-            Id = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day),
+            EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day),
             Type = InvestmentTransactionType.Sell, Quantity = 2.5m, UnitPrice = 125,
             Fee = 10, Currency = "GBX", AssetListing = new AssetListing { TradingCurrency = "GBP" }
         }]);
@@ -291,10 +291,10 @@ public class TransactionLogServiceTests
         _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
         SetupInvestmentAccount(30, "Broker", [
-            new() { Id = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { Id = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { Id = int.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { Id = long.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 }]);
+            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
+            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
+            new() { EntryId = int.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
+            new() { EntryId = long.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 }]);
 
         var expected = (await _service.GetLastTransactions(_userId, 100, TestContext.Current.CancellationToken))
             .Where(e => e.Date >= day.AddDays(-1)).ToList();
@@ -326,8 +326,8 @@ public class TransactionLogServiceTests
         var day = new DateTime(2024, 3, 5);
         SetupCurrencyAccount(10, "Bank", [new(10, 1, day, 0, 1), new(10, 2, day.AddHours(1), 0, 2)]);
         SetupInvestmentAccount(30, "Broker", [
-            new() { Id = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
-            new() { Id = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(1)) }]);
+            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
+            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(1)) }]);
 
         var result = await _service.GetPage(_userId, new(day.AddHours(1), day.AddDays(1)), TestContext.Current.CancellationToken);
 
@@ -441,7 +441,7 @@ public class TransactionLogServiceTests
         Assert.Equal(2, page.Items.Count);
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(11)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
         // None of the other accounts is selected, so their streams never reach an entry query.
         VerifyBondEntryQueries(Times.Never());
         VerifyInvestmentEntryQueries(Times.Never());
@@ -460,7 +460,7 @@ public class TransactionLogServiceTests
         Assert.Equal(2, page.Items.Count);
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(
             It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
+            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
     }
 
     [Fact]
@@ -539,17 +539,17 @@ public class TransactionLogServiceTests
         _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
         SetupInvestmentAccount(30, "Broker", [
-            new() { Id = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { Id = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)), Quantity = 1, UnitPrice = 2 }]);
+            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
+            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)), Quantity = 1, UnitPrice = 2 }]);
     }
 
     private void VerifyCurrencyEntryQueries(Times times) =>
         _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     private void VerifyBondEntryQueries(Times times) =>
         _bondEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     private void VerifyInvestmentEntryQueries(Times times) =>
         _investmentTransactionRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
@@ -615,8 +615,8 @@ public class TransactionLogServiceTests
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
         _currencyEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
@@ -632,8 +632,8 @@ public class TransactionLogServiceTests
         _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
             .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
         _bondEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, int? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
+            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
@@ -652,8 +652,8 @@ public class TransactionLogServiceTests
             It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
             .ReturnsAsync((IReadOnlyCollection<int> ids, DateOnly start, DateOnly end, int take, DateOnly? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
                 transactions.Where(e => ids.Contains(e.AccountId) && e.TradeDate >= start && e.TradeDate <= end &&
-                    (date == null || e.TradeDate < date || (e.TradeDate == date && e.Id < id)))
-                .OrderByDescending(e => e.TradeDate).ThenByDescending(e => e.Id).Take(take).ToList());
+                    (date == null || e.TradeDate < date || (e.TradeDate == date && e.EntryId < id)))
+                .OrderByDescending(e => e.TradeDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
         _investmentTransactionRepository.Setup(r => r.GetMostRecentByAccounts(It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
     }

@@ -329,10 +329,10 @@ public class InvestmentModelRepositoryTests
         var requested = await txRepo.Add(Make(10, new DateOnly(2026, 1, 10)), ct);
         var otherAccount = await txRepo.Add(Make(20, new DateOnly(2026, 1, 11)), ct);
 
-        var result = await txRepo.GetByAccountAndIds(10, [requested.Id, otherAccount.Id], ct);
+        var result = await txRepo.GetByAccountAndIds(10, [requested.EntryId, otherAccount.EntryId], ct);
 
         var transaction = Assert.Single(result);
-        Assert.Equal(requested.Id, transaction.Id);
+        Assert.Equal(requested.EntryId, transaction.EntryId);
         Assert.Equal(10, transaction.AccountId);
         Assert.NotNull(transaction.AssetListing.Asset);
         Assert.Empty(await txRepo.GetByAccountAndIds(10, [], ct));
@@ -394,7 +394,7 @@ public class InvestmentModelRepositoryTests
         var result = await txRepo.GetLatestByListingAsOf(11, new DateOnly(2026, 1, 31), ct);
 
         var metadata = Assert.Single(result);
-        Assert.Equal(latest.Id, metadata.Id);
+        Assert.Equal(latest.EntryId, metadata.EntryId);
         Assert.Equal(120m, metadata.UnitPrice);
         Assert.Equal("CSPX", metadata.AssetListing.Ticker);
         Assert.Equal(AssetType.ETF, metadata.AssetListing.Asset.Type);
@@ -547,9 +547,9 @@ public class InvestmentModelRepositoryTests
         Assert.False(hasMore);
         Assert.Equal(3, items.Count);
         // t3 and t2 are on 2026-01-20, t3 was added after t2 so t3.Id > t2.Id
-        Assert.Equal(t3.Id, items[0].Id);
-        Assert.Equal(t2.Id, items[1].Id);
-        Assert.Equal(t1.Id, items[2].Id);
+        Assert.Equal(t3.EntryId, items[0].EntryId);
+        Assert.Equal(t2.EntryId, items[1].EntryId);
+        Assert.Equal(t1.EntryId, items[2].EntryId);
     }
 
     [Fact]
@@ -582,16 +582,16 @@ public class InvestmentModelRepositoryTests
         var (page1, hasMore1) = await txRepo.GetHistoryPage(accountId, pageSize: 2, cancellationToken: ct);
         Assert.True(hasMore1);
         Assert.Equal(2, page1.Count);
-        Assert.Equal(t4.Id, page1[0].Id);
-        Assert.Equal(t3.Id, page1[1].Id);
+        Assert.Equal(t4.EntryId, page1[0].EntryId);
+        Assert.Equal(t3.EntryId, page1[1].EntryId);
 
         // Page 2 continuing from page 1's last item (t3)
         var (page2, hasMore2) = await txRepo.GetHistoryPage(
-            accountId, pageSize: 2, cursorTradeDate: page1[^1].TradeDate, cursorId: page1[^1].Id, cancellationToken: ct);
+            accountId, pageSize: 2, cursorTradeDate: page1[^1].TradeDate, cursorId: page1[^1].EntryId, cancellationToken: ct);
         Assert.False(hasMore2);
         Assert.Equal(2, page2.Count);
-        Assert.Equal(t2.Id, page2[0].Id);
-        Assert.Equal(t1.Id, page2[1].Id);
+        Assert.Equal(t2.EntryId, page2[0].EntryId);
+        Assert.Equal(t1.EntryId, page2[1].EntryId);
     }
 
     [Fact]
@@ -757,7 +757,7 @@ public class InvestmentModelRepositoryTests
         Assert.Equal("Updated Note", afterUpdate[0].Notes);
 
         // Delete
-        await txRepo.Delete(t1.Id, ct);
+        await txRepo.Delete(t1.EntryId, ct);
         var (afterDelete, _) = await txRepo.GetHistoryPage(accountId, 10, cancellationToken: ct);
         Assert.Empty(afterDelete);
     }

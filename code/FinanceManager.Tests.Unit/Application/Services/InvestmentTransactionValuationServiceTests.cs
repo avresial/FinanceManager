@@ -19,7 +19,7 @@ public class InvestmentTransactionValuationServiceTests
 
     private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1, AssetListing? listing = null) => new()
     {
-        Id = id,
+        EntryId = id,
         AccountId = _accountId,
         AssetListingId = (listing ?? _listing).Id,
         AssetListing = listing ?? _listing,
@@ -40,7 +40,7 @@ public class InvestmentTransactionValuationServiceTests
                 It.IsAny<IReadOnlyCollection<long>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
-                transactions.Where(transaction => ids.Contains(transaction.Id)).ToList());
+                transactions.Where(transaction => ids.Contains(transaction.EntryId)).ToList());
         return (repo, new Mock<IInvestmentPriceProvider>(), new Mock<ICurrencyExchangeService>());
     }
 

@@ -83,7 +83,7 @@ public class TransactionLogSearchTests
         Assert.Equal(new long[] { 1L }, await Page(context, "Currency", 10, null, "%_sale[one]", []));
     }
 
-    private static async Task<long[]> Page(AppDbContext context, string stream, int take, int? cursor, string search, int[] matchedAccounts)
+    private static async Task<long[]> Page(AppDbContext context, string stream, int take, long? cursor, string search, int[] matchedAccounts)
     {
         var ct = TestContext.Current.CancellationToken;
         var date = cursor.HasValue ? _day : (DateTime?)null;
@@ -92,7 +92,7 @@ public class TransactionLogSearchTests
         if (stream == "Bond")
             return [.. (await new BondEntryRepository(context).GetHistoryPage([1, 2], _day, _day, take, date, cursor, ct, search, matchedAccounts)).Select(e => (long)e.EntryId)];
         var day = DateOnly.FromDateTime(_day);
-        return [.. (await new InvestmentTransactionRepository(context).GetHistoryPage([1, 2], day, day, take, cursor.HasValue ? day : null, cursor, ct, search, matchedAccounts)).Select(e => e.Id)];
+        return [.. (await new InvestmentTransactionRepository(context).GetHistoryPage([1, 2], day, day, take, cursor.HasValue ? day : null, cursor, ct, search, matchedAccounts)).Select(e => e.EntryId)];
     }
 
     private static AssetListing Listing(long id, string ticker, string name) => new()
@@ -107,7 +107,7 @@ public class TransactionLogSearchTests
 
     private static InvestmentTransaction Trade(long id, int accountId, long listingId, int offset = 0) => new()
     {
-        Id = id,
+        EntryId = id,
         AccountId = accountId,
         UserId = 1,
         AssetListingId = listingId,
@@ -129,7 +129,7 @@ public class TransactionLogSearchTests
             modelBuilder.Entity<BondDetails>().Property(e => e.Id).ValueGeneratedNever();
             modelBuilder.Entity<Asset>().Property(e => e.Id).ValueGeneratedNever();
             modelBuilder.Entity<AssetListing>().Property(e => e.Id).ValueGeneratedNever();
-            modelBuilder.Entity<InvestmentTransaction>().Property(e => e.Id).ValueGeneratedNever();
+            modelBuilder.Entity<InvestmentTransaction>().Property(e => e.EntryId).ValueGeneratedNever();
         }
     }
 

@@ -1,6 +1,6 @@
 namespace FinanceManager.Domain.Labels.Entities;
 
-public record RecurringTransactionEntryReference(int AccountId, int EntryId);
+public record RecurringTransactionEntryReference(int AccountId, long EntryId);
 
 public class RecurringTransactionResult(string name, decimal value)
 {

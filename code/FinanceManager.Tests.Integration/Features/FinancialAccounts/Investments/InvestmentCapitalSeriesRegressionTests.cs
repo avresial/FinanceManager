@@ -91,12 +91,12 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var persisted = await _testDatabase.Context.InvestmentTransactions
             .AsNoTracking()
             .OrderBy(x => x.TradeDate)
-            .ThenBy(x => x.Id)
+            .ThenBy(x => x.EntryId)
             .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(_productionTrades.Count, flows.Count);
         Assert.Equal(_productionTrades.Count, flows.Select(x => x.TransactionId).Distinct().Count());
-        Assert.Equal(persisted.Select(x => x.Id), flows.Select(x => x.TransactionId));
+        Assert.Equal(persisted.Select(x => x.EntryId), flows.Select(x => x.TransactionId));
 
         for (var index = 0; index < _productionTrades.Count; index++)
         {

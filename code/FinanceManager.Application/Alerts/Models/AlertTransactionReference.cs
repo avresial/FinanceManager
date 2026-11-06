@@ -2,7 +2,7 @@ namespace FinanceManager.Application.Alerts.Models;
 
 public sealed record AlertTransactionReference(
     int AccountId,
-    int EntryId,
+    long EntryId,
     DateTime PostingDate,
     decimal Amount,
     string Description,

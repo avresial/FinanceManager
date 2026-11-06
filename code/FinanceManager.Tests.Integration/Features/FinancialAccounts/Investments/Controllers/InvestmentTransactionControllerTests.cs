@@ -141,7 +141,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         };
         _testDatabase!.Context.InvestmentTransactions.Add(transaction);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        return transaction.Id;
+        return transaction.EntryId;
     }
 
     private static AddInvestmentTransactionRequest AddRequest(int accountId) => new(
@@ -653,7 +653,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         Assert.True(result);
         var inDb = await _testDatabase!.Context.InvestmentTransactions
-            .FirstOrDefaultAsync(x => x.Id == id, TestContext.Current.CancellationToken);
+            .FirstOrDefaultAsync(x => x.EntryId == id, TestContext.Current.CancellationToken);
         Assert.Equal(8m, inDb!.Quantity);
         Assert.Equal(130m, inDb.UnitPrice);
     }
@@ -669,7 +669,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         Assert.True(result);
         var inDb = await _testDatabase!.Context.InvestmentTransactions
-            .FirstOrDefaultAsync(x => x.Id == id, TestContext.Current.CancellationToken);
+            .FirstOrDefaultAsync(x => x.EntryId == id, TestContext.Current.CancellationToken);
         Assert.Null(inDb);
     }
 
