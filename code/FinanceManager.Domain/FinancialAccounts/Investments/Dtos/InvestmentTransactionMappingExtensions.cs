@@ -16,7 +16,7 @@ public static class InvestmentTransactionMappingExtensions
         transaction.Currency,
         transaction.TradeDate,
         transaction.Fee,
-        transaction.Notes,
+        transaction.Description.Length == 0 ? null : transaction.Description,
         transaction.AssetListing?.Ticker ?? string.Empty,
         transaction.AssetListing?.ExchangeName ?? string.Empty,
         transaction.AssetListing?.Asset?.Type ?? AssetType.Other,
@@ -34,7 +34,7 @@ public static class InvestmentTransactionMappingExtensions
         Currency = request.Currency,
         TradeDate = request.TradeDate,
         Fee = request.Fee,
-        Notes = request.Notes
+        Description = request.Notes ?? string.Empty
     };
 
     /// <summary>Map an update request onto the editable fields the repository copies by id.</summary>
@@ -49,6 +49,6 @@ public static class InvestmentTransactionMappingExtensions
         Currency = request.Currency,
         TradeDate = request.TradeDate,
         Fee = request.Fee,
-        Notes = request.Notes
+        Description = request.Notes ?? string.Empty
     };
 }

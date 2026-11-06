@@ -17,7 +17,7 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.Property(x => x.UnitPrice).HasPrecision(18, 8);
         builder.Property(x => x.Fee).HasPrecision(18, 8);
         builder.Property(x => x.Currency).HasMaxLength(3).IsRequired();
-        builder.Property(x => x.Notes).HasMaxLength(512);
+        builder.Property(x => x.Description).HasMaxLength(512).IsRequired();
 
         builder.Ignore(x => x.TradeDate);
         builder.Property(x => x.PostingDate).HasConversion(new ValueConverter<DateTime, DateTime>(

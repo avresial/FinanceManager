@@ -219,7 +219,7 @@ public sealed class McpToolsTests
             Labels = [label]
         };
         var investment = InvestmentTransaction(_userId, 10, 100, "SAFE", 2);
-        investment.Notes = "private note";
+        investment.Description = "private note";
         investment.CreatedAt = DateTimeOffset.UtcNow;
         investment.AssetListing.MarketDataSymbols = [new MarketDataSymbol { Symbol = "provider-secret" }];
         var payload = new object[]

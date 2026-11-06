@@ -48,6 +48,10 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
+                    <MudTextField @bind-Value="_description" T="string" Label="Description (optional)" Variant="Variant.Outlined"
+                                  MaxLength="512" MaxLines="5" AutoGrow="true" />
+                </MudItem>
+                <MudItem xs="12">
                     <FormActions>
                         @if (CustomButton is not null)
                         {

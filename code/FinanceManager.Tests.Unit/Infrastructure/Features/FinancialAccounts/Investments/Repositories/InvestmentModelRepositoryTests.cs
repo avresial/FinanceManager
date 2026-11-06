@@ -639,7 +639,7 @@ public class InvestmentModelRepositoryTests
             UnitPrice = 500m,
             Currency = "USD",
             TradeDate = new DateOnly(2026, 1, 10),
-            Notes = "Monthly ETF contribution"
+            Description = "Monthly ETF contribution"
         }, ct);
 
         await txRepo.Add(new InvestmentTransaction
@@ -652,7 +652,7 @@ public class InvestmentModelRepositoryTests
             UnitPrice = 220m,
             Currency = "USD",
             TradeDate = new DateOnly(2026, 2, 1),
-            Notes = "Tech trim"
+            Description = "Tech trim"
         }, ct);
 
         // Filter by Date Range
@@ -745,16 +745,16 @@ public class InvestmentModelRepositoryTests
             UnitPrice = 500m,
             Currency = "USD",
             TradeDate = new DateOnly(2026, 1, 10),
-            Notes = "Original Note"
+            Description = "Original Note"
         }, ct);
 
         // Update note
-        t1.Notes = "Updated Note";
+        t1.Description = "Updated Note";
         await txRepo.Update(t1, ct);
 
         var (afterUpdate, _) = await txRepo.GetHistoryPage(accountId, 10, cancellationToken: ct);
         Assert.Single(afterUpdate);
-        Assert.Equal("Updated Note", afterUpdate[0].Notes);
+        Assert.Equal("Updated Note", afterUpdate[0].Description);
 
         // Delete
         await txRepo.Delete(t1.EntryId, ct);

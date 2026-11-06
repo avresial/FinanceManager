@@ -659,6 +659,32 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task Notes_AreStoredAsDescription_AndNullOrEmptyNotesComeBackAsNull()
+    {
+        await SeedAccount();
+        await SeedListing();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+
+        var withNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = "Monthly ETF contribution" });
+        var withoutNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = null });
+
+        Assert.Equal("Monthly ETF contribution", withNotes!.Notes);
+        Assert.Null(withoutNotes!.Notes);
+        _testDatabase!.Context.ChangeTracker.Clear();
+        var stored = await _testDatabase.Context.InvestmentTransactions.AsNoTracking().OrderBy(x => x.EntryId).ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(["Monthly ETF contribution", string.Empty], stored.Select(x => x.Description));
+
+        // An update with empty notes clears the text; the payload still reports no notes.
+        var cleared = new UpdateInvestmentTransactionRequest(
+            withNotes.Id, _testAccountId, _listingId, InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), Notes: "");
+        Assert.True(await client.UpdateAsync(cleared));
+        _testDatabase.Context.ChangeTracker.Clear();
+        Assert.Equal(string.Empty, (await _testDatabase.Context.InvestmentTransactions.AsNoTracking()
+            .SingleAsync(x => x.EntryId == withNotes.Id, TestContext.Current.CancellationToken)).Description);
+    }
+
+    [Fact]
     public async Task Delete_RemovesTransaction()
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
@@ -742,7 +768,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 UnitPrice = 100m,
                 Currency = "USD",
                 TradeDate = new DateOnly(2024, 1, 15),
-                Notes = "Dividend reinvestment"
+                Description = "Dividend reinvestment"
             },
             new InvestmentTransaction
             {
@@ -754,7 +780,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 UnitPrice = 110m,
                 Currency = "USD",
                 TradeDate = new DateOnly(2024, 2, 15),
-                Notes = "Rebalancing"
+                Description = "Rebalancing"
             });
         await _testDatabase.Context.SaveChangesAsync(ct);
         Authorize("testuser", _testUserId, UserRole.User);

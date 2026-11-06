@@ -1,10 +1,13 @@
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
 public class BondAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
 {
+    // Order below the shared Description (-1) so bond payloads keep BondDetailsId first.
+    [JsonPropertyOrder(-2)]
     public int BondDetailsId { get; set; } = bondDetailsId;
 
     public override void Update(FinancialEntryBase entry)
@@ -16,6 +19,12 @@ public class BondAccountEntry(int accountId, long entryId, DateTime postingDate,
             BondDetailsId = bondEntry.BondDetailsId;
         }
     }
+
+    public BondAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange, BondDetailsId)
+    {
+        Description = Description,
+        Labels = [.. Labels],
+    };
 
     public decimal GetPriceAt(DateOnly date, BondDetails bondDetails)
     {
@@ -57,5 +66,5 @@ public class BondAccountEntry(int accountId, long entryId, DateTime postingDate,
     }
 
     public override string ToString() =>
-    $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}";
+    $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}, Description: {Description}";
 }
