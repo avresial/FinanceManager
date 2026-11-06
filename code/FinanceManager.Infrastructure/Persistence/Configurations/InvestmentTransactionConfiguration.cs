@@ -19,6 +19,7 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.Property(x => x.Notes).HasMaxLength(512);
 
         builder.Ignore(x => x.SignedQuantity);
+        builder.Ignore(x => x.ValueChange);
 
         // Transactions link to an asset listing; the Assets feature does not back-reference user transactions.
         // Keep transactions if a listing is ever removed by requiring the listing to be transaction-free first.

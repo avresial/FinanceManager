@@ -13,7 +13,7 @@ public class FinancialEntryBase(int accountId, long entryId, DateTime postingDat
     public decimal Value { get; set; } = value;
 
     [JsonPropertyOrder(5)]
-    public decimal ValueChange { get; set; } = valueChange;
+    public override decimal ValueChange { get; set; } = valueChange;
 
     [JsonPropertyOrder(6)]
     public ICollection<FinancialLabel> Labels { get; set; } = [];
