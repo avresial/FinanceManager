@@ -18,12 +18,16 @@ public abstract class AccountEntryBase
     {
     }
 
-    protected AccountEntryBase(int accountId, long entryId, DateTime postingDate)
+    protected AccountEntryBase(int accountId, long entryId, DateTime postingDate, decimal value = 0m)
     {
         PostingDate = postingDate;
         AccountId = accountId;
         EntryId = entryId;
+        _value = value;
     }
+
+    // Backing field instead of an auto-property so the constructor does not call the virtual setter.
+    private decimal _value;
 
     /// <summary>
     /// Entry identifier. Assigned by the persistence layer, so the setter stays restricted to the Domain assembly
@@ -36,6 +40,18 @@ public abstract class AccountEntryBase
     [JsonPropertyOrder(3)]
     public virtual DateTime PostingDate { get; set; }
 
+    /// <summary>
+    /// Running balance of the account units after this entry: currency amount, bond count, or for an investment
+    /// transaction the units of its listing held in the account. Virtual so investment transactions can keep it
+    /// out of their JSON, as no endpoint returns that entity.
+    /// </summary>
+    [JsonPropertyOrder(4)]
+    public virtual decimal Value
+    {
+        get => _value;
+        set => _value = value;
+    }
+
     /// <summary>Signed change in the account units (currency amount, bond count or investment quantity).</summary>
     public abstract decimal ValueChange { get; set; }
 
@@ -45,6 +61,9 @@ public abstract class AccountEntryBase
     /// </summary>
     [JsonPropertyOrder(-1)]
     public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(6)]
+    public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     /// <summary>Financial account this entry belongs to.</summary>
     [JsonPropertyOrder(2)]

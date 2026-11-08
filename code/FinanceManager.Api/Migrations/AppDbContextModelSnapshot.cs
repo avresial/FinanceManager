@@ -821,6 +821,10 @@ namespace FinanceManager.Api.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("numeric(18,8)");
+
                     b.HasKey("EntryId");
 
                     b.HasIndex("AccountId");
@@ -1396,6 +1400,21 @@ namespace FinanceManager.Api.Migrations
                     b.ToTable("TransactionRules");
                 });
 
+            modelBuilder.Entity("FinancialLabelInvestmentTransaction", b =>
+                {
+                    b.Property<long>("InvestmentTransactionEntryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("LabelsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("InvestmentTransactionEntryId", "LabelsId");
+
+                    b.HasIndex("LabelsId");
+
+                    b.ToTable("InvestmentTransactionFinancialLabel", (string)null);
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>
                 {
                     b.Property<string>("Id")
@@ -1759,6 +1778,21 @@ namespace FinanceManager.Api.Migrations
                     b.HasOne("FinanceManager.Domain.Identity.Dtos.UserDto", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinancialLabelInvestmentTransaction", b =>
+                {
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction", null)
+                        .WithMany()
+                        .HasForeignKey("InvestmentTransactionEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel", null)
+                        .WithMany()
+                        .HasForeignKey("LabelsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
