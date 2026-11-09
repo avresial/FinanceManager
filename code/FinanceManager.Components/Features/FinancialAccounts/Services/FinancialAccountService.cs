@@ -84,7 +84,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             foreach (var item in data)
                 if (item is BondAccountEntry bondEntry)
                     await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId, bondEntry.EntryId, bondEntry.PostingDate,
-                        bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId));
+                        bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId, bondEntry.Description));
         }
         else
         {
@@ -104,7 +104,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
             case BondAccountEntry bondEntry:
                 await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId, bondEntry.EntryId, bondEntry.PostingDate,
-                    bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId));
+                    bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId, bondEntry.Description));
                 break;
 
             default: throw new NotSupportedException($"Account entry {accountEntry.GetType()} type not supported for adding entry.");
@@ -306,7 +306,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         else if (accountEntry is BondAccountEntry bondAccountEntry)
         {
             UpdateBondAccountEntry updateBondAccountEntry = new(bondAccountEntry.AccountId, bondAccountEntry.EntryId,
-                bondAccountEntry.PostingDate, bondAccountEntry.Value, bondAccountEntry.ValueChange, bondAccountEntry.BondDetailsId);
+                bondAccountEntry.PostingDate, bondAccountEntry.Value, bondAccountEntry.ValueChange, bondAccountEntry.BondDetailsId, bondAccountEntry.Description);
             await bondEntryHttpClient.UpdateEntryAsync(updateBondAccountEntry);
             return;
         }

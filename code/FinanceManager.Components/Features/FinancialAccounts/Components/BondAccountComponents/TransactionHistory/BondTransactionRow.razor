@@ -24,7 +24,11 @@
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
                              Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
                 }
-                @if (BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Issuer))
+                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate" Style="min-width: 0;" data-testid="bond-row-description">@Entry.Description</MudText>
+                }
+                else if (BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Issuer))
                 {
                     <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate" Style="min-width: 0;">@BondDetails.Issuer</MudText>
                 }
@@ -62,6 +66,13 @@
                     </MudText>
                 </MudStack>
             </MudItem>
+            @if (!string.IsNullOrWhiteSpace(Entry.Description))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Description</MudText>
+                    <MudText Typo="Typo.body2" Style="overflow-wrap: anywhere;">@Entry.Description</MudText>
+                </MudItem>
+            }
             @if (BondDetails is not null)
             {
                 <MudItem xs="6">

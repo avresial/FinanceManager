@@ -25,6 +25,38 @@ public class BondAccountEntryTests
     }
 
     [Fact]
+    public void Update_ShouldKeepTheDescriptionOfTheUpdatedEntry()
+    {
+        var entry = new BondAccountEntry(1, 1, DateTime.Now, 100m, 10m, 1) { Description = "old" };
+        var updateEntry = new BondAccountEntry(1, 1, DateTime.Now, 100m, 10m, 1) { Description = "new" };
+
+        entry.Update(updateEntry);
+
+        Assert.Equal("new", entry.Description);
+
+        entry.Update(new BondAccountEntry(1, 1, DateTime.Now, 100m, 10m, 1));
+
+        Assert.Equal(string.Empty, entry.Description);
+    }
+
+    [Fact]
+    public void GetCopy_ShouldKeepDescriptionAndLabelsWithoutSharingThem()
+    {
+        var label = new FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel { Id = 5, Name = "Savings" };
+        var entry = new BondAccountEntry(1, 2, new DateTime(2026, 1, 1), 100m, 10m, 3) { Description = "Quarterly top-up", Labels = [label] };
+
+        var copy = entry.GetCopy();
+        copy.Description = "changed";
+        copy.Labels.Clear();
+
+        Assert.NotSame(entry, copy);
+        Assert.Equal((entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, entry.BondDetailsId),
+            (copy.AccountId, copy.EntryId, copy.PostingDate, copy.Value, copy.ValueChange, copy.BondDetailsId));
+        Assert.Equal("Quarterly top-up", entry.Description);
+        Assert.Single(entry.Labels);
+    }
+
+    [Fact]
     public void GetPrice_ShouldReturnCorrectValues()
     {
         // Arrange

@@ -19,6 +19,8 @@ public class BondAccountEntryConfiguration : IEntityTypeConfiguration<BondAccoun
         builder.Property(e => e.ValueChange)
           .HasPrecision(18, 2);
 
+        builder.Property(e => e.Description).HasMaxLength(512).IsRequired();
+
         builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
         builder.HasIndex(e => new { e.AccountId, e.BondDetailsId, e.PostingDate, e.EntryId });
 

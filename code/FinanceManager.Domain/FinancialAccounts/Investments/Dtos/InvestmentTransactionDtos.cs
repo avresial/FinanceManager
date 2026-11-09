@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 
@@ -19,7 +20,8 @@ public record InvestmentTransactionDto(
     string Ticker = "",
     string ExchangeName = "",
     AssetType AssetType = AssetType.Other,
-    bool AutomaticPricesAvailable = true);
+    bool AutomaticPricesAvailable = true,
+    IReadOnlyList<FinancialLabel>? Labels = null);
 
 /// <summary>Request to add a new investment transaction. The owning user is derived from the account, not this payload.</summary>
 public record AddInvestmentTransactionRequest(
@@ -32,7 +34,8 @@ public record AddInvestmentTransactionRequest(
     DateOnly TradeDate,
     decimal? Fee = null,
     string? Notes = null,
-    string? ExternalInstrumentResultId = null);
+    string? ExternalInstrumentResultId = null,
+    IReadOnlyCollection<int>? LabelIds = null);
 
 /// <summary>Request to update an existing investment transaction. Account and owner are not reassigned.</summary>
 public record UpdateInvestmentTransactionRequest(
@@ -45,4 +48,5 @@ public record UpdateInvestmentTransactionRequest(
     string Currency,
     DateOnly TradeDate,
     decimal? Fee = null,
-    string? Notes = null);
+    string? Notes = null,
+    IReadOnlyCollection<int>? LabelIds = null);

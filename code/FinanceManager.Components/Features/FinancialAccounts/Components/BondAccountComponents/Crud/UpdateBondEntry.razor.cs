@@ -29,6 +29,8 @@ public partial class UpdateBondEntry
     private BondDetails? _selectedBond;
     private List<BondDetails> _possibleBonds = [];
 
+    private string _description = string.Empty;
+
     private string _labelValue = "Nothing selected";
     private IReadOnlyCollection<string> _selectedLabels = [];
     private List<FinancialLabel> _possibleLabels = [];
@@ -62,6 +64,7 @@ public partial class UpdateBondEntry
         _postingDate = BondAccountEntry.PostingDate;
         _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
         _valueChange = BondAccountEntry.ValueChange;
+        _description = BondAccountEntry.Description;
 
         SetSelectedBond();
 
@@ -93,6 +96,7 @@ public partial class UpdateBondEntry
             DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
             BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
             {
+                Description = _description?.Trim() ?? string.Empty,
                 Labels = GetLabels().ToList()
             };
 

@@ -1,25 +1,20 @@
-﻿
+
 using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 public class FinancialEntryBase(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange)
-    : AccountEntryBase(accountId, entryId, postingDate)
+    : AccountEntryBase(accountId, entryId, postingDate, value)
 {
-    [JsonPropertyOrder(4)]
-    public decimal Value { get; set; } = value;
-
     [JsonPropertyOrder(5)]
     public override decimal ValueChange { get; set; } = valueChange;
-
-    [JsonPropertyOrder(6)]
-    public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     public virtual void Update(FinancialEntryBase financialEntryBase)
     {
         if (EntryId != financialEntryBase.EntryId) throw new Exception("Entry id can not be changed.");
 
         PostingDate = financialEntryBase.PostingDate;
+        Description = financialEntryBase.Description;
         var valueChangeChange = financialEntryBase.ValueChange - ValueChange;
         Value += valueChangeChange;
 

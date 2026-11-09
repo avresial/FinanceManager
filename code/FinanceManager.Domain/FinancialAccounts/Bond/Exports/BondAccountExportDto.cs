@@ -7,4 +7,5 @@ public record BondAccountExportDto(
     decimal Value,
     decimal ValueChange,
     string BondName,
-    string? Labels = null) : IAccountExportDto;
+    string? Labels = null,
+    string Description = "") : IAccountExportDto;

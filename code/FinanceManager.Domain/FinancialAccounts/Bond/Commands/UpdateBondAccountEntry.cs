@@ -9,4 +9,5 @@ public record UpdateBondAccountEntry(
     [ReasonableDate] DateTime PostingDate,
     decimal Value,
     decimal ValueChange,
-    [Range(1, int.MaxValue)] int BondDetailsId);
+    [Range(1, int.MaxValue)] int BondDetailsId,
+    [StringLength(512)] string Description = "");
