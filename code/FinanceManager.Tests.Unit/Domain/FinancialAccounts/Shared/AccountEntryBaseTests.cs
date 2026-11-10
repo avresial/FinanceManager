@@ -70,6 +70,26 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
+    public void BondEntry_SerializesDescriptionAfterBondDetailsId()
+    {
+        var entry = new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3) { Description = "Quarterly top-up" };
+
+        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(
+            """{"bondDetailsId":3,"description":"Quarterly top-up","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            json);
+    }
+
+    [Fact]
+    public void Description_DefaultsToEmptyOnEveryEntryType()
+    {
+        AccountEntryBase[] entries = [new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m), new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3), new InvestmentTransaction()];
+
+        Assert.All(entries, entry => Assert.Equal(string.Empty, entry.Description));
+    }
+
+    [Fact]
     public void BondEntry_SerializesWithUnchangedPropertyOrder()
     {
         var entry = new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3);
@@ -77,7 +97,7 @@ public class AccountEntryBaseTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"bondDetailsId":3,"entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            """{"bondDetailsId":3,"description":"","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
             json);
     }
 
@@ -111,7 +131,7 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
-    public void InvestmentEntry_SerializesWithUnchangedPropertiesAndOrder()
+    public void InvestmentEntry_SerializesPostingDateAndIgnoresComputedTradeDate()
     {
         var entry = new InvestmentTransaction
         {
@@ -128,8 +148,22 @@ public class AccountEntryBaseTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","tradeDate":"2026-05-17","fee":null,"notes":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1}""",
+            """{"description":"","userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","labels":[]}""",
             json);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Utc)]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public void InvestmentPostingDate_NormalizesCalendarDateToUtcMidnight(DateTimeKind kind)
+    {
+        var entry = new InvestmentTransaction { PostingDate = new DateTime(2026, 5, 17, 23, 42, 0, kind) };
+        Assert.Equal(new DateOnly(2026, 5, 17), entry.TradeDate);
+        Assert.Equal(DateTimeKind.Utc, entry.PostingDate.Kind);
+        Assert.Equal(TimeSpan.Zero, entry.PostingDate.TimeOfDay);
+        entry.TradeDate = new DateOnly(2024, 2, 29);
+        Assert.Equal(new DateTime(2024, 2, 29, 0, 0, 0, DateTimeKind.Utc), entry.PostingDate);
     }
 
     [Fact]
@@ -146,6 +180,34 @@ public class AccountEntryBaseTests
             Assert.Equal("ValueChange", property.GetColumnName());
             Assert.Equal(typeof(decimal), property.ClrType);
         }
+    }
+
+    [Fact]
+    public void EfModel_ValueIsMappedOnEveryEntryWithTheDocumentedPrecision()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
+        using var context = new AppDbContext(options.Options);
+
+        foreach (var (type, precision, scale) in new[] { (typeof(CurrencyAccountEntry), 18, 2), (typeof(BondAccountEntry), 18, 2), (typeof(InvestmentTransaction), 18, 8) })
+        {
+            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(AccountEntryBase.Value));
+            Assert.NotNull(property);
+            Assert.Equal("Value", property.GetColumnName());
+            Assert.Equal(precision, property.GetPrecision());
+            Assert.Equal(scale, property.GetScale());
+        }
+    }
+
+    [Fact]
+    public void InvestmentTransaction_ValueIsStoredButNotSerialized()
+    {
+        // No endpoint returns the entity (controllers map to DTOs), and its JSON predates Value.
+        var entry = new InvestmentTransaction { AccountId = 1, Value = 12.5m };
+
+        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(12.5m, entry.Value);
+        Assert.DoesNotContain("\"value\"", json);
     }
 
     [Fact]

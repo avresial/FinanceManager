@@ -33,13 +33,35 @@ public class InvestmentTransaction : AccountEntryBase
     public string Currency { get; set; } = null!;
 
     /// <summary>Date when the transaction happened.</summary>
-    public DateOnly TradeDate { get; set; }
+    [JsonIgnore]
+    public DateOnly TradeDate
+    {
+        get => DateOnly.FromDateTime(PostingDate);
+        set => PostingDate = value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    }
+
+    // Trades have a calendar date, not an instant: preserve its day even for Local/Unspecified inputs.
+    [JsonPropertyOrder(3)]
+    public override DateTime PostingDate
+    {
+        get => DateTime.SpecifyKind(base.PostingDate, DateTimeKind.Utc);
+        set => base.PostingDate = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
+    }
+
+    /// <summary>
+    /// Units of <see cref="AssetListingId"/> held in the account immediately after this trade: the running sum of
+    /// <see cref="SignedQuantity"/> per account and listing, ordered by posting date then entry id. Maintained by
+    /// the investment transaction repository, so it is not part of the entity's JSON.
+    /// </summary>
+    [JsonIgnore]
+    public override decimal Value
+    {
+        get => base.Value;
+        set => base.Value = value;
+    }
 
     /// <summary>Optional broker fee. Retained because fees affect the real cost basis.</summary>
     public decimal? Fee { get; set; }
-
-    /// <summary>Optional note entered by the user.</summary>
-    public string? Notes { get; set; }
 
     /// <summary>Timestamp when the record was created in this system.</summary>
     public DateTimeOffset CreatedAt { get; set; }

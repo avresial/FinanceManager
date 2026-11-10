@@ -12,6 +12,17 @@
         <MudChip T="string" Size="Size.Small" Color="@TypeColor" Variant="Variant.Outlined" Style="flex-shrink: 0;">@TypeLabel</MudChip>
 
         <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
+            @if (Transaction.Labels is { Count: > 0 })
+            {
+                <div class="d-flex flex-wrap" style="min-width: 0; max-width: 100%;">
+                    @foreach (var label in Transaction.Labels)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="max-width: 100%;" title="@label.Name">
+                            <span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@label.Name</span>
+                        </MudChip>
+                    }
+                </div>
+            }
             <MudText Typo="Typo.body1" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@Transaction.Ticker</MudText>
             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                 <MudText Typo="Typo.caption" Color="Color.Default" Class="fm-tabular">@Transaction.Quantity.ToString("N4") @@ @MoneyFormatter.Format(Transaction.UnitPrice, Transaction.Currency)</MudText>

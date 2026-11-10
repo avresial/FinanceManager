@@ -225,6 +225,29 @@ public class BondAccountImportServiceTests
     }
 
     [Fact]
+    public async Task ImportEntries_KeepsImportedDescription()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const int userId = 1;
+        const int accountId = 10;
+        var account = new BondAccount(userId, accountId, "TestBonds");
+        _mockAccountRepository.Setup(x => x.Get(accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        _mockAccountRepository.Setup(x => x.Get(accountId)).ReturnsAsync(account);
+        List<BondAccountEntry> saved = [];
+        _mockBondEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) => saved.AddRange(entries))
+            .ReturnsAsync(true);
+        _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        BondEntryImport[] imports = [new(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 5m, 1, "Top up")];
+
+        var result = await _service.ImportEntries(userId, accountId, imports, ct);
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal("Top up", Assert.Single(saved).Description);
+    }
+
+    [Fact]
     public async Task ImportEntries_UsesBoundedPersistenceBatches()
     {
         var ct = TestContext.Current.CancellationToken;

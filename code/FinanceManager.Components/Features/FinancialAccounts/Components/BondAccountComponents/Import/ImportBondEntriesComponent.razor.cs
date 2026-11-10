@@ -17,7 +17,8 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
     private string? _selectedPostingDateHeader;
     private string? _selectedValueChangeHeader;
     private string? _selectedBondHeader;
-    private List<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName)> _mappedPreview = [];
+    private string? _selectedDescriptionHeader;
+    private List<(DateTime PostingDate, decimal ValueChange, int BondDetailsId, string BondName, string Description)> _mappedPreview = [];
     private BondImportResult? _importResult;
     private bool _conflictsResolved;
     private List<BondDetails> _possibleBonds = [];
@@ -72,6 +73,9 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
                 case "Bond":
                     _selectedBondHeader = suggestion.OriginalHeaderName;
                     break;
+                case "Description":
+                    _selectedDescriptionHeader = suggestion.OriginalHeaderName;
+                    break;
             }
         });
     }
@@ -92,7 +96,7 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
         try
         {
             _mappedPreview = BondImportMapper
-                .MapEntries(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, _headers, _rawPreview, _possibleBonds)
+                .MapEntries(_selectedPostingDateHeader, _selectedValueChangeHeader, _selectedBondHeader, _headers, _rawPreview, _possibleBonds, _selectedDescriptionHeader)
                 .ToList();
         }
         catch (Exception ex)
@@ -126,8 +130,8 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
                 ?? throw new Exception("Failed to read data for import.");
 
             var entries = BondImportMapper
-                .MapEntries(_selectedPostingDateHeader!, _selectedValueChangeHeader!, _selectedBondHeader!, headers, data, _possibleBonds)
-                .Select(x => new BondEntryImportRecordDto(x.PostingDate, x.ValueChange, x.BondDetailsId))
+                .MapEntries(_selectedPostingDateHeader!, _selectedValueChangeHeader!, _selectedBondHeader!, headers, data, _possibleBonds, _selectedDescriptionHeader)
+                .Select(x => new BondEntryImportRecordDto(x.PostingDate, x.ValueChange, x.BondDetailsId, x.Description))
                 .ToList();
 
             _importResult = await AccountImportHttpClient.ImportBondEntriesAsync(new(AccountId, entries));
@@ -162,6 +166,7 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
         _selectedPostingDateHeader = null;
         _selectedValueChangeHeader = null;
         _selectedBondHeader = null;
+        _selectedDescriptionHeader = null;
         _mappedPreview.Clear();
     }
 
@@ -195,12 +200,14 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
             string.IsNullOrEmpty(_selectedBondHeader))
             return;
 
-        HeaderMappingRequestItemDto[] mappingItems =
+        List<HeaderMappingRequestItemDto> mappingItems =
         [
             new(_selectedPostingDateHeader, "PostingDate"),
             new(_selectedValueChangeHeader, "ValueChange"),
             new(_selectedBondHeader, "Bond")
         ];
+        if (!string.IsNullOrEmpty(_selectedDescriptionHeader))
+            mappingItems.Add(new(_selectedDescriptionHeader, "Description"));
 
         await SaveMappingChoices(
             mappingItems,

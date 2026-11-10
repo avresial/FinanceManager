@@ -176,7 +176,7 @@ public class MultiAccountHistoryPageTests
         using var context = CreateContext(false);
         AssertIndex<CurrencyAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
         AssertIndex<BondAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
-        AssertIndex<InvestmentTransaction>(context, "AccountId", "TradeDate", "EntryId");
+        AssertIndex<InvestmentTransaction>(context, "AccountId", "PostingDate", "EntryId");
     }
 
     private static void AssertIndex<T>(AppDbContext context, params string[] properties) =>

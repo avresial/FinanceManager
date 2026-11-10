@@ -13,6 +13,7 @@ public static class BondAccountEntryExtension
         ValueChange = bondAccountEntry.ValueChange,
         Value = bondAccountEntry.Value,
         BondDetailsId = bondAccountEntry.BondDetailsId,
+        Description = bondAccountEntry.Description,
         PostingDate = bondAccountEntry.PostingDate,
         Labels = [.. bondAccountEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id })]
     };

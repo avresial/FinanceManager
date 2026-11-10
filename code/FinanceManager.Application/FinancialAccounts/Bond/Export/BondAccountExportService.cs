@@ -35,7 +35,7 @@ public class BondAccountExportService(
                 ? name
                 : $"Bond #{entry.BondDetailsId}";
 
-            yield return new BondAccountExportDto(entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, bondName);
+            yield return new BondAccountExportDto(entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, bondName, Description: entry.Description);
         }
     }
 }

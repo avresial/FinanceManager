@@ -28,6 +28,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
          0, entry.ValueChange, entry.BondDetailsId)
         {
+            Description = entry.Description,
             Labels = await ResolveTrackedLabels(entry.Labels, cancellationToken),
         };
 
@@ -93,6 +94,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
              0, entry.ValueChange, entry.BondDetailsId)
             {
+                Description = entry.Description,
                 Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
@@ -595,6 +597,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
                     join details in context.Bonds on entry.BondDetailsId equals details.Id into bonds
                     from details in bonds.DefaultIfEmpty()
                     where matchedAccounts.Contains(entry.AccountId) ||
+                        entry.Description.ToUpper().Contains(term) ||
                         (details != null && details.Name != null && details.Name.ToUpper().Contains(term))
                     select entry;
         }
@@ -627,8 +630,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
                 .Where(e => accountIdChunk.Contains(e.AccountId))
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
-                // The dashboard only needs account, ordering, value-change, and bond id fields.
-                .Select(e => new BondAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId))
+                // The dashboard only needs account, ordering, value-change, bond id and description fields.
+                .Select(e => new BondAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId) { Description = e.Description })
                 .Take(count)
                 .ToListAsync(cancellationToken));
         }
