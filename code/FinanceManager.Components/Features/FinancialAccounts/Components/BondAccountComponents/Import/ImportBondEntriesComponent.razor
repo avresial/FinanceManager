@@ -74,6 +74,18 @@
                                     }
                                 </MudSelect>
                             </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="string" Label="Description"
+                                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                           HelperText="Optional text for each entry"
+                                           Value="_selectedDescriptionHeader"
+                                           ValueChanged="@((string v) => { _selectedDescriptionHeader = v; OnMappingChanged(); })">
+                                    @foreach (var h in _headers)
+                                    {
+                                        <MudSelectItem T="string" Value="@h">@h</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
                         </MudGrid>
 
                         <MudDivider />
@@ -92,6 +104,7 @@
                                         <th>Posting date</th>
                                         <th>Units change</th>
                                         <th>Bond</th>
+                                        <th>Description</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -105,6 +118,7 @@
                                                 </MudText>
                                             </td>
                                             <td>@row.BondName</td>
+                                            <td>@(string.IsNullOrEmpty(row.Description) ? "-" : row.Description)</td>
                                         </tr>
                                     }
                                 </tbody>

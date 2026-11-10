@@ -33,6 +33,6 @@ public class ResolvedBondImportConflict
     {
         return ImportData is null
             ? throw new ArgumentNullException($"{nameof(ImportData)} is null")
-            : new BondAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.BondDetailsId);
+            : new BondAccountEntry(AccountId, 0, ImportData.PostingDate, ImportData.ValueChange, ImportData.ValueChange, ImportData.BondDetailsId) { Description = ImportData.Description };
     }
 }

@@ -199,6 +199,68 @@ public class TransactionLogServiceTests
     }
 
     [Fact]
+    public async Task GetLastTransactions_UsesBondDescription_AndFallsBackToBondNameWhenBlank()
+    {
+        SetupBondAccount(accountId: 20, "Bonds", [
+            new BondAccountEntry(20, 3, new DateTime(2024, 3, 3), 10, 10, bondDetailsId: 7) { Description = "   " },
+            new BondAccountEntry(20, 2, new DateTime(2024, 3, 2), 10, 10, bondDetailsId: 7) { Description = "Quarterly top-up" },
+            new BondAccountEntry(20, 1, new DateTime(2024, 3, 1), 10, 10, bondDetailsId: 7),
+        ]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
+
+        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["EDO0134", "Quarterly top-up", "EDO0134"], result.Select(entry => entry.Description));
+    }
+
+    [Fact]
+    public async Task GetPage_UsesBondDescription_AndFallsBackToBondName()
+    {
+        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        SetupBondAccount(accountId: 20, "Bonds", [
+            new BondAccountEntry(20, 2, day, 10, 10, bondDetailsId: 7) { Description = "Quarterly top-up" },
+            new BondAccountEntry(20, 1, day, 10, 10, bondDetailsId: 7),
+        ]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
+
+        var page = await _service.GetPage(_userId, new(day, day), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["Quarterly top-up", "EDO0134"], page.Items.Select(entry => entry.Description));
+    }
+
+    [Fact]
+    public async Task GetPage_PassesSearchTextToBondHistory_SoDescriptionsCanMatch()
+    {
+        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        SetupBondAccount(accountId: 20, "Bonds", []);
+
+        await _service.GetPage(_userId, new(day, day, Search: " top-up "), TestContext.Current.CancellationToken);
+
+        _bondEntryRepository.Verify(r => r.GetHistoryPage(
+            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(),
+            It.IsAny<CancellationToken>(), "top-up", It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetLastTransactions_KeepsInvestmentTextUnchanged_WhenTheTradeHasADescription()
+    {
+        SetupInvestmentAccount(accountId: 30, "Broker", [
+            new InvestmentTransaction
+            {
+                EntryId = 1, AccountId = 30, UserId = _userId, Type = InvestmentTransactionType.Buy, Quantity = 2m, UnitPrice = 5m, Currency = "USD",
+                TradeDate = new DateOnly(2024, 3, 1), Description = "Monthly ETF contribution",
+                AssetListing = new AssetListing { Ticker = "CSPX", Asset = new Asset { Name = "iShares" } }
+            },
+        ]);
+
+        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Buy 2 CSPX", Assert.Single(result).Description);
+    }
+
+    [Fact]
     public async Task GetLastTransactions_PassesOnlyAvailableAccountIdsToBatchQueries()
     {
         _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
@@ -334,6 +396,24 @@ public class TransactionLogServiceTests
         Assert.Equal([AccountType.Stock, AccountType.Currency], result.Items.Select(e => e.AccountType));
         Assert.All(result.Items, e => Assert.Equal(2, e.EntryId));
         Assert.Null(result.NextCursor);
+    }
+
+    [Fact]
+    public async Task GetPage_IntradayCursorIncludesSameDayInvestmentRegardlessOfId()
+    {
+        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+        SetupCurrencyAccount(10, "Bank", [new(10, 1, day.AddHours(1), 0, 1)]);
+        SetupInvestmentAccount(30, "Broker", [
+            new() { EntryId = 100, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
+            new() { EntryId = 101, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)) }]);
+        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), 1);
+        var first = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
+        Assert.Equal(AccountType.Currency, Assert.Single(first.Items).AccountType);
+        var second = await _service.GetPage(_userId, query with { Cursor = first.NextCursor }, TestContext.Current.CancellationToken);
+        Assert.Equal(100, Assert.Single(second.Items).EntryId);
+        var third = await _service.GetPage(_userId, query with { Cursor = second.NextCursor }, TestContext.Current.CancellationToken);
+        Assert.Equal(101, Assert.Single(third.Items).EntryId);
+        Assert.Null(third.NextCursor);
     }
 
     [Fact]

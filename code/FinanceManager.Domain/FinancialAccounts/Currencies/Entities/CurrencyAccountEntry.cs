@@ -5,14 +5,12 @@ namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 public class CurrencyAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange)
     : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
 {
-    public string Description { get; set; } = string.Empty;
     public string? ContractorDetails { get; set; }
 
     public void Update(CurrencyAccountEntry entry)
     {
         base.Update(entry);
 
-        Description = entry.Description;
         ContractorDetails = entry.ContractorDetails;
     }
 

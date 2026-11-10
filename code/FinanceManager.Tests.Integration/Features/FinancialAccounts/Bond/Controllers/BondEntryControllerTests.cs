@@ -370,6 +370,52 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(300m, dbEntry.ValueChange);
     }
 
+    [Fact]
+    public async Task Description_RoundTripsThroughAddUpdateAndGet()
+    {
+        // arrange
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new BondEntryHttpClient(Client);
+        var postingDate = DateTime.UtcNow.Date.AddDays(-4);
+
+        // act: add with a description
+        Assert.True(await client.AddEntryAsync(new AddBondAccountEntry(_testAccountId, 0, postingDate, 0m, 10m, 505, "Quarterly top-up")));
+        var added = await _testDatabase!.Context.BondEntries.AsNoTracking()
+            .SingleAsync(e => e.AccountId == _testAccountId && e.BondDetailsId == 505, TestContext.Current.CancellationToken);
+        var fetched = await Client.GetFromJsonAsync<BondAccountEntry>($"api/BondEntry?accountId={_testAccountId}&entryId={added.EntryId}", TestContext.Current.CancellationToken);
+
+        // assert: stored and returned
+        Assert.Equal("Quarterly top-up", added.Description);
+        Assert.Equal("Quarterly top-up", fetched?.Description);
+
+        // act: update the description
+        Assert.True(await client.UpdateEntryAsync(new UpdateBondAccountEntry(_testAccountId, added.EntryId, postingDate, added.Value, 10m, 505, "Updated text")));
+        _testDatabase.Context.ChangeTracker.Clear();
+        Assert.Equal("Updated text", (await _testDatabase.Context.BondEntries.AsNoTracking()
+            .SingleAsync(e => e.EntryId == added.EntryId, TestContext.Current.CancellationToken)).Description);
+
+        // act: an update without a description clears it (the trailing parameter defaults to empty)
+        Assert.True(await client.UpdateEntryAsync(new UpdateBondAccountEntry(_testAccountId, added.EntryId, postingDate, added.Value, 10m, 505)));
+        _testDatabase.Context.ChangeTracker.Clear();
+        Assert.Equal(string.Empty, (await _testDatabase.Context.BondEntries.AsNoTracking()
+            .SingleAsync(e => e.EntryId == added.EntryId, TestContext.Current.CancellationToken)).Description);
+    }
+
+    [Fact]
+    public async Task AddEntry_WithoutDescription_StoresEmptyDescription()
+    {
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var client = new BondEntryHttpClient(Client);
+
+        Assert.True(await client.AddEntryAsync(new AddBondAccountEntry(_testAccountId, 0, DateTime.UtcNow.Date.AddDays(-2), 0m, 5m, 606)));
+
+        var entry = await _testDatabase!.Context.BondEntries.AsNoTracking()
+            .SingleAsync(e => e.AccountId == _testAccountId && e.BondDetailsId == 606, TestContext.Current.CancellationToken);
+        Assert.Equal(string.Empty, entry.Description);
+    }
+
     public override void Dispose()
     {
         base.Dispose();

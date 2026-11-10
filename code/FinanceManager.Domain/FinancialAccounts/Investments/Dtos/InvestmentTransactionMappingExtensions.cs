@@ -16,11 +16,12 @@ public static class InvestmentTransactionMappingExtensions
         transaction.Currency,
         transaction.TradeDate,
         transaction.Fee,
-        transaction.Notes,
+        transaction.Description.Length == 0 ? null : transaction.Description,
         transaction.AssetListing?.Ticker ?? string.Empty,
         transaction.AssetListing?.ExchangeName ?? string.Empty,
         transaction.AssetListing?.Asset?.Type ?? AssetType.Other,
-        transaction.AssetListing?.HasEnabledSymbol ?? true);
+        transaction.AssetListing?.HasEnabledSymbol ?? true,
+        transaction.Labels.ToList());
 
     /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
     public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, long assetListingId) => new()
@@ -34,7 +35,8 @@ public static class InvestmentTransactionMappingExtensions
         Currency = request.Currency,
         TradeDate = request.TradeDate,
         Fee = request.Fee,
-        Notes = request.Notes
+        Description = request.Notes ?? string.Empty,
+        Labels = (request.LabelIds ?? []).Distinct().Select(id => new FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel { Id = id, Name = string.Empty }).ToList()
     };
 
     /// <summary>Map an update request onto the editable fields the repository copies by id.</summary>
@@ -49,6 +51,7 @@ public static class InvestmentTransactionMappingExtensions
         Currency = request.Currency,
         TradeDate = request.TradeDate,
         Fee = request.Fee,
-        Notes = request.Notes
+        Description = request.Notes ?? string.Empty,
+        Labels = (request.LabelIds ?? []).Distinct().Select(id => new FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel { Id = id, Name = string.Empty }).ToList()
     };
 }

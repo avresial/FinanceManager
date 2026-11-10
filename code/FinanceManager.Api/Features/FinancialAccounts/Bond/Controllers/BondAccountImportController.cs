@@ -37,7 +37,7 @@ public class BondAccountImportController(IBondAccountImportService importService
         if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId))
             return Forbid();
 
-        var domainEntries = importDto.Entries.Select(e => new BondEntryImport(e.PostingDate, e.ValueChange, e.BondDetailsId));
+        var domainEntries = importDto.Entries.Select(e => new BondEntryImport(e.PostingDate, e.ValueChange, e.BondDetailsId, e.Description ?? string.Empty));
         var domainResult = await importService.ImportEntries(userId, importDto.AccountId, domainEntries, HttpContext.RequestAborted);
         await dashboardCacheInvalidator.InvalidateUser(userId);
         await financialAlertService.EvaluateAlertsAsync(userId, HttpContext.RequestAborted);

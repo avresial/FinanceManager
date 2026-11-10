@@ -90,7 +90,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var flows = await repository.GetCapitalFlowInputs([_accountId], _fixtureEnd, TestContext.Current.CancellationToken);
         var persisted = await _testDatabase.Context.InvestmentTransactions
             .AsNoTracking()
-            .OrderBy(x => x.TradeDate)
+            .OrderBy(x => x.PostingDate)
             .ThenBy(x => x.EntryId)
             .ToListAsync(TestContext.Current.CancellationToken);
 
