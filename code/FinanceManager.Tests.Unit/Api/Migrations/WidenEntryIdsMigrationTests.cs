@@ -2,6 +2,7 @@ using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using System.Text.RegularExpressions;
 
 namespace FinanceManager.Tests.Unit.Api.Migrations;
 
@@ -22,11 +23,40 @@ public class WidenEntryIdsMigrationTests
 
         var up = migrator.GenerateScript("AddDividendPayments", "WidenEntryIdsToLong");
 
-        Assert.Contains("PK_CurrencyEntries", up, StringComparison.Ordinal);
-        Assert.Contains("PK_BondEntries", up, StringComparison.Ordinal);
-        foreach (var column in new[] { "EntryId", "CurrencyAccountEntryEntryId", "BondAccountEntryEntryId" })
-            Assert.Contains(column, up, StringComparison.Ordinal);
-        Assert.Contains("bigint", up, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("FK_FinancialLabels_BondEntries_BondAccountEntryEntryId", up, StringComparison.Ordinal);
+        foreach (var (table, column) in new[]
+        {
+            ("CurrencyEntries", "EntryId"),
+            ("BondEntries", "EntryId"),
+            ("CurrencyAccountEntryFinancialLabel", "CurrencyAccountEntryEntryId"),
+            ("FinancialLabels", "BondAccountEntryEntryId"),
+        })
+            Assert.Matches($@"ALTER TABLE {Name(table)} ALTER COLUMN {Name(column)} (TYPE )?bigint", up);
+
+        foreach (var (table, key) in new[]
+        {
+            ("CurrencyEntries", "PK_CurrencyEntries"),
+            ("BondEntries", "PK_BondEntries"),
+            ("CurrencyAccountEntryFinancialLabel", "PK_CurrencyAccountEntryFinancialLabel"),
+        })
+            Assert.Matches($@"ALTER TABLE {Name(table)} ADD CONSTRAINT {Name(key)} PRIMARY KEY", up);
+
+        foreach (var (table, foreignKey) in new[]
+        {
+            ("CurrencyAccountEntryFinancialLabel", "FK_CurrencyAccountEntryFinancialLabel_CurrencyEntries_Currency~"),
+            ("FinancialLabels", "FK_FinancialLabels_BondEntries_BondAccountEntryEntryId"),
+        })
+            Assert.Matches($@"ALTER TABLE {Name(table)} ADD CONSTRAINT {Name(foreignKey)} FOREIGN KEY", up);
+
+        foreach (var index in new[]
+        {
+            "IX_CurrencyEntries_AccountId_PostingDate_EntryId",
+            "IX_BondEntries_AccountId_PostingDate_EntryId",
+            "IX_BondEntries_AccountId_BondDetailsId_PostingDate_EntryId",
+            "IX_FinancialLabels_BondAccountEntryEntryId",
+        })
+            Assert.Matches($@"CREATE INDEX {Name(index)}", up);
     }
+
+    // Quoting differs by provider: "Name" on PostgreSQL and [Name] on SQL Server.
+    private static string Name(string identifier) => $@"[""\[]{Regex.Escape(identifier)}[""\]]";
 }
