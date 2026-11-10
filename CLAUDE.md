@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FinanceManager is an online budgeting tool built with Blazor WebAssembly + ASP.NET Core. The Blazor WASM client is hosted and served by the API project as static files. All application source lives under `code/`. The [arc42 architecture documentation](./docs/architecture/README.md) is the canonical technical documentation; do not edit generated build output.
 
-The solution file is `code/FinanceManager.slnx`. Target framework is `.NET 10`.
+The solution file is `code/FinanceManager.slnx`. Target framework is `.NET 11`.
 
 ## Commit Messages
 
@@ -104,7 +104,7 @@ Every code change that has a user-visible effect must add a changelog fragment, 
 
 ## Agent Requirements
 
-- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 10 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show a `10.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
+- **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 11 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show an `11.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
 - **Run dotnet format after every feature or bugfix.** After implementing a feature or bugfix, run `dotnet format ./code/FinanceManager.slnx` from the repository root before final validation, then include any formatting changes in the same commit as the implementation.
 - **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.
 - **Render and screenshot any UI change on the guest account.** A green build is not proof the UI looks right. Whenever a change touches the Blazor UI (any `.razor`/`.razor.cs`/`.razor.css`, layouts, or styling), boot the app, log in via the built-in **"Check out demo"** guest account, and screenshot the affected page on both a mobile and a desktop viewport before reporting the task complete. Follow [`.claude/skills/ui-testing/SKILL.md`](./.claude/skills/ui-testing/SKILL.md) for the exact steps and sandbox gotchas (blocked chart CDN, light-vs-dark theme, SPA navigation).
@@ -112,12 +112,12 @@ Every code change that has a user-visible effect must add a changelog fragment, 
 
 ### Installing the .NET SDK (cloud sandbox)
 
-The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are **not** on the cloud sandbox's network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Use Ubuntu's apt packages instead — Ubuntu 24.04 ships `dotnet-sdk-10.0` directly:
+The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are **not** on the cloud sandbox's network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Use a configured distribution feed that provides .NET 11 instead; do not assume the base Ubuntu feed already contains it:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-10.0
-dotnet --list-sdks   # should show 10.0.*
+sudo apt-get install -y dotnet-sdk-11.0
+dotnet --list-sdks   # should show 11.0.*
 ```
 
 If the install fails with `404 Not Found` on `.deb` files, the apt index is stale — re-run `sudo apt-get update` and retry. PPA fetch errors (`deadsnakes`, `ondrej/php`) during `apt-get update` are unrelated and can be ignored.

@@ -6,7 +6,7 @@
 
 | Constraint | Consequence | Evidence |
 |---|---|---|
-| .NET 10 and C# with `LangVersion=latest`, nullable reference types, implicit usings, style enforcement, and warnings as errors | New projects inherit shared settings; build warnings are failures | [Directory.Build.props](../../code/Directory.Build.props) |
+| .NET 11 and C# with `LangVersion=latest`, nullable reference types, implicit usings, style enforcement, and warnings as errors | New projects inherit shared settings; build warnings are failures | [Directory.Build.props](../../code/Directory.Build.props) |
 | One MSBuild solution with centrally managed NuGet versions | Add dependencies in the owning `.csproj` and set their version centrally; avoid copied version tables as the maintenance source | [FinanceManager.slnx](../../code/FinanceManager.slnx), [Directory.Packages.props](../../code/Directory.Packages.props) |
 | Blazor WebAssembly hosted by ASP.NET Core | Browser components access data through HTTP clients; the API publishes the browser assets | [WASM bootstrap](../../code/FinanceManager/Program.cs), [API bootstrap](../../code/FinanceManager.Api/Program.cs) |
 | Domain has no project/package references to ASP.NET Core or EF Core | Keep persistence and web transport implementations outside Domain | [Domain project](../../code/FinanceManager.Domain/FinanceManager.Domain.csproj), [layer dependency tests](../../code/FinanceManager.Tests.Architecture/LayerDependencyTests.cs) |
@@ -20,7 +20,7 @@ The intended boundaries are constraints for new work, not a claim that every exi
 
 The following versions were verified in the central package file during this migration. They document the baseline, not a promise to remain pinned to these versions. The [central package file](../../code/Directory.Packages.props) is authoritative after subsequent updates.
 
-The October 2026 dependency refresh uses stable NuGet releases. `Microsoft.OpenApi` remains on the latest 2.x release because `Microsoft.AspNetCore.OpenApi` 10.x requires a version below 3.0.0. The [AppHost project](../../code/AppHost/AppHost.csproj) aligns its Aspire SDK and hosting packages and retains NuGet-provided orchestration/dashboard binaries without requiring the optional Aspire CLI bundle.
+The November 2026 runtime upgrade uses .NET/ASP.NET Core 11 and Microsoft.OpenApi 3.x. EF Core and all database providers remain on compatible 10.x releases until the stable Npgsql 11 provider ships; do not mix EF Core 11 with Npgsql 10. The table below records the earlier documentation baseline. The [AppHost project](../../code/AppHost/AppHost.csproj) aligns its Aspire SDK and hosting packages and retains NuGet-provided orchestration/dashboard binaries without requiring the optional Aspire CLI bundle.
 
 | Dependency | Baseline | Role |
 |---|---|---|
@@ -45,7 +45,7 @@ The October 2026 dependency refresh uses stable NuGet releases. `Microsoft.OpenA
 
 Use PascalCase filenames/types, `_camelCase` private fields, `IPascalCase` interfaces, and namespaces matching folders. Feature folders refine project-level separation. Complex Razor components use `.razor` plus `.razor.cs`; DI registrations are grouped behind `Add*` extensions. Full conventions are maintained in [coding conventions](concepts/coding-conventions.md) and [`.editorconfig`](../../code/.editorconfig).
 
-The test runner is Microsoft.Testing.Platform, selected by [global.json](../../code/global.json). Run tests from `code/` so the runner configuration is discovered, and pass `--project`. CI also invokes the built test executables. The shared props target .NET 10; `global.json` selects the test runner and does not pin an SDK version.
+The test runner is Microsoft.Testing.Platform, selected by [global.json](../../code/global.json). Run tests from `code/` so the runner configuration is discovered, and pass `--project`. CI also invokes the built test executables. The shared props target .NET 11; `global.json` selects the test runner and pins SDK 11.0.100 with patch roll-forward and prereleases disabled.
 
 ```bash
 # From repository root

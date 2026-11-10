@@ -17,7 +17,7 @@ A merge to `develop` triggers build → unit tests → code-quality → security
 
 1. **Create the Azure Web App** (Free F1 tier):
    - Name: `FinanceManagerApi-dev`
-   - Runtime: .NET 10 (same as prod)
+   - Runtime: .NET 11 (same as prod)
    - Same region/resource group as prod is fine.
 2. **Download the publish profile** from the Azure portal (Web App → *Get publish profile*).
 3. **Add it as a GitHub repository secret** named `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` (paste the full XML).
@@ -104,3 +104,5 @@ Liveness and readiness return only the aggregate status word (no per-check detai
 ## Feature-branch preview environments (not implemented)
 
 Researched and intentionally skipped — see issue #189 discussion. Re-evaluate if/when the App Service plan moves to Standard or above (deployment slots) or if frontend previews via Azure Static Web Apps become worthwhile.
+
+Before deploying framework-dependent .NET 11 artifacts, configure both App Services with a supported .NET 11 runtime. The repository does not provision or verify that live setting. Keep migration tooling on `dotnet-ef` 10.x while EF Core/providers remain on 10.x. CI installs it with `--allow-roll-forward` so the tool can run on the installed .NET 11 runtime.

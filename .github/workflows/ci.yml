@@ -13,7 +13,7 @@ env:
   AZURE_WEBAPP_NAME: 'FinanceManagerApi'
   AZURE_WEBAPP_NAME_DEV: 'FinanceManagerApi-dev'
   AZURE_WEBAPP_PACKAGE_PATH: './code/FinanceManager.Api/publish'
-  DOTNET_VERSION: '10.x'
+  DOTNET_VERSION: '11.0.100'
   SOLUTION_PATH: './code/FinanceManager.slnx'
   API_PROJECT_PATH: './code/FinanceManager.Api/FinanceManager.Api.csproj'
   PUBLISH_DIR: './code/FinanceManager.Api/publish'
@@ -198,7 +198,7 @@ jobs:
       - name: Run unit tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.Tests.Unit/bin/Release/net10.0/FinanceManager.Tests.Unit -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
+          ./code/FinanceManager.Tests.Unit/bin/Release/net11.0/FinanceManager.Tests.Unit -trx ${{ github.workspace }}/TestResults/unit-test-results.trx
 
       - name: Publish unit test results
         uses: dorny/test-reporter@v3
@@ -246,7 +246,7 @@ jobs:
       - name: Run integration tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.Tests.Integration/bin/Release/net10.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx -maxThreads unlimited
+          ./code/FinanceManager.Tests.Integration/bin/Release/net11.0/FinanceManager.Tests.Integration -trx ${{ github.workspace }}/TestResults/integration-test-results.trx -maxThreads unlimited
 
       - name: Publish integration test results
         uses: dorny/test-reporter@v3
@@ -294,7 +294,7 @@ jobs:
       - name: Run architecture tests
         run: |
           mkdir -p ${{ github.workspace }}/TestResults
-          ./code/FinanceManager.Tests.Architecture/bin/Debug/net10.0/FinanceManager.Tests.Architecture -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
+          ./code/FinanceManager.Tests.Architecture/bin/Debug/net11.0/FinanceManager.Tests.Architecture -trx ${{ github.workspace }}/TestResults/architecture-test-results.trx
 
       - name: Publish architecture test results
         uses: dorny/test-reporter@v3
@@ -395,7 +395,7 @@ jobs:
 
       - name: Install EF Core CLI
         run: |
-          dotnet tool install --global dotnet-ef --version 10.*
+          dotnet tool install --global dotnet-ef --version 10.* --allow-roll-forward
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Apply EF migrations
@@ -452,7 +452,7 @@ jobs:
 
       - name: Install EF Core CLI
         run: |
-          dotnet tool install --global dotnet-ef --version 10.*
+          dotnet tool install --global dotnet-ef --version 10.* --allow-roll-forward
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Apply EF migrations

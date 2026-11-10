@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
 	<PropertyGroup>
-		<NoWarn>$(NoWarn);CS0618;MUD0002;MUD0012</NoWarn>
+		<!-- Razor-generated sources do not inherit the advisory severity from .editorconfig. -->
+		<NoWarn>$(NoWarn);CS0618;MUD0002;MUD0012;BL0016</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

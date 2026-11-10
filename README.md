@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://github.com/avresial/FinanceManager/stargazers"><img src="https://img.shields.io/github/stars/avresial/FinanceManager" alt="GitHub stars"/></a>
   <a href="https://github.com/avresial/FinanceManager/issues"><img src="https://img.shields.io/github/issues/avresial/FinanceManager" alt="GitHub issues"/></a>
-  <img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10"/>
+  <img src="https://img.shields.io/badge/.NET-11-512BD4" alt=".NET 11"/>
   <img src="https://img.shields.io/badge/Blazor-WASM-blue" alt="Blazor WASM"/>
   <a href="https://financemanager.mikikarkowski.dev/login"><img src="https://img.shields.io/badge/Live%20App-online-brightgreen" alt="Live App"/></a>
 </p>
@@ -126,7 +126,7 @@ The solution follows a **layered modular monolith** architecture. Read the [arc4
 ## Getting Started
 
 ### Prerequisites
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [.NET 11 SDK](https://dotnet.microsoft.com/download)
 - PostgreSQL **or** SQL Server
 - (Optional) Docker, for running PostgreSQL through .NET Aspire
 
