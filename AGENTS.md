@@ -7,6 +7,8 @@ Instructions for AI agents working on FinanceManager.
 **Read CLAUDE.md first** - CLAUDE.md contains the information usualy found in agents md.
 
 
+- **Blazor work**: use the [installed Blazor skills and applicability notes](.agents/skills/README.md#blazor) for components, forms, auth, shared state, API calls, UI planning, and JS interop. This is an API-hosted WebAssembly client using MudBlazor and custom authentication; preserve those conventions over generic server/Auto/SSR examples.
+- **New .NET 11 APIs**: use the repository skills for [process management](.agents/skills/process-api-net11/SKILL.md) and [System.Text.Json](.agents/skills/system-text-json-net11/SKILL.md) when relevant. Source and update details: [skill installation notes](.agents/skills/README.md).
 - **Project conventions** (build, tests, architecture, branching, changelog): read [`CLAUDE.md`](./CLAUDE.md).
 - **Using the running app** — above all the **develop-only auto test login** (`/DevelopLogin/{login}/{page}`)
   that signs you in as `guest` or `testuser` without the landing page or login form: read
