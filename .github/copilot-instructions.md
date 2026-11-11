@@ -18,12 +18,12 @@ Use these instructions for all repository-scoped Copilot work.
 
 ## Cloud sandbox environment (.NET SDK install + running tests)
 
-If you are running in a cloud sandbox without a preinstalled .NET SDK, install it via apt — **not** the official installer script. The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are blocked by the sandbox network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Ubuntu 24.04 ships `dotnet-sdk-10.0` directly in its repos:
+If you are running in a cloud sandbox without a preinstalled .NET SDK, install it via apt — **not** the official installer script. The Microsoft installer hosts (`dot.net`, `aka.ms`, `dotnetcli.azureedge.net`, `builds.dotnet.microsoft.com`) are blocked by the sandbox network allowlist, so `curl https://dot.net/v1/dotnet-install.sh | bash` fails with `Host not in allowlist`. Use a distribution feed that provides `dotnet-sdk-11.0`; availability depends on the configured feeds:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y dotnet-sdk-10.0
-dotnet --list-sdks   # should show 10.0.*
+sudo apt-get install -y dotnet-sdk-11.0
+dotnet --list-sdks   # should show 11.0.*
 ```
 
 Notes:

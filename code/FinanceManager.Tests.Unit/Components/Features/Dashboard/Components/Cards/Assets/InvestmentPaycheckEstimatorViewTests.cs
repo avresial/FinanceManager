@@ -11,10 +11,15 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 [Trait("Category", "Unit")]
 public sealed class InvestmentPaycheckEstimatorViewTests
 {
+    public static TheoryData<decimal, decimal, decimal> MonthlyPaychecks => new()
+    {
+        { 120_000m, 0.04m, 400m },
+        { 240_000m, 0.03m, 600m },
+        { 100_000m, 0.05m, 416.67m }
+    };
+
     [Theory]
-    [InlineData(120_000, 0.04, 400)]
-    [InlineData(240_000, 0.03, 600)]
-    [InlineData(100_000, 0.05, 416.67)]
+    [MemberData(nameof(MonthlyPaychecks))]
     public async Task MonthlyPaycheck_ComputesLocally(decimal assets, decimal rate, decimal expected)
     {
         await using var context = CreateContext();

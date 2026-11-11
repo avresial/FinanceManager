@@ -1,0 +1,5 @@
+is_global = true
+
+# Apply the .NET 11 JS interop advisory to Razor-generated sources as well as C#.
+# File-based .editorconfig settings do not reach every source-generator tree.
+dotnet_diagnostic.BL0016.severity = suggestion
