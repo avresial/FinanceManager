@@ -49,7 +49,7 @@ public class AuthControllerTests(OptionsProvider optionsProvider) : ControllerTe
         refreshTokenServiceMock.Setup(x => x.Issue(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync("refresh-token-1");
         refreshTokenServiceMock.Setup(x => x.ValidateAndRotate("refresh-token-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(RefreshTokenRotationResult.Ok(_userId, "refresh-token-2"));
+            .ReturnsAsync(new RefreshTokenRotationResult.Rotated(_userId, "refresh-token-2"));
         refreshTokenServiceMock.Setup(x => x.Revoke("refresh-token-2", It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddSingleton(refreshTokenServiceMock.Object);

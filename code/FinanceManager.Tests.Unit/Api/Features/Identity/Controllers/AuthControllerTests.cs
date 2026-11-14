@@ -84,7 +84,7 @@ public class AuthControllerTests
     public async Task Refresh_ValidToken_ReturnsAccessTokenAndRotatesCookie()
     {
         _refreshTokenService.Setup(s => s.ValidateAndRotate("rawtoken", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(RefreshTokenRotationResult.Ok(99, "newtoken"));
+            .ReturnsAsync(new RefreshTokenRotationResult.Rotated(99, "newtoken"));
         _userRepository.Setup(r => r.GetUser(99)).ReturnsAsync(new User
         {
             UserId = 99,
@@ -111,14 +111,19 @@ public class AuthControllerTests
         Assert.Contains("path=/api/Auth", setCookie, StringComparison.OrdinalIgnoreCase);
     }
 
+    public static TheoryData<RefreshTokenRotationResult> FailedRotations =>
+    [
+        new RefreshTokenRotationResult.NotFound(),
+        new RefreshTokenRotationResult.Expired(),
+        new RefreshTokenRotationResult.Revoked(),
+    ];
+
     [Theory]
-    [InlineData(RefreshTokenStatus.NotFound)]
-    [InlineData(RefreshTokenStatus.Expired)]
-    [InlineData(RefreshTokenStatus.Revoked)]
-    public async Task Refresh_FailedRotation_ReturnsUnauthorizedAndClearsCookie(RefreshTokenStatus status)
+    [MemberData(nameof(FailedRotations))]
+    public async Task Refresh_FailedRotation_ReturnsUnauthorizedAndClearsCookie(RefreshTokenRotationResult failure)
     {
         _refreshTokenService.Setup(s => s.ValidateAndRotate("rawtoken", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(RefreshTokenRotationResult.Failure(status));
+            .ReturnsAsync(failure);
 
         var controller = CreateController("rawtoken", out var ctx);
 
@@ -135,7 +140,7 @@ public class AuthControllerTests
     public async Task Refresh_UnknownUser_ReturnsUnauthorized()
     {
         _refreshTokenService.Setup(s => s.ValidateAndRotate("rawtoken", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(RefreshTokenRotationResult.Ok(99, "newtoken"));
+            .ReturnsAsync(new RefreshTokenRotationResult.Rotated(99, "newtoken"));
         _userRepository.Setup(r => r.GetUser(99)).ReturnsAsync((User?)null);
 
         var controller = CreateController("rawtoken", out _);

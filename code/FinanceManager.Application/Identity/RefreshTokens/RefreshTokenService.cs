@@ -35,11 +35,11 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
     public async Task<RefreshTokenRotationResult> ValidateAndRotate(string rawToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawToken))
-            return RefreshTokenRotationResult.Failure(RefreshTokenStatus.NotFound);
+            return new RefreshTokenRotationResult.NotFound();
 
         var existing = await repository.GetByHash(Hash(rawToken));
         if (existing is null)
-            return RefreshTokenRotationResult.Failure(RefreshTokenStatus.NotFound);
+            return new RefreshTokenRotationResult.NotFound();
 
         var now = dateTimeProvider.UtcNow;
 
@@ -48,11 +48,11 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
         if (existing.RevokedAt is not null)
         {
             await repository.RevokeFamily(existing.FamilyId, now);
-            return RefreshTokenRotationResult.Failure(RefreshTokenStatus.Revoked);
+            return new RefreshTokenRotationResult.Revoked();
         }
 
         if (now >= existing.ExpiresAt || now >= existing.AbsoluteExpiresAt)
-            return RefreshTokenRotationResult.Failure(RefreshTokenStatus.Expired);
+            return new RefreshTokenRotationResult.Expired();
 
         var newRawToken = GenerateRawToken();
         var replacement = new RefreshToken
@@ -71,7 +71,7 @@ public class RefreshTokenService(IRefreshTokenRepository repository, IOptions<Re
         // Revoke-and-replace in one commit so a failure can't strand the old token revoked without a successor.
         await repository.Rotate(existing, replacement);
 
-        return RefreshTokenRotationResult.Ok(existing.UserId, newRawToken);
+        return new RefreshTokenRotationResult.Rotated(existing.UserId, newRawToken);
     }
 
     public async Task Revoke(string rawToken, CancellationToken cancellationToken = default)
