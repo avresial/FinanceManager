@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
@@ -41,8 +42,8 @@ internal sealed class CachedCurrencyExchangeRateSource(
         {
             if (cache.TryGetValue(GetCacheKey(fromCurrency, toCurrency, date), out CurrencyExchangeRateResolution? cached)
                 && cached is not null
-                && ((cached.Result.IsSuccess && IsExact(cached.Source))
-                    || (reuseCachedMisses && !cached.Result.IsSuccess)))
+                && ((cached.Result is CurrencyExchangeRateResult.Success && IsExact(cached.Source))
+                    || (reuseCachedMisses && cached.Result is not CurrencyExchangeRateResult.Success)))
             {
                 results[date] = cached;
             }
@@ -59,11 +60,11 @@ internal sealed class CachedCurrencyExchangeRateSource(
         foreach (var (date, resolution) in delegated)
         {
             results[date] = resolution;
-            if (resolution.Result.IsSuccess && IsExact(resolution.Source))
+            if (resolution.Result is CurrencyExchangeRateResult.Success && IsExact(resolution.Source))
             {
                 cache.Set(GetCacheKey(fromCurrency, toCurrency, date), resolution, _cacheOptions);
             }
-            else if (reuseCachedMisses && !resolution.Result.IsSuccess)
+            else if (reuseCachedMisses && resolution.Result is not CurrencyExchangeRateResult.Success)
             {
                 cache.Set(GetCacheKey(fromCurrency, toCurrency, date), resolution, _missCacheOptions);
             }

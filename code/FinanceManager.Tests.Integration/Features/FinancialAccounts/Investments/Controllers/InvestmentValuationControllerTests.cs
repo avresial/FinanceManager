@@ -178,8 +178,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), end))
             .ReturnsAsync(pending
-                ? CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
-                : CurrencyExchangeRateResult.Success(4m));
+                ? new CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
+                : new CurrencyExchangeRateResult.Success(4m));
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
         var point = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_testAccountId}/985/{end:yyyy-MM-dd}", TestContext.Current.CancellationToken);

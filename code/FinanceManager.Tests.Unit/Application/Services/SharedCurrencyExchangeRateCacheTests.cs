@@ -168,7 +168,7 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         var sut = CreateSut();
 
         var point = await sut.GetExchangeRateResultAsync(gbp, _eur, date);
-        Assert.Equal(0.92m * 0.92m, point.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m * 0.92m), point);
         var range = await sut.GetExchangeRateAsync(gbp, _eur, date, date);
         Assert.Equal(0.94m, Assert.Single(range).Value);
 
@@ -183,8 +183,7 @@ public class SharedCurrencyExchangeRateCacheTests : IDisposable
         _provider.Setup(x => x.GetExchangeRateAsync(_usd, _eur, date))
             .ReturnsAsync(new CurrencyExchangeRateProviderResult(CurrencyExchangeRateProviderStatus.NotYetPublished));
         var sut = CreateSut();
-        Assert.Equal(CurrencyExchangeRateStatus.NotYetPublished,
-            (await sut.GetExchangeRateResultAsync(_usd, _eur, date)).Status);
+        Assert.IsType<CurrencyExchangeRateResult.NotYetPublished>(await sut.GetExchangeRateResultAsync(_usd, _eur, date));
 
         var range = await sut.GetExchangeRateAsync(_usd, _eur, date, date);
 

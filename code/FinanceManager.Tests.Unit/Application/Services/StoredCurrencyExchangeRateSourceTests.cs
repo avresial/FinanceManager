@@ -72,7 +72,7 @@ public class StoredCurrencyExchangeRateSourceTests
                 return dates.ToDictionary(
                     date => date,
                     date => new CurrencyExchangeRateResolution(
-                        CurrencyExchangeRateResult.Success(0.92m),
+                        new CurrencyExchangeRateResult.Success(0.92m),
                         CurrencyExchangeRateSource.Provider));
             });
 
@@ -110,7 +110,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Stored, resolution.Source);
-        Assert.Equal(0.92m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), resolution.Result);
 
         repository.Verify(x => x.Get("USD", "EUR", date, ct), Times.Once);
         repository.Verify(x => x.Get("EUR", "USD", It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -140,7 +140,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Stored, resolution.Source);
-        Assert.Equal(0.5m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.5m), resolution.Result);
 
         repository.Verify(x => x.Get("USD", "EUR", date, ct), Times.Once);
         repository.Verify(x => x.Get("EUR", "USD", date, ct), Times.Once);
@@ -163,7 +163,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.Is<IReadOnlyCollection<DateTime>>(d => d.Count == 1 && d.Contains(date)), true, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
@@ -171,7 +171,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Provider, resolution.Source);
-        Assert.Equal(0.92m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), resolution.Result);
 
         repository.Verify(x => x.Add("USD", "EUR", date, 0.92m, ct), Times.Once);
         repository.Verify(x => x.AddRange(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<(DateTime Date, decimal Rate)>>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -201,9 +201,9 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.Equal(3, results.Count);
         Assert.All(results.Values, r => Assert.Equal(CurrencyExchangeRateSource.Stored, r.Source));
-        Assert.Equal(0.92m, results[dateStart].Result.Value);
-        Assert.Equal(0.91m, results[dateStart.AddDays(1)].Result.Value);
-        Assert.Equal(0.93m, results[dateEnd].Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), results[dateStart].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.91m), results[dateStart.AddDays(1)].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.93m), results[dateEnd].Result);
 
         repository.Verify(x => x.GetRange("USD", "EUR", dateStart, dateEnd, ct), Times.Once);
         repository.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -232,7 +232,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Stored, resolution.Source);
-        Assert.Equal(0.92m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), resolution.Result);
 
         repository.Verify(x => x.GetRange("USD", "EUR", date, date, ct), Times.Once);
         repository.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -260,7 +260,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.Is<IReadOnlyCollection<DateTime>>(d => d.Count == 1 && d.Contains(date)), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
@@ -268,7 +268,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Provider, resolution.Source);
-        Assert.Equal(0.92m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), resolution.Result);
 
         repository.Verify(x => x.GetRange("USD", "EUR", date, date, ct), Times.Once);
         repository.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -297,7 +297,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.Is<IReadOnlyCollection<DateTime>>(d => d.Count == 60), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(dates.ToDictionary(
                 d => d,
-                d => new CurrencyExchangeRateResolution(CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)));
+                d => new CurrencyExchangeRateResolution(new CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)));
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
         var results = await sut.ResolveAsync(_usd, _eur, dates, reuseCachedMisses: false, ct);
@@ -336,8 +336,8 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.Is<IReadOnlyCollection<DateTime>>(d => d.Count == 2 && d.Contains(d2) && d.Contains(d3)), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [d2] = new(CurrencyExchangeRateResult.Success(0.91m), CurrencyExchangeRateSource.Provider),
-                [d3] = new(CurrencyExchangeRateResult.Success(0.93m), CurrencyExchangeRateSource.Provider)
+                [d2] = new(new CurrencyExchangeRateResult.Success(0.91m), CurrencyExchangeRateSource.Provider),
+                [d3] = new(new CurrencyExchangeRateResult.Success(0.93m), CurrencyExchangeRateSource.Provider)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
@@ -372,16 +372,16 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.IsAny<IReadOnlyCollection<DateTime>>(), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [d1] = new(CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable),
-                [d2] = new(CurrencyExchangeRateResult.Failed(), CurrencyExchangeRateSource.Unavailable)
+                [d1] = new(new CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable),
+                [d2] = new(new CurrencyExchangeRateResult.Failed(), CurrencyExchangeRateSource.Unavailable)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
         var results = await sut.ResolveAsync(_usd, _eur, [d1, d2], reuseCachedMisses: false, ct);
 
         Assert.Equal(2, results.Count);
-        Assert.False(results[d1].Result.IsSuccess);
-        Assert.False(results[d2].Result.IsSuccess);
+        Assert.IsNotType<CurrencyExchangeRateResult.Success>(results[d1].Result);
+        Assert.IsNotType<CurrencyExchangeRateResult.Success>(results[d2].Result);
 
         repository.Verify(x => x.AddRange(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyCollection<(DateTime Date, decimal Rate)>>(), It.IsAny<CancellationToken>()), Times.Never);
         repository.Verify(x => x.Add(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -407,7 +407,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(_usd, _eur, It.IsAny<IReadOnlyCollection<DateTime>>(), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.Provider)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
@@ -438,7 +438,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(gbp, _usd, It.Is<IReadOnlyCollection<DateTime>>(d => d.Count == 1 && d.Contains(date)), false, ct, It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(1.25m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(1.25m), CurrencyExchangeRateSource.Provider)
             });
 
         var sut = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);
@@ -446,7 +446,7 @@ public class StoredCurrencyExchangeRateSourceTests
 
         Assert.True(results.TryGetValue(date, out var resolution));
         Assert.Equal(CurrencyExchangeRateSource.Provider, resolution.Source);
-        Assert.Equal(1.25m, resolution.Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(1.25m), resolution.Result);
 
         repository.Verify(x => x.GetRange("GBP", "USD", date, date, ct), Times.Once);
         repository.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -483,7 +483,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(gbp, pln, It.IsAny<IReadOnlyCollection<DateTime>>(), false, It.IsAny<CancellationToken>(), It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable)
+                [date] = new(new CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable)
             });
 
         // GBP -> USD provider succeeds
@@ -491,7 +491,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(gbp, DefaultCurrency.USD, It.IsAny<IReadOnlyCollection<DateTime>>(), false, It.IsAny<CancellationToken>(), It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(1.25m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(1.25m), CurrencyExchangeRateSource.Provider)
             });
 
         // USD -> PLN provider succeeds
@@ -499,7 +499,7 @@ public class StoredCurrencyExchangeRateSourceTests
             .Setup(x => x.ResolveAsync(DefaultCurrency.USD, pln, It.IsAny<IReadOnlyCollection<DateTime>>(), false, It.IsAny<CancellationToken>(), It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(4m), CurrencyExchangeRateSource.Provider)
+                [date] = new(new CurrencyExchangeRateResult.Success(4m), CurrencyExchangeRateSource.Provider)
             });
 
         var source = new StoredCurrencyExchangeRateSource(repository.Object, inner.Object);

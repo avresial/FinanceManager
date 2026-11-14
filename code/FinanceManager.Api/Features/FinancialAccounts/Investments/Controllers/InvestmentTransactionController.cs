@@ -346,7 +346,12 @@ public class InvestmentTransactionController(
         var currency = new Currency(0, listing.TradingCurrency, listing.TradingCurrency);
         var priceDate = asOf?.ToDateTime(TimeOnly.MinValue) ?? DateTime.UtcNow;
         var result = await priceProvider.GetPricePerUnitResultAsync(listingId, currency, priceDate, cancellationToken);
-        return Ok(new ListingPriceDto(result.Price > 0 ? result.Price : null, listing.TradingCurrency, result.Message, result.RetryAtUtc));
+        return Ok(result switch
+        {
+            InvestmentPriceResult.Success(var price) => new ListingPriceDto(price, listing.TradingCurrency),
+            InvestmentPriceResult.NotYetPublished(var message, var retryAtUtc) => new ListingPriceDto(null, listing.TradingCurrency, message, retryAtUtc),
+            InvestmentPriceResult.NotFound => new ListingPriceDto(null, listing.TradingCurrency),
+        });
     }
 
     private async Task<bool> AreLabelsValid(IReadOnlyCollection<int>? ids, CancellationToken cancellationToken)
