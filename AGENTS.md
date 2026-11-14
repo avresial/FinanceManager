@@ -8,6 +8,7 @@ Instructions for AI agents working on FinanceManager.
 
 
 - **Project conventions** (build, tests, architecture, branching, changelog): read [`CLAUDE.md`](./CLAUDE.md).
+- **Agent friction reporting**: for repository tasks using tools, follow [`.claude/skills/agent-friction/SKILL.md`](./.claude/skills/agent-friction/SKILL.md). Record unexpected obstacles and verified recovery; finalize a short session summary even when no friction occurred. Read-only or no-file-write requests take precedence.
 - **Using the running app** — above all the **develop-only auto test login** (`/DevelopLogin/{login}/{page}`)
   that signs you in as `guest` or `testuser` without the landing page or login form: read
   [`.claude/skills/finance-manager-usage/SKILL.md`](./.claude/skills/finance-manager-usage/SKILL.md).

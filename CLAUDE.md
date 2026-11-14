@@ -104,6 +104,7 @@ Every code change that has a user-visible effect must add a changelog fragment, 
 
 ## Agent Requirements
 
+- **Report agent friction.** For repository tasks using tools, follow [`.claude/skills/agent-friction/SKILL.md`](./.claude/skills/agent-friction/SKILL.md). Record unexpected obstacles and verified recovery; finalize a short session summary even when no friction occurred. Read-only or no-file-write requests take precedence.
 - **Install the .NET SDK before coding.** Any task that involves code changes requires the .NET 11 SDK to be installed first so that `dotnet build`, `dotnet format`, and `dotnet test` can run. If `dotnet --list-sdks` does not show an `11.*` SDK, install it before making changes — see "Installing the .NET SDK" below for the path that works in the cloud sandbox.
 - **Run dotnet format after every feature or bugfix.** After implementing a feature or bugfix, run `dotnet format ./code/FinanceManager.slnx` from the repository root before final validation, then include any formatting changes in the same commit as the implementation.
 - **Run unit tests after every change.** Every code change must end with `dotnet test --project ./code/FinanceManager.Tests.Unit/FinanceManager.Tests.Unit.csproj` passing (see "Running tests" below for the correct invocation). Do not commit, push, or report a task as complete until unit tests are green.

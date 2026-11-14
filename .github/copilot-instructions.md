@@ -4,6 +4,8 @@ For canonical technical documentation, read the [arc42 architecture documentatio
 
 Use these instructions for all repository-scoped Copilot work.
 
+For repository tasks using tools, follow the [agent friction reporting skill](../.claude/skills/agent-friction/SKILL.md). Record unexpected obstacles and verified recovery; finalize a short session summary even when no friction occurred. Read-only or no-file-write requests take precedence.
+
 ## Repository location and scope
 - This repository's solution is at `code/FinanceManager.slnx`.
 - Keep changes minimal and targeted. Do not refactor unrelated code.
