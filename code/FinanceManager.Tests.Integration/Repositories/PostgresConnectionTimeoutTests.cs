@@ -219,36 +219,31 @@ public sealed class PostgresConnectionTimeoutTests
         }
     }
 
+    // RunAndCaptureTextAsync drains stdout and stderr together, so a chatty stderr cannot fill its pipe and
+    // stall the process while stdout is still being read.
     private static async Task<string> Docker(CancellationToken cancellationToken, params string[] arguments)
     {
-        using var process = StartDocker(arguments);
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
-        await process.WaitForExitAsync(cancellationToken);
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException($"docker {arguments[0]} failed: {error}");
+        var result = await Process.RunAndCaptureTextAsync("docker", arguments, cancellationToken);
+        ThrowIfCanceled(result.ExitStatus, cancellationToken);
+        if (result.ExitStatus.ExitCode != 0)
+            throw new InvalidOperationException($"docker {arguments[0]} failed: {result.StandardError}");
 
-        return output;
+        return result.StandardOutput;
     }
 
     private static async Task<int> DockerExitCode(CancellationToken cancellationToken, params string[] arguments)
     {
-        using var process = StartDocker(arguments);
-        await process.WaitForExitAsync(cancellationToken);
-        return process.ExitCode;
+        var status = await Process.RunAsync("docker", arguments, silent: true, cancellationToken);
+        ThrowIfCanceled(status, cancellationToken);
+        return status.ExitCode;
     }
 
-    private static Process StartDocker(string[] arguments)
+    // The .NET 11 run helpers kill the process on cancellation and can report it through Canceled instead of
+    // throwing. Surface it as cancellation so a canceled run is never read as a Docker failure or absence.
+    private static void ThrowIfCanceled(ProcessExitStatus status, CancellationToken cancellationToken)
     {
-        var startInfo = new ProcessStartInfo("docker")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-        foreach (var argument in arguments)
-            startInfo.ArgumentList.Add(argument);
-
-        return Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start Docker.");
+        if (status.Canceled)
+            throw new OperationCanceledException(cancellationToken);
     }
 
 }
