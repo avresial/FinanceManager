@@ -224,6 +224,7 @@ public sealed class PostgresConnectionTimeoutTests
     private static async Task<string> Docker(CancellationToken cancellationToken, params string[] arguments)
     {
         var result = await Process.RunAndCaptureTextAsync("docker", arguments, cancellationToken);
+        ThrowIfCanceled(result.ExitStatus, cancellationToken);
         if (result.ExitStatus.ExitCode != 0)
             throw new InvalidOperationException($"docker {arguments[0]} failed: {result.StandardError}");
 
@@ -233,7 +234,16 @@ public sealed class PostgresConnectionTimeoutTests
     private static async Task<int> DockerExitCode(CancellationToken cancellationToken, params string[] arguments)
     {
         var status = await Process.RunAsync("docker", arguments, silent: true, cancellationToken);
+        ThrowIfCanceled(status, cancellationToken);
         return status.ExitCode;
+    }
+
+    // The .NET 11 run helpers kill the process on cancellation and can report it through Canceled instead of
+    // throwing. Surface it as cancellation so a canceled run is never read as a Docker failure or absence.
+    private static void ThrowIfCanceled(ProcessExitStatus status, CancellationToken cancellationToken)
+    {
+        if (status.Canceled)
+            throw new OperationCanceledException(cancellationToken);
     }
 
 }
