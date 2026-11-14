@@ -30,7 +30,9 @@ public class InvestmentPriceProvider(
     private static readonly TimeSpan _cacheTtl = TimeSpan.FromMinutes(60);
 
     public async Task<decimal> GetPricePerUnitAsync(long assetListingId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default) =>
-        (await GetPricePerUnitResultAsync(assetListingId, targetCurrency, asOf, ct)).Price ?? 0m;
+        await GetPricePerUnitResultAsync(assetListingId, targetCurrency, asOf, ct) is InvestmentPriceResult.Success(var price)
+            ? price
+            : 0m;
 
     public async Task<InvestmentPriceResult> GetPricePerUnitResultAsync(
         long assetListingId,
@@ -38,7 +40,7 @@ public class InvestmentPriceProvider(
         DateTime asOf,
         CancellationToken ct = default)
     {
-        if (assetListingId <= 0) return InvestmentPriceResult.NotFound();
+        if (assetListingId <= 0) return new InvestmentPriceResult.NotFound();
 
         // Cache-first: a hit must not depend on any repository I/O.
         // Guest databases reuse listing ids but contain independently seeded quotes.
@@ -46,10 +48,10 @@ public class InvestmentPriceProvider(
             ? $"GUEST_{guestSessionAccessor.GuestUserId}_"
             : string.Empty;
         var cacheKey = $"INVEST_PRICE_{cacheScope}{targetCurrency.ShortName}_{asOf:yyyyMMdd}_{assetListingId}";
-        if (cache.TryGetValue(cacheKey, out decimal cached)) return InvestmentPriceResult.Success(cached);
+        if (cache.TryGetValue(cacheKey, out decimal cached)) return new InvestmentPriceResult.Success(cached);
 
         var listing = await listingRepository.Get(assetListingId, ct);
-        if (listing is null) return InvestmentPriceResult.NotFound();
+        if (listing is null) return new InvestmentPriceResult.NotFound();
 
         // Exchanges are closed at the weekend, so a Saturday/Sunday "as of" is priced from that
         // week's Friday close rather than from dates no provider will ever publish.
@@ -62,19 +64,17 @@ public class InvestmentPriceProvider(
             quote = await priceQuoteRepository.GetLatestOnOrBefore(assetListingId, DayEnd(priceDate), cancellationToken: ct);
         }
 
-        if (quote is null) return InvestmentPriceResult.NotFound();
+        if (quote is null) return new InvestmentPriceResult.NotFound();
 
-        var (price, direct, pending) = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
-        if (pending is not null)
-            return InvestmentPriceResult.NotYetPublished(pending.Message!, pending.RetryAtUtc!.Value);
+        var (result, direct) = await ConvertAsync(quote.Price, quote.Currency, targetCurrency, asOf, ct);
 
         // A USD-fallback value is not denominated in the target currency, so caching it under the
         // target-currency key would serve mislabelled amounts for the whole TTL. A pending current-
         // day rate returns above without a numeric fallback.
-        if (price > 0 && direct)
+        if (result is InvestmentPriceResult.Success(var price) && direct)
             cache.Set(cacheKey, price, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = _cacheTtl });
 
-        return price > 0 ? InvestmentPriceResult.Success(price) : InvestmentPriceResult.NotFound();
+        return result;
     }
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetPricePerUnitSeriesAsync(
@@ -133,8 +133,8 @@ public class InvestmentPriceProvider(
             // conversion (which may cross through USD), never one lookup per day.
             if (rateMap.Count == 0)
             {
-                var (unitRate, _, _) = await ConvertAsync(1m, name, targetCurrency, endDate, ct);
-                if (unitRate > 0)
+                var (unitResult, _) = await ConvertAsync(1m, name, targetCurrency, endDate, ct);
+                if (unitResult is InvestmentPriceResult.Success(var unitRate))
                 {
                     for (var date = startDate; date <= endDate; date = date.AddDays(1))
                         rateMap[date] = unitRate;
@@ -227,27 +227,28 @@ public class InvestmentPriceProvider(
     }
 
     // Direct is false when the returned value is the USD fallback (i.e. not denominated in
-    // targetCurrency); such values must not be cached under the target currency.
-    private async Task<(decimal Price, bool Direct, CurrencyExchangeRateResult? Pending)> ConvertAsync(
+    // targetCurrency); such values must not be cached under the target currency. A non-positive
+    // converted price is reported as NotFound.
+    private async Task<(InvestmentPriceResult Result, bool Direct)> ConvertAsync(
         decimal price,
         string sourceCurrencyName,
         Currency targetCurrency,
         DateTime date,
         CancellationToken ct)
     {
-        if (price <= 0) return (0m, true, null);
+        if (price <= 0) return (new InvestmentPriceResult.NotFound(), true);
         if (string.Equals(sourceCurrencyName, targetCurrency.ShortName, StringComparison.OrdinalIgnoreCase))
-            return (price, true, null);
+            return (new InvestmentPriceResult.Success(price), true);
 
         if (date > DateTime.UtcNow) date = DateTime.UtcNow;
         var sourceCurrency = await currencyRepository.GetOrAdd(sourceCurrencyName, sourceCurrencyName, ct);
         var rateResult = await currencyExchangeService.GetExchangeRateResultAsync(sourceCurrency, targetCurrency, date.Date);
-        if (rateResult.IsSuccess) return (price * rateResult.Value!.Value, true, null);
+        if (rateResult is CurrencyExchangeRateResult.Success(var rate)) return (Priced(price * rate), true);
 
-        if (rateResult.Status == CurrencyExchangeRateStatus.NotYetPublished)
+        if (rateResult is CurrencyExchangeRateResult.NotYetPublished pending)
         {
-            logger.LogInformation("{Message}", rateResult.Message);
-            return (0m, true, rateResult);
+            logger.LogInformation("{Message}", pending.Message);
+            return (new InvestmentPriceResult.NotYetPublished(pending.Message, pending.RetryAtUtc), true);
         }
 
         // Historical or otherwise unknown rates retain the existing USD fallback. A current-day
@@ -255,17 +256,20 @@ public class InvestmentPriceProvider(
         logger.LogWarning("No exchange rate {From}→{To} on {Date}; falling back to USD", sourceCurrency.ShortName, targetCurrency.ShortName, date.Date);
 
         if (string.Equals(sourceCurrencyName, DefaultCurrency.USD.ShortName, StringComparison.OrdinalIgnoreCase))
-            return (price, false, null);
+            return (new InvestmentPriceResult.Success(price), false);
 
         var usdRateResult = await currencyExchangeService.GetExchangeRateResultAsync(sourceCurrency, DefaultCurrency.USD, date.Date);
-        if (usdRateResult.Status == CurrencyExchangeRateStatus.NotYetPublished)
+        if (usdRateResult is CurrencyExchangeRateResult.NotYetPublished usdPending)
         {
-            logger.LogInformation("{Message}", usdRateResult.Message);
-            return (0m, false, usdRateResult);
+            logger.LogInformation("{Message}", usdPending.Message);
+            return (new InvestmentPriceResult.NotYetPublished(usdPending.Message, usdPending.RetryAtUtc), false);
         }
 
-        return usdRateResult.IsSuccess
-            ? (price * usdRateResult.Value!.Value, false, null)
-            : (0m, false, null);
+        return usdRateResult is CurrencyExchangeRateResult.Success(var usdRate)
+            ? (Priced(price * usdRate), false)
+            : (new InvestmentPriceResult.NotFound(), false);
     }
+
+    private static InvestmentPriceResult Priced(decimal price) =>
+        price > 0 ? new InvestmentPriceResult.Success(price) : new InvestmentPriceResult.NotFound();
 }

@@ -37,7 +37,7 @@ internal sealed class CurrencyExchangeRateProviderSource(
 
         return results.ToDictionary(
             pair => pair.Key,
-            pair => pair.Value.IsSuccess
+            pair => pair.Value is CurrencyExchangeRateResult.Success
                 ? new CurrencyExchangeRateResolution(pair.Value, CurrencyExchangeRateSource.Provider)
                 : new CurrencyExchangeRateResolution(pair.Value, CurrencyExchangeRateSource.Unavailable));
     }
@@ -69,7 +69,7 @@ internal sealed class CurrencyExchangeRateProviderSource(
             {
                 return new Dictionary<DateTime, CurrencyExchangeRateResolution>
                 {
-                    [date] = new(CurrencyExchangeRateResult.Success(rate), CurrencyExchangeRateSource.Provider)
+                    [date] = new(new CurrencyExchangeRateResult.Success(rate), CurrencyExchangeRateSource.Provider)
                 };
             }
 
@@ -141,7 +141,7 @@ internal sealed class CurrencyExchangeRateProviderSource(
 
                     if (providerResult is { Status: CurrencyExchangeRateProviderStatus.Success, Value: decimal rate })
                     {
-                        results[date] = CurrencyExchangeRateResult.Success(rate);
+                        results[date] = new CurrencyExchangeRateResult.Success(rate);
                         continue;
                     }
 
@@ -189,11 +189,11 @@ internal sealed class CurrencyExchangeRateProviderSource(
         public CurrencyExchangeRateResult Build(DateTime requestedDate)
         {
             if (PendingRetryAtUtc is DateTime retryAtUtc)
-                return CurrencyExchangeRateResult.NotYetPublished(requestedDate, retryAtUtc);
+                return new CurrencyExchangeRateResult.NotYetPublished(requestedDate, retryAtUtc);
 
             return HasFailure
-                ? CurrencyExchangeRateResult.Failed()
-                : CurrencyExchangeRateResult.NotFound();
+                ? new CurrencyExchangeRateResult.Failed()
+                : new CurrencyExchangeRateResult.NotFound();
         }
     }
 }
