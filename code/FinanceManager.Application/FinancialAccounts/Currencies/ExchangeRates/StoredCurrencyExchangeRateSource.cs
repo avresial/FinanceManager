@@ -94,17 +94,17 @@ internal sealed class StoredCurrencyExchangeRateSource(
             return results;
 
         var delegated = await inner.ResolveAsync(fromCurrency, toCurrency, missingDates, reuseCachedMisses, ct, context);
+        List<(DateTime Date, decimal Rate)> ratesToPersist = [];
         foreach (var (date, resolution) in delegated)
+        {
             results[date] = resolution;
-
-        var ratesToPersist = delegated
-            .Where(pair => pair.Value.Source == CurrencyExchangeRateSource.Provider && pair.Value.Result.IsSuccess)
-            .Select(pair => (pair.Key, pair.Value.Result.Value!.Value))
-            .ToList();
+            if (resolution is { Source: CurrencyExchangeRateSource.Provider, Result: CurrencyExchangeRateResult.Success(var rate) })
+                ratesToPersist.Add((date, rate));
+        }
         if (ratesToPersist.Count > 0)
         {
             if (isPointMode && ratesToPersist.Count == 1)
-                await repository.Add(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist[0].Item1, ratesToPersist[0].Item2, ct);
+                await repository.Add(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist[0].Date, ratesToPersist[0].Rate, ct);
             else
                 await repository.AddRange(fromCurrency.ShortName, toCurrency.ShortName, ratesToPersist, ct);
         }
@@ -113,7 +113,7 @@ internal sealed class StoredCurrencyExchangeRateSource(
     }
 
     private static CurrencyExchangeRateResolution Stored(decimal rate) =>
-        new(CurrencyExchangeRateResult.Success(rate), CurrencyExchangeRateSource.Stored);
+        new(new CurrencyExchangeRateResult.Success(rate), CurrencyExchangeRateSource.Stored);
 
     private static string NormalizeCurrency(string currency) =>
         currency.Trim().ToUpperInvariant();

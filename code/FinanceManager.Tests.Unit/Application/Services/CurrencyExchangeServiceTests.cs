@@ -488,11 +488,11 @@ public class CurrencyExchangeServiceTests : IDisposable
             new Currency(2, "PLN", "zł"),
             todayUtc);
 
-        Assert.Equal(CurrencyExchangeRateStatus.NotYetPublished, result.Status);
-        Assert.Equal(todayUtc.AddDays(1), result.RetryAtUtc);
+        var pending = Assert.IsType<CurrencyExchangeRateResult.NotYetPublished>(result);
+        Assert.Equal(todayUtc.AddDays(1), pending.RetryAtUtc);
         Assert.Equal(
             "The exchange rate for 2024-04-01 UTC has not been published yet. It is safe to retry after 2024-04-02T00:00:00Z.",
-            result.Message);
+            pending.Message);
         provider.Verify(
             x => x.GetExchangeRateAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
             Times.Once);
