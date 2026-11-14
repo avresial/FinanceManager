@@ -209,7 +209,7 @@ public class InvestmentPriceProviderTests
         // Normalised 5 GBP → USD at 1.25 = 6.25
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateResultAsync(It.Is<Currency>(c => c.ShortName == "GBP"), It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>()))
-            .ReturnsAsync(CurrencyExchangeRateResult.Success(1.25m));
+            .ReturnsAsync(new CurrencyExchangeRateResult.Success(1.25m));
 
         var result = await CreateSut().GetPricePerUnitAsync(10, _usd, asOf, TestContext.Current.CancellationToken);
 
@@ -236,7 +236,7 @@ public class InvestmentPriceProviderTests
             QuoteType = PriceQuoteType.EndOfDay
         });
 
-        var pending = CurrencyExchangeRateResult.NotYetPublished(todayUtc, todayUtc.AddDays(1));
+        var pending = new CurrencyExchangeRateResult.NotYetPublished(todayUtc, todayUtc.AddDays(1));
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateResultAsync(
                 It.Is<Currency>(c => c.ShortName == "GBP"),
@@ -250,10 +250,7 @@ public class InvestmentPriceProviderTests
             todayUtc,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(InvestmentPriceStatus.NotYetPublished, result.Status);
-        Assert.Null(result.Price);
-        Assert.Equal(pending.Message, result.Message);
-        Assert.Equal(todayUtc.AddDays(1), result.RetryAtUtc);
+        Assert.Equal(new InvestmentPriceResult.NotYetPublished(pending.Message, todayUtc.AddDays(1)), result);
         _currencyExchangeService.Verify(
             x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
             Times.Once);
@@ -452,7 +449,7 @@ public class InvestmentPriceProviderTests
             .ReturnsAsync([(mon, 1.2m), (thu, 1.3m)]);
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateResultAsync(It.Is<Currency>(c => c.ShortName == "GBP"), _usd, fri))
-            .ReturnsAsync(CurrencyExchangeRateResult.Success(1.4m));
+            .ReturnsAsync(new CurrencyExchangeRateResult.Success(1.4m));
 
         var series = await CreateSut().GetPricePerUnitSeriesAsync(10, _usd, mon, fri, TestContext.Current.CancellationToken);
 
@@ -521,8 +518,8 @@ public class InvestmentPriceProviderTests
         _currencyExchangeService
             .Setup(x => x.GetExchangeRateResultAsync(It.IsAny<Currency>(), _usd, end))
             .ReturnsAsync(pending
-                ? CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
-                : CurrencyExchangeRateResult.Success(1.5m));
+                ? new CurrencyExchangeRateResult.NotYetPublished(end, end.AddDays(1))
+                : new CurrencyExchangeRateResult.Success(1.5m));
 
         var sut = CreateSut();
         var series = await sut.GetPricePerUnitSeriesAsync(10, _usd, start, end, TestContext.Current.CancellationToken);

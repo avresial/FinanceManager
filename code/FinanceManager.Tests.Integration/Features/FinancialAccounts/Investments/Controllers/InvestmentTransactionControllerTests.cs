@@ -192,7 +192,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         _priceProvider
             .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(InvestmentPriceResult.Success(321.45m));
+            .ReturnsAsync(new InvestmentPriceResult.Success(321.45m));
 
         var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
 
@@ -210,7 +210,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         _priceProvider
             .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(),
                 tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(InvestmentPriceResult.Success(300m));
+            .ReturnsAsync(new InvestmentPriceResult.Success(300m));
 
         var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
 
@@ -224,7 +224,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
         var retryAtUtc = DateTime.UtcNow.Date.AddDays(1);
-        var pending = InvestmentPriceResult.NotYetPublished(
+        var pending = new InvestmentPriceResult.NotYetPublished(
             "The exchange rate for today is not published yet.",
             retryAtUtc);
         _priceProvider

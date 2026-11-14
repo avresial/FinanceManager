@@ -38,8 +38,8 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
         var first = await sut.ResolveAsync(_usd, _eur, [date], reuseCachedMisses: true, ct: TestContext.Current.CancellationToken);
         var second = await sut.ResolveAsync(_usd, _eur, [date], reuseCachedMisses: true, ct: TestContext.Current.CancellationToken);
 
-        Assert.Equal(0.92m, first[date].Result.Value);
-        Assert.Equal(0.92m, second[date].Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), first[date].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), second[date].Result);
         _inner.Verify(x => x.ResolveAsync(
             _usd,
             _eur,
@@ -63,7 +63,7 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
                 It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = Unavailable(CurrencyExchangeRateStatus.NotYetPublished)
+                [date] = Unavailable(notYetPublished: true)
             })
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
@@ -74,8 +74,8 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
         var point = await sut.ResolveAsync(_usd, _eur, [date], reuseCachedMisses: true, ct: TestContext.Current.CancellationToken);
         var range = await sut.ResolveAsync(_usd, _eur, [date], reuseCachedMisses: false, ct: TestContext.Current.CancellationToken);
 
-        Assert.Equal(CurrencyExchangeRateStatus.NotYetPublished, point[date].Result.Status);
-        Assert.Equal(0.94m, range[date].Result.Value);
+        Assert.IsType<CurrencyExchangeRateResult.NotYetPublished>(point[date].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.94m), range[date].Result);
         _inner.Verify(x => x.ResolveAsync(
             _usd,
             _eur,
@@ -112,9 +112,9 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
         var result = await sut.ResolveAsync(_usd, _eur, [start, missingDate, end], reuseCachedMisses: false, ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(3, result.Count);
-        Assert.Equal(0.92m, result[start].Result.Value);
-        Assert.Equal(0.93m, result[missingDate].Result.Value);
-        Assert.Equal(0.94m, result[end].Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), result[start].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.93m), result[missingDate].Result);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.94m), result[end].Result);
         _inner.Verify(x => x.ResolveAsync(
             _usd,
             _eur,
@@ -138,7 +138,7 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
                 It.IsAny<CurrencyExchangeRateResolutionContext>()))
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
-                [date] = new(CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.CarriedForward)
+                [date] = new(new CurrencyExchangeRateResult.Success(0.92m), CurrencyExchangeRateSource.CarriedForward)
             })
             .ReturnsAsync(new Dictionary<DateTime, CurrencyExchangeRateResolution>
             {
@@ -150,7 +150,7 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
         var point = await sut.ResolveAsync(_usd, _eur, [date], reuseCachedMisses: true, ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(CurrencyExchangeRateSource.CarriedForward, range[date].Source);
-        Assert.Equal(0.94m, point[date].Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.94m), point[date].Result);
         _inner.Verify(x => x.ResolveAsync(
             _usd,
             _eur,
@@ -191,7 +191,7 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
             reuseCachedMisses: false,
             ct: TestContext.Current.CancellationToken);
 
-        Assert.Equal(0.92m, second[date].Result.Value);
+        Assert.Equal(new CurrencyExchangeRateResult.Success(0.92m), second[date].Result);
         _inner.Verify(x => x.ResolveAsync(
             It.IsAny<Currency>(),
             It.IsAny<Currency>(),
@@ -205,12 +205,12 @@ public class CachedCurrencyExchangeRateSourceTests : IDisposable
         DateTime date,
         decimal value,
         CurrencyExchangeRateSource source) =>
-        new(CurrencyExchangeRateResult.Success(value), source);
+        new(new CurrencyExchangeRateResult.Success(value), source);
 
-    private static CurrencyExchangeRateResolution Unavailable(CurrencyExchangeRateStatus status) =>
-        new(status == CurrencyExchangeRateStatus.NotYetPublished
-            ? CurrencyExchangeRateResult.NotYetPublished(new DateTime(2024, 1, 15), new DateTime(2024, 1, 16))
-            : CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable);
+    private static CurrencyExchangeRateResolution Unavailable(bool notYetPublished) =>
+        new(notYetPublished
+            ? new CurrencyExchangeRateResult.NotYetPublished(new DateTime(2024, 1, 15), new DateTime(2024, 1, 16))
+            : new CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable);
 
     private static string Key(Currency fromCurrency, Currency toCurrency, DateTime date) =>
         $"EXCHANGE_RATE_RESULT_{fromCurrency.ShortName.Trim().ToUpperInvariant()}_{toCurrency.ShortName.Trim().ToUpperInvariant()}_{date:yyyyMMdd}";

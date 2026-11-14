@@ -80,11 +80,11 @@ internal sealed class CurrencyExchangeService(
                 continue;
             }
 
-            if (resolution.Result.IsSuccess)
+            if (resolution.Result is CurrencyExchangeRateResult.Success(var rate))
             {
-                rates[date] = (resolution.Result.Value, resolution.Source);
+                rates[date] = (rate, resolution.Source);
             }
-            else if (resolution.Result.Status == CurrencyExchangeRateStatus.NotYetPublished)
+            else if (resolution.Result is CurrencyExchangeRateResult.NotYetPublished)
             {
                 // A publication miss must not be replaced by yesterday's value.
                 rates[date] = (null, CurrencyExchangeRateSource.Unavailable);
@@ -116,7 +116,7 @@ internal sealed class CurrencyExchangeService(
                         continue;
                     }
 
-                    if (!fromUsdResolution.Result.IsSuccess)
+                    if (fromUsdResolution.Result is not CurrencyExchangeRateResult.Success)
                     {
                         rates[date] = (null, CurrencyExchangeRateSource.Unavailable);
                         continue;
@@ -134,10 +134,10 @@ internal sealed class CurrencyExchangeService(
                         continue;
                     }
 
-                    if (usdTargetResolution.Result.IsSuccess && fromUsd[date].Result.Value is decimal fromRate)
+                    if (usdTargetResolution.Result is CurrencyExchangeRateResult.Success(var usdTargetRate) && fromUsd[date].Result is CurrencyExchangeRateResult.Success(var fromRate))
                     {
                         rates[date] = (
-                            fromRate * usdTargetResolution.Result.Value!.Value,
+                            fromRate * usdTargetRate,
                             CurrencyExchangeRateSource.DerivedViaUsd);
                     }
                     else
@@ -185,7 +185,9 @@ internal sealed class CurrencyExchangeService(
         Currency toCurrency,
         DateTime date,
         CancellationToken cancellationToken) =>
-        (await GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, cancellationToken)).Value;
+        await GetExchangeRateResultCoreAsync(fromCurrency, toCurrency, date, cancellationToken) is CurrencyExchangeRateResult.Success(var rate)
+            ? rate
+            : null;
 
     private async Task<CurrencyExchangeRateResult> GetExchangeRateResultCoreAsync(
         Currency fromCurrency,
@@ -202,26 +204,26 @@ internal sealed class CurrencyExchangeService(
     {
         var requestedDate = NormalizeDate(date);
         if (IsSameCurrency(fromCurrency, toCurrency))
-            return new(CurrencyExchangeRateResult.Success(1m), CurrencyExchangeRateSource.SameCurrency);
+            return new(new CurrencyExchangeRateResult.Success(1m), CurrencyExchangeRateSource.SameCurrency);
 
         var context = new CurrencyExchangeRateResolutionContext();
         var direct = await ResolveSingleAsync(fromCurrency, toCurrency, requestedDate, reuseCachedMisses: true, cancellationToken, context);
-        if (direct.Result.IsSuccess || direct.Result.Status == CurrencyExchangeRateStatus.NotYetPublished)
+        if (direct.Result is CurrencyExchangeRateResult.Success or CurrencyExchangeRateResult.NotYetPublished)
             return direct;
 
         if (IsUsd(fromCurrency) || IsUsd(toCurrency))
             return direct;
 
         var fromUsd = await ResolveSingleAsync(fromCurrency, DefaultCurrency.USD, requestedDate, reuseCachedMisses: true, cancellationToken, context);
-        if (!fromUsd.Result.IsSuccess)
+        if (fromUsd.Result is not CurrencyExchangeRateResult.Success(var fromUsdRate))
             return new(CombineFailure(direct.Result, fromUsd.Result), CurrencyExchangeRateSource.Unavailable);
 
         var usdTarget = await ResolveSingleAsync(DefaultCurrency.USD, toCurrency, requestedDate, reuseCachedMisses: true, cancellationToken, context);
-        if (!usdTarget.Result.IsSuccess)
+        if (usdTarget.Result is not CurrencyExchangeRateResult.Success(var usdTargetRate))
             return new(CombineFailure(direct.Result, usdTarget.Result), CurrencyExchangeRateSource.Unavailable);
 
         return new(
-            CurrencyExchangeRateResult.Success(fromUsd.Result.Value!.Value * usdTarget.Result.Value!.Value),
+            new CurrencyExchangeRateResult.Success(fromUsdRate * usdTargetRate),
             CurrencyExchangeRateSource.DerivedViaUsd);
     }
 
@@ -236,7 +238,7 @@ internal sealed class CurrencyExchangeService(
         var resolved = await source.ResolveAsync(fromCurrency, toCurrency, [date], reuseCachedMisses, ct: cancellationToken, context: context);
         return resolved.TryGetValue(date, out var result)
             ? result
-            : new(CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable);
+            : new(new CurrencyExchangeRateResult.NotFound(), CurrencyExchangeRateSource.Unavailable);
     }
 
     private static void AddCarryForwardRates(
@@ -278,13 +280,13 @@ internal sealed class CurrencyExchangeService(
         CurrencyExchangeRateResult first,
         CurrencyExchangeRateResult second)
     {
-        if (first.Status == CurrencyExchangeRateStatus.NotYetPublished)
+        if (first is CurrencyExchangeRateResult.NotYetPublished)
             return first;
-        if (second.Status == CurrencyExchangeRateStatus.NotYetPublished)
+        if (second is CurrencyExchangeRateResult.NotYetPublished)
             return second;
-        if (first.Status == CurrencyExchangeRateStatus.Failed || second.Status == CurrencyExchangeRateStatus.Failed)
-            return CurrencyExchangeRateResult.Failed();
-        return CurrencyExchangeRateResult.NotFound();
+        if (first is CurrencyExchangeRateResult.Failed || second is CurrencyExchangeRateResult.Failed)
+            return new CurrencyExchangeRateResult.Failed();
+        return new CurrencyExchangeRateResult.NotFound();
     }
 
     private static bool IsSameCurrency(Currency fromCurrency, Currency toCurrency) =>
