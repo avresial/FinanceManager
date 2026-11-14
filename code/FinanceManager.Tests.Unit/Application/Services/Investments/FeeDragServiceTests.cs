@@ -2,6 +2,7 @@ using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
@@ -163,4 +164,63 @@ public class FeeDragServiceTests
             TradeDate = new DateOnly(2026, 9, 1),
             Currency = listing.TradingCurrency ?? DefaultCurrency.USD.ShortName,
         };
+
+    // .NET 11 made decimal<->double conversions correctly rounded. Projections compound through
+    // Math.Pow(double), so these tests pin the cent results against exact decimal compounding.
+    [Fact]
+    public void BuildProjections_PinsKnownCentValues()
+    {
+        var projections = FeeDragService.BuildProjections(10_000m, 0.002m, 0.07m);
+
+        Assert.Collection(
+            projections,
+            ten => AssertProjection(ten, 10, 19_671.51m, 19_306.90m, 364.61m),
+            twenty => AssertProjection(twenty, 20, 38_696.84m, 37_275.64m, 1_421.20m),
+            thirty => AssertProjection(thirty, 30, 76_122.55m, 71_967.69m, 4_154.86m));
+    }
+
+    public static TheoryData<decimal, decimal, decimal> ProjectionInputs => new()
+    {
+        { 0.01m, 0m, 0.07m },
+        { 999.99m, 0.0003m, 0.05m },
+        { 12_345.67m, 0.0075m, 0.10m },
+        { 250_000m, 0.02m, -0.10m },
+        { 1_000_000m, 0.0022m, 0.0731m },
+        { 10_000_000m, 0.0099m, 0.0999m },
+        { 1_000_000_000m, 0.005m, 0.10m },
+    };
+
+    [Theory]
+    [MemberData(nameof(ProjectionInputs))]
+    public void BuildProjections_MatchesExactDecimalCompounding(decimal principal, decimal expenseRatio, decimal returnRate)
+    {
+        var projections = FeeDragService.BuildProjections(principal, expenseRatio, returnRate);
+
+        var netRate = Math.Max(-1m, returnRate - expenseRatio);
+        foreach (var projection in projections)
+        {
+            var gross = RoundMoney(principal * ExactPower(1m + returnRate, projection.Years));
+            var net = RoundMoney(principal * ExactPower(1m + netRate, projection.Years));
+            AssertProjection(projection, projection.Years, gross, net, RoundMoney(Math.Max(0m, gross - net)));
+        }
+    }
+
+    private static void AssertProjection(FeeDragProjection projection, int years, decimal gross, decimal net, decimal fee)
+    {
+        Assert.Equal(years, projection.Years);
+        Assert.Equal(gross, projection.GrossFutureValue);
+        Assert.Equal(net, projection.NetFutureValue);
+        Assert.Equal(fee, projection.CumulativeFeeCost);
+    }
+
+    // Repeated multiplication keeps the compounding in decimal, so it is exact to 28 significant digits.
+    private static decimal ExactPower(decimal factor, int years)
+    {
+        var result = 1m;
+        for (var year = 0; year < years; year++)
+            result *= factor;
+        return result;
+    }
+
+    private static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 }
