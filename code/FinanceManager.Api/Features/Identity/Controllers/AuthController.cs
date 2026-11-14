@@ -73,16 +73,16 @@ public class AuthController(
             return Unauthorized();
 
         var rotation = await refreshTokenService.ValidateAndRotate(rawToken, cancellationToken);
-        if (rotation.Status != RefreshTokenStatus.Success)
+        if (rotation is not RefreshTokenRotationResult.Rotated(var userId, var newRefreshToken))
         {
-            if (rotation.Status == RefreshTokenStatus.Revoked)
+            if (rotation is RefreshTokenRotationResult.Revoked)
                 logger.LogWarning("A revoked refresh token was replayed; the token family has been revoked.");
 
             ClearCookie();
             return Unauthorized();
         }
 
-        var user = await userRepository.GetUser(rotation.UserId);
+        var user = await userRepository.GetUser(userId);
         if (user is null)
         {
             ClearCookie();
@@ -90,7 +90,7 @@ public class AuthController(
         }
 
         var token = jwtTokenGenerator.GenerateToken(user.Login, user.UserId, user.UserRole);
-        AppendCookie(rotation.NewRefreshToken!);
+        AppendCookie(newRefreshToken);
         return Ok(token);
     }
 

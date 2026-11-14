@@ -71,13 +71,13 @@ public class RefreshTokenServiceTests
 
         var result = await _service.ValidateAndRotate("anything", TestContext.Current.CancellationToken);
 
-        Assert.Equal(RefreshTokenStatus.Success, result.Status);
-        Assert.Equal(7, result.UserId);
-        Assert.False(string.IsNullOrWhiteSpace(result.NewRefreshToken));
+        var rotated = Assert.IsType<RefreshTokenRotationResult.Rotated>(result);
+        Assert.Equal(7, rotated.UserId);
+        Assert.False(string.IsNullOrWhiteSpace(rotated.NewRefreshToken));
 
         // Old token revoked and linked to its replacement, committed atomically with the replacement insert.
         Assert.NotNull(existing.RevokedAt);
-        Assert.Equal(Hash(result.NewRefreshToken!), existing.ReplacedByTokenHash);
+        Assert.Equal(Hash(rotated.NewRefreshToken), existing.ReplacedByTokenHash);
         _repository.Verify(r => r.Rotate(existing, It.IsAny<RefreshToken>()), Times.Once);
         Assert.Same(existing, revoked);
 
@@ -110,7 +110,7 @@ public class RefreshTokenServiceTests
 
         var result = await _service.ValidateAndRotate("x", TestContext.Current.CancellationToken);
 
-        Assert.Equal(RefreshTokenStatus.Success, result.Status);
+        Assert.IsType<RefreshTokenRotationResult.Rotated>(result);
         Assert.NotNull(added);
         Assert.Equal(existing.AbsoluteExpiresAt, added!.ExpiresAt);
     }
@@ -122,7 +122,7 @@ public class RefreshTokenServiceTests
 
         var result = await _service.ValidateAndRotate("ghost", TestContext.Current.CancellationToken);
 
-        Assert.Equal(RefreshTokenStatus.NotFound, result.Status);
+        Assert.IsType<RefreshTokenRotationResult.NotFound>(result);
         _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
     }
 
@@ -142,7 +142,7 @@ public class RefreshTokenServiceTests
 
         var result = await _service.ValidateAndRotate("old", TestContext.Current.CancellationToken);
 
-        Assert.Equal(RefreshTokenStatus.Expired, result.Status);
+        Assert.IsType<RefreshTokenRotationResult.Expired>(result);
         _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
         _repository.Verify(r => r.RevokeFamily(It.IsAny<Guid>(), It.IsAny<DateTime>()), Times.Never);
     }
@@ -165,7 +165,7 @@ public class RefreshTokenServiceTests
 
         var result = await _service.ValidateAndRotate("reused", TestContext.Current.CancellationToken);
 
-        Assert.Equal(RefreshTokenStatus.Revoked, result.Status);
+        Assert.IsType<RefreshTokenRotationResult.Revoked>(result);
         _repository.Verify(r => r.RevokeFamily(familyId, It.IsAny<DateTime>()), Times.Once);
         _repository.Verify(r => r.Rotate(It.IsAny<RefreshToken>(), It.IsAny<RefreshToken>()), Times.Never);
     }
