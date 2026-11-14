@@ -1,0 +1,14 @@
+diff --git a/code/FinanceManager.Benchmarks/Program.cs b/code/FinanceManager.Benchmarks/Program.cs
+index 0df717c8..02fa7ba0 100644
+--- a/code/FinanceManager.Benchmarks/Program.cs
++++ b/code/FinanceManager.Benchmarks/Program.cs
+@@ -10,6 +10,9 @@ internal static class Program
+     {
+         try
+         {
++            if (args.Contains("--validate-e01-long-bond", StringComparer.OrdinalIgnoreCase))
++                return await LongBondFixtureValidator.Run(args) ? 0 : 1;
++
+             if (args.Contains("--validate", StringComparer.OrdinalIgnoreCase))
+                 return await EndpointValidator.Run() ? 0 : 1;
+ 

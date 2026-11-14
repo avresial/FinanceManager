@@ -1,0 +1,4 @@
+cfbb96b2f718a13ed5191e7f5c0669302d4147b6853ce577c97d08f3525b2a19  code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+65da47133609eabb20b2d3cc68fa2becc756c3fd1f87581a23594f152949e17e  code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+c2f4978df39ff91a80d7acbaf074099ecde224fdc0e2a4da6bd1ec24b0e37867  code/FinanceManager.Benchmarks/bin/Release/net10.0/benchmark-data/seed-template.sqlite
+7baadd33b0b0bce2037825ddf1c282e312bdb3a9a4066f8e20112c92502aabb6  docs/performance/dashboard-experiments/iteration-02/raw/e03-b2-preservation.patch

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>BenchmarkRun-joined-2026-10-30-21-19-58</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.8, macOS Tahoe 26.6.2 (25G83) [Darwin 25.6.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.302
+  [Host] : .NET 10.0.10 (10.0.10, 10.0.1026.32716), Arm64 RyuJIT armv8.0-a
+</code></pre>
+<pre><code>Toolchain=InProcessEmitToolchain  IterationCount=10  IterationTime=250ms  
+WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>Method        </th><th>WindowDays</th><th>Descending</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>P95 </th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>RepeatedPointPricing</td><td>31</td><td>False</td><td>14.5339 ms</td><td>0.2754 ms</td><td>0.1822 ms</td><td>14.5075 ms</td><td>14.8339 ms</td><td>1.00</td><td>0.02</td><td>2444.4444</td><td>1222.2222</td><td>1222.2222</td><td>15435.66 KB</td><td>1.00</td>
+</tr><tr><td>PreparedHistory</td><td>31</td><td>False</td><td>0.4687 ms</td><td>0.0059 ms</td><td>0.0035 ms</td><td>0.4673 ms</td><td>0.4737 ms</td><td>0.03</td><td>0.00</td><td>79.0441</td><td>38.6029</td><td>38.6029</td><td>498.89 KB</td><td>0.03</td>
+</tr><tr><td>RepeatedPointPricing</td><td>31</td><td>True</td><td>14.7999 ms</td><td>0.1123 ms</td><td>0.0742 ms</td><td>14.7999 ms</td><td>14.8968 ms</td><td>1.00</td><td>0.01</td><td>2437.5000</td><td>1187.5000</td><td>1187.5000</td><td>15436.57 KB</td><td>1.00</td>
+</tr><tr><td>PreparedHistory</td><td>31</td><td>True</td><td>0.4795 ms</td><td>0.0027 ms</td><td>0.0016 ms</td><td>0.4795 ms</td><td>0.4816 ms</td><td>0.03</td><td>0.00</td><td>79.5455</td><td>39.7727</td><td>39.7727</td><td>498.9 KB</td><td>0.03</td>
+</tr><tr><td>RepeatedPointPricing</td><td>183</td><td>False</td><td>85.6406 ms</td><td>0.3081 ms</td><td>0.1833 ms</td><td>85.6168 ms</td><td>85.8911 ms</td><td>1.000</td><td>0.00</td><td>14500.0000</td><td>7250.0000</td><td>7250.0000</td><td>90256.9 KB</td><td>1.000</td>
+</tr><tr><td>PreparedHistory</td><td>183</td><td>False</td><td>0.4795 ms</td><td>0.0146 ms</td><td>0.0096 ms</td><td>0.4743 ms</td><td>0.4957 ms</td><td>0.006</td><td>0.00</td><td>79.5455</td><td>39.7727</td><td>39.7727</td><td>498.9 KB</td><td>0.006</td>
+</tr><tr><td>RepeatedPointPricing</td><td>183</td><td>True</td><td>84.4090 ms</td><td>0.4487 ms</td><td>0.2670 ms</td><td>84.4470 ms</td><td>84.7696 ms</td><td>1.000</td><td>0.00</td><td>14500.0000</td><td>7250.0000</td><td>7250.0000</td><td>90256.76 KB</td><td>1.000</td>
+</tr><tr><td>PreparedHistory</td><td>183</td><td>True</td><td>0.4773 ms</td><td>0.0126 ms</td><td>0.0083 ms</td><td>0.4745 ms</td><td>0.4876 ms</td><td>0.006</td><td>0.00</td><td>79.0441</td><td>38.6029</td><td>38.6029</td><td>498.89 KB</td><td>0.006</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,0 +1,224 @@
+diff --git a/code/FinanceManager.Application/MoneyFlow/NetWorth/LiabilitiesService.cs b/code/FinanceManager.Application/MoneyFlow/NetWorth/LiabilitiesService.cs
+index 0efbc0b5..409565a3 100644
+--- a/code/FinanceManager.Application/MoneyFlow/NetWorth/LiabilitiesService.cs
++++ b/code/FinanceManager.Application/MoneyFlow/NetWorth/LiabilitiesService.cs
+@@ -11,6 +11,26 @@ namespace FinanceManager.Application.MoneyFlow.NetWorth;
+ 
+ public class LiabilitiesService(IFinancialAccountRepository financialAccountService) : ILiabilitiesService
+ {
++    // Same-scope read snapshot: caches the fully enumerated (userId, end) account list per instance so repeated
++    // reads of the same key skip re-enumeration. The repository already deduplicates identical (end, end) queries;
++    // this only removes repeated async enumeration and does not eliminate DB access. Stored after successful
++    // enumeration only, so failed reads are retried on next call.
++    private readonly Dictionary<(int UserId, DateTime End), List<CurrencyAccount>> _endAccounts = [];
++
++    // start is intentionally unused as before: the existing call passes end for both bounds (no date truncation).
++    private async Task<List<CurrencyAccount>> GetEndAccountsAsync(int userId, DateTime end)
++    {
++        if (_endAccounts.TryGetValue((userId, end), out var cached))
++            return cached;
++
++        var accounts = new List<CurrencyAccount>();
++        await foreach (var account in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end))
++            accounts.Add(account);
++
++        _endAccounts[(userId, end)] = accounts;
++        return accounts;
++    }
++
+     public async Task<bool> IsAnyAccountWithLiabilities(int userId)
+     {
+         var currencyAccounts = financialAccountService.GetAccounts<CurrencyAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
+@@ -32,7 +52,7 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
+     }
+     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
+     {
+-        await foreach (CurrencyAccount account in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end))
++        foreach (CurrencyAccount account in await GetEndAccountsAsync(userId, end))
+         {
+             if (account is null || account.Entries is null) continue;
+             var entry = account.Entries.FirstOrDefault();
+@@ -56,7 +76,9 @@ public class LiabilitiesService(IFinancialAccountRepository financialAccountServ
+     }
+     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
+     {
+-        await foreach (var accounts in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end).GroupBy(x => x.AccountType))
++        // Group over the complete input: group order is first occurrence of each account type in the full list,
++        // so positive-only accounts still fix their group's position. No prefilter before grouping.
++        foreach (var accounts in (await GetEndAccountsAsync(userId, end)).GroupBy(x => x.AccountType))
+         {
+             NameValueResult? result = null;
+             foreach (var account in accounts)
+diff --git a/code/FinanceManager.Tests.Unit/Application/Services/LiabilitiesServiceTests.cs b/code/FinanceManager.Tests.Unit/Application/Services/LiabilitiesServiceTests.cs
+index 5aac98f5..c5fb7715 100644
+--- a/code/FinanceManager.Tests.Unit/Application/Services/LiabilitiesServiceTests.cs
++++ b/code/FinanceManager.Tests.Unit/Application/Services/LiabilitiesServiceTests.cs
+@@ -3,6 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+ using FinanceManager.Domain.Identity.Entities;
++using FinanceManager.Domain.MoneyFlow.Entities;
+ using Moq;
+ 
+ namespace FinanceManager.Tests.Unit.Application.Services;
+@@ -95,4 +96,159 @@ public class LiabilitiesServiceTests
+         Assert.NotEmpty(list);
+         Assert.Contains(list, ts => ts.Value < 0);
+     }
++
++    // Ordered fixture for (userId=1, end=2024-01-03): id1 Loan +100 (positive-only), id2 Other -20, id3 Loan -50,
++    // id4 Loan zero, id5 Other with empty entries but older NextOlderEntry -30, id6 Loan empty without boundary.
++    private static List<CurrencyAccount> CreateEndFixtureAccounts()
++    {
++        var firstDay = new DateTime(2024, 1, 1);
++        return
++        [
++            new CurrencyAccount(1, 1, "loan-positive", [new CurrencyAccountEntry(1, 1, firstDay, 100m, 100m)], AccountLabel.Loan),
++            new CurrencyAccount(1, 2, "other-negative", [new CurrencyAccountEntry(2, 1, firstDay, -20m, -20m)], AccountLabel.Other),
++            new CurrencyAccount(1, 3, "loan-negative", [new CurrencyAccountEntry(3, 1, firstDay, -50m, -50m)], AccountLabel.Loan),
++            new CurrencyAccount(1, 4, "loan-zero", [new CurrencyAccountEntry(4, 1, firstDay, 0m, 0m)], AccountLabel.Loan),
++            new CurrencyAccount(1, 5, "other-older-only", [], AccountLabel.Other, nextOlderEntry: new CurrencyAccountEntry(5, 1, new DateTime(2023, 12, 31), -30m, -30m)),
++            new CurrencyAccount(1, 6, "loan-empty", [], AccountLabel.Loan)
++        ];
++    }
++
++    [Theory]
++    // Both call orders (PerAccount then PerType, and reversed) hit the same cache key on one service instance.
++    [InlineData(false)]
++    [InlineData(true)]
++    public async Task EndLiabilities_BothCallOrders_ReturnSameRows_AndSingleRepositoryCall(bool perTypeFirst)
++    {
++        // Arrange: start is intentionally different from end to prove it remains unused as before.
++        var userId = 1;
++        var start = new DateTime(2023, 12, 1);
++        var end = new DateTime(2024, 1, 3);
++        List<CurrencyAccount> accounts = CreateEndFixtureAccounts();
++
++        var repositoryMock = new Mock<IFinancialAccountRepository>();
++        repositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, end, end, It.Is<bool>(includeEntryMetadata => includeEntryMetadata)))
++            .Returns(accounts.ToAsyncEnumerable());
++
++        var service = new LiabilitiesService(repositoryMock.Object);
++
++        // Act
++        List<NameValueResult> perAccount;
++        List<NameValueResult> perType;
++
++        if (perTypeFirst)
++        {
++            perType = await service.GetEndLiabilitiesPerType(userId, start, end)
++                .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++            perAccount = await service.GetEndLiabilitiesPerAccount(userId, start, end)
++                .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        }
++        else
++        {
++            perAccount = await service.GetEndLiabilitiesPerAccount(userId, start, end)
++                .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++            perType = await service.GetEndLiabilitiesPerType(userId, start, end)
++                .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        }
++
++        // Assert: account rows (id1 +100 and id6 empty are filtered out).
++        int[] expectedAccountIds = [2, 3, 4, 5];
++        decimal[] expectedAccountValues = [-20m, -50m, 0m, -30m];
++        Assert.Equal(expectedAccountIds, perAccount.Select(x => x.AccountId.GetValueOrDefault()));
++        Assert.Equal(expectedAccountValues, perAccount.Select(x => x.Value));
++
++        // Assert: type totals keep first-occurrence group order of the complete input, so Loan (via positive id1) precedes Other.
++        string[] expectedTypeNames = [AccountLabel.Loan.ToString(), AccountLabel.Other.ToString()];
++        decimal[] expectedTypeTotals = [-50m, -50m];
++        Assert.Equal(expectedTypeNames, perType.Select(x => x.Name));
++        Assert.Equal(expectedTypeTotals, perType.Select(x => x.Value));
++
++        // Both reads share one repository enumeration for the exact (userId, end, end) key.
++        repositoryMock.Verify(
++            x => x.GetAccounts<CurrencyAccount>(userId, end, end, It.Is<bool>(includeEntryMetadata => includeEntryMetadata)),
++            Times.Once);
++    }
++
++    [Fact]
++    public async Task EndLiabilities_DifferentUserOrExactEnd_AreReadSeparately()
++    {
++        var end = new DateTime(2024, 1, 3);
++        var later = end.AddMinutes(1);
++        var repository = new Mock<IFinancialAccountRepository>();
++        CurrencyAccount[] first = [new CurrencyAccount(1, 7, "first", [new CurrencyAccountEntry(7, 1, end, -10m, -10m)], AccountLabel.Loan)];
++        CurrencyAccount[] otherUser = [new CurrencyAccount(2, 8, "other", [new CurrencyAccountEntry(8, 1, end, -20m, -20m)], AccountLabel.Loan)];
++        CurrencyAccount[] otherTime = [new CurrencyAccount(1, 9, "later", [new CurrencyAccountEntry(9, 1, later, -30m, -30m)], AccountLabel.Loan)];
++        repository.Setup(x => x.GetAccounts<CurrencyAccount>(1, end, end, true)).Returns(first.ToAsyncEnumerable());
++        repository.Setup(x => x.GetAccounts<CurrencyAccount>(2, end, end, true)).Returns(otherUser.ToAsyncEnumerable());
++        repository.Setup(x => x.GetAccounts<CurrencyAccount>(1, later, later, true)).Returns(otherTime.ToAsyncEnumerable());
++        var service = new LiabilitiesService(repository.Object);
++
++        var a = await service.GetEndLiabilitiesPerAccount(1, end, end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        var b = await service.GetEndLiabilitiesPerAccount(2, end, end).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        var c = await service.GetEndLiabilitiesPerAccount(1, end, later).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        Assert.Equal(-10m, Assert.Single(a).Value);
++        Assert.Equal(-20m, Assert.Single(b).Value);
++        Assert.Equal(-30m, Assert.Single(c).Value);
++        repository.Verify(x => x.GetAccounts<CurrencyAccount>(1, end, end, true), Times.Once);
++        repository.Verify(x => x.GetAccounts<CurrencyAccount>(2, end, end, true), Times.Once);
++        repository.Verify(x => x.GetAccounts<CurrencyAccount>(1, later, later, true), Times.Once);
++
++        // An identical key in a fresh service must read again.
++        var fresh = await new LiabilitiesService(repository.Object).GetEndLiabilitiesPerAccount(1, end, end)
++            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++        Assert.Equal(-10m, Assert.Single(fresh).Value);
++        repository.Verify(x => x.GetAccounts<CurrencyAccount>(1, end, end, true), Times.Exactly(2));
++    }
++
++    [Fact]
++    public async Task EndLiabilities_FailedEnumeration_IsNotCached_RetryEnumeratesAgain()
++    {
++        // Arrange: the first repository enumeration fails; a failed read must not be stored.
++        var userId = 1;
++        var start = new DateTime(2023, 12, 1);
++        var end = new DateTime(2024, 1, 3);
++        List<CurrencyAccount> accounts = CreateEndFixtureAccounts();
++
++        var repositoryMock = new Mock<IFinancialAccountRepository>();
++        int attempts = 0;
++        repositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, end, end, It.Is<bool>(includeEntryMetadata => includeEntryMetadata)))
++            .Returns(() => CreateMaybeFailingEnumeration(accounts, Interlocked.Increment(ref attempts) == 1));
++
++        var service = new LiabilitiesService(repositoryMock.Object);
++
++        // Act: first read fails, retry re-enumerates the repository.
++        await Assert.ThrowsAnyAsync<InvalidOperationException>(() =>
++            service.GetEndLiabilitiesPerAccount(userId, start, end)
++                .ToListAsync(cancellationToken: TestContext.Current.CancellationToken).AsTask());
++
++        var list = await service.GetEndLiabilitiesPerAccount(userId, start, end)
++            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
++
++        // Assert: retry produced the full rows, proving nothing was cached from the failed enumeration.
++        int[] expectedAccountIds = [2, 3, 4, 5];
++        decimal[] expectedAccountValues = [-20m, -50m, 0m, -30m];
++        Assert.Equal(expectedAccountIds, list.Select(x => x.AccountId.GetValueOrDefault()));
++        Assert.Equal(expectedAccountValues, list.Select(x => x.Value));
++
++        repositoryMock.Verify(
++            x => x.GetAccounts<CurrencyAccount>(userId, end, end, It.Is<bool>(includeEntryMetadata => includeEntryMetadata)),
++            Times.Exactly(2));
++    }
++
++    private static IAsyncEnumerable<CurrencyAccount> CreateMaybeFailingEnumeration(List<CurrencyAccount> accounts, bool fail)
++    {
++        var failed = false;
++        return Enumerate();
++
++        async IAsyncEnumerable<CurrencyAccount> Enumerate()
++        {
++            if (fail && !failed)
++            {
++                failed = true;
++                throw new InvalidOperationException("simulated repository enumeration failure");
++            }
++
++            foreach (var account in accounts)
++                yield return account;
++        }
++    }
+ }
+\ No newline at end of file

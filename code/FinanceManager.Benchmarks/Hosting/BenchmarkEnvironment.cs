@@ -71,6 +71,15 @@ public sealed class BenchmarkEnvironment : IDisposable
         _instance = null;
     }
 
+    /// <summary>
+    /// Creates a DI scope over the running host's services, letting an in-process benchmark resolve
+    /// domain types (AppDbContext, repositories) directly rather than through an HTTP endpoint. Used
+    /// by benchmarks that load fixtures into memory during <c>[GlobalSetup]</c> and measure a production
+    /// method A/B without routing anything through MVC — the point is to exercise exactly the code under
+    /// test with the real seeded database, not a synthetic microbenchmark.
+    /// </summary>
+    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
+
     public void Dispose()
     {
         Client.Dispose();
@@ -141,7 +150,10 @@ public sealed class BenchmarkEnvironment : IDisposable
         using var scope = host.Services.CreateScope();
 
         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
+        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
+        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
+        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
+        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
 
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 

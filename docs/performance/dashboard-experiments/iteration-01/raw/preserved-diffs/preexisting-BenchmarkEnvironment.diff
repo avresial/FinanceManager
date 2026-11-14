@@ -1,0 +1,16 @@
+diff --git a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+index 7afc0419..65b522ad 100644
+--- a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
++++ b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+@@ -141,7 +141,10 @@ public sealed class BenchmarkEnvironment : IDisposable
+         using var scope = host.Services.CreateScope();
+ 
+         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
++        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
++        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
++        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
++        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
+ 
+         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+ 

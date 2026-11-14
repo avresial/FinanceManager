@@ -1,0 +1,1 @@
+PASS: entire baseline and candidate reports are semantically equal, including scenario, full and month responses

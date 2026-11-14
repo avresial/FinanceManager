@@ -1,0 +1,295 @@
+diff --git a/code/FinanceManager.Application/FinancialAccounts/Bond/Valuation/BondDashboardContext.cs b/code/FinanceManager.Application/FinancialAccounts/Bond/Valuation/BondDashboardContext.cs
+index f4bede9d..d2ccd35b 100644
+--- a/code/FinanceManager.Application/FinancialAccounts/Bond/Valuation/BondDashboardContext.cs
++++ b/code/FinanceManager.Application/FinancialAccounts/Bond/Valuation/BondDashboardContext.cs
+@@ -14,6 +14,7 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
+     private readonly Dictionary<int, BondDetails> _details = [];
+     private readonly HashSet<int> _requestedIds = [];
+     private readonly Dictionary<(int AccountId, int EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value, DateOnly Date), decimal> _prices = [];
++    private readonly Dictionary<(int AccountId, int EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value), (DateOnly Through, Dictionary<DateOnly, decimal> Prices)> _histories = [];
+ 
+     /// <summary>
+     /// Loads the bond definitions referenced by the accounts (in-range entries plus next-older boundary
+@@ -55,10 +56,36 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
+     }
+ 
+     /// <summary>
+-    /// Returns the memoized price of the entry at the date, computing it only on the first request for
+-    /// that account/entry/date. Bond pricing is a pure function of the entry and the definition, so two
+-    /// dashboard paths that materialize the same account within one request share a single computation
+-    /// without allowing a changed entry snapshot to reuse a stale value.
++    /// Prepares a bounded price series for the entry once per request snapshot, covering every date up to
++    /// the fixed horizon. Callers prepare with the maximum date they will look up (the dashboard fixes the
++    /// request end once); ordinary ascending lookups never extend the history automatically. Explicit
++    /// successive preparations to increasing horizons rebuild the series, which is why a single caller
++    /// prepares exactly once per snapshot. Preparation is skipped when the horizon precedes the posting
++    /// date, preserving pre-posting behavior through the fallback path. Missing definitions still throw
++    /// here, where pricing actually needs them. No shared/static cache is involved.
++    /// </summary>
++    public void PreparePriceHistory(int accountId, BondAccountEntry entry, DateOnly through)
++    {
++        var key = (accountId, entry.EntryId, entry.BondDetailsId, DateOnly.FromDateTime(entry.PostingDate), entry.Value);
++        if (_histories.TryGetValue(key, out var existing) && existing.Through >= through)
++            return;
++
++        if (through < DateOnly.FromDateTime(entry.PostingDate))
++            return;
++
++        _histories[key] = (through, entry.GetPrice(through, GetDetails(entry.BondDetailsId)));
++    }
++
++    /// <summary>
++    /// Returns the memoized price of the entry at the date. The exact-date cache is checked first, then a
++    /// prepared bounded history when it covers the date; absent or gap dates (and pre-posting dates) read
++    /// as zero from the history exactly like <see cref="BondAccountEntry.GetPriceAt"/>. Otherwise the price
++    /// falls back to on-demand computation and is memoized per account/entry/date. This method never extends
++    /// a prepared history; callers explicitly prepare a bounded series once, which prevents ascending
++    /// lookups from rebuilding the prefix. Bond pricing is a pure function of the entry and the definition,
++    /// so two dashboard paths that materialize the same account within one request share a single computation
++    /// without allowing a changed entry snapshot to reuse a stale value. Missing definitions still throw when
++    /// preparation or pricing actually needs them. No shared/static cache is involved.
+     /// </summary>
+     public decimal GetOrComputePrice(int accountId, BondAccountEntry entry, DateOnly date)
+     {
+@@ -66,6 +93,10 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
+         if (_prices.TryGetValue(key, out var price))
+             return price;
+ 
++        var historyKey = (accountId, entry.EntryId, entry.BondDetailsId, DateOnly.FromDateTime(entry.PostingDate), entry.Value);
++        if (_histories.TryGetValue(historyKey, out var history) && date <= history.Through)
++            return history.Prices.GetValueOrDefault(date);
++
+         price = entry.GetPriceAt(date, GetDetails(entry.BondDetailsId));
+         _prices[key] = price;
+ 
+diff --git a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+index 815e1b58..6f29db69 100644
+--- a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
++++ b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+@@ -22,12 +22,14 @@ public class GuestAccountSeeder(
+     IDateTimeProvider dateTimeProvider,
+     ILogger<GuestAccountSeeder> logger)
+ {
+-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
++    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default, int seedMonths = 6)
+     {
+         // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
+         var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
+         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+-        var start = end.AddMonths(-6);
++        // Six months matches the in-app guest sandbox; a wider window scales entry counts for benchmarks without
++        // changing what the app seeds. The optional parameter keeps every existing caller unchanged.
++        var start = end.AddMonths(-seedMonths);
+ 
+         await EnsureGuestUserRecord(guestUserId);
+         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
+diff --git a/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs b/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
+index f8730fdc..75858390 100644
+--- a/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
++++ b/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
+@@ -82,6 +82,10 @@ public class NetWorthService(
+         var investmentValuesByAccount = await investmentValuationService.GetAccountValueSeriesAsync(
+             investmentAccounts.Select(a => a.AccountId).ToList(), currency, start.Date, end.Date);
+ 
++        // The range overload fixes one request end for every day of the loop, so each selected bond
++        // snapshot prepares its bounded history exactly once instead of rebuilding it per ascending date.
++        var bondHistoryEnd = DateOnly.FromDateTime(end);
++
+         for (DateTime date = end; date >= start; date = date.AddDays(-1))
+         {
+             decimal dailyTotal = 0;
+@@ -99,6 +103,7 @@ public class NetWorthService(
+                 {
+                     var entry = account.GetThisOrNextOlder(date, detailsId);
+                     if (entry is null) continue;
++                    bondDashboardContext.PreparePriceHistory(account.AccountId, entry, bondHistoryEnd);
+                     dailyTotal += bondDashboardContext.GetOrComputePrice(account.AccountId, entry, DateOnly.FromDateTime(date));
+                 }
+             }
+diff --git a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+index 7afc0419..9cd9a141 100644
+--- a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
++++ b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+@@ -71,6 +71,15 @@ public sealed class BenchmarkEnvironment : IDisposable
+         _instance = null;
+     }
+ 
++    /// <summary>
++    /// Creates a DI scope over the running host's services, letting an in-process benchmark resolve
++    /// domain types (AppDbContext, repositories) directly rather than through an HTTP endpoint. Used
++    /// by benchmarks that load fixtures into memory during <c>[GlobalSetup]</c> and measure a production
++    /// method A/B without routing anything through MVC — the point is to exercise exactly the code under
++    /// test with the real seeded database, not a synthetic microbenchmark.
++    /// </summary>
++    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
++
+     public void Dispose()
+     {
+         Client.Dispose();
+@@ -141,7 +150,10 @@ public sealed class BenchmarkEnvironment : IDisposable
+         using var scope = host.Services.CreateScope();
+ 
+         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
++        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
++        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
++        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
++        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
+ 
+         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+ 
+diff --git a/code/FinanceManager.Benchmarks/Program.cs b/code/FinanceManager.Benchmarks/Program.cs
+index 0df717c8..02fa7ba0 100644
+--- a/code/FinanceManager.Benchmarks/Program.cs
++++ b/code/FinanceManager.Benchmarks/Program.cs
+@@ -10,6 +10,9 @@ internal static class Program
+     {
+         try
+         {
++            if (args.Contains("--validate-e01-long-bond", StringComparer.OrdinalIgnoreCase))
++                return await LongBondFixtureValidator.Run(args) ? 0 : 1;
++
+             if (args.Contains("--validate", StringComparer.OrdinalIgnoreCase))
+                 return await EndpointValidator.Run() ? 0 : 1;
+ 
+diff --git a/code/FinanceManager.Tests.Unit/Application/FinancialAccounts/Bond/Valuation/BondDashboardContextTests.cs b/code/FinanceManager.Tests.Unit/Application/FinancialAccounts/Bond/Valuation/BondDashboardContextTests.cs
+index 95648ef6..0e67b705 100644
+--- a/code/FinanceManager.Tests.Unit/Application/FinancialAccounts/Bond/Valuation/BondDashboardContextTests.cs
++++ b/code/FinanceManager.Tests.Unit/Application/FinancialAccounts/Bond/Valuation/BondDashboardContextTests.cs
+@@ -215,6 +215,136 @@ public class BondDashboardContextTests
+         }
+     }
+ 
++    [Theory]
++    [MemberData(nameof(ParityDateOrders))]
++    public async Task GetOrComputePrice_PreparedHistory_MatchesEntryGetPriceAt_ForAscendingDescendingAndShuffledDates(int[] dayOffsets)
++    {
++        var details = CreateParityDetails(1);
++        var repository = new Mock<IBondDetailsRepository>();
++        repository
++            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
++            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
++
++        var context = new BondDashboardContext(repository.Object);
++        var account = new BondAccount(
++            1,
++            10,
++            "Bonds",
++            [new BondAccountEntry(10, 1, new DateTime(2023, 1, 1), 10m, 10m, 1)],
++            AccountLabel.Other);
++        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
++
++        var entry = account.Entries[0];
++        var baseDate = new DateOnly(2023, 1, 1);
++        // One preparation at the fixed maximum horizon; ascending lookups must not rebuild it.
++        context.PreparePriceHistory(account.AccountId, entry, baseDate.AddDays(730));
++        foreach (var pass in new[] { dayOffsets, dayOffsets })
++        {
++            foreach (var dayOffset in pass)
++            {
++                var date = baseDate.AddDays(dayOffset);
++                Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++            }
++        }
++    }
++
++    [Fact]
++    public async Task GetOrComputePrice_PreparedHistory_MatchesEntryGetPriceAt_AroundMethodExpiryGap()
++    {
++        var details = CreateParityDetails(1, untilDate: "2023-01-05");
++        var repository = new Mock<IBondDetailsRepository>();
++        repository
++            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
++            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
++
++        var context = new BondDashboardContext(repository.Object);
++        var account = new BondAccount(
++            1,
++            10,
++            "Bonds",
++            [new BondAccountEntry(10, 1, new DateTime(2023, 1, 1), 10m, 10m, 1)],
++            AccountLabel.Other);
++        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
++
++        var entry = account.Entries[0];
++        var baseDate = new DateOnly(2023, 1, 1);
++        // One preparation at the fixed maximum horizon; gap dates read as zero from the history.
++        context.PreparePriceHistory(account.AccountId, entry, baseDate.AddDays(10));
++        foreach (var dayOffset in new[] { 0, 4, 5, 6, 10 })
++        {
++            var date = baseDate.AddDays(dayOffset);
++            Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++        }
++    }
++
++    [Fact]
++    public async Task GetOrComputePrice_PreparedHistory_UsesFreshValueAfterEntryMutation()
++    {
++        var details = CreateDetails(1, unitValue: 100m);
++        var repository = new Mock<IBondDetailsRepository>();
++        repository
++            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
++            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
++
++        var context = new BondDashboardContext(repository.Object);
++        var account = new BondAccount(
++            1,
++            10,
++            "Bonds",
++            [new BondAccountEntry(10, 1, new DateTime(2024, 1, 1), 10m, 10m, 1)],
++            AccountLabel.Other);
++        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
++
++        var entry = account.Entries[0];
++        var date = new DateOnly(2024, 1, 2);
++
++        context.PreparePriceHistory(account.AccountId, entry, date);
++        Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++
++        // The prepared history is keyed by the old Value, so a mutated snapshot falls back to a fresh price.
++        entry.Value = 12m;
++        Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++
++        // Preparing the changed snapshot restores parity through the new history.
++        context.PreparePriceHistory(account.AccountId, entry, date);
++        Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++    }
++
++    [Fact]
++    public async Task GetOrComputePrice_PreparedHistory_FallsBackBeyondHorizon_ThenMatchesAfterExplicitExtension()
++    {
++        var details = CreateParityDetails(1);
++        var repository = new Mock<IBondDetailsRepository>();
++        repository
++            .Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
++            .ReturnsAsync((IReadOnlyList<BondDetails>)[details]);
++
++        var context = new BondDashboardContext(repository.Object);
++        var account = new BondAccount(
++            1,
++            10,
++            "Bonds",
++            [new BondAccountEntry(10, 1, new DateTime(2023, 1, 1), 10m, 10m, 1)],
++            AccountLabel.Other);
++        await context.LoadReferencedDetailsAsync([account], TestContext.Current.CancellationToken);
++
++        var entry = account.Entries[0];
++        var baseDate = new DateOnly(2023, 1, 1);
++
++        context.PreparePriceHistory(account.AccountId, entry, baseDate.AddDays(366));
++        // Day 730 is beyond the prepared horizon: unchanged on-demand fallback.
++        Assert.Equal(entry.GetPriceAt(baseDate.AddDays(730), details), context.GetOrComputePrice(account.AccountId, entry, baseDate.AddDays(730)));
++
++        // Explicit preparation to a larger horizon rebuilds and covers all requested days; ordinary
++        // ascending lookups never extend the history automatically.
++        context.PreparePriceHistory(account.AccountId, entry, baseDate.AddDays(730));
++        foreach (var dayOffset in new[] { 365, 366, 730 })
++        {
++            var date = baseDate.AddDays(dayOffset);
++            Assert.Equal(entry.GetPriceAt(date, details), context.GetOrComputePrice(account.AccountId, entry, date));
++        }
++    }
++
+     public static IEnumerable<object[]> ParityDateOrders()
+     {
+         var ascending = new[] { -1, 0, 1, 364, 365, 366, 730 };

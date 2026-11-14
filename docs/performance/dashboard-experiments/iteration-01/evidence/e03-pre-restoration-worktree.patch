@@ -1,0 +1,344 @@
+diff --git a/code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs b/code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs
+index 5cf18cdd..660c222a 100644
+--- a/code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs
++++ b/code/FinanceManager.Application/FinancialAccounts/Investments/Assets/AssetsServiceInvestment.cs
+@@ -70,13 +70,40 @@ internal class AssetsServiceInvestment(
+         return await GetAssetsTimeSeries(userId, currency, start, end);
+     }
+ 
+-    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
++    // Read-composition snapshot of the end-of-period account load and batched valuation shared by
++    // GetEndAssetsPerAccount/GetEndAssetsPerType. Keyed by immutable scalars copied from the mutable
++    // Currency fields at lookup time (never the Currency object itself). The cache is scoped to this
++    // service instance: a new service/request revalues everything, and same-scope writes would require
++    // invalidation, which these read-only paths do not perform.
++    private readonly Dictionary<
++        (int UserId, int CurrencyId, string CurrencyCode, string CurrencySymbol, DateTime AsOf),
++        (List<InvestmentAccount> Accounts, IReadOnlyDictionary<int, decimal> Values)> _endValuations = [];
++
++    private async Task<(List<InvestmentAccount> Accounts, IReadOnlyDictionary<int, decimal> Values)> GetEndValuationAsync(
++        int userId,
++        Currency currency,
++        DateTime asOf)
+     {
+-        List<InvestmentAccount> accounts = [];
+-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+-            accounts.Add(account);
++        var key = (userId, currency.Id, currency.ShortName, currency.Symbol, asOf);
++        if (!_endValuations.TryGetValue(key, out var snapshot))
++        {
++            List<InvestmentAccount> accounts = [];
++            await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOf.AddMinutes(-1), asOf))
++                accounts.Add(account);
++
++            // Snapshot the returned values and store only after a successful valuation so a failed
++            // call is never cached.
++            var values = (await valuationService.GetAccountValueAsync(accounts.Select(a => a.AccountId).ToList(), currency, asOf)).ToDictionary();
++            snapshot = (accounts, values);
++            _endValuations[key] = snapshot;
++        }
++
++        return snapshot;
++    }
+ 
+-        var valuesByAccount = await valuationService.GetAccountValueAsync(accounts.Select(a => a.AccountId).ToList(), currency, asOfDate);
++    public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
++    {
++        var (accounts, valuesByAccount) = await GetEndValuationAsync(userId, currency, asOfDate);
+         foreach (var account in accounts)
+         {
+             if (valuesByAccount.TryGetValue(account.AccountId, out var value) && value > 0)
+@@ -86,11 +113,9 @@ internal class AssetsServiceInvestment(
+ 
+     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
+     {
+-        List<int> accountIds = [];
+-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate))
+-            accountIds.Add(account.AccountId);
+-
+-        var valuesByAccount = await valuationService.GetAccountValueAsync(accountIds, currency, asOfDate);
++        // Sum every valued account (negatives included), not just the positive rows, so the type total
++        // reflects the portfolio's net position.
++        var (_, valuesByAccount) = await GetEndValuationAsync(userId, currency, asOfDate);
+         var total = valuesByAccount.Values.Sum();
+ 
+         if (total > 0)
+diff --git a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+index 815e1b58..6f29db69 100644
+--- a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
++++ b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+@@ -22,12 +22,14 @@ public class GuestAccountSeeder(
+     IDateTimeProvider dateTimeProvider,
+     ILogger<GuestAccountSeeder> logger)
+ {
+-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
++    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default, int seedMonths = 6)
+     {
+         // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
+         var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
+         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+-        var start = end.AddMonths(-6);
++        // Six months matches the in-app guest sandbox; a wider window scales entry counts for benchmarks without
++        // changing what the app seeds. The optional parameter keeps every existing caller unchanged.
++        var start = end.AddMonths(-seedMonths);
+ 
+         await EnsureGuestUserRecord(guestUserId);
+         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
+diff --git a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+index 7afc0419..9cd9a141 100644
+--- a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
++++ b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+@@ -71,6 +71,15 @@ public sealed class BenchmarkEnvironment : IDisposable
+         _instance = null;
+     }
+ 
++    /// <summary>
++    /// Creates a DI scope over the running host's services, letting an in-process benchmark resolve
++    /// domain types (AppDbContext, repositories) directly rather than through an HTTP endpoint. Used
++    /// by benchmarks that load fixtures into memory during <c>[GlobalSetup]</c> and measure a production
++    /// method A/B without routing anything through MVC — the point is to exercise exactly the code under
++    /// test with the real seeded database, not a synthetic microbenchmark.
++    /// </summary>
++    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
++
+     public void Dispose()
+     {
+         Client.Dispose();
+@@ -141,7 +150,10 @@ public sealed class BenchmarkEnvironment : IDisposable
+         using var scope = host.Services.CreateScope();
+ 
+         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
++        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
++        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
++        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
++        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
+ 
+         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+ 
+diff --git a/code/FinanceManager.Tests.Unit/Application/Services/AssetsServiceInvestmentTests.cs b/code/FinanceManager.Tests.Unit/Application/Services/AssetsServiceInvestmentTests.cs
+index 5b5c50f7..acbe7e66 100644
+--- a/code/FinanceManager.Tests.Unit/Application/Services/AssetsServiceInvestmentTests.cs
++++ b/code/FinanceManager.Tests.Unit/Application/Services/AssetsServiceInvestmentTests.cs
+@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+ using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+ using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
++using FinanceManager.Domain.MoneyFlow.Entities;
+ using Moq;
+ 
+ namespace FinanceManager.Tests.Unit.Application.Services;
+@@ -353,4 +354,212 @@ public class AssetsServiceInvestmentTests
+         Assert.Null(result);
+         priceProvider.VerifyNoOtherCalls();
+     }
++
++    [Theory]
++    [InlineData(false)]
++    [InlineData(true)]
++    public async Task GetEndAssets_ShareOneValuationSnapshot_WhicheverDistributionRunsFirst(bool typeFirst)
++    {
++        var accountRepository = new Mock<IFinancialAccountRepository>();
++        var valuationService = new Mock<IInvestmentValuationService>();
++        var asOfDate = new DateTime(2024, 1, 3);
++
++        // Both accounts share a name so no name-based joining can hide an id mismatch.
++        var account7 = new InvestmentAccount(1, 7, "Broker");
++        var account8 = new InvestmentAccount(1, 8, "Broker");
++
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate))
++            .Returns(new[] { account7, account8 }.ToAsyncEnumerable());
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
++                It.IsAny<Currency>(), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 100m, [8] = -20m });
++
++        var service = CreateService(accountRepository.Object, valuationService.Object);
++
++        List<NameValueResult> typeRows = [];
++        List<NameValueResult> accountRows = [];
++        if (typeFirst)
++        {
++            typeRows = await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate));
++            accountRows = await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, asOfDate));
++        }
++        else
++        {
++            accountRows = await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, asOfDate));
++            typeRows = await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate));
++        }
++
++        // The negative value nets against the positive one: 100 + (-20) = 80.
++        var stockRow = Assert.Single(typeRows);
++        Assert.Equal(InvestmentType.Stock.ToString(), stockRow.Name);
++        Assert.Equal(80m, stockRow.Value);
++
++        // Only the account with a positive value is listed, identified by its id despite the name clash.
++        var accountRow = Assert.Single(accountRows);
++        Assert.Equal(7, accountRow.AccountId);
++        Assert.Equal("Broker", accountRow.Name);
++        Assert.Equal(100m, accountRow.Value);
++
++        // Both distributions hit one shared snapshot: one repository read and one batched valuation.
++        accountRepository.Verify(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate), Times.Once);
++        valuationService.Verify(
++            x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
++                It.IsAny<Currency>(), asOfDate),
++            Times.Once);
++    }
++
++    [Fact]
++    public async Task GetEndAssets_Revalues_WhenServiceInstanceIsFresh()
++    {
++        var accountRepository = new Mock<IFinancialAccountRepository>();
++        var valuationService = new Mock<IInvestmentValuationService>();
++        var asOfDate = new DateTime(2024, 1, 3);
++        var account7 = new InvestmentAccount(1, 7, "Broker");
++
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate))
++            .Returns(new[] { account7 }.ToAsyncEnumerable());
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 100m });
++
++        var firstService = CreateService(accountRepository.Object, valuationService.Object);
++        Assert.Equal(100m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)firstService.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate))).Single().Value);
++
++        // A new service instance (a fresh DI scope) must revalue even for the identical key.
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 200m });
++
++        var secondService = CreateService(accountRepository.Object, valuationService.Object);
++        Assert.Equal(200m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)secondService.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate))).Single().Value);
++
++        // Scope freshness: one call per service instance.
++        valuationService.Verify(
++            x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), asOfDate),
++            Times.Exactly(2));
++    }
++
++    [Fact]
++    public async Task GetEndAssets_CacheKeyIsolatesUserCurrencyAndExactAsOf()
++    {
++        var accountRepository = new Mock<IFinancialAccountRepository>();
++        var valuationService = new Mock<IInvestmentValuationService>();
++        var asOfDate = new DateTime(2024, 1, 3).AddHours(9).AddMinutes(15);
++        var nextMinute = asOfDate.AddMinutes(1);
++
++        // Non-empty accounts for both users so a key collision would show up in the returned values.
++        var account7 = new InvestmentAccount(1, 7, "Broker");
++        var account8 = new InvestmentAccount(2, 8, "Other broker");
++
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate))
++            .Returns(new[] { account7 }.ToAsyncEnumerable());
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(2, asOfDate.AddMinutes(-1), asOfDate))
++            .Returns(new[] { account8 }.ToAsyncEnumerable());
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(1, nextMinute.AddMinutes(-1), nextMinute))
++            .Returns(new[] { account7 }.ToAsyncEnumerable());
++
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(7)),
++                It.Is<Currency>(c => c.ShortName == "PLN"), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 100m });
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(8)),
++                It.IsAny<Currency>(), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [8] = 25m });
++        var eur = new Currency(2, "EUR", "€");
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(7)),
++                It.Is<Currency>(c => c.ShortName == "EUR"), asOfDate))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 400m });
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(
++                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(7)),
++                It.IsAny<Currency>(), nextMinute))
++            .ReturnsAsync(new Dictionary<int, decimal> { [7] = 150m });
++
++        var service = CreateService(accountRepository.Object, valuationService.Object);
++
++        // Same user/currency/date first, then each dimension changed one at a time. Every distinct key
++        // must revalue: four calls, four different values (a shared cache entry would repeat an earlier value).
++        Assert.Equal(100m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, asOfDate))).Single().Value);
++        Assert.Equal(25m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(2, DefaultCurrency.PLN, asOfDate))).Single().Value);
++        Assert.Equal(400m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(1, eur, asOfDate))).Single().Value);
++
++        // Same day but a different exact minute: no Date-only truncation of the key.
++        Assert.Equal(150m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, nextMinute))).Single().Value);
++
++        valuationService.Verify(
++            x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>()),
++            Times.Exactly(4));
++        // One repository read per distinct cache key: user 1 is read once for each currency.
++        accountRepository.Verify(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate), Times.Exactly(2));
++        accountRepository.Verify(x => x.GetAccounts<InvestmentAccount>(2, asOfDate.AddMinutes(-1), asOfDate), Times.Once);
++        accountRepository.Verify(x => x.GetAccounts<InvestmentAccount>(1, nextMinute.AddMinutes(-1), nextMinute), Times.Once);
++    }
++
++    [Fact]
++    public async Task GetEndAssets_DoesNotCacheFailedValuation()
++    {
++        var accountRepository = new Mock<IFinancialAccountRepository>();
++        var valuationService = new Mock<IInvestmentValuationService>();
++        var asOfDate = new DateTime(2024, 1, 3);
++        var account7 = new InvestmentAccount(1, 7, "Broker");
++
++        accountRepository
++            .Setup(x => x.GetAccounts<InvestmentAccount>(1, asOfDate.AddMinutes(-1), asOfDate))
++            .Returns(new[] { account7 }.ToAsyncEnumerable());
++
++        int valuationCalls = 0;
++        valuationService
++            .Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), asOfDate))
++            .Returns(() =>
++            {
++                valuationCalls++;
++                return valuationCalls == 1
++                    ? Task.FromException<IReadOnlyDictionary<int, decimal>>(new InvalidOperationException("valuation failed"))
++                    : Task.FromResult<IReadOnlyDictionary<int, decimal>>(new Dictionary<int, decimal> { [7] = 100m });
++            });
++
++        var service = CreateService(accountRepository.Object, valuationService.Object);
++
++        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
++        {
++            await foreach (var _ in service.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate))
++            {
++            }
++        });
++
++        // The failed result is not cached: retrying the same key revalues and succeeds.
++        Assert.Equal(100m, (await CollectRowsAsync((IAsyncEnumerable<NameValueResult>)service.GetEndAssetsPerType(1, DefaultCurrency.PLN, asOfDate))).Single().Value);
++        valuationService.Verify(
++            x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), asOfDate),
++            Times.Exactly(2));
++    }
++
++    private static AssetsServiceInvestment CreateService(IFinancialAccountRepository accountRepository, IInvestmentValuationService valuationService) => new(
++        accountRepository,
++        Mock.Of<IAccountRepository<InvestmentAccount>>(),
++        valuationService,
++        Mock.Of<IInvestmentTransactionRepository>(),
++        Mock.Of<IInvestmentPriceProvider>(),
++        Mock.Of<ICurrencyExchangeService>());
++
++    private static async Task<List<NameValueResult>> CollectRowsAsync(IAsyncEnumerable<NameValueResult> rows)
++    {
++        List<NameValueResult> result = [];
++        await foreach (var row in rows)
++            result.Add(row);
++        return result;
++    }
+ }
+\ No newline at end of file

@@ -22,12 +22,14 @@ public class GuestAccountSeeder(
     IDateTimeProvider dateTimeProvider,
     ILogger<GuestAccountSeeder> logger)
 {
-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
+    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default, int seedMonths = 6)
     {
         // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
         var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var start = end.AddMonths(-6);
+        // Six months matches the in-app guest sandbox; a wider window scales entry counts for benchmarks without
+        // changing what the app seeds. The optional parameter keeps every existing caller unchanged.
+        var start = end.AddMonths(-seedMonths);
 
         await EnsureGuestUserRecord(guestUserId);
         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before

@@ -1,0 +1,59 @@
+8f987e2e5f909716ece1d396f96c2701fbc3707a
+ M code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+ M code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+?? docs/performance/
+cfbb96b2f718a13ed5191e7f5c0669302d4147b6853ce577c97d08f3525b2a19  code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+65da47133609eabb20b2d3cc68fa2becc756c3fd1f87581a23594f152949e17e  code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+diff --git a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+index 815e1b58..6f29db69 100644
+--- a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
++++ b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+@@ -22,12 +22,14 @@ public class GuestAccountSeeder(
+     IDateTimeProvider dateTimeProvider,
+     ILogger<GuestAccountSeeder> logger)
+ {
+-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
++    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default, int seedMonths = 6)
+     {
+         // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
+         var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
+         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+-        var start = end.AddMonths(-6);
++        // Six months matches the in-app guest sandbox; a wider window scales entry counts for benchmarks without
++        // changing what the app seeds. The optional parameter keeps every existing caller unchanged.
++        var start = end.AddMonths(-seedMonths);
+ 
+         await EnsureGuestUserRecord(guestUserId);
+         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
+diff --git a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+index 7afc0419..9cd9a141 100644
+--- a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
++++ b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+@@ -71,6 +71,15 @@ public sealed class BenchmarkEnvironment : IDisposable
+         _instance = null;
+     }
+ 
++    /// <summary>
++    /// Creates a DI scope over the running host's services, letting an in-process benchmark resolve
++    /// domain types (AppDbContext, repositories) directly rather than through an HTTP endpoint. Used
++    /// by benchmarks that load fixtures into memory during <c>[GlobalSetup]</c> and measure a production
++    /// method A/B without routing anything through MVC — the point is to exercise exactly the code under
++    /// test with the real seeded database, not a synthetic microbenchmark.
++    /// </summary>
++    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
++
+     public void Dispose()
+     {
+         Client.Dispose();
+@@ -141,7 +150,10 @@ public sealed class BenchmarkEnvironment : IDisposable
+         using var scope = host.Services.CreateScope();
+ 
+         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
++        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
++        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
++        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
++        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
+ 
+         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+ 

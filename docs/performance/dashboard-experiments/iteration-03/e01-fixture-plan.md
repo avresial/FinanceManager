@@ -1,0 +1,15 @@
+# E01 long-held bond fixture plan — blocked before implementation
+
+## Resumed implementation choice
+
+Use a repeatable isolated fixture builder against a verified byte-for-byte copy of the six-month template, adding one independent old bond and retaining a separate unmodified control. Exercise the real repository selection and cold endpoint for both scenario windows, checkpoint only the isolated copy, and freeze and hash the resulting template. No production edits or timing are planned at this checkpoint.
+
+The fixture must be synthetic and isolated. Copy the existing six-month `seed-template.sqlite` into a new `FM_BENCH_DATA_DIR`, never reseed or alter the original, then add one independent bond account, definition, pricing method and old entry only after understanding their full schema and invariants. Check SQLite sidecars/checkpoint before hashing; treat the resulting template as immutable. `BenchmarkDatabase.Prepare` copies that template to a per-process working database, so baseline and candidate must use the same verified template with `FM_BENCH_RESEED=0`.
+
+The API resolves `Scenario.Start` and `End` from the first currency account's oldest and youngest entries; `LastMonthStart` is `End.AddMonths(-1)` bounded by `Start`, rather than a fixed 31 days. The six-month window is the actual seeded start/end, not necessarily exactly 183 days. Check the actual dates and require the new posting date at least 3650 days before both starts. NetWorthService loads accounts for the requested range, loops daily, selects `GetThisOrNextOlder(date, detailsId)`, and values it through `BondDashboardContext.GetOrComputePrice`. AccountRepository fetches in-range entries and older boundaries, so validation must prove the new entry survives that path and is selected on every day, not merely exists in SQLite. Verify all pricing methods cover the full interval and endpoint response contribution is nonzero by comparing isolated fixture with a control copy, for both windows. Keep the source and assertions repeatable.
+
+Before timing, validate response parity for baseline and candidate. Run cold A/B/A/B sequentially, separate output paths, identical template hash, SDK, machine and seed settings; retain full JSON and allocation data. Warm runs need separate justification because warm cache bypasses net-worth computation. These are API/SQLite measurements, not user-representative or browser performance.
+
+## Stop condition encountered
+
+A read-only schema inspection using `sqlite3 'file:code/FinanceManager.Benchmarks/bin/Release/net10.0/benchmark-data/seed-template.sqlite?mode=ro' '.schema'` failed with `Error: unable to open database file` (the relative SQLite URI was not accepted in this environment). Per the task's stop-on-error instruction, no alternate inspection, copying, modification, tests or benchmark were attempted. Resume by resolving read-only URI/path handling, inspecting schema and valuation invariants, then implementing and validating the fixture; no timing until parent review.

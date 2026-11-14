@@ -1,0 +1,152 @@
+diff --git a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+index 815e1b58..6f29db69 100644
+--- a/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
++++ b/code/FinanceManager.Application/Identity/Seeders/GuestAccountSeeder.cs
+@@ -22,12 +22,14 @@ public class GuestAccountSeeder(
+     IDateTimeProvider dateTimeProvider,
+     ILogger<GuestAccountSeeder> logger)
+ {
+-    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default)
++    public async Task SeedForGuest(int guestUserId, CancellationToken cancellationToken = default, int seedMonths = 6)
+     {
+         // Capture the date once: all data derives from it, so the result only depends on the UTC calendar date.
+         var demoSeed = new GuestDemoSeed(DateOnly.FromDateTime(dateTimeProvider.UtcNow));
+         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+-        var start = end.AddMonths(-6);
++        // Six months matches the in-app guest sandbox; a wider window scales entry counts for benchmarks without
++        // changing what the app seeds. The optional parameter keeps every existing caller unchanged.
++        var start = end.AddMonths(-seedMonths);
+ 
+         await EnsureGuestUserRecord(guestUserId);
+         // The per-session in-memory DB starts empty, so the label and bond-details seeders need to run before
+diff --git a/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs b/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
+index f8730fdc..d83351e5 100644
+--- a/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
++++ b/code/FinanceManager.Application/MoneyFlow/NetWorth/NetWorthService.cs
+@@ -62,11 +62,13 @@ public class NetWorthService(
+         Dictionary<DateTime, decimal> result = [];
+ 
+         List<CurrencyAccount> currencyAccounts = [];
+-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
++        // The range dashboard only needs entry dates and values; labels are omitted to shrink the
++        // row payload. The repository cache key includes this flag, so savings must be measured.
++        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end, includeEntryMetadata: false))
+             currencyAccounts.Add(account);
+ 
+         List<BondAccount> bondAccounts = [];
+-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
++        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end, includeEntryMetadata: false))
+             bondAccounts.Add(account);
+ 
+         await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
+diff --git a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+index 7afc0419..9cd9a141 100644
+--- a/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
++++ b/code/FinanceManager.Benchmarks/Hosting/BenchmarkEnvironment.cs
+@@ -71,6 +71,15 @@ public sealed class BenchmarkEnvironment : IDisposable
+         _instance = null;
+     }
+ 
++    /// <summary>
++    /// Creates a DI scope over the running host's services, letting an in-process benchmark resolve
++    /// domain types (AppDbContext, repositories) directly rather than through an HTTP endpoint. Used
++    /// by benchmarks that load fixtures into memory during <c>[GlobalSetup]</c> and measure a production
++    /// method A/B without routing anything through MVC — the point is to exercise exactly the code under
++    /// test with the real seeded database, not a synthetic microbenchmark.
++    /// </summary>
++    public IServiceScope CreateHostScope() => _host.Services.CreateScope();
++
+     public void Dispose()
+     {
+         Client.Dispose();
+@@ -141,7 +150,10 @@ public sealed class BenchmarkEnvironment : IDisposable
+         using var scope = host.Services.CreateScope();
+ 
+         var seeder = scope.ServiceProvider.GetRequiredService<GuestAccountSeeder>();
+-        await seeder.SeedForGuest(BenchmarkOptions.UserId);
++        // FM_BENCH_SEED_MONTHS scales entry counts (cash/bond/cash entries grow with the window while a single bond's
++        // price series stays ~10 years) for longer-bond and scaled-account fixtures. The default keeps this identical
++        // to the in-app guest sandbox, so a baseline run measures byte-identical data until it is overridden.
++        await seeder.SeedForGuest(BenchmarkOptions.UserId, seedMonths: BenchmarkOptions.SeedMonths);
+ 
+         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+ 
+diff --git a/code/FinanceManager.Tests.Unit/Application/Services/NetWorthServiceTests.cs b/code/FinanceManager.Tests.Unit/Application/Services/NetWorthServiceTests.cs
+index efa51e6d..3d827bf8 100644
+--- a/code/FinanceManager.Tests.Unit/Application/Services/NetWorthServiceTests.cs
++++ b/code/FinanceManager.Tests.Unit/Application/Services/NetWorthServiceTests.cs
+@@ -25,9 +25,11 @@ public class NetWorthServiceTests
+     {
+         _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Array.Empty<BondDetails>());
+ 
+-        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
++        // The range overload passes includeEntryMetadata: false, the single-date overload keeps the
++        // default true; both must resolve to empty streams in the shared constructor setups.
++        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+-        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
++        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+             .Returns(AsyncEnumerable.Empty<BondAccount>());
+         _financialAccountRepositoryMock.Setup(r => r.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+             .Returns(AsyncEnumerable.Empty<InvestmentAccount>());
+@@ -132,9 +134,9 @@ public class NetWorthServiceTests
+ 
+         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+             .Returns(investmentAccounts.ToAsyncEnumerable());
+-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
++        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false))
+             .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
+-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
++        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false))
+             .Returns(AsyncEnumerable.Empty<BondAccount>());
+ 
+         List<int>? capturedIds = null;
+@@ -155,4 +157,47 @@ public class NetWorthServiceTests
+         Assert.NotNull(capturedIds);
+         Assert.Equal(new[] { 1, 2, 3 }, capturedIds!.OrderBy(x => x));
+     }
++
++    [Fact]
++    public async Task GetNetWorth_OverRange_FetchesCurrencyAndBondsInMetadataFreeMode_AndKeepsValues()
++    {
++        const int userId = 1;
++        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
++        var end = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc);
++
++        // Accounts are built straight from entry lists (no Add/RecalculateEntryValues) so the
++        // asserted values are exactly what GetThisOrNextOlder reads.
++        var currencyAccount = new CurrencyAccount(userId, 1, "Cash", [
++            new CurrencyAccountEntry(1, 1, start, 100m, 100m),
++            new CurrencyAccountEntry(1, 2, start.AddDays(1), 150m, 50m)
++        ], AccountLabel.Other);
++
++        var bondDetails = new BondDetails("Bond", "Issuer", new DateOnly(2023, 1, 1), new DateOnly(2025, 1, 1), [
++            new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = "2025-01-01", Rate = 0m }
++        ], DefaultCurrency.PLN, BondType.InflationBond, unitValue: 100m)
++        { Id = 1 };
++
++        var bondAccount = new BondAccount(userId, 2, "Bonds", [
++            new BondAccountEntry(2, 1, start, 10m, 10m, 1)
++        ], AccountLabel.Other);
++
++        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(userId, start, end, false))
++            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
++        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<BondAccount>(userId, start, end, false))
++            .Returns(new[] { bondAccount }.ToAsyncEnumerable());
++        _bondDetailsRepositoryMock.Setup(x => x.GetByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
++            .ReturnsAsync((IReadOnlyList<BondDetails>)new[] { bondDetails });
++
++        var result = await _netWorthService.GetNetWorth(userId, DefaultCurrency.PLN, start, end);
++
++        // Currency: 100 (Jan 1) / 150 (Jan 2-3). Bond: 10 units * unitValue 100 at zero rate.
++        Assert.Equal(1100m, result[start]);
++        Assert.Equal(1150m, result[start.AddDays(1)]);
++        Assert.Equal(1150m, result[end]);
++
++        _financialAccountRepositoryMock.Verify(r => r.GetAccounts<CurrencyAccount>(userId, start, end, false), Times.Once);
++        _financialAccountRepositoryMock.Verify(r => r.GetAccounts<CurrencyAccount>(userId, start, end, true), Times.Never);
++        _financialAccountRepositoryMock.Verify(r => r.GetAccounts<BondAccount>(userId, start, end, false), Times.Once);
++        _financialAccountRepositoryMock.Verify(r => r.GetAccounts<BondAccount>(userId, start, end, true), Times.Never);
++    }
+ }
+\ No newline at end of file

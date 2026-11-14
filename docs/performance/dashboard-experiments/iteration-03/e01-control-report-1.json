@@ -1,0 +1,1747 @@
+{
+  "mode": "control",
+  "UserId": 424242,
+  "CurrencyId": 0,
+  "Start": "2026-04-30T00:00:00Z",
+  "End": "2026-10-16T00:00:00Z",
+  "LastMonthStart": "2026-09-16T00:00:00Z",
+  "proof": null,
+  "full": {
+    "userId": 424242,
+    "currencyId": 0,
+    "startDate": "2026-04-30T00:00:00Z",
+    "endDate": "2026-10-16T00:00:00Z",
+    "netWorthSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-04-30T00:00:00Z",
+        "value": 5000.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-01T00:00:00Z",
+        "value": 10000.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-02T00:00:00Z",
+        "value": 9932.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-03T00:00:00Z",
+        "value": 10056.98
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-04T00:00:00Z",
+        "value": 8964.12
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-05T00:00:00Z",
+        "value": 8960.29
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-06T00:00:00Z",
+        "value": 8966.86
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-07T00:00:00Z",
+        "value": 8011.32
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-08T00:00:00Z",
+        "value": 7541.37
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-09T00:00:00Z",
+        "value": 7275.90
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-10T00:00:00Z",
+        "value": 7287.79
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-11T00:00:00Z",
+        "value": 7257.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-12T00:00:00Z",
+        "value": 6883.48
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-13T00:00:00Z",
+        "value": 6793.45
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-14T00:00:00Z",
+        "value": 6673.22
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-15T00:00:00Z",
+        "value": 6524.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-16T00:00:00Z",
+        "value": 6345.10
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-17T00:00:00Z",
+        "value": 6335.02
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-18T00:00:00Z",
+        "value": 6346.68
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-19T00:00:00Z",
+        "value": 6359.71
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-20T00:00:00Z",
+        "value": 6370.13
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-21T00:00:00Z",
+        "value": 6362.78
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-22T00:00:00Z",
+        "value": 6362.41
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-23T00:00:00Z",
+        "value": 6358.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-24T00:00:00Z",
+        "value": 6361.89
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-25T00:00:00Z",
+        "value": 6354.49
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-26T00:00:00Z",
+        "value": 6344.78
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-27T00:00:00Z",
+        "value": 6337.01
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-28T00:00:00Z",
+        "value": 6346.40
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-29T00:00:00Z",
+        "value": 6343.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-30T00:00:00Z",
+        "value": 6335.84
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-31T00:00:00Z",
+        "value": 6330.24
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-01T00:00:00Z",
+        "value": 11325.33
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-02T00:00:00Z",
+        "value": 11182.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-03T00:00:00Z",
+        "value": 11319.28
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-04T00:00:00Z",
+        "value": 10213.05
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-05T00:00:00Z",
+        "value": 10193.46
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-06T00:00:00Z",
+        "value": 10199.62
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-07T00:00:00Z",
+        "value": 9953.48
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-08T00:00:00Z",
+        "value": 9785.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-09T00:00:00Z",
+        "value": 9322.64
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-10T00:00:00Z",
+        "value": 9068.24
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-11T00:00:00Z",
+        "value": 8324.88
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-12T00:00:00Z",
+        "value": 7661.33
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-13T00:00:00Z",
+        "value": 7639.01
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-14T00:00:00Z",
+        "value": 7652.59
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-15T00:00:00Z",
+        "value": 7657.31
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-16T00:00:00Z",
+        "value": 7664.33
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-17T00:00:00Z",
+        "value": 7676.79
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-18T00:00:00Z",
+        "value": 7695.53
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-19T00:00:00Z",
+        "value": 7684.64
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-20T00:00:00Z",
+        "value": 7697.23
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-21T00:00:00Z",
+        "value": 7716.60
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-22T00:00:00Z",
+        "value": 7704.81
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-23T00:00:00Z",
+        "value": 7684.64
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-24T00:00:00Z",
+        "value": 7682.55
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-25T00:00:00Z",
+        "value": 7696.96
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-26T00:00:00Z",
+        "value": 7715.50
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-27T00:00:00Z",
+        "value": 7720.74
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-28T00:00:00Z",
+        "value": 7725.42
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-29T00:00:00Z",
+        "value": 7711.91
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-30T00:00:00Z",
+        "value": 7716.38
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-01T00:00:00Z",
+        "value": 12712.91
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-02T00:00:00Z",
+        "value": 12590.08
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-03T00:00:00Z",
+        "value": 12712.81
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-04T00:00:00Z",
+        "value": 11629.52
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-05T00:00:00Z",
+        "value": 11620.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-06T00:00:00Z",
+        "value": 11582.96
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-07T00:00:00Z",
+        "value": 11306.96
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-08T00:00:00Z",
+        "value": 10741.56
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-09T00:00:00Z",
+        "value": 10673.65
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-10T00:00:00Z",
+        "value": 10222.96
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-11T00:00:00Z",
+        "value": 10069.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-12T00:00:00Z",
+        "value": 9899.16
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-13T00:00:00Z",
+        "value": 9430.11
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-14T00:00:00Z",
+        "value": 9411.82
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-15T00:00:00Z",
+        "value": 9047.90
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-16T00:00:00Z",
+        "value": 9036.98
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-17T00:00:00Z",
+        "value": 9047.86
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-18T00:00:00Z",
+        "value": 9078.33
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-19T00:00:00Z",
+        "value": 9089.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-20T00:00:00Z",
+        "value": 9090.70
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-21T00:00:00Z",
+        "value": 9088.52
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-22T00:00:00Z",
+        "value": 9050.78
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-23T00:00:00Z",
+        "value": 9020.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-24T00:00:00Z",
+        "value": 9019.45
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-25T00:00:00Z",
+        "value": 9013.80
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-26T00:00:00Z",
+        "value": 8979.48
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-27T00:00:00Z",
+        "value": 8962.55
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-28T00:00:00Z",
+        "value": 8963.89
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-29T00:00:00Z",
+        "value": 8972.57
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-30T00:00:00Z",
+        "value": 8957.42
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-31T00:00:00Z",
+        "value": 8923.90
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-01T00:00:00Z",
+        "value": 13898.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-02T00:00:00Z",
+        "value": 13367.51
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-03T00:00:00Z",
+        "value": 13500.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-04T00:00:00Z",
+        "value": 12375.40
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-05T00:00:00Z",
+        "value": 12369.18
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-06T00:00:00Z",
+        "value": 12389.36
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-07T00:00:00Z",
+        "value": 12061.59
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-08T00:00:00Z",
+        "value": 11726.96
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-09T00:00:00Z",
+        "value": 11105.81
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-10T00:00:00Z",
+        "value": 11003.80
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-11T00:00:00Z",
+        "value": 10372.52
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-12T00:00:00Z",
+        "value": 10227.28
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-13T00:00:00Z",
+        "value": 10230.29
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-14T00:00:00Z",
+        "value": 10208.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-15T00:00:00Z",
+        "value": 10211.29
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-16T00:00:00Z",
+        "value": 10206.01
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-17T00:00:00Z",
+        "value": 10241.53
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-18T00:00:00Z",
+        "value": 10261.66
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-19T00:00:00Z",
+        "value": 10256.12
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-20T00:00:00Z",
+        "value": 10230.62
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-21T00:00:00Z",
+        "value": 10252.83
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-22T00:00:00Z",
+        "value": 10298.18
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-23T00:00:00Z",
+        "value": 10323.75
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-24T00:00:00Z",
+        "value": 10286.97
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-25T00:00:00Z",
+        "value": 10280.17
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-26T00:00:00Z",
+        "value": 10322.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-27T00:00:00Z",
+        "value": 10372.32
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-28T00:00:00Z",
+        "value": 10352.77
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-29T00:00:00Z",
+        "value": 10341.60
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-30T00:00:00Z",
+        "value": 10368.88
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-31T00:00:00Z",
+        "value": 10344.52
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-01T00:00:00Z",
+        "value": 15348.68
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-02T00:00:00Z",
+        "value": 14662.59
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-03T00:00:00Z",
+        "value": 14813.91
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-04T00:00:00Z",
+        "value": 13695.31
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-05T00:00:00Z",
+        "value": 13755.48
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-06T00:00:00Z",
+        "value": 13724.36
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-07T00:00:00Z",
+        "value": 13462.05
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-08T00:00:00Z",
+        "value": 13439.17
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-09T00:00:00Z",
+        "value": 12690.81
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-10T00:00:00Z",
+        "value": 12521.29
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-11T00:00:00Z",
+        "value": 12526.05
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-12T00:00:00Z",
+        "value": 12164.30
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-13T00:00:00Z",
+        "value": 11847.52
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-14T00:00:00Z",
+        "value": 11730.49
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-15T00:00:00Z",
+        "value": 11720.65
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-16T00:00:00Z",
+        "value": 11734.51
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-17T00:00:00Z",
+        "value": 11698.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-18T00:00:00Z",
+        "value": 11752.67
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-19T00:00:00Z",
+        "value": 11769.12
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-20T00:00:00Z",
+        "value": 11759.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-21T00:00:00Z",
+        "value": 11802.74
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-22T00:00:00Z",
+        "value": 11762.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-23T00:00:00Z",
+        "value": 11707.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-24T00:00:00Z",
+        "value": 11687.16
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-25T00:00:00Z",
+        "value": 11650.31
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-26T00:00:00Z",
+        "value": 11669.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-27T00:00:00Z",
+        "value": 11669.17
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-28T00:00:00Z",
+        "value": 11711.07
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-29T00:00:00Z",
+        "value": 11720.38
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-30T00:00:00Z",
+        "value": 11750.34
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 16781.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-02T00:00:00Z",
+        "value": 16505.47
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-03T00:00:00Z",
+        "value": 16676.70
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-04T00:00:00Z",
+        "value": 15602.58
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-05T00:00:00Z",
+        "value": 15533.94
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-06T00:00:00Z",
+        "value": 15558.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-07T00:00:00Z",
+        "value": 15285.78
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-08T00:00:00Z",
+        "value": 15219.43
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-09T00:00:00Z",
+        "value": 15077.70
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-10T00:00:00Z",
+        "value": 14544.49
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-11T00:00:00Z",
+        "value": 14081.03
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-12T00:00:00Z",
+        "value": 13721.26
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-13T00:00:00Z",
+        "value": 13587.16
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-14T00:00:00Z",
+        "value": 13491.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-15T00:00:00Z",
+        "value": 13289.69
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-16T00:00:00Z",
+        "value": 13267.19
+      }
+    ],
+    "netCashFlowSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-04-30T00:00:00Z",
+        "value": 5000.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-05T00:00:00Z",
+        "value": 300.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-05T00:00:00Z",
+        "value": 300.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-05T00:00:00Z",
+        "value": 300.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-05T00:00:00Z",
+        "value": 300.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-05T00:00:00Z",
+        "value": 300.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 401.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-05T00:00:00Z",
+        "value": 300.00
+      }
+    ],
+    "closingBalanceSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-04-30T00:00:00Z",
+        "value": 5000.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-01T00:00:00Z",
+        "value": 6029.17759000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-05-05T00:00:00Z",
+        "value": 301.066000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-06-01T00:00:00Z",
+        "value": 7716.37577000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-07-01T00:00:00Z",
+        "value": 8923.90394250
+      },
+      {
+        "name": "",
+        "dateTime": "2026-08-01T00:00:00Z",
+        "value": 10344.52151000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-01T00:00:00Z",
+        "value": 11750.33813000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 13267.1940625
+      }
+    ],
+    "liabilitiesPerType": [
+      {
+        "name": "Loan",
+        "value": -21600.0,
+        "accountId": null
+      }
+    ],
+    "liabilitiesPerAccount": [
+      {
+        "name": "Loan 1",
+        "value": -21600.0,
+        "accountId": 2
+      }
+    ],
+    "labelsValue": [
+      {
+        "name": "Salary",
+        "value": 30000.0,
+        "accountId": null
+      },
+      {
+        "name": "Undisclosed Expense",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Undisclosed Income",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Loan",
+        "value": 0.0,
+        "accountId": null
+      },
+      {
+        "name": "No matching label",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Utilities",
+        "value": -600.0,
+        "accountId": null
+      },
+      {
+        "name": "Education",
+        "value": -929.0,
+        "accountId": null
+      },
+      {
+        "name": "Healthcare",
+        "value": -1539.0,
+        "accountId": null
+      },
+      {
+        "name": "Travel",
+        "value": -1667.0,
+        "accountId": null
+      },
+      {
+        "name": "Subscription",
+        "value": -1786.0,
+        "accountId": null
+      },
+      {
+        "name": "Entertainment",
+        "value": -2156.0,
+        "accountId": null
+      },
+      {
+        "name": "Transportation",
+        "value": -2660.0,
+        "accountId": null
+      },
+      {
+        "name": "Dining Out",
+        "value": -2679.0,
+        "accountId": null
+      },
+      {
+        "name": "Groceries",
+        "value": -2778.0,
+        "accountId": null
+      },
+      {
+        "name": "Investment",
+        "value": -4800.0,
+        "accountId": null
+      },
+      {
+        "name": "Rent",
+        "value": -6000.0,
+        "accountId": null
+      }
+    ],
+    "assetsPerType": [
+      {
+        "name": "Cash",
+        "value": 29006.0,
+        "accountId": null
+      },
+      {
+        "name": "Bond 1",
+        "value": 1802.717000,
+        "accountId": null
+      },
+      {
+        "name": "Stock",
+        "value": 4058.4770625,
+        "accountId": null
+      }
+    ],
+    "assetsPerAccount": [
+      {
+        "name": "Cash 1",
+        "value": 29006.0,
+        "accountId": 1
+      },
+      {
+        "name": "Bond 1",
+        "value": 1802.717000,
+        "accountId": 4
+      },
+      {
+        "name": "Investments",
+        "value": 4058.4770625,
+        "accountId": 3
+      }
+    ],
+    "expenseDistribution": [
+      {
+        "name": "Essential",
+        "value": 40906.0,
+        "accountId": null
+      },
+      {
+        "name": "Investment",
+        "value": 4800.0,
+        "accountId": null
+      },
+      {
+        "name": "Want",
+        "value": 8288.0,
+        "accountId": null
+      }
+    ]
+  },
+  "month": {
+    "userId": 424242,
+    "currencyId": 0,
+    "startDate": "2026-09-16T00:00:00Z",
+    "endDate": "2026-10-16T00:00:00Z",
+    "netWorthSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-09-16T00:00:00Z",
+        "value": 11734.51
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-17T00:00:00Z",
+        "value": 11698.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-18T00:00:00Z",
+        "value": 11752.67
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-19T00:00:00Z",
+        "value": 11769.12
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-20T00:00:00Z",
+        "value": 11759.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-21T00:00:00Z",
+        "value": 11802.74
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-22T00:00:00Z",
+        "value": 11762.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-23T00:00:00Z",
+        "value": 11707.61
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-24T00:00:00Z",
+        "value": 11687.16
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-25T00:00:00Z",
+        "value": 11650.31
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-26T00:00:00Z",
+        "value": 11669.44
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-27T00:00:00Z",
+        "value": 11669.17
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-28T00:00:00Z",
+        "value": 11711.07
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-29T00:00:00Z",
+        "value": 11720.38
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-30T00:00:00Z",
+        "value": 11750.34
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 16781.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-02T00:00:00Z",
+        "value": 16505.47
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-03T00:00:00Z",
+        "value": 16676.70
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-04T00:00:00Z",
+        "value": 15602.58
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-05T00:00:00Z",
+        "value": 15533.94
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-06T00:00:00Z",
+        "value": 15558.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-07T00:00:00Z",
+        "value": 15285.78
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-08T00:00:00Z",
+        "value": 15219.43
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-09T00:00:00Z",
+        "value": 15077.70
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-10T00:00:00Z",
+        "value": 14544.49
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-11T00:00:00Z",
+        "value": 14081.03
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-12T00:00:00Z",
+        "value": 13721.26
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-13T00:00:00Z",
+        "value": 13587.16
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-14T00:00:00Z",
+        "value": 13491.09
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-15T00:00:00Z",
+        "value": 13289.69
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-16T00:00:00Z",
+        "value": 13267.19
+      }
+    ],
+    "netCashFlowSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-09-16T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-17T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-18T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-19T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-20T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-21T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-22T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-23T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-24T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-25T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-26T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-27T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-28T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-29T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-30T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 5000.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-02T00:00:00Z",
+        "value": -342.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-03T00:00:00Z",
+        "value": -500.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-04T00:00:00Z",
+        "value": -1100.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-05T00:00:00Z",
+        "value": 0.00
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-06T00:00:00Z",
+        "value": 0.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-07T00:00:00Z",
+        "value": -320.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-08T00:00:00Z",
+        "value": 0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-09T00:00:00Z",
+        "value": -148.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-10T00:00:00Z",
+        "value": -486.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-11T00:00:00Z",
+        "value": -518.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-12T00:00:00Z",
+        "value": -345.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-13T00:00:00Z",
+        "value": -181.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-14T00:00:00Z",
+        "value": -116.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-15T00:00:00Z",
+        "value": -155.0
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-16T00:00:00Z",
+        "value": -88.0
+      }
+    ],
+    "closingBalanceSeries": [
+      {
+        "name": "",
+        "dateTime": "2026-09-16T00:00:00Z",
+        "value": 11734.51418625
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-17T00:00:00Z",
+        "value": 11698.60516125
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-18T00:00:00Z",
+        "value": 11752.66716375
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-19T00:00:00Z",
+        "value": 11769.1234750
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-20T00:00:00Z",
+        "value": 11759.43637250
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-21T00:00:00Z",
+        "value": 11802.74267625
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-22T00:00:00Z",
+        "value": 11762.43716125
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-23T00:00:00Z",
+        "value": 11707.60752750
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-24T00:00:00Z",
+        "value": 11687.16472625
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-25T00:00:00Z",
+        "value": 11650.31359625
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-26T00:00:00Z",
+        "value": 11669.43920500
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-27T00:00:00Z",
+        "value": 11669.17315250
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-28T00:00:00Z",
+        "value": 11711.06629875
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-29T00:00:00Z",
+        "value": 11720.37831375
+      },
+      {
+        "name": "",
+        "dateTime": "2026-09-30T00:00:00Z",
+        "value": 11750.33813000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-01T00:00:00Z",
+        "value": 16781.0045250
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-02T00:00:00Z",
+        "value": 16505.47091000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-03T00:00:00Z",
+        "value": 16676.7024875
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-04T00:00:00Z",
+        "value": 15602.57928250
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-05T00:00:00Z",
+        "value": 15533.94301500
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-06T00:00:00Z",
+        "value": 15558.09454875
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-07T00:00:00Z",
+        "value": 15285.77856125
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-08T00:00:00Z",
+        "value": 15219.43052375
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-09T00:00:00Z",
+        "value": 15077.70007000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-10T00:00:00Z",
+        "value": 14544.48581000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-11T00:00:00Z",
+        "value": 14081.02561500
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-12T00:00:00Z",
+        "value": 13721.26119375
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-13T00:00:00Z",
+        "value": 13587.16045500
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-14T00:00:00Z",
+        "value": 13491.09309125
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-15T00:00:00Z",
+        "value": 13289.68783000
+      },
+      {
+        "name": "",
+        "dateTime": "2026-10-16T00:00:00Z",
+        "value": 13267.1940625
+      }
+    ],
+    "liabilitiesPerType": [
+      {
+        "name": "Loan",
+        "value": -21600.0,
+        "accountId": null
+      }
+    ],
+    "liabilitiesPerAccount": [
+      {
+        "name": "Loan 1",
+        "value": -21600.0,
+        "accountId": 2
+      }
+    ],
+    "labelsValue": [
+      {
+        "name": "Salary",
+        "value": 5000.0,
+        "accountId": null
+      },
+      {
+        "name": "Undisclosed Expense",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Undisclosed Income",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Loan",
+        "value": 0.0,
+        "accountId": null
+      },
+      {
+        "name": "No matching label",
+        "value": 0,
+        "accountId": null
+      },
+      {
+        "name": "Utilities",
+        "value": -100.0,
+        "accountId": null
+      },
+      {
+        "name": "Education",
+        "value": -148.0,
+        "accountId": null
+      },
+      {
+        "name": "Entertainment",
+        "value": -188.0,
+        "accountId": null
+      },
+      {
+        "name": "Healthcare",
+        "value": -239.0,
+        "accountId": null
+      },
+      {
+        "name": "Dining Out",
+        "value": -321.0,
+        "accountId": null
+      },
+      {
+        "name": "Subscription",
+        "value": -340.0,
+        "accountId": null
+      },
+      {
+        "name": "Travel",
+        "value": -340.0,
+        "accountId": null
+      },
+      {
+        "name": "Groceries",
+        "value": -382.0,
+        "accountId": null
+      },
+      {
+        "name": "Transportation",
+        "value": -741.0,
+        "accountId": null
+      },
+      {
+        "name": "Investment",
+        "value": -800.0,
+        "accountId": null
+      },
+      {
+        "name": "Rent",
+        "value": -1000.0,
+        "accountId": null
+      }
+    ],
+    "assetsPerType": [
+      {
+        "name": "Cash",
+        "value": 29006.0,
+        "accountId": null
+      },
+      {
+        "name": "Bond 1",
+        "value": 1802.717000,
+        "accountId": null
+      },
+      {
+        "name": "Stock",
+        "value": 4058.4770625,
+        "accountId": null
+      }
+    ],
+    "assetsPerAccount": [
+      {
+        "name": "Cash 1",
+        "value": 29006.0,
+        "accountId": 1
+      },
+      {
+        "name": "Bond 1",
+        "value": 1802.717000,
+        "accountId": 4
+      },
+      {
+        "name": "Investments",
+        "value": 4058.4770625,
+        "accountId": 3
+      }
+    ],
+    "expenseDistribution": [
+      {
+        "name": "Essential",
+        "value": 3010.0,
+        "accountId": null
+      },
+      {
+        "name": "Investment",
+        "value": 800.0,
+        "accountId": null
+      },
+      {
+        "name": "Want",
+        "value": 1189.0,
+        "accountId": null
+      }
+    ]
+  }
+}

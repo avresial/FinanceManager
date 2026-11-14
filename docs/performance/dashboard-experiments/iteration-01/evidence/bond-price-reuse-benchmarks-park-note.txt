@@ -1,0 +1,10 @@
+Park note (E01 baseline restoration, 2026-10-30)
+==============================================
+This benchmark targets the E01 candidate API BondDashboardContext.PreparePriceHistory
+and does not compile against the restored f3945df5 baseline (7 CS errors in
+FinanceManager.Benchmarks). It was never measured: no raw artifacts exist for it.
+
+To run it, first apply ../e01-candidate.patch to the working tree, then move this
+file back to code/FinanceManager.Benchmarks/Benchmarks/BondPriceReuseBenchmarks.cs.
+The companion BondHistoryBenchmarks.cs compiles against both baseline and candidate
+and remains in place.
