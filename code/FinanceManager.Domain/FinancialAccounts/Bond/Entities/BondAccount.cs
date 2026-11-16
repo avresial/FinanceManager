@@ -16,8 +16,11 @@ public class BondAccount : IAccount
     public DateTime? End => LedgerEntries.GetEnd(Entries);
     public List<BondAccountEntry> Entries { get; protected set; } = [];
 
-    // Preserve existing asset filtering; mixed-instrument detection is tracked in #1107.
-    public bool ContainsAssets => Entries.Count != 0 && Entries.First().Value > 0;
+    /// <summary>
+    /// True when any instrument's latest balance in this slice is positive. Each instrument keeps its own
+    /// balance, so quantities are never summed across instruments and entry order is not relied on.
+    /// </summary>
+    public bool ContainsAssets => GetStoredBondsIds().Any(bondDetailsId => GetLatestEntry(bondDetailsId)?.Value > 0);
 
     public int AccountId { get; set; }
     public int UserId { get; set; }
@@ -262,6 +265,11 @@ public class BondAccount : IAccount
 
         return NextOlderEntries[bondDetailsId];
     }
+
+    // MaxBy keeps the first of equal posting dates, which is the younger entry in the newest-first list.
+    private BondAccountEntry? GetLatestEntry(int bondDetailsId) =>
+        Entries.Where(entry => entry.BondDetailsId == bondDetailsId).MaxBy(entry => entry.PostingDate)
+            ?? NextOlderEntries.GetValueOrDefault(bondDetailsId);
 
     public List<int> GetStoredBondsIds()
     {

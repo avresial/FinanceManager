@@ -139,4 +139,62 @@ public class AssetsServiceBondTests
         Assert.Single(result);
         Assert.Equal(15m, result[0].Value);
     }
+
+    [Fact]
+    public async Task GetEndAssetsPerAccount_IncludesAccountWhenLatestTransactionSellsAnotherInstrument()
+    {
+        var asOfDate = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+        var account = new BondAccount(1, 1, "Bonds",
+            [
+                new BondAccountEntry(1, 3, asOfDate.Date.AddHours(9), 0m, -5m, 2),
+                new BondAccountEntry(1, 2, asOfDate.Date.AddHours(8), 5m, 5m, 2)
+            ],
+            AccountLabel.Other,
+            new Dictionary<int, BondAccountEntry> { [1] = new BondAccountEntry(1, 1, asOfDate.AddDays(-5), 10m, 10m, 1) });
+        SetupAccounts(asOfDate, account);
+
+        var result = await _service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, asOfDate)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(10m, Assert.Single(result).Value);
+        Assert.True(await _service.IsAnyAccountWithAssets(1));
+    }
+
+    [Fact]
+    public async Task GetEndAssetsPerAccount_SkipsAccountWhenEveryInstrumentIsSold()
+    {
+        var asOfDate = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+        var account = new BondAccount(1, 1, "Bonds",
+            [new BondAccountEntry(1, 3, asOfDate.Date.AddHours(9), 0m, -5m, 2)],
+            AccountLabel.Other,
+            new Dictionary<int, BondAccountEntry> { [1] = new BondAccountEntry(1, 1, asOfDate.AddDays(-5), 0m, -10m, 1) });
+        SetupAccounts(asOfDate, account);
+
+        var result = await _service.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, asOfDate)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+        Assert.False(await _service.IsAnyAccountWithAssets(1));
+    }
+
+    private void SetupAccounts(DateTime asOfDate, params BondAccount[] accounts)
+    {
+        BondDetails CreateDetails(int id) => new(
+            $"Bond {id}",
+            "Issuer",
+            DateOnly.FromDateTime(asOfDate.AddYears(-1)),
+            DateOnly.FromDateTime(asOfDate.AddYears(1)),
+            [new BondCalculationMethod { Id = id, DateOperator = DateOperator.UntilDate, DateValue = asOfDate.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0m }],
+            DefaultCurrency.PLN,
+            BondType.InflationBond,
+            1m)
+        { Id = id };
+
+        _financialAccountRepositoryMock
+            .Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
+            .Returns(() => accounts.ToAsyncEnumerable());
+        _bondDetailsRepositoryMock
+            .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .Returns(() => new[] { CreateDetails(1), CreateDetails(2) }.ToAsyncEnumerable());
+    }
 }
