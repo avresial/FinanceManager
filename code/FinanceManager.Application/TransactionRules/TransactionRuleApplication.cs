@@ -19,15 +19,16 @@ public sealed class TransactionRuleApplication(
         var result = TransactionRuleEngine.Run(rules, facts);
         if (!result.HasChanges) return false;
 
-        var existingByName = entry.Labels
-            .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var availableByName = availableLabels
             .GroupBy(label => label.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        // Attached labels can differ only by case (Food and FOOD), so each final name claims
+        // an unused attached label, preferring an exact-case match, before falling back to
+        // the user's available labels. This keeps both IDs when rules leave labels unchanged.
+        var unclaimedAttached = entry.Labels.ToList();
         var resolvedLabels = result.FinalFacts.Labels
-            .Where(name => existingByName.ContainsKey(name) || availableByName.ContainsKey(name))
-            .Select(name => existingByName.GetValueOrDefault(name) ?? availableByName[name])
+            .Select(name => ClaimAttached(unclaimedAttached, name) ?? availableByName.GetValueOrDefault(name))
+            .OfType<FinancialLabel>()
             .DistinctBy(label => label.Id)
             .ToList();
         var finalContractor = string.IsNullOrWhiteSpace(result.FinalFacts.Contractor) ? null : result.FinalFacts.Contractor;
@@ -41,6 +42,15 @@ public sealed class TransactionRuleApplication(
         entry.Description = result.FinalFacts.Description;
         entry.Labels = resolvedLabels;
         return true;
+    }
+
+    private static FinancialLabel? ClaimAttached(List<FinancialLabel> unclaimed, string name)
+    {
+        var label = unclaimed.FirstOrDefault(candidate => string.Equals(candidate.Name, name, StringComparison.Ordinal))
+            ?? unclaimed.FirstOrDefault(candidate => string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (label is not null)
+            unclaimed.Remove(label);
+        return label;
     }
 
     internal static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
