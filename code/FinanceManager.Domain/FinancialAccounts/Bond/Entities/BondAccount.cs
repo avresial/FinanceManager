@@ -5,30 +5,43 @@ using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-public class BondAccount : FinancialAccountBase<BondAccountEntry>
+public class BondAccount : BasicAccountInformation
 {
     public readonly Dictionary<int, BondAccountEntry> NextOlderEntries = [];
     public readonly Dictionary<int, BondAccountEntry> NextYoungerEntries = [];
 
     public AccountLabel AccountType { get; set; }
 
+    public override DateTime? Start => LedgerEntries.GetStart(Entries);
+    public override DateTime? End => LedgerEntries.GetEnd(Entries);
+    public List<BondAccountEntry> Entries { get; protected set; } = [];
+
+    // Preserve existing asset filtering; mixed-instrument detection is tracked in #1107.
+    public bool ContainsAssets => Entries.Count != 0 && Entries.First().Value > 0;
+
+    // Multiple constructors support both account metadata and loaded entry slices.
     public BondAccount(int userId, int accountId, string name, IEnumerable<BondAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,
-        Dictionary<int, BondAccountEntry>? nextOlderEntries = null, Dictionary<int, BondAccountEntry>? nextYoungerEntries = null) : base(userId, accountId, name)
+        Dictionary<int, BondAccountEntry>? nextOlderEntries = null, Dictionary<int, BondAccountEntry>? nextYoungerEntries = null)
     {
         UserId = userId;
+        AccountId = accountId;
+        Name = name;
         Entries = entries is null ? [] : [.. entries];
         AccountType = accountType;
         NextOlderEntries = nextOlderEntries ?? [];
         NextYoungerEntries = nextYoungerEntries ?? [];
     }
 
-    public BondAccount(int userId, int id, string name, AccountLabel accountType) : base(userId, id, name)
+    public BondAccount(int userId, int id, string name, AccountLabel accountType)
     {
+        UserId = userId;
+        AccountId = id;
+        Name = name;
         AccountType = accountType;
         Entries = [];
     }
 
-    public override void Add(BondAccountEntry entry, bool recalculateValues = true)
+    public void Add(BondAccountEntry entry, bool recalculateValues = true)
     {
         var alreadyExistingEntry = Entries.FirstOrDefault(x => x.EntryId == entry.EntryId);
         if (alreadyExistingEntry is not null)
@@ -37,27 +50,32 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
             return;
         }
 
-        // Find the correct position in the list (youngest entry older than the new one)
-        var previousEntry = Entries.GetNextYounger(entry.PostingDate).FirstOrDefault();
-        var index = -1;
-        if (previousEntry is not null)
-            index = Entries.IndexOf(previousEntry);
-
-        if (index < 0)
-        {
-            Entries.Add(entry);
-            index = Entries.Count - 1;
-        }
-        else
-        {
-            Entries.Insert(index, entry);
-        }
+        var index = LedgerEntries.InsertByPostingDate(Entries, entry);
 
         if (recalculateValues)
         {
             // Recalculate only entries with the same BondDetailsId
             RecalculateEntriesForBond(entry.BondDetailsId, index);
         }
+    }
+
+    public IEnumerable<BondAccountEntry> Get() => Entries;
+    public IEnumerable<BondAccountEntry> Get(DateTime date) => Entries.Get(date);
+    public IEnumerable<BondAccountEntry> Get(DateTime start, DateTime end) =>
+        Entries.Where(entry => entry.PostingDate >= start && entry.PostingDate <= end);
+
+    public void Add(IEnumerable<BondAccountEntry> entries, bool recalculateValues = true)
+    {
+        foreach (var entry in entries)
+            Add(entry, recalculateValues);
+    }
+
+    public long? GetMaxId() => LedgerEntries.GetMaxId(Entries);
+
+    public void RecalculateEntryValues(int? startingIndex)
+    {
+        foreach (var bondId in Entries.Select(entry => entry.BondDetailsId).Distinct())
+            RecalculateEntriesForBond(bondId, startingIndex ?? Entries.Count - 1);
     }
 
     private void RecalculateEntriesForBond(int bondDetailsId, int startingIndex)
@@ -84,7 +102,7 @@ public class BondAccount : FinancialAccountBase<BondAccountEntry>
         }
     }
 
-    public override void Remove(long id)
+    public void Remove(long id)
     {
         var entry = Entries.FirstOrDefault(x => x.EntryId == id);
         if (entry is null) return;

@@ -10,15 +10,15 @@ namespace FinanceManager.Tests.Unit.Domain.Entities.Accounts;
 [Trait("Category", "Unit")]
 public class FinancialAccountTests
 {
-    private readonly FinancialAccountBase<FinancialEntryBase> _financialAccount = new(1, 1, "Test account");
+    private readonly CurrencyAccount _financialAccount = new(1, 1, "Test account");
 
     [Fact]
     public void AddData_AddsNotOrderedData()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 29), 20, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 2, new(2000, 1, 30), 30, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 3, new(2000, 1, 28), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 29), 20, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 2, new(2000, 1, 30), 30, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 3, new(2000, 1, 28), 10, 10));
 
         // Act
 
@@ -31,9 +31,9 @@ public class FinancialAccountTests
     public void AddEntries_FromYoungersToOldest_SingleTickers()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 30), 10, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 2, new(2000, 1, 29), 10, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 3, new(2000, 1, 28), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 30), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 2, new(2000, 1, 29), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 3, new(2000, 1, 28), 10, 10));
 
         // Act
 
@@ -47,7 +47,7 @@ public class FinancialAccountTests
     {
         // Arrange
         // Act
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 1), 0, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 1), 0, 10));
 
         // Assert
         Assert.NotNull(_financialAccount.Entries);
@@ -58,11 +58,11 @@ public class FinancialAccountTests
     public void RemoveData_RecalculatesValues()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 29), 40, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 2, new(2000, 1, 30), 50, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 3, new(2000, 1, 28), 30, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 4, new(2000, 1, 27), 20, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 5, new(2000, 1, 26), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 29), 40, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 2, new(2000, 1, 30), 50, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 3, new(2000, 1, 28), 30, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 4, new(2000, 1, 27), 20, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 5, new(2000, 1, 26), 10, 10));
 
         // Act
         _financialAccount.Remove(3);
@@ -76,8 +76,8 @@ public class FinancialAccountTests
     public void RemoveData_RemovesOldestElement_RecalculatesValues()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 1), 10, 10));
-        _financialAccount.Add(new FinancialEntryBase(1, 2, new(2000, 1, 2), 20, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 1), 10, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 2, new(2000, 1, 2), 20, 10));
 
         // Act
         _financialAccount.Remove(1);
@@ -92,7 +92,7 @@ public class FinancialAccountTests
     public void RemoveData_OnlyOneElement_RecalculatesValues()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 28), 30, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 28), 30, 10));
 
         // Act
         _financialAccount.Remove(1);
@@ -105,7 +105,7 @@ public class FinancialAccountTests
     public void RemoveData_SingleElementGetsDeleted_NoEntriesAreLEft()
     {
         // Arrange
-        _financialAccount.Add(new FinancialEntryBase(1, 1, new(2000, 1, 29), 40, 10));
+        _financialAccount.Add(new CurrencyAccountEntry(1, 1, new(2000, 1, 29), 40, 10));
 
         // Act
         _financialAccount.Remove(1);
@@ -121,11 +121,11 @@ public class FinancialAccountTests
     {
         // Arrange - Add 1000 entries
         var baseDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Large Dataset Test");
+        var account = new CurrencyAccount(1, 1, "Large Dataset Test");
 
         for (int i = 0; i < 1000; i++)
         {
-            account.Add(new FinancialEntryBase(1, i + 1, baseDate.AddDays(i), 0, 10m), recalculateValues: false);
+            account.Add(new CurrencyAccountEntry(1, i + 1, baseDate.AddDays(i), 0, 10m), recalculateValues: false);
         }
 
         // Act - Recalculate all at once
@@ -157,12 +157,12 @@ public class FinancialAccountTests
     public void Add_WithRecalculateFalse_ThenExplicitRecalculate_ShouldCorrectValues()
     {
         // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Test");
+        var account = new CurrencyAccount(1, 1, "Test");
 
         // Add multiple entries without recalculation
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 100m), recalculateValues: false);
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, 50m), recalculateValues: false);
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 0, 25m), recalculateValues: false);
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m), recalculateValues: false);
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m), recalculateValues: false);
+        account.Add(new CurrencyAccountEntry(1, 3, new DateTime(2023, 1, 3), 0, 25m), recalculateValues: false);
 
         // Explicit recalculation
         account.RecalculateEntryValues(account.Entries.Count - 1);
@@ -177,10 +177,10 @@ public class FinancialAccountTests
     public void Remove_FirstEntry_ShouldRecalculateCorrectly()
     {
         // Arrange - Entry at index 0 (youngest)
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Test");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 30, 30m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 20, -10m));
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 10, -10m));
+        var account = new CurrencyAccount(1, 1, "Test");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 30, 30m));
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 20, -10m));
+        account.Add(new CurrencyAccountEntry(1, 3, new DateTime(2023, 1, 3), 10, -10m));
 
         // Act - Remove the first entry (youngest) from the list
         account.Remove(account.Entries.First().EntryId);
@@ -195,7 +195,7 @@ public class FinancialAccountTests
     public void BoundaryCondition_EmptyAccount_RecalculateShouldNotThrow()
     {
         // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Empty");
+        var account = new CurrencyAccount(1, 1, "Empty");
 
         // Act & Assert
         account.RecalculateEntryValues(0); // Should not throw
@@ -207,8 +207,8 @@ public class FinancialAccountTests
     public void BoundaryCondition_SingleEntry_ShouldEqualValueChange()
     {
         // Arrange & Act
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Single");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 42m));
+        var account = new CurrencyAccount(1, 1, "Single");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 42m));
 
         // Assert
         Assert.Single(account.Entries);
@@ -220,9 +220,9 @@ public class FinancialAccountTests
     public void BoundaryCondition_TwoEntries_ShouldCalculateCorrectly()
     {
         // Arrange & Act
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Two Entries");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, -20m));
+        var account = new CurrencyAccount(1, 1, "Two Entries");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m));
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, -20m));
 
         // Assert
         Assert.Equal(2, account.Entries.Count);
@@ -234,11 +234,11 @@ public class FinancialAccountTests
     public void Add_DuplicateEntryId_ShouldNotAdd()
     {
         // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Duplicate Test");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 100m));
+        var account = new CurrencyAccount(1, 1, "Duplicate Test");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m));
 
         // Act - Try to add entry with same ID
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 2), 0, 50m));
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 2), 0, 50m));
 
         // Assert - Should only have one entry
         Assert.Single(account.Entries);
@@ -249,11 +249,11 @@ public class FinancialAccountTests
     public void Add_OutOfOrderDates_ShouldMaintainChronologicalOrder()
     {
         // Arrange & Act
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Out of Order");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 15), 0, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 5), 0, 50m));
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 10), 0, 25m));
-        account.Add(new FinancialEntryBase(1, 4, new DateTime(2023, 1, 1), 0, 10m));
+        var account = new CurrencyAccount(1, 1, "Out of Order");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 15), 0, 100m));
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 5), 0, 50m));
+        account.Add(new CurrencyAccountEntry(1, 3, new DateTime(2023, 1, 10), 0, 25m));
+        account.Add(new CurrencyAccountEntry(1, 4, new DateTime(2023, 1, 1), 0, 10m));
 
         // Assert - Should be in chronological order (oldest first in list)
         var dates = account.Entries.Select(e => e.PostingDate).ToList();
@@ -273,11 +273,11 @@ public class FinancialAccountTests
     public void Remove_MiddleEntry_ShouldAdjustValuesCorrectly()
     {
         // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Remove Middle");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 100m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, 50m)); // REMOVED
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 0, 25m));
-        account.Add(new FinancialEntryBase(1, 4, new DateTime(2023, 1, 4), 0, 10m));
+        var account = new CurrencyAccount(1, 1, "Remove Middle");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 100m));
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, 50m)); // REMOVED
+        account.Add(new CurrencyAccountEntry(1, 3, new DateTime(2023, 1, 3), 0, 25m));
+        account.Add(new CurrencyAccountEntry(1, 4, new DateTime(2023, 1, 4), 0, 10m));
 
         // Act - Remove middle entry (id 2)
         account.Remove(2);
@@ -298,10 +298,10 @@ public class FinancialAccountTests
     public void RecalculateValues_WithNegativeValues_ShouldHandleCorrectly()
     {
         // Arrange
-        var account = new FinancialAccountBase<FinancialEntryBase>(1, 1, "Negative Test");
-        account.Add(new FinancialEntryBase(1, 1, new DateTime(2023, 1, 1), 0, 1000m));
-        account.Add(new FinancialEntryBase(1, 2, new DateTime(2023, 1, 2), 0, -1500m));
-        account.Add(new FinancialEntryBase(1, 3, new DateTime(2023, 1, 3), 0, 200m));
+        var account = new CurrencyAccount(1, 1, "Negative Test");
+        account.Add(new CurrencyAccountEntry(1, 1, new DateTime(2023, 1, 1), 0, 1000m));
+        account.Add(new CurrencyAccountEntry(1, 2, new DateTime(2023, 1, 2), 0, -1500m));
+        account.Add(new CurrencyAccountEntry(1, 3, new DateTime(2023, 1, 3), 0, 200m));
 
         // Assert
         Assert.Equal(-300m, account.Entries[0].Value); // 1000 -1500 + 200
@@ -340,7 +340,7 @@ public class FinancialAccountTests
         account.Add(entry1, true);
         account.Add(entry2, true);
 
-        // Assert - Base class behavior should work for all derived types
+        // Assert - Each concrete account owns its balance calculation
         var entries = (IReadOnlyList<FinancialEntryBase>)account.Entries;
         Assert.Equal(2, entries.Count);
         Assert.Equal(150m, entries.First().Value);
