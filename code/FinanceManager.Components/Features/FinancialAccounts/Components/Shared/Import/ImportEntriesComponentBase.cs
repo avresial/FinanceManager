@@ -13,7 +13,7 @@ using MudBlazor;
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
 
 public abstract class ImportEntriesComponentBase<TAccount, TComponent> : ComponentBase
-    where TAccount : BasicAccountInformation
+    where TAccount : class, IAccount
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
 

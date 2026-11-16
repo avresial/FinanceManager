@@ -109,7 +109,7 @@ public class AccountLedgerTests
     [Fact]
     public void LedgerEntries_PartialRecalculationPreservesOlderOpeningBalance()
     {
-        List<FinancialEntryBase> entries = [
+        List<CurrencyAccountEntry> entries = [
             new(1, 3, _date.AddDays(2), 0m, -5m),
             new(1, 2, _date.AddDays(1), 0m, 10m),
             new(1, 1, _date, 100m, 2m)
@@ -128,7 +128,7 @@ public class AccountLedgerTests
     [Fact]
     public void EmptyLedgersHaveNoBoundsOrIdentityAndCanBeRecalculated()
     {
-        List<FinancialEntryBase> entries = [];
+        List<CurrencyAccountEntry> entries = [];
         LedgerEntries.RecalculateRunningBalance(entries, null);
         Assert.Null(LedgerEntries.GetStart(entries));
         Assert.Null(LedgerEntries.GetEnd(entries));

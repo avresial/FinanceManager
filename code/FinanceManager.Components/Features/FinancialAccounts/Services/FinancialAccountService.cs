@@ -38,7 +38,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         return false;
     }
-    public async Task AddAccount<T>(T account) where T : BasicAccountInformation
+    public async Task AddAccount<T>(T account) where T : class, IAccount
     {
         switch (account)
         {
@@ -58,8 +58,8 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         InvalidateAvailableAccountsCache();
     }
     public async Task AddAccount<AccountType, EntryType>(string accountName, List<EntryType> data)
-        where AccountType : BasicAccountInformation
-        where EntryType : FinancialEntryBase
+        where AccountType : class, IAccount
+        where EntryType : class, ILedgerEntry
     {
         if (typeof(AccountType) == typeof(CurrencyAccount))
         {
@@ -93,7 +93,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         InvalidateAvailableAccountsCache();
     }
-    public async Task AddEntry<T>(T accountEntry) where T : FinancialEntryBase
+    public async Task AddEntry<T>(T accountEntry) where T : class, ILedgerEntry
     {
         switch (accountEntry)
         {
@@ -111,7 +111,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         }
     }
-    public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd, int minimumEntryCount = 0) where T : BasicAccountInformation
+    public async Task<T?> GetAccount<T>(int userId, int id, DateTime dateStart, DateTime dateEnd, int minimumEntryCount = 0) where T : class, IAccount
     {
         if (typeof(T) == typeof(CurrencyAccount))
             return await currencyAccountHttpClient.GetAccountWithEntriesAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
@@ -125,7 +125,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
     }
 
     public async Task<T?> GetInitialTransactionHistory<T>(int userId, int id, DateTime dateStart, DateTime dateEnd,
-        int minimumEntryCount = 100) where T : BasicAccountInformation
+        int minimumEntryCount = 100) where T : class, IAccount
     {
         if (typeof(T) == typeof(CurrencyAccount))
             return await currencyAccountHttpClient.GetInitialTransactionHistoryAsync(id, dateStart, dateEnd, minimumEntryCount) as T;
@@ -282,7 +282,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         else throw new InvalidOperationException($"Account {accountId}, entryId {entryId} not found.");
     }
-    public async Task UpdateAccount<T>(T account) where T : BasicAccountInformation
+    public async Task UpdateAccount<T>(T account) where T : class, IAccount
     {
         if (account is CurrencyAccount currencyAccount)
             await currencyAccountHttpClient.UpdateAccountAsync(new(currencyAccount.AccountId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId));
@@ -296,7 +296,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         // The cached list carries account names (the nav menu reads them), so a rename must refetch it.
         InvalidateAvailableAccountsCache();
     }
-    public async Task UpdateEntry<T>(T accountEntry) where T : FinancialEntryBase
+    public async Task UpdateEntry<T>(T accountEntry) where T : class, ILedgerEntry
     {
         if (accountEntry is CurrencyAccountEntry currencyAccountEntry)
         {

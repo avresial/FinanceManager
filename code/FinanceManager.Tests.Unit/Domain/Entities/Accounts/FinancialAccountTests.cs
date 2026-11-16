@@ -341,7 +341,7 @@ public class FinancialAccountTests
         account.Add(entry2, true);
 
         // Assert - Each concrete account owns its balance calculation
-        var entries = (IReadOnlyList<FinancialEntryBase>)account.Entries;
+        var entries = (IReadOnlyList<ILedgerEntry>)account.Entries;
         Assert.Equal(2, entries.Count);
         Assert.Equal(150m, entries.First().Value);
         Assert.Equal(100m, entries.Last().Value);
@@ -376,7 +376,7 @@ public class FinancialAccountTests
         account.Remove(2);
 
         // Assert
-        var entries = (IReadOnlyList<FinancialEntryBase>)account.Entries;
+        var entries = (IReadOnlyList<ILedgerEntry>)account.Entries;
         Assert.Equal(2, entries.Count);
         Assert.Equal(200m, entries.First().Value); // 100 + 100
         Assert.Equal(100m, entries.Last().Value);

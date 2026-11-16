@@ -9,24 +9,24 @@ using System.Text.Json;
 namespace FinanceManager.Tests.Unit.Domain.FinancialAccounts.Shared;
 
 [Trait("Category", "Unit")]
-public class AccountEntryBaseTests
+public class AccountEntryContractTests
 {
     private static readonly DateTime _postingDate = new(2026, 5, 17, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void AccountEntryBase_IsAbstractAndParentOfAllEntryTypes()
+    public void TransactionModelsOwnTheirStateWithoutImplementationParents()
     {
-        Assert.True(typeof(AccountEntryBase).IsAbstract);
-        Assert.Equal(typeof(AccountEntryBase), typeof(FinancialEntryBase).BaseType);
-        Assert.Equal(typeof(AccountEntryBase), typeof(InvestmentTransaction).BaseType);
-        Assert.IsAssignableFrom<AccountEntryBase>(new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m));
-        Assert.IsAssignableFrom<AccountEntryBase>(new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3));
+        Assert.Equal(typeof(object), typeof(CurrencyAccountEntry).BaseType);
+        Assert.Equal(typeof(object), typeof(BondAccountEntry).BaseType);
+        Assert.Equal(typeof(object), typeof(InvestmentTransaction).BaseType);
+        Assert.IsAssignableFrom<ILedgerEntry>(new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m));
+        Assert.IsAssignableFrom<ILedgerEntry>(new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3));
     }
 
     [Fact]
-    public void FinancialEntryBase_ConstructorSetsInheritedIdentity()
+    public void CurrencyEntry_ConstructorSetsIdentity()
     {
-        var entry = new FinancialEntryBase(7, 5_000_000_000L, _postingDate, 10m, 1m);
+        var entry = new CurrencyAccountEntry(7, 5_000_000_000L, _postingDate, 10m, 1m);
 
         Assert.Equal(7, entry.AccountId);
         Assert.Equal(5_000_000_000L, entry.EntryId);
@@ -42,16 +42,13 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
-    public void EntryRepositories_CanSetEntryIdThroughFinancialEntryBaseReflection()
+    public void EntryRepositories_CanSetConcreteEntryIdsThroughReflection()
     {
         // Mirrors CurrencyEntryRepository / BondEntryRepository: the setter is internal, so it is only reachable by reflection.
-        var property = typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId));
-        Assert.NotNull(property);
         var currency = new CurrencyAccountEntry(1, 0, _postingDate, 10m, 1m);
         var bond = new BondAccountEntry(1, 0, _postingDate, 10m, 1m, 3);
-
-        property.SetValue(currency, 5_000_000_000L);
-        property.SetValue(bond, 42L);
+        typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId))!.SetValue(currency, 5_000_000_000L);
+        typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))!.SetValue(bond, 42L);
 
         Assert.Equal(5_000_000_000L, currency.EntryId);
         Assert.Equal(42L, bond.EntryId);
@@ -84,9 +81,9 @@ public class AccountEntryBaseTests
     [Fact]
     public void Description_DefaultsToEmptyOnEveryEntryType()
     {
-        AccountEntryBase[] entries = [new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m), new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3), new InvestmentTransaction()];
-
-        Assert.All(entries, entry => Assert.Equal(string.Empty, entry.Description));
+        Assert.Equal(string.Empty, new CurrencyAccountEntry(1, 2, _postingDate, 10m, 1m).Description);
+        Assert.Equal(string.Empty, new BondAccountEntry(1, 2, _postingDate, 10m, 1m, 3).Description);
+        Assert.Equal(string.Empty, new InvestmentTransaction().Description);
     }
 
     [Fact]
@@ -106,7 +103,7 @@ public class AccountEntryBaseTests
     [InlineData(InvestmentTransactionType.Sell, 2.5, -2.5)]
     public void InvestmentValueChange_ReturnsSignedQuantity(InvestmentTransactionType type, decimal quantity, decimal expected)
     {
-        AccountEntryBase entry = new InvestmentTransaction { Type = type, Quantity = quantity };
+        InvestmentTransaction entry = new InvestmentTransaction { Type = type, Quantity = quantity };
 
         Assert.Equal(expected, entry.ValueChange);
     }
@@ -117,7 +114,7 @@ public class AccountEntryBaseTests
     public void InvestmentValueChange_SetterRoundTripsAndPreservesDirectionAtZero(InvestmentTransactionType initialType)
     {
         var transaction = new InvestmentTransaction { Type = initialType, Quantity = 3m };
-        AccountEntryBase entry = transaction;
+        InvestmentTransaction entry = transaction;
 
         foreach (var value in new[] { 0m, -2.5m, 0m, 4.25m, 0m, -1m })
         {
@@ -172,10 +169,10 @@ public class AccountEntryBaseTests
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
         using var context = new AppDbContext(options.Options);
 
-        Assert.Null(context.Model.FindEntityType(typeof(InvestmentTransaction))!.FindProperty(nameof(AccountEntryBase.ValueChange)));
+        Assert.Null(context.Model.FindEntityType(typeof(InvestmentTransaction))!.FindProperty(nameof(CurrencyAccountEntry.ValueChange)));
         foreach (var type in new[] { typeof(CurrencyAccountEntry), typeof(BondAccountEntry) })
         {
-            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(AccountEntryBase.ValueChange));
+            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(CurrencyAccountEntry.ValueChange));
             Assert.NotNull(property);
             Assert.Equal("ValueChange", property.GetColumnName());
             Assert.Equal(typeof(decimal), property.ClrType);
@@ -190,7 +187,7 @@ public class AccountEntryBaseTests
 
         foreach (var (type, precision, scale) in new[] { (typeof(CurrencyAccountEntry), 18, 2), (typeof(BondAccountEntry), 18, 2), (typeof(InvestmentTransaction), 18, 8) })
         {
-            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(AccountEntryBase.Value));
+            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(CurrencyAccountEntry.Value));
             Assert.NotNull(property);
             Assert.Equal("Value", property.GetColumnName());
             Assert.Equal(precision, property.GetPrecision());
@@ -211,13 +208,11 @@ public class AccountEntryBaseTests
     }
 
     [Fact]
-    public void EfModel_DoesNotMapAccountEntryBaseAndKeepsIdColumn()
+    public void EfModel_UsesStandaloneEntryModelsAndKeepsIdColumn()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
         using var context = new AppDbContext(options.Options);
 
-        Assert.Null(context.Model.FindEntityType(typeof(AccountEntryBase)));
-        Assert.Null(context.Model.FindEntityType(typeof(FinancialEntryBase)));
         Assert.Null(context.Model.FindEntityType(typeof(InvestmentTransaction))?.BaseType);
         Assert.Null(context.Model.FindEntityType(typeof(CurrencyAccountEntry))?.BaseType);
 

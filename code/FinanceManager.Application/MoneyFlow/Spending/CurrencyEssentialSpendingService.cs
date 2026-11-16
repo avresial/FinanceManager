@@ -40,9 +40,9 @@ public class CurrencyEssentialSpendingService(IFinancialAccountRepository financ
                 if (!result.ContainsKey(date)) result.Add(date, 0);
 
                 var entries = account.Get(date);
-                foreach (var entry in entries.Select(x => x as FinancialEntryBase).Where(x => x is not null))
+                foreach (var entry in entries)
                 {
-                    if (entry!.PostingDate.Date != date.Date) continue;
+                    if (entry is null || entry.PostingDate.Date != date.Date) continue;
                     if (entry.ValueChange >= 0) continue;
                     if (!HasResolvedClassification(entry.Labels, FinancialLabelClassificationCatalog.EssentialValue)) continue;
 

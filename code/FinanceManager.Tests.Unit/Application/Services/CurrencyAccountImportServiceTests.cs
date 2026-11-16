@@ -158,7 +158,7 @@ public class CurrencyAccountImportServiceTests
             .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((batch, _, _) =>
             {
                 foreach (var entry in batch)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 100);
+                    typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId))?.SetValue(entry, 100);
                 cancellation.Cancel();
             })
             .ReturnsAsync(true);
@@ -193,7 +193,7 @@ public class CurrencyAccountImportServiceTests
             .Callback<IEnumerable<CurrencyAccountEntry>, bool>((batch, _) =>
             {
                 foreach (var entry in batch)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 77);
+                    typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId))?.SetValue(entry, 77);
             })
             .ReturnsAsync(true);
         _mockAccountEntryRepository.Setup(x => x.RecalculateValues(accountId, 77))

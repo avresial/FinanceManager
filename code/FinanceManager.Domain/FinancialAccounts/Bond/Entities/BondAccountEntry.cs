@@ -4,20 +4,51 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-public class BondAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : FinancialEntryBase(accountId, entryId, postingDate, value, valueChange)
+public class BondAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : ILedgerEntry
 {
-    // Order below the shared Description (-1) so bond payloads keep BondDetailsId first.
     [JsonPropertyOrder(-2)]
     public int BondDetailsId { get; set; } = bondDetailsId;
 
-    public override void Update(FinancialEntryBase entry)
-    {
-        base.Update(entry);
+    [JsonInclude]
+    [JsonPropertyOrder(1)]
+    public long EntryId { get; internal set; } = entryId;
 
-        if (entry is BondAccountEntry bondEntry)
-        {
-            BondDetailsId = bondEntry.BondDetailsId;
-        }
+    [JsonPropertyOrder(3)]
+    public DateTime PostingDate { get; set; } = postingDate;
+
+    private decimal _value = value;
+
+    [JsonPropertyOrder(4)]
+    public decimal Value
+    {
+        get => _value;
+        set => _value = value;
+    }
+
+    [JsonPropertyOrder(-1)]
+    public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(6)]
+    public ICollection<FinancialLabel> Labels { get; set; } = [];
+
+    [JsonPropertyOrder(2)]
+    public int AccountId { get; set; } = accountId;
+
+    [JsonPropertyOrder(5)]
+    public decimal ValueChange { get; set; } = valueChange;
+
+    public void Update(BondAccountEntry entry)
+    {
+        if (EntryId != entry.EntryId) throw new Exception("Entry id can not be changed.");
+
+        PostingDate = entry.PostingDate;
+        Description = entry.Description;
+        var valueChangeChange = entry.ValueChange - ValueChange;
+        Value += valueChangeChange;
+        ValueChange = entry.ValueChange;
+        AccountId = entry.AccountId;
+        Labels = entry.Labels ?? [];
+        BondDetailsId = entry.BondDetailsId;
     }
 
     public BondAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange, BondDetailsId)

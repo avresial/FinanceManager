@@ -5,19 +5,23 @@ using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-public class BondAccount : BasicAccountInformation
+public class BondAccount : IAccount
 {
     public readonly Dictionary<int, BondAccountEntry> NextOlderEntries = [];
     public readonly Dictionary<int, BondAccountEntry> NextYoungerEntries = [];
 
     public AccountLabel AccountType { get; set; }
 
-    public override DateTime? Start => LedgerEntries.GetStart(Entries);
-    public override DateTime? End => LedgerEntries.GetEnd(Entries);
+    public DateTime? Start => LedgerEntries.GetStart(Entries);
+    public DateTime? End => LedgerEntries.GetEnd(Entries);
     public List<BondAccountEntry> Entries { get; protected set; } = [];
 
     // Preserve existing asset filtering; mixed-instrument detection is tracked in #1107.
     public bool ContainsAssets => Entries.Count != 0 && Entries.First().Value > 0;
+
+    public int AccountId { get; set; }
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     // Multiple constructors support both account metadata and loaded entry slices.
     public BondAccount(int userId, int accountId, string name, IEnumerable<BondAccountEntry>? entries = null, AccountLabel accountType = AccountLabel.Other,

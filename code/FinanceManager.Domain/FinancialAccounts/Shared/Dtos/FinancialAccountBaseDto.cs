@@ -1,8 +1,9 @@
-﻿using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 
+/// <summary>Standalone persisted Accounts row. Account response DTOs own their fields independently.</summary>
 public class FinancialAccountBaseDto
 {
     public AccountType AccountType { get; set; }

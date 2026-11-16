@@ -13,7 +13,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
     IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository, IBondAccountEntryRepository<BondAccountEntry> bondEntryRepository
      ) : IFinancialAccountRepository
 {
-    private readonly Dictionary<(Type Type, int UserId, DateTime Start, DateTime End, bool IncludeEntryMetadata), IReadOnlyList<BasicAccountInformation>> _readCache = [];
+    private readonly Dictionary<(Type Type, int UserId, DateTime Start, DateTime End, bool IncludeEntryMetadata), IReadOnlyList<IAccount>> _readCache = [];
 
     public async Task<Dictionary<int, Type>> GetAvailableAccounts(int userId)
     {
@@ -38,7 +38,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         return currencyAccountsCount + investmentAccountsCount + bondAccountsCount;
     }
-    public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : BasicAccountInformation
+    public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : class, IAccount
     {
         switch (typeof(T))
         {
@@ -92,7 +92,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         throw new NotSupportedException($"Account type {typeof(T)} is not supported.");
     }
-    public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata = true) where T : BasicAccountInformation
+    public async IAsyncEnumerable<T> GetAccounts<T>(int userId, DateTime dateStart, DateTime dateEnd, bool includeEntryMetadata = true) where T : class, IAccount
     {
         var cacheKey = (typeof(T), userId, dateStart, dateEnd, includeEntryMetadata);
         if (_readCache.TryGetValue(cacheKey, out var cachedAccounts))
@@ -107,19 +107,19 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         {
             case Type t when t == typeof(CurrencyAccount):
                 accounts = (await GetCurrencyAccounts(userId, dateStart, dateEnd, includeEntryMetadata))
-                    .Select(account => (T)(BasicAccountInformation)account)
+                    .Select(account => (T)(IAccount)account)
                     .ToList();
                 break;
 
             case Type t when t == typeof(InvestmentAccount):
                 accounts = (await investmentAccountRepository.GetAll(userId))
-                    .Select(account => (T)(BasicAccountInformation)account)
+                    .Select(account => (T)(IAccount)account)
                     .ToList();
                 break;
 
             case Type t when t == typeof(BondAccount):
                 accounts = (await GetBondAccounts(userId, dateStart, dateEnd, includeEntryMetadata))
-                    .Select(account => (T)(BasicAccountInformation)account)
+                    .Select(account => (T)(IAccount)account)
                     .ToList();
                 break;
 
@@ -198,7 +198,7 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
         return result;
     }
 
-    public async Task<int?> AddAccount<T>(T account) where T : BasicAccountInformation
+    public async Task<int?> AddAccount<T>(T account) where T : class, IAccount
     {
         _readCache.Clear();
         switch (account)
