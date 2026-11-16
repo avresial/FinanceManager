@@ -198,6 +198,63 @@ public sealed class TransactionRuleServiceTests
     }
 
     [Fact]
+    public async Task ApplyToEntry_DescriptionOnlyRule_KeepsCaseVariantAttachedLabels()
+    {
+        SetupSingleRule("[{\"type\":\"NormalizeDescription\",\"value\":\"Groceries\"}]");
+        var entry = EntryWithCaseVariantLabels();
+
+        var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
+
+        Assert.True(changed);
+        Assert.Equal("Groceries", entry.Description);
+        Assert.Equal([7, 8], entry.Labels.Select(label => label.Id));
+    }
+
+    [Fact]
+    public async Task ApplyToEntry_ReplaceLabelsRule_KeepsOnlyTheRequestedCaseVariant()
+    {
+        SetupSingleRule("[{\"type\":\"SetLabels\",\"labels\":[\"FOOD\"],\"replaceExisting\":true}]");
+        var entry = EntryWithCaseVariantLabels();
+
+        var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
+
+        Assert.True(changed);
+        Assert.Equal(8, Assert.Single(entry.Labels).Id);
+    }
+
+    [Fact]
+    public async Task ApplyToEntry_ReplaceLabelsRule_RemovesAllCaseVariants()
+    {
+        SetupSingleRule("[{\"type\":\"SetLabels\",\"labels\":[\"Bills\"],\"replaceExisting\":true}]");
+        var entry = EntryWithCaseVariantLabels();
+
+        var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
+
+        Assert.True(changed);
+        Assert.Equal(1, Assert.Single(entry.Labels).Id);
+    }
+
+    private void SetupSingleRule(string actionsJson) =>
+        _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new TransactionRuleDefinition
+                {
+                    UserId = 7,
+                    Name = "Rule",
+                    Order = 1,
+                    ConditionsJson = "[]",
+                    ActionsJson = actionsJson
+                }
+            ]);
+
+    private static CurrencyAccountEntry EntryWithCaseVariantLabels() =>
+        new(2, 3, DateTime.UtcNow, -20m, -20m)
+        {
+            Description = "Shop",
+            Labels = [new FinancialLabel { Id = 7, Name = "Food" }, new FinancialLabel { Id = 8, Name = "FOOD" }]
+        };
+
+    [Fact]
     public async Task ApplyToEntry_ReturnsFalseWhenOnlyUnavailableLabelsAreRequested()
     {
         _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
