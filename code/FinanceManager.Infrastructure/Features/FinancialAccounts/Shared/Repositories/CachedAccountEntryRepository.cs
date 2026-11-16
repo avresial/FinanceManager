@@ -24,7 +24,7 @@ public class CachedAccountEntryRepository<T>(
     IAccountUserResolver userResolver,
     ICacheInvalidator cacheInvalidator,
     HybridCache cache,
-    EntryRangeCacheOptions rangeOptions) : IAccountEntryRepository<T> where T : FinancialEntryBase
+    EntryRangeCacheOptions rangeOptions) : IAccountEntryRepository<T> where T : class, ILedgerEntry
 {
     private static readonly HybridCacheEntryOptions _pointReadOptions = new() { Expiration = TimeSpan.FromMinutes(5) };
 

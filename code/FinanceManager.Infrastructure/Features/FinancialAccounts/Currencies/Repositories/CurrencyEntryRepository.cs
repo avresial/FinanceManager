@@ -15,7 +15,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     private readonly CurrencyEntryValueCalculator _valueCalculator = new(context);
     private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
-        typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId));
+        typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId));
 
     public Task<bool> Add(CurrencyAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);

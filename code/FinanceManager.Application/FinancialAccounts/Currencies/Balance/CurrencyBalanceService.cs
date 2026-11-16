@@ -57,7 +57,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
         return BucketToClosingBalanceSeries(result);
     }
 
-    private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<FinancialEntryBase, bool> predicate, IReadOnlyCollection<int> accountIds)
+    private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<CurrencyAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 

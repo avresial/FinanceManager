@@ -9,7 +9,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 /// dividends, splits, transfers and tax records are intentionally deferred to later work.
 /// Each transaction references the exact <see cref="AssetListing"/> traded (not just the asset).
 /// </summary>
-public class InvestmentTransaction : AccountEntryBase
+public class InvestmentTransaction
 {
     /// <summary>User who owns this transaction.</summary>
     public long UserId { get; set; }
@@ -42,11 +42,13 @@ public class InvestmentTransaction : AccountEntryBase
 
     // Trades have a calendar date, not an instant: preserve its day even for Local/Unspecified inputs.
     [JsonPropertyOrder(3)]
-    public override DateTime PostingDate
+    public DateTime PostingDate
     {
-        get => DateTime.SpecifyKind(base.PostingDate, DateTimeKind.Utc);
-        set => base.PostingDate = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
+        get => DateTime.SpecifyKind(field, DateTimeKind.Utc);
+        set => field = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
     }
+
+    private decimal _value;
 
     /// <summary>
     /// Units of <see cref="AssetListingId"/> held in the account immediately after this trade: the running sum of
@@ -54,10 +56,10 @@ public class InvestmentTransaction : AccountEntryBase
     /// the investment transaction repository, so it is not part of the entity's JSON.
     /// </summary>
     [JsonIgnore]
-    public override decimal Value
+    public decimal Value
     {
-        get => base.Value;
-        set => base.Value = value;
+        get => _value;
+        set => _value = value;
     }
 
     /// <summary>Optional broker fee. Retained because fees affect the real cost basis.</summary>
@@ -71,7 +73,7 @@ public class InvestmentTransaction : AccountEntryBase
 
     /// <summary>Signed change in investment units, derived from the trade.</summary>
     [JsonIgnore]
-    public override decimal ValueChange
+    public decimal ValueChange
     {
         get => SignedQuantity;
         set
@@ -89,4 +91,17 @@ public class InvestmentTransaction : AccountEntryBase
         InvestmentTransactionType.Sell => -Quantity,
         _ => 0m
     };
+
+    [JsonInclude]
+    [JsonPropertyOrder(1)]
+    public long EntryId { get; internal set; }
+
+    [JsonPropertyOrder(-1)]
+    public string Description { get; set; } = string.Empty;
+
+    [JsonPropertyOrder(6)]
+    public ICollection<FinancialLabel> Labels { get; set; } = [];
+
+    [JsonPropertyOrder(2)]
+    public int AccountId { get; set; }
 }

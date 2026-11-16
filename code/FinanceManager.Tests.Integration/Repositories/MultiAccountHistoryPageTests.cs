@@ -49,7 +49,7 @@ public class MultiAccountHistoryPageTests
     public async Task Entries_PageAcrossAccounts_HonoursRangeAndExclusiveCursor(bool bonds, bool sqlite)
     {
         await using var context = CreateContext(sqlite);
-        FinancialEntryBase[] entries =
+        ILedgerEntry[] entries =
         [
             Entry(bonds, 1, 1, _start.AddTicks(-1)),
             Entry(bonds, 1, 2, _start),
@@ -59,7 +59,7 @@ public class MultiAccountHistoryPageTests
             Entry(bonds, 1, 6, _end.AddTicks(1)),
             Entry(bonds, 3, 7, _end)
         ];
-        entries[3].Labels.Add(new FinancialLabel { Name = "History label" });
+        Labels(entries[3]).Add(new FinancialLabel { Name = "History label" });
         context.AddRange(entries);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
@@ -67,7 +67,7 @@ public class MultiAccountHistoryPageTests
         // A caller requesting pageSize + 1 gets its lookahead row without repository-side trimming.
         var lookahead = await EntryPage(context, bonds, [1, 2, 1], 3);
         Assert.Equal([5, 4, 3], lookahead.Select(e => e.EntryId));
-        Assert.Equal("History label", Assert.Single(lookahead[1].Labels).Name);
+        Assert.Equal("History label", Assert.Single(Labels(lookahead[1])).Name);
         var first = await EntryPage(context, bonds, [1, 2], 1);
         var second = await EntryPage(context, bonds, [1, 2], 2, first[^1].PostingDate, first[^1].EntryId);
         var third = await EntryPage(context, bonds, [1, 2], 2, second[^1].PostingDate, second[^1].EntryId);
@@ -196,7 +196,14 @@ public class MultiAccountHistoryPageTests
         return context;
     }
 
-    private static FinancialEntryBase Entry(bool bonds, int accountId, int id, DateTime date) => bonds
+    private static ICollection<FinancialLabel> Labels(ILedgerEntry entry) => entry switch
+    {
+        BondAccountEntry bond => bond.Labels,
+        CurrencyAccountEntry currency => currency.Labels,
+        _ => throw new ArgumentException("Unsupported test entry", nameof(entry))
+    };
+
+    private static ILedgerEntry Entry(bool bonds, int accountId, int id, DateTime date) => bonds
         ? new BondAccountEntry(accountId, id, date, 100m, 1m, 1)
         : new CurrencyAccountEntry(accountId, id, date, 100m, 1m);
 
@@ -213,7 +220,7 @@ public class MultiAccountHistoryPageTests
         Currency = "PLN"
     };
 
-    private static async Task<IReadOnlyList<FinancialEntryBase>> EntryPage(
+    private static async Task<IReadOnlyList<ILedgerEntry>> EntryPage(
         AppDbContext context, bool bonds, IReadOnlyCollection<int> accountIds, int take,
         DateTime? cursorDate = null, long? cursorId = null, DateTime? start = null, DateTime? end = null)
     {

@@ -2,9 +2,9 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Extensions;
 
-public static class FinancialEntryBaseExtension
+public static class LedgerEntryExtensions
 {
-    public static IEnumerable<T> Get<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+    public static IEnumerable<T> Get<T>(this IEnumerable<T> entries, DateTime date) where T : class, ILedgerEntry
     {
         if (entries is null) return [];
         var result = entries.Where(x => x.PostingDate.Year == date.Year && x.PostingDate.Month == date.Month && x.PostingDate.Day == date.Day);
@@ -13,7 +13,7 @@ public static class FinancialEntryBaseExtension
         return entries.GetNextYounger(date);
     }
 
-    public static IEnumerable<T> GetNextYounger<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+    public static IEnumerable<T> GetNextYounger<T>(this IEnumerable<T> entries, DateTime date) where T : class, ILedgerEntry
     {
         var lastEntry = entries.Where(x => x.PostingDate <= date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return [];
@@ -21,14 +21,14 @@ public static class FinancialEntryBaseExtension
         return [lastEntry];
     }
 
-    public static T? GetNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+    public static T? GetNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : class, ILedgerEntry
     {
         var lastEntry = entries.Where(x => x.PostingDate < date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
         if (lastEntry is null) return default;
 
         return lastEntry;
     }
-    public static T? GetThisOrNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : FinancialEntryBase
+    public static T? GetThisOrNextOlder<T>(this IEnumerable<T> entries, DateTime date) where T : class, ILedgerEntry
     {
         var results = entries.Get(date);
         if (results is null || !results.Any()) return default;

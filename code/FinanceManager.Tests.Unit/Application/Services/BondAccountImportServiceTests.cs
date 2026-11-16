@@ -122,7 +122,7 @@ public class BondAccountImportServiceTests
             .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((batch, _, _) =>
             {
                 foreach (var entry in batch)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(entry, 100);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(entry, 100);
                 cancellation.Cancel();
             })
             .ReturnsAsync(true);
@@ -199,7 +199,7 @@ public class BondAccountImportServiceTests
             {
                 int id = 100;
                 foreach (var e in entries)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, id++);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(e, id++);
             })
             .ReturnsAsync(true);
         _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
@@ -323,7 +323,7 @@ public class BondAccountImportServiceTests
             .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) =>
             {
                 foreach (var e in entries)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 50);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(e, 50);
             })
             .ReturnsAsync(true);
         _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
@@ -371,7 +371,7 @@ public class BondAccountImportServiceTests
             .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) =>
             {
                 foreach (var e in entries)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 42);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(e, 42);
             })
             .ReturnsAsync(true);
         _mockBondEntryRepository.Setup(x => x.RecalculateValues(accountId, It.IsAny<long>(), It.IsAny<CancellationToken>()))
@@ -406,14 +406,14 @@ public class BondAccountImportServiceTests
             .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) =>
             {
                 foreach (var e in entries)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 77);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(e, 77);
             })
             .ReturnsAsync(true);
         _mockBondEntryRepository.Setup(x => x.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false))
             .Callback<IEnumerable<BondAccountEntry>, bool>((entries, _) =>
             {
                 foreach (var e in entries)
-                    typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId))?.SetValue(e, 77);
+                    typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId))?.SetValue(e, 77);
             })
             .ReturnsAsync(true);
 

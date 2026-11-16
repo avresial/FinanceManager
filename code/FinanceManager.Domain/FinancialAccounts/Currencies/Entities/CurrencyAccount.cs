@@ -6,17 +6,21 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
-public class CurrencyAccount : BasicAccountInformation
+public class CurrencyAccount : IAccount
 {
     public readonly CurrencyAccountEntry? NextOlderEntry = null;
     public readonly CurrencyAccountEntry? NextYoungerEntry = null;
     public AccountLabel AccountType { get; set; }
     public int CurrencyId { get; set; }
 
-    public override DateTime? Start => LedgerEntries.GetStart(Entries);
-    public override DateTime? End => LedgerEntries.GetEnd(Entries);
+    public DateTime? Start => LedgerEntries.GetStart(Entries);
+    public DateTime? End => LedgerEntries.GetEnd(Entries);
     public List<CurrencyAccountEntry> Entries { get; protected set; } = [];
     public bool ContainsAssets => Entries.Count != 0 && Entries.First().Value > 0;
+
+    public int AccountId { get; set; }
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     // Multiple constructors preserve the existing account JSON constructor contract.
     [JsonConstructorAttribute]

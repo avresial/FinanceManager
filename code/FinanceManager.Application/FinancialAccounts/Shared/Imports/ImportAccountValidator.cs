@@ -13,7 +13,7 @@ public class ImportAccountValidator(IUserPlanVerifier userPlanVerifier)
             throw new InvalidOperationException("Plan does not allow importing this many entries.");
     }
 
-    public void EnsureOwnership(BasicAccountInformation? account, int userId)
+    public void EnsureOwnership(IAccount? account, int userId)
     {
         if (account is null || account.UserId != userId)
             throw new InvalidOperationException("Account not found or access denied.");

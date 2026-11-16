@@ -16,7 +16,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     private readonly BondEntryValueCalculator _valueCalculator = new(context);
     private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
-        typeof(FinancialEntryBase).GetProperty(nameof(FinancialEntryBase.EntryId));
+        typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId));
 
     public Task<bool> Add(BondAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
