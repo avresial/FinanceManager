@@ -1,19 +1,18 @@
+using FinanceManager.Api.Features.FinancialAccounts.Currencies.Extensions;
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.FinancialAccounts.Currencies;
 using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

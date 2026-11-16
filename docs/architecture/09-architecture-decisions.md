@@ -13,6 +13,8 @@ The records below reconstruct decisions from the implementation and existing rep
 | [0005 — Normalize portfolio movements without return semantics](decisions/0005-normalize-portfolio-movements.md) | A shared movement ledger feeds money-weighted return and attribution, with calculations kept in consumer services | Common normalization with explicit signs/FX in consumers; TWR still has a separate path |
 | [0006 — Account models without implementation inheritance](decisions/0006-account-models-without-inheritance.md) | Concrete accounts, transactions and response DTOs own their state; narrow interfaces support shared consumers | Preserved schema and wire contracts; modest duplication avoids inherited financial assumptions |
 
+| [0007 — Shared API contracts](decisions/0007-shared-api-contracts.md) | Independent transport models shared by API, Application and browser | Domain/persistence remain separate; explicit mapping and incremental migration |
+
 ## Recording future decisions
 
 Add a numbered ADR when a change materially affects boundaries, persistence/consistency, financial meaning, external contracts, deployment, or a recurring crosscutting pattern. A prospective record should state status, context, the chosen option, supporting evidence, consequences, viable alternatives and when they would become preferable. Link the issue/PR that establishes approval; do not infer approval from the existence of an implementation.

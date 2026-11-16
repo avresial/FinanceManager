@@ -1,6 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Features.FinancialAccounts.Models;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Services;
@@ -52,9 +52,9 @@ public static class InvestmentTransactionHistoryFilter
             .Where(t => t.TradeDate >= DateOnly.FromDateTime(dateStart) && t.TradeDate <= DateOnly.FromDateTime(dateEnd));
 
         if (filter == AccountHistoryToolbar.TxFilter.Income)
-            filtered = filtered.Where(t => t.Type == InvestmentTransactionType.Sell);
+            filtered = filtered.Where(t => t.Type == InvestmentTransactionTypeDto.Sell);
         else if (filter == AccountHistoryToolbar.TxFilter.Expense)
-            filtered = filtered.Where(t => t.Type == InvestmentTransactionType.Buy);
+            filtered = filtered.Where(t => t.Type == InvestmentTransactionTypeDto.Buy);
 
         var needle = NormalizeSearch(searchText);
         var serverSearchApplied = string.Equals(serverQuery.Search, needle, StringComparison.OrdinalIgnoreCase);
@@ -76,7 +76,7 @@ public static class InvestmentTransactionHistoryFilter
     {
         var gross = transaction.Quantity * transaction.UnitPrice;
         var fee = transaction.Fee ?? 0m;
-        return transaction.Type == InvestmentTransactionType.Sell ? gross - fee : -(gross + fee);
+        return transaction.Type == InvestmentTransactionTypeDto.Sell ? gross - fee : -(gross + fee);
     }
 
     private static string? NormalizeSearch(string? searchText) =>

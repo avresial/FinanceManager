@@ -1,8 +1,8 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
-namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Extensions;
+namespace FinanceManager.Api.Features.FinancialAccounts.Bond.Extensions;
 
 public static class BondAccountExtension
 {
@@ -20,7 +20,7 @@ public static class BondAccountExtension
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
-            AccountLabel = account.AccountType,
+            AccountLabel = (FinanceManager.Contracts.FinancialAccounts.Shared.AccountLabelDto)account.AccountType,
             NextOlderEntries = older?.ToDictionary(x => x.Key, x => x.Value.ToDto()),
             NextYoungerEntries = younger?.ToDictionary(x => x.Key, x => x.Value.ToDto()),
             Entries = effectiveEntries.Select(e => e.ToDto()).ToList()

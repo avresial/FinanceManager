@@ -1,7 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Contracts.FinancialAccounts.Shared;
 
-namespace FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+namespace FinanceManager.Contracts.FinancialAccounts.Currencies;
 
 public class CurrencyAccountEntryDto
 {
@@ -13,6 +12,6 @@ public class CurrencyAccountEntryDto
     public DateTime PostingDate { get; set; }
     public decimal Value { get; set; }
     public decimal ValueChange { get; set; }
-    public List<FinancialLabel> Labels { get; set; } = [];
+    public List<FinancialLabelDto> Labels { get; set; } = [];
 
 }

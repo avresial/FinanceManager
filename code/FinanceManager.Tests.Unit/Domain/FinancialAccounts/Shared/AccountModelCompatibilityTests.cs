@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Bond;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;

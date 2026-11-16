@@ -1,6 +1,6 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -16,7 +16,7 @@ public class InvestmentDayGroupCardTests
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
-        var buy = new InvestmentTransactionDto(1, 1, 1, 1, InvestmentTransactionType.Buy, 2m, 100m, "USD",
+        var buy = new InvestmentTransactionDto(1, 1, 1, 1, InvestmentTransactionTypeDto.Buy, 2m, 100m, "USD",
             new DateOnly(2026, 10, 1), 1m, null, "AAPL");
         var valuation = new InvestmentTransactionValuationDto(1, 400m, 800m, 150m, 1200m, 400m, 50m, "PLN", true, true);
 

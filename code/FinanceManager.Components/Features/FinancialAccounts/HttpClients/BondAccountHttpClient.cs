@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -22,7 +22,7 @@ public class BondAccountHttpClient(HttpClient httpClient)
         var result = await httpClient.GetFromJsonAsync<BondAccountDto>($"{httpClient.BaseAddress}api/BondAccount/{accountId}");
         if (result is null) return null;
 
-        return new BondAccount(result.UserId, result.AccountId, result.Name, [], result.AccountLabel);
+        return new BondAccount(result.UserId, result.AccountId, result.Name, [], (AccountLabel)result.AccountLabel);
     }
 
     public async Task<BondAccount?> GetAccountWithEntriesAsync(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0)
@@ -41,19 +41,24 @@ public class BondAccountHttpClient(HttpClient httpClient)
         if (result is null) return null;
 
         Dictionary<int, BondAccountEntry> nextOlder = result.NextOlderEntries is null ? [] :
-            result.NextOlderEntries.ToDictionary(x => x.Key, x => x.Value.ToBondAccountEntry());
+            result.NextOlderEntries.ToDictionary(x => x.Key, x => ToBondAccountEntry(x.Value));
 
         Dictionary<int, BondAccountEntry> nextYounger = result.NextYoungerEntries is null ? [] :
-            result.NextYoungerEntries.ToDictionary(x => x.Key, x => x.Value.ToBondAccountEntry());
+            result.NextYoungerEntries.ToDictionary(x => x.Key, x => ToBondAccountEntry(x.Value));
 
         var entries = result.Entries
-            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Description = x.Description, Labels = x.Labels })
+            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Description = x.Description, Labels = x.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()! })
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId);
 
         return new(result.UserId, result.AccountId, result.Name, entries,
-            result.AccountLabel, nextOlder, nextYounger);
+            (AccountLabel)result.AccountLabel, nextOlder, nextYounger);
     }
+
+    private static BondAccountEntry ToBondAccountEntry(BondAccountEntryDto entry) => new(entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, entry.BondDetailsId)
+    {
+        Description = entry.Description
+    };
 
     public async Task<int?> AddAccountAsync(AddAccount addAccount)
     {

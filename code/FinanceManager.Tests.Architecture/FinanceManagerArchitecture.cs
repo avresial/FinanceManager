@@ -22,6 +22,7 @@ public static class FinanceManagerArchitecture
 {
     // One marker type per project: locates the assembly and forces the compiler to keep the
     // project reference (so the assembly is copied to the output dir for the loader).
+    private static readonly System.Reflection.Assembly _contractsAssembly = typeof(FinanceManager.Contracts.FinancialAccounts.Currencies.CurrencyAccountDto).Assembly;
     private static readonly System.Reflection.Assembly _domainAssembly = typeof(FinanceManager.Domain.Administration.Logging.LogEntry).Assembly;
     private static readonly System.Reflection.Assembly _applicationAssembly = typeof(FinanceManager.Application.Administration.Users.AdministrationUsersService).Assembly;
     private static readonly System.Reflection.Assembly _infrastructureAssembly = typeof(FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories.AccountRepository).Assembly;
@@ -31,6 +32,7 @@ public static class FinanceManagerArchitecture
 
     public static readonly ArchitectureModel LoadedArchitecture = new ArchLoader()
         .LoadAssemblies(
+            _contractsAssembly,
             _domainAssembly,
             _applicationAssembly,
             _infrastructureAssembly,
@@ -38,6 +40,9 @@ public static class FinanceManagerArchitecture
             _componentsAssembly,
             _webUiAssembly)
         .Build();
+
+    public static readonly IObjectProvider<IType> ContractsLayer =
+        Types().That().ResideInAssembly(_contractsAssembly).As("Wire contracts");
 
     public static readonly IObjectProvider<IType> DomainLayer =
         Types().That().ResideInAssembly(_domainAssembly).As("Domain layer");

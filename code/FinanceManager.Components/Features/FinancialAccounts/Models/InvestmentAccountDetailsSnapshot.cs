@@ -1,6 +1,6 @@
 using FinanceManager.Components.Shared.Models;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Models;
 

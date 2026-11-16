@@ -1,5 +1,5 @@
+@using FinanceManager.Contracts.FinancialAccounts.Investments
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
-@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 @using System.Collections.Generic
 
@@ -73,6 +73,6 @@
     {
         var gross = t.Quantity * t.UnitPrice;
         var fee = t.Fee ?? 0m;
-        return t.Type == InvestmentTransactionType.Sell ? gross - fee : -(gross + fee);
+        return t.Type == InvestmentTransactionTypeDto.Sell ? gross - fee : -(gross + fee);
     }
 }

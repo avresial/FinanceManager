@@ -1,9 +1,8 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
-namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Extensions;
+namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Extensions;
 
 public static class CurrencyAccountExtension
 {
@@ -28,7 +27,7 @@ public static class CurrencyAccountExtension
             AccountId = account.AccountId,
             UserId = account.UserId,
             Name = account.Name,
-            AccountLabel = account.AccountType,
+            AccountLabel = (FinanceManager.Contracts.FinancialAccounts.Shared.AccountLabelDto)account.AccountType,
             CurrencyId = account.CurrencyId,
             NextOlderEntry = older?.ToDto(),
             NextYoungerEntry = younger?.ToDto(),

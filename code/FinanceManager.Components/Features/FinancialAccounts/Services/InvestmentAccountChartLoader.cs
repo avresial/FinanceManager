@@ -2,9 +2,9 @@ using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared;
 
@@ -118,7 +118,7 @@ public sealed class InvestmentAccountChartLoader(
                 quantity,
                 latest.UnitPrice,
                 quantity * latest.UnitPrice,
-                latest.AssetType));
+                (FinanceManager.Domain.Assets.Entities.AssetType)latest.AssetType));
         }
         return [.. rows.OrderByDescending(h => h.Value)];
     }

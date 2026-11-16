@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -18,16 +18,16 @@ public partial class InvestmentTransactionRow
 
     private bool _expanded;
 
-    private string TypeLabel => Transaction.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy";
-    private Color TypeColor => Transaction.Type == InvestmentTransactionType.Sell ? Color.Error : Color.Success;
+    private string TypeLabel => Transaction.Type == InvestmentTransactionTypeDto.Sell ? "Sell" : "Buy";
+    private Color TypeColor => Transaction.Type == InvestmentTransactionTypeDto.Sell ? Color.Error : Color.Success;
 
     private decimal GrossValue => Transaction.Quantity * Transaction.UnitPrice;
 
     // Performance tiles apply to purchases only, and only once the server has priced the position.
-    private bool ShowValuation => Transaction.Type == InvestmentTransactionType.Buy && Valuation is not null;
+    private bool ShowValuation => Transaction.Type == InvestmentTransactionTypeDto.Buy && Valuation is not null;
 
     // Buy is a cash outflow (negative), sell is a cash inflow (positive). Fees always reduce the cash impact.
-    private decimal CashImpact => Transaction.Type == InvestmentTransactionType.Sell
+    private decimal CashImpact => Transaction.Type == InvestmentTransactionTypeDto.Sell
         ? GrossValue - (Transaction.Fee ?? 0m)
         : -(GrossValue + (Transaction.Fee ?? 0m));
 
@@ -35,7 +35,7 @@ public partial class InvestmentTransactionRow
     // worth now versus what it cost — because that answers "how is this doing?" more naturally than the
     // purchase outlay. Sells and not-yet-priced buys have no gain/loss figure, so they fall back to the
     // trade's cash impact, which is the only amount available for them.
-    private bool ShowGainLoss => Transaction.Type == InvestmentTransactionType.Buy && Valuation is { HasCurrentPrice: true };
+    private bool ShowGainLoss => Transaction.Type == InvestmentTransactionTypeDto.Buy && Valuation is { HasCurrentPrice: true };
 
     private void ToggleExpanded() => _expanded = !_expanded;
 

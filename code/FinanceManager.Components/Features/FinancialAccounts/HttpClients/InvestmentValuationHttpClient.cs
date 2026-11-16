@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using System.Globalization;
 using System.Net.Http.Json;
 

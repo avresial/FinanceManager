@@ -1,6 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.Services;
@@ -75,7 +75,7 @@ public class InvestmentTransactionHistoryFilterTests
     public void CashImpact_SellIsNetOfFee_BuyIsNegativeIncludingFee()
     {
         var sell = new Tx(1, InvestmentTransactionType.Sell, new DateOnly(2024, 1, 5)).ToDto() with { Quantity = 2m, UnitPrice = 10m, Fee = 1m };
-        var buy = sell with { Type = InvestmentTransactionType.Buy };
+        var buy = sell with { Type = InvestmentTransactionTypeDto.Buy };
 
         Assert.Equal(19m, InvestmentTransactionHistoryFilter.CashImpact(sell));
         Assert.Equal(-21m, InvestmentTransactionHistoryFilter.CashImpact(buy));
@@ -84,6 +84,6 @@ public class InvestmentTransactionHistoryFilterTests
     private sealed record Tx(long Id, InvestmentTransactionType Type, DateOnly TradeDate, string Ticker = "T")
     {
         public InvestmentTransactionDto ToDto() =>
-            new(Id, 1, 1, 10, Type, 1m, 1m, "USD", TradeDate, null, null, Ticker);
+            new(Id, 1, 1, 10, (InvestmentTransactionTypeDto)Type, 1m, 1m, "USD", TradeDate, null, null, Ticker);
     }
 }

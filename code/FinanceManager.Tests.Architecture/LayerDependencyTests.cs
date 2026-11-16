@@ -9,19 +9,36 @@ namespace FinanceManager.Tests.Architecture;
 /// Enforces the layered modular monolith described in CLAUDE.md:
 /// Domain ← Application ← Infrastructure ← Api, with the browser-side surface
 /// (Components + the FinanceManager.WebUi WASM host) ← Application.
-/// Dependencies only ever point downward; the Domain stays free of infrastructure concerns
+/// Contracts is an independent shared wire boundary referenced by Application and presentation.
+/// Domain and Infrastructure must not use wire contracts. Dependencies only ever point downward; the Domain stays free of infrastructure concerns
 /// and the browser-side code never reaches the database.
 /// </summary>
 [Trait("Category", "Architecture")]
 public class LayerDependencyTests
 {
+    [Fact]
+    public void Contracts_should_be_independent_of_application_layers_and_frameworks()
+    {
+        IArchRule rule = Types().That().Are(ContractsLayer)
+            .Should().NotDependOnAny(DomainLayer)
+            .AndShould().NotDependOnAny(ApplicationLayer)
+            .AndShould().NotDependOnAny(InfrastructureLayer)
+            .AndShould().NotDependOnAny(ApiLayer)
+            .AndShould().NotDependOnAny(ComponentsLayer)
+            .AndShould().NotDependOnAny(WebUiLayer)
+            .AndShould().NotDependOnAnyTypesThat().ResideInNamespaceMatching(EntityFrameworkCoreNamespacePattern)
+            .AndShould().NotDependOnAnyTypesThat().ResideInNamespaceMatching(AspNetCoreNamespacePattern);
+        rule.Check(LoadedArchitecture);
+    }
+
     // --- Domain is the pure leaf -------------------------------------------------------------
 
     [Fact]
     public void Domain_should_not_depend_on_any_other_layer()
     {
         IArchRule rule = Types().That().Are(DomainLayer)
-            .Should().NotDependOnAny(ApplicationLayer)
+            .Should().NotDependOnAny(ContractsLayer)
+            .AndShould().NotDependOnAny(ApplicationLayer)
             .AndShould().NotDependOnAny(InfrastructureLayer)
             .AndShould().NotDependOnAny(ApiLayer)
             .AndShould().NotDependOnAny(ComponentsLayer)
@@ -72,7 +89,8 @@ public class LayerDependencyTests
     public void Infrastructure_should_not_depend_on_presentation_layers()
     {
         IArchRule rule = Types().That().Are(InfrastructureLayer)
-            .Should().NotDependOnAny(ApiLayer)
+            .Should().NotDependOnAny(ContractsLayer)
+            .AndShould().NotDependOnAny(ApiLayer)
             .AndShould().NotDependOnAny(ComponentsLayer)
             .AndShould().NotDependOnAny(WebUiLayer)
             .Because("Infrastructure is an inner layer and must not depend on the Api or browser-side presentation layers.");

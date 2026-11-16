@@ -12,7 +12,8 @@ The deployable system consists of the API host and the browser assets it publish
 | [FinanceManager.Components](../../code/FinanceManager.Components) | Feature pages/components, typed HTTP clients, browser services, caches/snapshots and interactive state | [ServiceCollectionExtension](../../code/FinanceManager.Components/ServiceCollectionExtension.cs); no API/Infrastructure project reference |
 | [FinanceManager.Api](../../code/FinanceManager.Api) | HTTP controllers, middleware, bearer/OAuth setup, SignalR, hosted workers, EF migrations, static client hosting | [Program.cs](../../code/FinanceManager.Api/Program.cs); route/host and worker coordination rather than reusable financial calculations |
 | [FinanceManager.Application](../../code/FinanceManager.Application) | Use-case services, valuation/performance, providers and fallback coordination, import/insight/label orchestration, seeders, shared browser services | [registrations](../../code/FinanceManager.Application/ServiceCollectionExtension.cs); no Infrastructure project dependency or direct EF context |
-| [FinanceManager.Domain](../../code/FinanceManager.Domain) | Entities, repository and service contracts, DTOs, value/result types, commands and domain concepts | [project](../../code/FinanceManager.Domain/FinanceManager.Domain.csproj); no other project reference or ASP.NET/EF package reference |
+| [FinanceManager.Contracts](../../code/FinanceManager.Contracts) | Core financial-account wire DTOs, request records, label payloads and transport enums | Independent project; no Domain, application, persistence or web framework dependencies |
+| [FinanceManager.Domain](../../code/FinanceManager.Domain) | Entities, repository and service contracts, value/result types, commands, and remaining legacy DTOs/read models | [project](../../code/FinanceManager.Domain/FinanceManager.Domain.csproj); no other project reference or ASP.NET/EF package reference |
 | [FinanceManager.Infrastructure](../../code/FinanceManager.Infrastructure) | EF context/model/configurations, repositories and cache decorators, external market/FX/AI adapters, OAuth persistence support | [AppDbContext](../../code/FinanceManager.Infrastructure/Persistence/AppDbContext.cs), [registrations](../../code/FinanceManager.Infrastructure/ServiceCollectionExtension.cs); no page or controller definitions |
 | [AppHost](../../code/AppHost) | Aspire PostgreSQL 17 resource, persistent local volume, pgAdmin, API startup/reference/wait | [AppHost.cs](../../code/AppHost/AppHost.cs); local orchestration, no feature logic |
 | [ServiceDefaults](../../code/ServiceDefaults) | OpenTelemetry, HTTP resilience/discovery defaults, health endpoints | [Extensions.cs](../../code/ServiceDefaults/Extensions.cs); shared host concerns |
@@ -49,8 +50,11 @@ flowchart TB
     Api --> WebUi
     Api --> Defaults[ServiceDefaults]
     WebUi[FinanceManager.WebUi] --> Components
+    Components --> Contracts
+    Api --> Contracts
     Components --> Application
     Infrastructure --> Application
+    Application --> Contracts
     Application --> Domain
     Benchmarks --> Api
     Benchmarks --> Defaults
@@ -69,7 +73,7 @@ flowchart TB
 
 Reference evidence: [API](../../code/FinanceManager.Api/FinanceManager.Api.csproj), [WebUi](../../code/FinanceManager/FinanceManager.WebUi.csproj), [Components](../../code/FinanceManager.Components/FinanceManager.Components.csproj), [Infrastructure](../../code/FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj), [Application](../../code/FinanceManager.Application/FinanceManager.Application.csproj), [Domain](../../code/FinanceManager.Domain/FinanceManager.Domain.csproj), [AppHost](../../code/AppHost/AppHost.csproj), [ServiceDefaults](../../code/ServiceDefaults/ServiceDefaults.csproj), and the verification projects in the table above.
 
-Domain and ServiceDefaults have no project references. Application references Domain directly, while Infrastructure and Components reference Application directly. API obtains Application/Domain transitively and references WebUi to host its built client. AppHost's WebUi reference exists even though [AppHost.cs](../../code/AppHost/AppHost.cs) currently creates only API and PostgreSQL resources. The architecture tests analyze type dependencies; a packaging reference is not the same as a server type depending on a UI type.
+Domain, Contracts and ServiceDefaults have no project references. Application references Domain and Contracts directly; Infrastructure references Application directly but its types must not depend on Contracts. Components references Application and Contracts, and API references Contracts directly for its HTTP payloads. API obtains Application/Domain transitively and references WebUi to host its built client. AppHost's WebUi reference exists even though [AppHost.cs](../../code/AppHost/AppHost.cs) currently creates only API and PostgreSQL resources. The architecture tests analyze type dependencies; a packaging reference is not the same as a server type depending on a UI type.
 
 ## 5.3 Level 2: feature slices and shared services
 
@@ -140,3 +144,9 @@ The Assets administration page includes an Incomplete tab. [IncompleteAssetQueue
 The investment account page renders [DividendPaymentHistory](../../code/FinanceManager.Components/Features/FinancialAccounts/Components/InvestmentAccountComponents/DividendPaymentHistory.razor) below trade history. Its [typed client](../../code/FinanceManager.Components/Features/FinancialAccounts/HttpClients/DividendPaymentHttpClient.cs) calls the account-scoped [DividendPaymentController](../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/DividendPaymentController.cs). [DividendPaymentService](../../code/FinanceManager.Application/FinancialAccounts/Investments/Dividends/DividendPaymentService.cs) enforces ownership, historical dates, positive cash amounts and supported payout currencies. [DividendPaymentRepository](../../code/FinanceManager.Infrastructure/Features/FinancialAccounts/Investments/Repositories/DividendPaymentRepository.cs) stores a separate ledger and returns bounded pages ordered by payment date and id. An account's traded listings and previously recorded dividend listings populate its holding choices, including sold holdings. Account deletion cascades to its dividend records; listing deletion is restricted while records reference it.
 
 Investment transactions share the global financial-label catalog through the `InvestmentTransactionFinancialLabel` many-to-many table. Currency and bond mappings remain separate. Investment history loads labels with split queries; spending analytics and transaction rules remain currency-scoped.
+
+### Core financial-account wire boundary
+
+[Contracts](../../code/FinanceManager.Contracts/FinancialAccounts) owns currency/bond account and entry payloads plus investment transaction Add/Update, history and valuation payloads. Domain entities and enums remain independent; transport enums have explicit stable numeric values and label/classification DTOs keep persistence entities out of these payloads. Application maps investment transactions, while API feature extensions map currency/bond responses. Browser HTTP clients map account payloads to their existing local domain models.
+
+This is an incremental extraction. Imports, dividends, fee-drag and other existing feature DTOs/read models retain their current ownership until their service/repository boundaries are addressed separately. `AddCurrencyEntryDto` is a domain ledger command. `FinancialAccountBaseDto` is the standalone mapped Accounts row, not a response DTO; its EF identity is unchanged. See [ADR 0007](decisions/0007-shared-api-contracts.md).

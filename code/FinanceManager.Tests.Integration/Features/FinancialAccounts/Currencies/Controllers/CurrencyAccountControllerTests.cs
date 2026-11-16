@@ -1,6 +1,6 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;

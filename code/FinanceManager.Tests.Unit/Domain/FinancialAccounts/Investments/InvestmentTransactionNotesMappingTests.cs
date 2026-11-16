@@ -1,4 +1,5 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Tests.Unit.Domain.FinancialAccounts.Investments;
@@ -16,7 +17,7 @@ public class InvestmentTransactionNotesMappingTests
     [InlineData("Monthly ETF contribution", "Monthly ETF contribution")]
     public void AddRequest_MapsNotesToDescription_WithNullBecomingEmpty(string? notes, string expectedDescription)
     {
-        var request = new AddInvestmentTransactionRequest(1, 2, InvestmentTransactionType.Buy, 1m, 10m, "USD", _tradeDate, Notes: notes);
+        var request = new AddInvestmentTransactionRequest(1, 2, InvestmentTransactionTypeDto.Buy, 1m, 10m, "USD", _tradeDate, Notes: notes);
 
         var entity = request.ToEntity(userId: 7, assetListingId: 2);
 
@@ -29,7 +30,7 @@ public class InvestmentTransactionNotesMappingTests
     [InlineData("Tech trim", "Tech trim")]
     public void UpdateRequest_MapsNotesToDescription_WithNullBecomingEmpty(string? notes, string expectedDescription)
     {
-        var request = new UpdateInvestmentTransactionRequest(9, 1, 2, InvestmentTransactionType.Sell, 1m, 10m, "USD", _tradeDate, Notes: notes);
+        var request = new UpdateInvestmentTransactionRequest(9, 1, 2, InvestmentTransactionTypeDto.Sell, 1m, 10m, "USD", _tradeDate, Notes: notes);
 
         var entity = request.ToEntity();
 

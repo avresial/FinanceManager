@@ -1,12 +1,12 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Application.Shared.Persistence;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using Microsoft.Extensions.Logging;
@@ -46,7 +46,7 @@ public class InvestmentTransactionServiceTests
 
         var service = CreateService();
         var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionType.Buy, 1m, 100m, "USD", new DateOnly(2026, 1, 1),
+            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "USD", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var exception = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
@@ -124,7 +124,7 @@ public class InvestmentTransactionServiceTests
             });
 
         var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionType.Buy, 1m, 100m, "EUR", new DateOnly(2026, 1, 1),
+            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "EUR", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
         var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
 
@@ -198,7 +198,7 @@ public class InvestmentTransactionServiceTests
             });
 
         var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionType.Buy, 3m, 118.45m, "eur", new DateOnly(2026, 2, 10),
+            1, null, InvestmentTransactionTypeDto.Buy, 3m, 118.45m, "eur", new DateOnly(2026, 2, 10),
             ExternalInstrumentResultId: "incomplete-id");
         var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
 
@@ -224,7 +224,7 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(instrument);
 
         var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionType.Buy, 1m, 100m, "PLN", new DateOnly(2026, 1, 1),
+            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "PLN", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var ex = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
@@ -248,7 +248,7 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(instrument);
 
         var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionType.Buy, 1m, 100m, "ZZZ", new DateOnly(2026, 1, 1),
+            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "ZZZ", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var ex = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
@@ -296,7 +296,7 @@ public class InvestmentTransactionServiceTests
             });
 
         var request = new AddInvestmentTransactionRequest(
-            1, 77, InvestmentTransactionType.Buy, 2m, 450m, "PLN", new DateOnly(2026, 3, 1));
+            1, 77, InvestmentTransactionTypeDto.Buy, 2m, 450m, "PLN", new DateOnly(2026, 3, 1));
         var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
 
         Assert.Equal(99, result.Id);

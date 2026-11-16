@@ -1,9 +1,9 @@
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;

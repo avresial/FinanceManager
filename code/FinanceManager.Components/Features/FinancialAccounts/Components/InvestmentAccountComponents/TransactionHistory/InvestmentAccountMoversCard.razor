@@ -1,5 +1,5 @@
+@using FinanceManager.Contracts.FinancialAccounts.Investments
 @namespace FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
-@using FinanceManager.Domain.FinancialAccounts.Investments.Dtos
 @using FinanceManager.Domain.FinancialAccounts.Investments.Entities
 
 <MudCard Outlined="true" Style="background-color: transparent;">
@@ -75,7 +75,7 @@
                     <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
                         <MudText Typo="Typo.body2" Style="overflow-wrap: anywhere;">@GetTitle(entry)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Default">
-                            @DateFormatter.FormatDayMonth(entry.TradeDate) · @(entry.Type == InvestmentTransactionType.Sell ? "Sell" : "Buy")
+                            @DateFormatter.FormatDayMonth(entry.TradeDate) · @(entry.Type == InvestmentTransactionTypeDto.Sell ? "Sell" : "Buy")
                         </MudText>
                     </MudStack>
                     <MudText Typo="Typo.body2" Class="fm-tabular ml-auto" Color="@accent" Style="white-space: nowrap; flex-shrink: 0;">
@@ -94,6 +94,6 @@
     {
         var gross = t.Quantity * t.UnitPrice;
         var fee = t.Fee ?? 0m;
-        return t.Type == InvestmentTransactionType.Sell ? gross - fee : -(gross + fee);
+        return t.Type == InvestmentTransactionTypeDto.Sell ? gross - fee : -(gross + fee);
     }
 }
