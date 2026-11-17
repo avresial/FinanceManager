@@ -26,15 +26,56 @@ public class AccountLedgerTests
     }
 
     [Fact]
-    public void BondAccount_ContainsAssetsCurrentlyUsesOnlyNewestEntry()
+    public void BondAccount_ContainsAssetsWhenAnotherInstrumentIsFullySoldLast()
     {
         var account = new BondAccount(1, 1, "Mixed");
         account.Add(new BondAccountEntry(1, 1, _date, 0m, 10m, 1));
         account.Add(new BondAccountEntry(1, 2, _date.AddDays(1), 0m, 5m, 2));
         account.Add(new BondAccountEntry(1, 3, _date.AddDays(2), 0m, -5m, 2));
 
-        Assert.Equal(10m, account.Entries.Single(e => e.EntryId == 1).Value);
-        // Preserve the existing false negative; correcting asset totals is tracked in #1107.
+        Assert.True(account.ContainsAssets);
+    }
+
+    [Fact]
+    public void BondAccount_DoesNotContainAssetsWhenEveryInstrumentIsSold()
+    {
+        var account = new BondAccount(1, 1, "Sold");
+        account.Add(new BondAccountEntry(1, 1, _date, 0m, 10m, 1));
+        account.Add(new BondAccountEntry(1, 2, _date.AddDays(1), 0m, 5m, 2));
+        account.Add(new BondAccountEntry(1, 3, _date.AddDays(2), 0m, -10m, 1));
+        account.Add(new BondAccountEntry(1, 4, _date.AddDays(3), 0m, -5m, 2));
+
+        Assert.False(account.ContainsAssets);
+    }
+
+    [Fact]
+    public void BondAccount_ContainsAssetsUsesLatestBalancePerInstrumentInCarriedOnlySlice()
+    {
+        var sold = new BondAccountEntry(1, 2, _date.AddDays(1), 0m, -5m, 2);
+        var held = new BondAccountEntry(1, 1, _date, 10m, 10m, 1);
+        // Carried-only slices copy NextOlderEntries in dictionary order, so the sold one may come first.
+        var account = new BondAccount(1, 1, "Carried", [sold, held], nextOlderEntries: new() { [2] = sold, [1] = held });
+
+        Assert.True(account.ContainsAssets);
+    }
+
+    [Fact]
+    public void BondAccount_ContainsAssetsUsesCarriedBalanceForInstrumentWithoutSliceEntry()
+    {
+        var account = new BondAccount(1, 1, "Carried and sold",
+            [new BondAccountEntry(1, 2, _date.AddDays(1), 0m, -5m, 2)],
+            nextOlderEntries: new() { [1] = new BondAccountEntry(1, 1, _date, 10m, 10m, 1) });
+
+        Assert.True(account.ContainsAssets);
+    }
+
+    [Fact]
+    public void BondAccount_ContainsAssetsPrefersSliceEntryOverCarriedBalance()
+    {
+        var account = new BondAccount(1, 1, "Sold in slice",
+            [new BondAccountEntry(1, 2, _date.AddDays(1), 0m, -10m, 1)],
+            nextOlderEntries: new() { [1] = new BondAccountEntry(1, 1, _date, 10m, 10m, 1) });
+
         Assert.False(account.ContainsAssets);
     }
 
