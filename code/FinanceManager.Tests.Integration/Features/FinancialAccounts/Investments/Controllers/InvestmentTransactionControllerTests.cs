@@ -3,6 +3,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
@@ -94,7 +95,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.NotNull(added);
         Assert.Equal(first.Id, Assert.Single(added.Labels!).Id);
         var update = new UpdateInvestmentTransactionRequest(added.Id, _testAccountId, _listingId,
-            InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), LabelIds: [second.Id]);
+            InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), LabelIds: [second.Id]);
         Assert.True(await client.UpdateAsync(update));
         var reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
         Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
@@ -183,7 +184,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     private static AddInvestmentTransactionRequest AddRequest(int accountId) => new(
-        accountId, _listingId, InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1));
+        accountId, _listingId, InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1));
 
     [Fact]
     public async Task ListingPrice_UsesPriceProvider()
@@ -280,7 +281,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var request = new AddInvestmentTransactionRequest(
             _testAccountId,
             null,
-            InvestmentTransactionType.Buy,
+            InvestmentTransactionTypeDto.Buy,
             2m,
             100m,
             "USD",
@@ -323,7 +324,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
             "api/InvestmentTransaction/SearchInstruments?q=CSPX", TestContext.Current.CancellationToken);
-        var request = new AddInvestmentTransactionRequest(_testAccountId, null, InvestmentTransactionType.Buy,
+        var request = new AddInvestmentTransactionRequest(_testAccountId, null, InvestmentTransactionTypeDto.Buy,
             2m, 100m, "USD", new DateOnly(2026, 1, 1), ExternalInstrumentResultId: Assert.Single(options!).ResultId);
         var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
@@ -376,7 +377,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var request = new AddInvestmentTransactionRequest(
             _testAccountId,
             null,
-            InvestmentTransactionType.Buy,
+            InvestmentTransactionTypeDto.Buy,
             2m,
             100m,
             "USD",
@@ -435,7 +436,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var request = new AddInvestmentTransactionRequest(
             _testAccountId,
             null,
-            InvestmentTransactionType.Buy,
+            InvestmentTransactionTypeDto.Buy,
             4m,
             117.50m,
             "EUR",
@@ -493,7 +494,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var request = new AddInvestmentTransactionRequest(
             _testAccountId,
             null,
-            InvestmentTransactionType.Buy,
+            InvestmentTransactionTypeDto.Buy,
             1m,
             100m,
             "USD",
@@ -559,7 +560,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         var transaction = Assert.Single((await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!);
 
-        Assert.Equal(AssetType.ETF, transaction.AssetType);
+        Assert.Equal(FinanceManager.Contracts.Assets.AssetTypeDto.ETF, transaction.AssetType);
     }
 
     [Fact]
@@ -579,7 +580,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(latestId, latest.Id);
         Assert.Equal(120m, latest.UnitPrice);
         Assert.Equal("CSPX", latest.Ticker);
-        Assert.Equal(AssetType.ETF, latest.AssetType);
+        Assert.Equal(FinanceManager.Contracts.Assets.AssetTypeDto.ETF, latest.AssetType);
     }
 
     [Fact]
@@ -659,7 +660,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentTransactionHttpClient(Client);
         var update = new UpdateInvestmentTransactionRequest(
-            long.MaxValue, _testAccountId, _listingId, InvestmentTransactionType.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
+            long.MaxValue, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
 
         var result = await client.UpdateAsync(update);
 
@@ -685,7 +686,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentTransactionHttpClient(Client);
         var update = new UpdateInvestmentTransactionRequest(
-            id, _testAccountId, _listingId, InvestmentTransactionType.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
+            id, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
 
         var result = await client.UpdateAsync(update);
 
@@ -715,7 +716,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         // An update with empty notes clears the text; the payload still reports no notes.
         var cleared = new UpdateInvestmentTransactionRequest(
-            withNotes.Id, _testAccountId, _listingId, InvestmentTransactionType.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), Notes: "");
+            withNotes.Id, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), Notes: "");
         Assert.True(await client.UpdateAsync(cleared));
         _testDatabase.Context.ChangeTracker.Clear();
         Assert.Equal(string.Empty, (await _testDatabase.Context.InvestmentTransactions.AsNoTracking()
@@ -828,14 +829,14 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?startDate=2024-02-01&endDate=2024-02-28",
             ct);
         Assert.Single(dateFiltered!.Items);
-        Assert.Equal(InvestmentTransactionType.Sell, dateFiltered.Items[0].Type);
+        Assert.Equal(InvestmentTransactionTypeDto.Sell, dateFiltered.Items[0].Type);
 
         // Type filter
         var typeFiltered = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
             $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?type=Buy",
             ct);
         Assert.Single(typeFiltered!.Items);
-        Assert.Equal(InvestmentTransactionType.Buy, typeFiltered.Items[0].Type);
+        Assert.Equal(InvestmentTransactionTypeDto.Buy, typeFiltered.Items[0].Type);
 
         // Search filter
         var searchFiltered = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(

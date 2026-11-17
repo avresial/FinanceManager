@@ -1,7 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
@@ -50,7 +49,7 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         {
             Description = result.NextOlderEntry.Description,
             ContractorDetails = result.NextOlderEntry.ContractorDetails,
-            Labels = result.NextOlderEntry.Labels
+            Labels = result.NextOlderEntry.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()!
         };
 
         CurrencyAccountEntry? nextYoungerEntry = result.NextYoungerEntry is null ? null : new(result.NextYoungerEntry.AccountId, result.NextYoungerEntry.EntryId,
@@ -58,19 +57,19 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
         {
             Description = result.NextYoungerEntry.Description,
             ContractorDetails = result.NextYoungerEntry.ContractorDetails,
-            Labels = result.NextYoungerEntry.Labels
+            Labels = result.NextYoungerEntry.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()!
         };
 
         var entries = result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
         {
             Description = x.Description,
             ContractorDetails = x.ContractorDetails,
-            Labels = x.Labels
+            Labels = x.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()!
         })
         .OrderByDescending(x => x.PostingDate)
         .ThenByDescending(x => x.EntryId);
 
-        return new(result.UserId, result.AccountId, result.Name, entries, result.AccountLabel, nextOlderEntry, nextYoungerEntry, result.CurrencyId);
+        return new(result.UserId, result.AccountId, result.Name, entries, (AccountLabel)result.AccountLabel, nextOlderEntry, nextYoungerEntry, result.CurrencyId);
     }
 
     public async Task<int?> AddAccountAsync(AddAccount addAccount)

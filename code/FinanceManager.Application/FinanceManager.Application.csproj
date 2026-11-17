@@ -22,4 +22,8 @@
 		<ProjectReference Include="..\FinanceManager.Domain\FinanceManager.Domain.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Contracts\FinanceManager.Contracts.csproj" />
+	</ItemGroup>
+
 </Project>

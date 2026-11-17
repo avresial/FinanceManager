@@ -1,7 +1,8 @@
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Services;
+namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
 /// <summary>
 /// Computes per-transaction valuation and performance figures (purchase-day value, current

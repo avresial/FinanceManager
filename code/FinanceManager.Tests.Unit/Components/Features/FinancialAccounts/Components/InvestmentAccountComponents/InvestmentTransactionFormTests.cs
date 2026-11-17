@@ -1,10 +1,10 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,7 +78,7 @@ public class InvestmentTransactionFormTests
                     UserId: 1,
                     AccountId: 10,
                     AssetListingId: 77,
-                    Type: InvestmentTransactionType.Buy,
+                    Type: InvestmentTransactionTypeDto.Buy,
                     Quantity: 2m,
                     UnitPrice: 118.25m,
                     Currency: capturedRequest!.Currency,

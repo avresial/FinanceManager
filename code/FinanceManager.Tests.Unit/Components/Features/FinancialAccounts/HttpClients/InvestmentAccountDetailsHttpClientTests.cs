@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Net;
@@ -57,7 +57,7 @@ public class InvestmentAccountDetailsHttpClientTests
             1,
             7,
             42,
-            InvestmentTransactionType.Buy,
+            InvestmentTransactionTypeDto.Buy,
             2m,
             100m,
             "USD",
@@ -66,7 +66,7 @@ public class InvestmentAccountDetailsHttpClientTests
             null,
             "CSPX",
             "NASDAQ",
-            FinanceManager.Domain.Assets.Entities.AssetType.ETF);
+            FinanceManager.Contracts.Assets.AssetTypeDto.ETF);
         var handler = new StubHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(new[] { transaction })

@@ -20,6 +20,7 @@
   <Project Path="FinanceManager.Application/FinanceManager.Application.csproj" />
   <Project Path="FinanceManager.Benchmarks/FinanceManager.Benchmarks.csproj" />
   <Project Path="FinanceManager.Tests.Architecture/FinanceManager.Tests.Architecture.csproj" />
+  <Project Path="FinanceManager.Contracts/FinanceManager.Contracts.csproj" />
   <Project Path="FinanceManager.Domain/FinanceManager.Domain.csproj" />
   <Project Path="FinanceManager.Infrastructure/FinanceManager.Infrastructure.csproj" />
   <Project Path="FinanceManager.Tests.Integration/FinanceManager.Tests.Integration.csproj" />

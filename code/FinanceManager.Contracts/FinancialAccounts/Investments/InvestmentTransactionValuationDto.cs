@@ -1,7 +1,7 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+namespace FinanceManager.Contracts.FinancialAccounts.Investments;
 
 /// <summary>
-/// Valuation and performance figures for a single <see cref="Entities.InvestmentTransaction"/> Buy,
+/// Valuation and performance figures for a single investment transaction Buy,
 /// used by the transaction detail view. All monetary figures are expressed in <see cref="Currency"/>:
 /// the user's default currency when <see cref="IsConverted"/> is <c>true</c>, otherwise the
 /// instrument/transaction currency (values are never mixed across currencies).

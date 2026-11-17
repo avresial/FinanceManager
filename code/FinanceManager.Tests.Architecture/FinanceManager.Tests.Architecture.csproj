@@ -30,4 +30,8 @@
 		<Using Include="Xunit" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Contracts\FinanceManager.Contracts.csproj" />
+	</ItemGroup>
+
 </Project>

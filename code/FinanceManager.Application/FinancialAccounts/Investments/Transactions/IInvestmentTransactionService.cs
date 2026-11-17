@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 

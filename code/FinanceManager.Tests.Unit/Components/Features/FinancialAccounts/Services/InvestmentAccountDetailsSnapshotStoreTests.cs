@@ -2,8 +2,8 @@ using FinanceManager.Components.Features.FinancialAccounts.Models;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -152,7 +152,7 @@ public class InvestmentAccountDetailsSnapshotStoreTests
             HistoryQuery: historyQuery);
 
     private static InvestmentTransactionDto Transaction(long id) =>
-        new(id, 1, 2, 10, InvestmentTransactionType.Buy, 1m, 100m, "USD", new DateOnly(2024, 1, 10), null, null);
+        new(id, 1, 2, 10, InvestmentTransactionTypeDto.Buy, 1m, 100m, "USD", new DateOnly(2024, 1, 10), null, null);
 
     private static InvestmentTransactionValuationDto Valuation(long transactionId) =>
         new(transactionId, 100m, 100m, 120m, 120m, 20m, 20m, "USD", true, true);

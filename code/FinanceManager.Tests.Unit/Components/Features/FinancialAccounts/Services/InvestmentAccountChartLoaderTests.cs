@@ -1,5 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.Services;
@@ -28,5 +28,5 @@ public class InvestmentAccountChartLoaderTests
     }
 
     private static InvestmentTransactionDto Trade(long id, long listingId, DateOnly date, decimal unitPrice, string ticker) =>
-        new(id, 1, 1, listingId, InvestmentTransactionType.Buy, 1m, unitPrice, "USD", date, null, null, ticker);
+        new(id, 1, 1, listingId, InvestmentTransactionTypeDto.Buy, 1m, unitPrice, "USD", date, null, null, ticker);
 }

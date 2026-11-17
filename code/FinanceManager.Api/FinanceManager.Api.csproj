@@ -38,4 +38,8 @@
 		<RemoveDir Directories="$(PublishDir)BlazorDebugProxy" />
 	</Target>
 
+	<ItemGroup>
+		<ProjectReference Include="..\FinanceManager.Contracts\FinanceManager.Contracts.csproj" />
+	</ItemGroup>
+
 </Project>

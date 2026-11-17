@@ -1,12 +1,12 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.Shared.Persistence;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;

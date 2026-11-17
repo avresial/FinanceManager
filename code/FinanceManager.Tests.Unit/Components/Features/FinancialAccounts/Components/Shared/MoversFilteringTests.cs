@@ -2,9 +2,9 @@ using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.TransactionHistory;
 using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.TransactionHistory;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,9 +78,9 @@ public class MoversFilteringTests
     public async Task InvestmentAccountMoversCard_FiltersDistinctTradesByMode()
     {
         await using var context = CreateContext();
-        var top = new InvestmentTransactionDto(1, 1, 1, 1, InvestmentTransactionType.Sell,
+        var top = new InvestmentTransactionDto(1, 1, 1, 1, InvestmentTransactionTypeDto.Sell,
             2m, 50m, "USD", DateOnly.FromDateTime(DateTime.UtcNow), null, null, "TOPTRADE", "Exchange");
-        var bottom = new InvestmentTransactionDto(2, 1, 1, 2, InvestmentTransactionType.Buy,
+        var bottom = new InvestmentTransactionDto(2, 1, 1, 2, InvestmentTransactionTypeDto.Buy,
             2m, 50m, "USD", DateOnly.FromDateTime(DateTime.UtcNow), null, null, "BOTTOMTRADE", "Exchange");
         var cut = context.Render<InvestmentAccountMoversCard>(p => p
             .Add(x => x.TopEntries, [top])

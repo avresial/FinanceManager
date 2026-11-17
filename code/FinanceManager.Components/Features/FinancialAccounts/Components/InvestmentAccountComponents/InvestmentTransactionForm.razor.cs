@@ -1,8 +1,8 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -140,7 +140,7 @@ public partial class InvestmentTransactionForm : ComponentBase
             TradingCurrency = listingTradingCurrency
         };
         _formListingId = Transaction?.AssetListingId ?? 0;
-        _formType = Transaction?.Type ?? InvestmentTransactionType.Buy;
+        _formType = (InvestmentTransactionType?)Transaction?.Type ?? InvestmentTransactionType.Buy;
         _formQuantity = Transaction?.Quantity ?? 1m;
         _formUnitPrice = Transaction?.UnitPrice ?? 0m;
         _formCurrency = Transaction?.Currency ?? string.Empty;
@@ -324,7 +324,7 @@ public partial class InvestmentTransactionForm : ComponentBase
             if (_editingId is long id)
             {
                 var updated = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                    id, AccountId, _formListingId, _formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
+                    id, AccountId, _formListingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
                 if (!updated)
                 {
                     _error = "Could not save the transaction.";
@@ -339,7 +339,7 @@ public partial class InvestmentTransactionForm : ComponentBase
                 var added = await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
                     AccountId,
                     _selectedInstrument?.Source == InstrumentOptionSource.Existing ? _formListingId : null,
-                    _formType,
+                    (InvestmentTransactionTypeDto)_formType,
                     _formQuantity,
                     _formUnitPrice,
                     _formCurrency,

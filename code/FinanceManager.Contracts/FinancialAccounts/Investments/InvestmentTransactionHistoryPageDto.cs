@@ -1,4 +1,4 @@
-namespace FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+namespace FinanceManager.Contracts.FinancialAccounts.Investments;
 
 /// <summary>
 /// Bounded page of investment transactions for an account with continuation metadata.

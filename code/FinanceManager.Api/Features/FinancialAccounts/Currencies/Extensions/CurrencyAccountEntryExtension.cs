@@ -1,10 +1,9 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 
-namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Extensions;
+namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Extensions;
 
 public static class CurrencyAccountEntryExtension
 {
@@ -17,6 +16,6 @@ public static class CurrencyAccountEntryExtension
         Description = currencyAccountEntry.Description,
         ContractorDetails = currencyAccountEntry.ContractorDetails,
         PostingDate = currencyAccountEntry.PostingDate,
-        Labels = [.. currencyAccountEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id })]
+        Labels = [.. currencyAccountEntry.Labels.Select(x => new FinanceManager.Contracts.FinancialAccounts.Shared.FinancialLabelDto() { Name = x.Name, Id = x.Id })]
     };
 }
