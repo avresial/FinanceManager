@@ -10,8 +10,11 @@ internal static class LabelSuggestionResponseParser
         PropertyNameCaseInsensitive = true
     };
 
-    internal static List<SuggestionItem> Parse(string content)
+    internal static IReadOnlyList<SuggestionItem> Parse(string content)
     {
+        if (string.IsNullOrWhiteSpace(content))
+            return [];
+
         var trimmed = content.Trim();
 
         if (TryDeserialize(trimmed, out var parsed))
@@ -35,7 +38,7 @@ internal static class LabelSuggestionResponseParser
             {
                 var root = JsonSerializer.Deserialize<SuggestionsRoot>(json, _jsonOptions);
                 if (root?.Suggestions is null) return false;
-                items = root.Suggestions;
+                items = root.Suggestions.OfType<SuggestionItem>().ToList();
                 return true;
             }
             catch
@@ -48,18 +51,6 @@ internal static class LabelSuggestionResponseParser
     private sealed class SuggestionsRoot
     {
         [JsonPropertyName("suggestions")]
-        public List<SuggestionItem> Suggestions { get; set; } = [];
-    }
-
-    internal sealed class SuggestionItem
-    {
-        [JsonPropertyName("labelName")]
-        public string? LabelName { get; set; }
-
-        [JsonPropertyName("rationale")]
-        public string? Rationale { get; set; }
-
-        [JsonPropertyName("exampleDescriptions")]
-        public List<string>? ExampleDescriptions { get; set; }
+        public List<SuggestionItem?> Suggestions { get; set; } = [];
     }
 }

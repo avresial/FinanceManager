@@ -107,5 +107,4 @@ internal sealed class LabelSuggestionAiService(
             return [];
         }
     }
-
 }
