@@ -6,8 +6,6 @@ using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace FinanceManager.Application.Labels.Suggestions;
 
@@ -20,11 +18,6 @@ internal sealed class LabelSuggestionAiService(
 {
     private const string _systemPrompt = "You are a finance assistant that proposes new transaction labels. Output strict JSON only.";
     private const string _modelId = "gpt-5-mini";
-
-    private static readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     public async Task<IReadOnlyList<LabelSuggestion>> SuggestLabels(
         int entrySampleSize = 100,
@@ -70,7 +63,7 @@ internal sealed class LabelSuggestionAiService(
                 return [];
             }
 
-            var parsed = TryParseSuggestions(content);
+            var parsed = LabelSuggestionResponseParser.Parse(content);
             logger.LogDebug("Parsed {Count} suggestions from AI response.", parsed.Count);
 
             var result = new List<LabelSuggestion>();
@@ -113,58 +106,5 @@ internal sealed class LabelSuggestionAiService(
             logger.LogError(ex, "AI label suggestion failed.");
             return [];
         }
-    }
-
-    private static List<SuggestionItem> TryParseSuggestions(string content)
-    {
-        var trimmed = content.Trim();
-
-        if (TryDeserialize(trimmed, out var parsed))
-            return parsed;
-
-        var start = trimmed.IndexOf('{');
-        var end = trimmed.LastIndexOf('}');
-        if (start >= 0 && end > start)
-        {
-            var candidate = trimmed[start..(end + 1)];
-            if (TryDeserialize(candidate, out parsed))
-                return parsed;
-        }
-
-        return [];
-
-        static bool TryDeserialize(string json, out List<SuggestionItem> items)
-        {
-            items = [];
-            try
-            {
-                var root = JsonSerializer.Deserialize<SuggestionsRoot>(json, _jsonOptions);
-                if (root?.Suggestions is null) return false;
-                items = root.Suggestions;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
-
-    private sealed class SuggestionsRoot
-    {
-        [JsonPropertyName("suggestions")]
-        public List<SuggestionItem> Suggestions { get; set; } = [];
-    }
-
-    private sealed class SuggestionItem
-    {
-        [JsonPropertyName("labelName")]
-        public string? LabelName { get; set; }
-
-        [JsonPropertyName("rationale")]
-        public string? Rationale { get; set; }
-
-        [JsonPropertyName("exampleDescriptions")]
-        public List<string>? ExampleDescriptions { get; set; }
     }
 }
