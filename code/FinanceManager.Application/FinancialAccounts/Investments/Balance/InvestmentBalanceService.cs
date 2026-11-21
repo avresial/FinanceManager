@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -97,7 +98,7 @@ internal class InvestmentBalanceService(
 
     public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
         if (end.Date < start.Date) return [];
 
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];

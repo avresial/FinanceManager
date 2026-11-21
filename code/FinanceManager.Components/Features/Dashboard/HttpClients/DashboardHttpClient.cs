@@ -10,7 +10,7 @@ namespace FinanceManager.Components.Features.Dashboard.HttpClients;
 /// </summary>
 public class DashboardHttpClient(HttpClient httpClient)
 {
-    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end)
+    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, bool defaultRange = false)
     {
         // Encode the round-trip dates: the "O" format contains '+' and ':', which a
         // query-string decoder would otherwise misread (e.g. '+' becomes a space).
@@ -18,6 +18,7 @@ public class DashboardHttpClient(HttpClient httpClient)
         var encodedEnd = Uri.EscapeDataString(end.ToString("O"));
 
         string endpoint = $"{httpClient.BaseAddress}api/Dashboard/overview?userId={userId}&currencyId={currencyId}&start={encodedStart}&end={encodedEnd}";
+        if (defaultRange) endpoint += "&defaultRange=true";
         return await httpClient.GetFromJsonAsync<DashboardOverviewDto>(endpoint);
     }
 }

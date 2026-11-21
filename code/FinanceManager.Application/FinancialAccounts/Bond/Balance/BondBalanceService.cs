@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Application.Shared;
@@ -134,7 +135,7 @@ internal class BondBalanceService(
 
     public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
         List<BondAccount> bondAccounts = [];
@@ -173,7 +174,7 @@ internal class BondBalanceService(
 
     private async Task<List<TimeSeriesModel>> AggregateByDay(int userId, DateTime start, DateTime end, Func<BondAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
         List<BondAccount> bondAccounts = [];

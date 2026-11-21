@@ -21,11 +21,11 @@ public class DashboardController(IDashboardQueryService dashboardQueryService) :
     /// </summary>
     [HttpGet("overview")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(DashboardOverviewDto))]
-    public async Task<IActionResult> GetOverview([FromQuery] int userId, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOverview([FromQuery] int userId, [FromQuery] int currencyId, [FromQuery] DateTime start, [FromQuery] DateTime end, CancellationToken cancellationToken = default, [FromQuery] bool defaultRange = false)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
-        var overview = await dashboardQueryService.GetOverview(userId, currencyId, start, end, cancellationToken);
+        var overview = await dashboardQueryService.GetOverview(userId, currencyId, start, end, cancellationToken, defaultRange);
         return overview is null ? NotFound() : Ok(overview);
     }
 }

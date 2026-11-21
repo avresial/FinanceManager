@@ -182,8 +182,9 @@ snapshot paint and refresh therefore start when it is first revealed, not when t
 request still runs once on page load; cards fed by it receive the current model when they mount. Mounting
 every card at once cost several seconds of blocked main thread on slow devices, mostly first-time chart setup.
 
-Below the md breakpoint cards size to their content, so a card can mount shorter or taller than its
-placeholder and move the cards below it. The preload margin grows to 150% of the viewport there, so that
-shift happens off screen even on fast scrolls, at the cost of mounting a few more cards on load.
+The 200px margin applies at phone widths too. The cash-flow forecast reserves at least its placeholder
+height while loading so its chart can appear without first collapsing the row. The three dashboard
+time-series cards draw without animation. The dashboard maps card models when it accepts an overview,
+and the net worth card reuses its prepared series on subsequent renders with the same model.
 
 Full-page screenshots in `scripts/Screenshot.cs` scroll each placeholder into view before capturing.

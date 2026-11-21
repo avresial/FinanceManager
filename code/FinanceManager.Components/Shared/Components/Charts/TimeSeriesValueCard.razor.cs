@@ -36,6 +36,7 @@ public partial class TimeSeriesValueCard
     /// <summary>Series points, ascending by <see cref="TimeSeriesModel.DateTime"/>.</summary>
     [Parameter] public IReadOnlyList<TimeSeriesModel> Data { get; set; } = [];
 
+    [Parameter] public bool AnimateChart { get; set; } = true;
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public bool HasError { get; set; }
 
@@ -150,7 +151,8 @@ public partial class TimeSeriesValueCard
 
     protected override void OnParametersSet()
     {
-        if (_options is null || _builtForAccent != ChartAccent || _builtForCurrency != CurrencyShortName)
+        if (_options is null || _builtForAccent != ChartAccent || _builtForCurrency != CurrencyShortName
+            || _options.Chart.Animations.Enabled != AnimateChart)
             BuildOptions();
 
         ApplyYScale();
@@ -211,7 +213,7 @@ public partial class TimeSeriesValueCard
                 Zoom = new Zoom { Enabled = false },
                 Background = "transparent",
                 FontFamily = "Roboto, sans-serif",
-                Animations = new Animations { Enabled = true, Speed = 400 },
+                Animations = new Animations { Enabled = AnimateChart, Speed = 400 },
             },
             Colors = [ChartAccent],
             Stroke = new Stroke { Curve = Curve.Stepline, Width = 2.5, LineCap = LineCap.Round },

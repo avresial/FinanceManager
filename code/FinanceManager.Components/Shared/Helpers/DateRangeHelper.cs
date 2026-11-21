@@ -69,6 +69,18 @@ public static class DateRangeHelper
     public static (DateTime Start, DateTime End) GetDefaultOverviewRange(DateTime now) =>
         GetLast31DaysRange(now);
 
+    /// <summary>
+    /// The range the Dashboard opens with: the same 31 days as <see cref="GetDefaultOverviewRange"/>,
+    /// but ending at the end of today (UTC) rather than at <paramref name="now"/>. Entries posted today
+    /// with a later time still count, and the range — and so the overview cache key — stays the same
+    /// for the whole day instead of moving on every visit. It rolls over at UTC midnight.
+    /// </summary>
+    public static (DateTime Start, DateTime End) GetDefaultDashboardRange(DateTime now)
+    {
+        var (start, _) = GetDefaultOverviewRange(now);
+        return (start, UtcDay.EndOf(now));
+    }
+
     public static (DateTime Start, DateTime End) GetCurrentQuarterRange()
     {
         var now = DateTime.UtcNow;

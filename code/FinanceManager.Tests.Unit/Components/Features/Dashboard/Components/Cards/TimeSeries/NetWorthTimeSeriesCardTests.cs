@@ -186,6 +186,61 @@ public class NetWorthTimeSeriesCardTests
     }
 
     [Fact]
+    public async Task SameSuppliedModel_ReRender_KeepsSeriesWithoutReprocessing()
+    {
+        var handler = new NetWorthHandler();
+        using var context = Context(handler);
+        var model = new TimeSeriesCardModel(Points(7));
+        var cut = context.Render<NetWorthTimeSeriesCard>(p => p
+            .Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, model));
+        cut.WaitForAssertion(() => Assert.Equal(7, View(cut).Data.Single().Value));
+        await Drain(cut);
+        var series = View(cut).Data;
+        Mock.Get(context.Services.GetRequiredService<ISettingsService>()).Setup(x => x.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.USD);
+
+        cut.Render(p => p.Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, model));
+        await Drain(cut);
+
+        Assert.Same(series, View(cut).Data);
+        Assert.Equal("USD", View(cut).Currency);
+        Assert.Equal(0, handler.Count);
+    }
+
+    [Fact]
+    public async Task NewSuppliedModel_ReplacesSeries_AndDroppingItFallsBackToSelfLoad()
+    {
+        var handler = new NetWorthHandler();
+        using var context = Context(handler);
+        var cut = context.Render<NetWorthTimeSeriesCard>(p => p
+            .Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, new TimeSeriesCardModel(Points(7))));
+        cut.WaitForAssertion(() => Assert.Equal(7, View(cut).Data.Single().Value));
+
+        cut.Render(p => p.Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, new TimeSeriesCardModel(Points(8))));
+        cut.WaitForAssertion(() => Assert.Equal(8, View(cut).Data.Single().Value));
+        Assert.Equal(0, handler.Count);
+
+        cut.Render(p => p.Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, (TimeSeriesCardModel?)null));
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count));
+        handler.Complete(0, Points(20));
+        cut.WaitForAssertion(() => Assert.Equal(20, View(cut).Data.Single().Value));
+        await Drain(cut);
+    }
+
+    [Fact]
+    public async Task SuppliedModel_IsNotMutatedBySorting()
+    {
+        var handler = new NetWorthHandler();
+        using var context = Context(handler);
+        List<TimeSeriesModel> points = [new(_start.AddDays(1), 2), new(_start, 1)];
+        var cut = context.Render<NetWorthTimeSeriesCard>(p => p
+            .Add(x => x.StartDateTime, _start).Add(x => x.EndDateTime, _end).Add(x => x.Model, new TimeSeriesCardModel(points)));
+        cut.WaitForAssertion(() => Assert.Equal([1m, 2m], View(cut).Data.Select(x => x.Value)));
+        await Drain(cut);
+        Assert.Equal([2m, 1m], points.Select(x => x.Value));
+        Assert.NotSame(points, View(cut).Data);
+    }
+
+    [Fact]
     public async Task StorageReadFailure_StillFetchesAndRenders()
     {
         _snapshots.Setup(x => x.GetAsync<NetWorthTimeSeriesSnapshot>(_key)).ThrowsAsync(new InvalidOperationException());

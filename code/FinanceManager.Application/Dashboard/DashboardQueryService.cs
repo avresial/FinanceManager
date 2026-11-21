@@ -51,8 +51,10 @@ public class DashboardQueryService(
         };
     }
 
-    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default, bool defaultRange = false)
     {
+        var useDayEnd = defaultRange && DashboardReadCutoff.IsDefaultWindow(start, end, DateTime.UtcNow);
+        using var cutoff = DashboardReadCutoff.Enter(useDayEnd ? end : null);
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return null;
 

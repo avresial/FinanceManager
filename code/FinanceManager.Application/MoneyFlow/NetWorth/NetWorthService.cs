@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -57,7 +58,7 @@ public class NetWorthService(
     public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (start == new DateTime()) return [];
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         Dictionary<DateTime, decimal> result = [];
 

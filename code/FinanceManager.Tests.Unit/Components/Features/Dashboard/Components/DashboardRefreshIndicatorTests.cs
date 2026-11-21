@@ -10,6 +10,7 @@ using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Shared.Components;
+using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -55,6 +56,44 @@ public class DashboardRefreshIndicatorTests
         var cut = context.Render<DashboardComponent>();
 
         Assert.Empty(cut.FindAll(".mud-progress-linear"));
+    }
+
+    // The default range ends at the end of today (UTC), not at the moment the page opened, so
+    // entries posted later today are requested and the range is the same on every visit that day. #1120
+    [Fact]
+    public void InitialLoad_RequestsDefaultRangeEndingAtEndOfTodayUtc()
+    {
+        var handler = new OverviewHandler();
+        using var context = CreateContext(handler);
+
+        var cut = context.Render<DashboardComponent>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+
+        var expected = DateRangeHelper.GetDefaultDashboardRange(DateTime.UtcNow);
+        Assert.Equal(expected, (cut.Instance.StartDate, cut.Instance.EndDate));
+        var query = System.Web.HttpUtility.ParseQueryString(handler.RequestUri(0).Query);
+        Assert.Equal("true", query["defaultRange"]);
+        var requestedEnd = DateTime.Parse(query["end"]!, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        Assert.Equal(expected.End, requestedEnd);
+        Assert.Equal(DateTimeKind.Utc, requestedEnd.Kind);
+    }
+
+    [Fact]
+    public void DefaultOverviewFailure_UsesExactFallbackAndRetriesTheDefaultRange()
+    {
+        var handler = new OverviewHandler();
+        using var context = CreateContext(handler);
+        var before = DateTime.UtcNow;
+        var cut = context.Render<DashboardComponent>();
+        cut.WaitForAssertion(() => Assert.Equal(1, handler.Count), _timeout);
+        handler.Fail(0);
+
+        cut.WaitForAssertion(() => Assert.Contains("Individual cards use the time", cut.Find(".mud-alert").TextContent), _timeout);
+        var fallback = cut.FindComponent<Stub<NetWorthTimeSeriesCard>>().Instance.Parameters.Get(x => x.EndDateTime);
+        Assert.InRange(fallback, before, DateTime.UtcNow);
+
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry").Click();
+        cut.WaitForAssertion(() => Assert.Equal(handler.RequestUri(0), handler.RequestUri(1)), _timeout);
     }
 
     [Fact]
@@ -128,6 +167,7 @@ public class DashboardRefreshIndicatorTests
         await ChangeRange(cut, start, end);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-progress-linear")), _timeout);
 
+        Assert.Null(System.Web.HttpUtility.ParseQueryString(handler.RequestUri(1).Query)["defaultRange"]);
         handler.Fail(1);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);
@@ -140,6 +180,7 @@ public class DashboardRefreshIndicatorTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-progress-linear")), _timeout);
         Assert.Empty(cut.FindAll(".mud-alert"));
 
+        Assert.Null(System.Web.HttpUtility.ParseQueryString(handler.RequestUri(2).Query)["defaultRange"]);
         handler.Complete(2, Overview(start, end));
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);
@@ -215,6 +256,32 @@ public class DashboardRefreshIndicatorTests
         Assert.Equal(start, assets.Get(x => x.StartDateTime));
         Assert.Equal(end, assets.Get(x => x.EndDateTime));
     }
+
+    [Fact]
+    public async Task ReRenderWithoutNewData_KeepsCardModelInstances_UntilFreshOverviewArrives()
+    {
+        var handler = new OverviewHandler();
+        using var context = CreateContext(handler);
+        var cut = await RenderLoaded(context, handler);
+        var netWorth = NetWorthModel(cut);
+        var assets = cut.FindComponent<Stub<AssetsDistributionOverviewCard>>().Instance.Parameters.Get(x => x.Model);
+
+        // The range change re-renders the dashboard (refresh indicator) before any new data exists.
+        var (start, end) = NewRange();
+        await ChangeRange(cut, start, end);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-progress-linear")), _timeout);
+        Assert.Same(netWorth, NetWorthModel(cut));
+        Assert.Same(assets, cut.FindComponent<Stub<AssetsDistributionOverviewCard>>().Instance.Parameters.Get(x => x.Model));
+
+        handler.Complete(1, Overview(start, end));
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);
+        Assert.NotSame(netWorth, NetWorthModel(cut));
+        Assert.Equal(start, NetWorthModel(cut)!.Series.Single().DateTime);
+    }
+
+    private static TimeSeriesCardModel? NetWorthModel(IRenderedComponent<DashboardComponent> cut) =>
+        cut.FindComponent<Stub<NetWorthTimeSeriesCard>>().Instance.Parameters.Get(x => x.Model);
 
     private static (DateTime Start, DateTime End) NewRange(int days = 10)
     {
@@ -316,6 +383,12 @@ public class DashboardRefreshIndicatorTests
     private sealed class OverviewHandler : HttpMessageHandler
     {
         private readonly List<TaskCompletionSource<HttpResponseMessage>> _responses = [];
+        private readonly List<Uri> _requestUris = [];
+
+        public Uri RequestUri(int index)
+        {
+            lock (_responses) return _requestUris[index];
+        }
 
         public int Count
         {
@@ -344,7 +417,11 @@ public class DashboardRefreshIndicatorTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var response = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-            lock (_responses) _responses.Add(response);
+            lock (_responses)
+            {
+                _responses.Add(response);
+                _requestUris.Add(request.RequestUri!);
+            }
             return response.Task;
         }
     }

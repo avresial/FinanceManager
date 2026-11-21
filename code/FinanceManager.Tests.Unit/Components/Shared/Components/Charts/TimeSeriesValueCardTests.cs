@@ -29,6 +29,16 @@ public class TimeSeriesValueCardTests
         Assert.Equal("Current value \u00B7 30 Oct 2026", cut.Find(".fm-card-header-subtitle").TextContent.Trim());
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(false, false)]
+    public async Task Chart_DrawAnimationFollowsCardPreference(bool? animateChart, bool expected)
+    {
+        var options = await RenderedOptionsAsync(Points(1, 2), "250px", animateChart);
+
+        Assert.Equal(expected, options.Chart.Animations.Enabled);
+    }
+
     [Fact]
     public async Task YAxis_ReservesALeftGutterAndInsetsTheRightEdge()
     {
@@ -90,17 +100,21 @@ public class TimeSeriesValueCardTests
     private static List<TimeSeriesModel> Points(params decimal[] values) =>
         [.. values.Select((value, i) => new TimeSeriesModel(_start.AddDays(i), value))];
 
-    private static async Task<ApexChartOptions<TimeSeriesModel>> RenderedOptionsAsync(List<TimeSeriesModel> points, string height)
+    private static async Task<ApexChartOptions<TimeSeriesModel>> RenderedOptionsAsync(List<TimeSeriesModel> points, string height, bool? animateChart = null)
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddMudServices();
 
-        var cut = context.Render<TimeSeriesValueCard>(p => p
-            .Add(x => x.Title, "Net worth over time")
-            .Add(x => x.Data, points)
-            .Add(x => x.Height, height));
+        var cut = context.Render<TimeSeriesValueCard>(p =>
+        {
+            p.Add(x => x.Title, "Net worth over time")
+                .Add(x => x.Data, points)
+                .Add(x => x.Height, height);
+            if (animateChart.HasValue)
+                p.Add(x => x.AnimateChart, animateChart.Value);
+        });
 
         return cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance.Options;
     }

@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -13,7 +14,7 @@ public class LabelsValueService(IFinancialAccountRepository financialAccountRepo
 {
     public async Task<List<NameValueResult>> GetLabelsValue(int userId, DateTime start, DateTime end)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var labels = await financialLabelsRepository.GetLabels().ToListAsync();
 

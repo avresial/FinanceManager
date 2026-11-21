@@ -17,6 +17,10 @@ public partial class NetWorthTimeSeriesCard
     private string _currency = "PLN";
     private List<TimeSeriesModel> _series = [];
 
+    // The supplied model _series was last built from. The dashboard re-renders for reasons that do
+    // not change the data (refresh indicator, other cards); the same instance means nothing to redo.
+    private TimeSeriesCardModel? _appliedModel;
+
     [Parameter] public DateTime StartDateTime { get; set; }
     [Parameter] public DateTime EndDateTime { get; set; } = DateTime.UtcNow;
     [Parameter] public string Height { get; set; } = "250px";
@@ -43,11 +47,15 @@ public partial class NetWorthTimeSeriesCard
             var supplied = await SettingsService.GetCurrencyAsync();
             if (!_gate.IsCurrent(version)) return;
             _currency = supplied.ShortName;
+            if (ReferenceEquals(model, _appliedModel)) return;
             _series = [.. model.Series.OrderBy(x => x.DateTime).Select(x => new TimeSeriesModel(x.DateTime, x.Value))];
             _hasError = false;
             _isLoading = false;
+            _appliedModel = model;
             return;
         }
+
+        _appliedModel = null;
 
         var start = StartDateTime.Date;
         var end = EndDateTime;

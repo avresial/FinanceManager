@@ -58,8 +58,8 @@ window.financeManager.unobserveScrollFade = function (element) {
 };
 
 // Tells a LazyMount component once its placeholder comes within the preload margin of the viewport, then stops
-// watching. Layouts where cards size to their content use the larger margin; see LazyMount.razor.cs.
-window.financeManager.observeLazyMount = function (element, dotNetRef, options) {
+// watching.
+window.financeManager.observeLazyMount = function (element, dotNetRef, preloadMargin) {
     if (!element) {
         return;
     }
@@ -78,7 +78,7 @@ window.financeManager.observeLazyMount = function (element, dotNetRef, options) 
         delete element._fmLazyMountObserver;
         reveal();
     }, {
-        rootMargin: window.matchMedia(options.autoHeightMediaQuery).matches ? options.autoHeightMargin : options.margin,
+        rootMargin: preloadMargin,
     });
 
     observer.observe(element);
