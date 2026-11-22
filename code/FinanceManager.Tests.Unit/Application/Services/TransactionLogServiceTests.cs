@@ -382,6 +382,46 @@ public class TransactionLogServiceTests
         Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(100)]
+    public async Task GetItemsPage_PagesTheSameRowsAsGetPage_WithTheirSourceEntries(int pageSize)
+    {
+        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+        var currencyEntry = new CurrencyAccountEntry(10, 1, day.AddHours(2), 10, -5) { Description = "Coffee" };
+        SetupCurrencyAccount(10, "Bank", [currencyEntry]);
+        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
+            .Returns(() => ToAsyncEnumerable([new AvailableAccount(10, "Bank", Currency: "EUR", CurrencyId: 3)]));
+        var bondEntry = new BondAccountEntry(20, 1, day.AddHours(1), 10, 2, 7);
+        SetupBondAccount(20, "Bonds", [bondEntry]);
+        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
+        var trade = new InvestmentTransaction { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 };
+        SetupInvestmentAccount(30, "Broker", [trade]);
+        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize);
+
+        List<TransactionLogEntryDto> summaries = [];
+        List<TransactionLogItem> items = [];
+        TransactionLogCursor? cursor = null;
+        for (var i = 0; i < 10; i++)
+        {
+            var summaryPage = await _service.GetPage(_userId, query with { Cursor = cursor }, TestContext.Current.CancellationToken);
+            var itemsPage = await _service.GetItemsPage(_userId, query with { Cursor = cursor }, TestContext.Current.CancellationToken);
+            Assert.Equal(summaryPage.NextCursor, itemsPage.NextCursor);
+            summaries.AddRange(summaryPage.Items);
+            items.AddRange(itemsPage.Items);
+            if ((cursor = itemsPage.NextCursor) is null) break;
+        }
+
+        Assert.Equal(summaries.Select(e => (e.AccountId, e.AccountName)), items.Select(i => (i.AccountId, i.AccountName)));
+        var currency = Assert.IsType<CurrencyTransactionLogItem>(items[0]);
+        Assert.Same(currencyEntry, currency.Entry);
+        Assert.Equal((3, "EUR"), (currency.CurrencyId, currency.Currency));
+        Assert.Same(bondEntry, Assert.IsType<BondTransactionLogItem>(items[1]).Entry);
+        Assert.Same(trade, Assert.IsType<InvestmentTransactionLogItem>(items[2]).Transaction);
+    }
+
     [Fact]
     public async Task GetPage_IntradayRange_ExcludesMidnightTrades_AndIncludesExactEndpoints()
     {

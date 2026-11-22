@@ -1,4 +1,10 @@
+using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Contracts.Dashboard;
+using FinanceManager.Contracts.FinancialAccounts.Bond;
+using FinanceManager.Contracts.FinancialAccounts.Currencies;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.WebUtilities;
@@ -53,6 +59,48 @@ public class TransactionLogHttpClientTests
 
         Assert.Equal(page.Items, result.Items);
         Assert.Equal(cursor, result.NextCursor);
+    }
+
+    [Fact]
+    public async Task GetItemsPage_ReadsEveryEntryKind_AsTheMatchingHistoryItem()
+    {
+        var date = new DateTime(2024, 3, 1, 12, 30, 0, DateTimeKind.Utc);
+        var label = new FinancialLabelDto { Id = 4, Name = "Food" };
+        var page = new TransactionLogItemsPageDto(
+        [
+            new CurrencyTransactionLogItemDto(10, "Bank", 3, "EUR", new CurrencyAccountEntryDto
+            {
+                AccountId = 10, EntryId = 1, PostingDate = date, Value = 90, ValueChange = -10, Description = "Lunch", Labels = [label]
+            }),
+            new CurrencyTransactionLogItemDto(10, "Bank", 3, "EUR", new CurrencyAccountEntryDto { AccountId = 10, EntryId = 2, PostingDate = date }),
+            new BondTransactionLogItemDto(20, "Bonds", new BondAccountEntryDto
+            {
+                AccountId = 20, EntryId = 1, PostingDate = date, Value = 5, ValueChange = 5, BondDetailsId = 7, Labels = [label]
+            }),
+            new InvestmentTransactionLogItemDto(30, "Broker", new InvestmentTransactionDto(
+                long.MaxValue, 7, 30, 1, InvestmentTransactionTypeDto.Sell, 1, 2, "USD", new DateOnly(2024, 3, 1), null, null, Labels: [label])),
+        ], new TransactionLogCursorDto(date, AccountTypeDto.Stock, long.MaxValue));
+        using var handler = new StubHandler(request =>
+        {
+            Assert.Equal("/api/TransactionLog/ItemsPage/7", request.RequestUri!.AbsolutePath);
+            return new(HttpStatusCode.OK) { Content = JsonContent.Create(page) };
+        });
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+
+        var result = await new TransactionLogHttpClient(http).GetItemsPage(7, new(date, date), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new TransactionLogCursor(date, AccountType.Stock, long.MaxValue), result.NextCursor);
+        Assert.Equal([AccountType.Currency, AccountType.Currency, AccountType.Bond, AccountType.Stock], result.Items.Select(i => i.AccountType));
+        var cash = Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[0]);
+        Assert.Equal((7, 10, "Bank", 3), (cash.Account.UserId, cash.Account.AccountId, cash.Account.Name, cash.Account.CurrencyId));
+        Assert.Equal(("EUR", "Lunch", -10m, "Food"), (cash.Currency, cash.Entry.Description, cash.Entry.ValueChange, cash.Entry.Labels.Single().Name));
+        // Rows of one account share its lightweight account instance.
+        Assert.Same(cash.Account, Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[1]).Account);
+        var bond = Assert.IsType<BondTransactionHistoryItem>(result.Items[2]);
+        Assert.Equal((20, "Bonds", 7, "Food"), (bond.Account.AccountId, bond.Account.Name, bond.Entry.BondDetailsId, bond.Entry.Labels.Single().Name));
+        var trade = Assert.IsType<InvestmentTransactionHistoryItem>(result.Items[3]);
+        Assert.Equal((long.MaxValue, "Food"), (trade.EntryId, trade.Transaction.Labels!.Single().Name));
+        Assert.Equal(new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc), trade.Date);
     }
 
     [Fact]

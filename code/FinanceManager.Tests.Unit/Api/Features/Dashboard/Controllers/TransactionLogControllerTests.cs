@@ -1,6 +1,11 @@
 using FinanceManager.Api.Features.Dashboard.Controllers;
+using FinanceManager.Contracts.Dashboard;
+using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -42,6 +47,51 @@ public class TransactionLogControllerTests
             search: query.Search, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
         _transactionLogService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task ItemsPage_MapsEachItemKindAndTheCursor_ToTheWireContract()
+    {
+        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
+        var cursor = new TransactionLogCursor(day, AccountType.Bond, 2);
+        _transactionLogService.Setup(x => x.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q => q.Search == "x" && q.PageSize == 3),
+            TestContext.Current.CancellationToken)).ReturnsAsync(new TransactionLogItemsPage(
+        [
+            new CurrencyTransactionLogItem(10, "Bank", 3, "EUR", new CurrencyAccountEntry(10, 1, day, 90, -10) { Description = "Lunch" }),
+            new BondTransactionLogItem(20, "Bonds", new BondAccountEntry(20, 2, day, 5, 5, 7)),
+            new InvestmentTransactionLogItem(30, "Broker", new InvestmentTransaction
+            {
+                EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2, Currency = "USD"
+            }),
+        ], cursor));
+
+        var result = await _controller.ItemsPage(_testUserId, day, day, pageSize: 3, search: "x",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var page = Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal(new TransactionLogCursorDto(day, AccountTypeDto.Bond, 2), page.NextCursor);
+        var cash = Assert.IsType<CurrencyTransactionLogItemDto>(page.Items[0]);
+        Assert.Equal((10, "Bank", 3, "EUR", 1L, "Lunch"), (cash.AccountId, cash.AccountName, cash.CurrencyId, cash.Currency, cash.Entry.EntryId, cash.Entry.Description));
+        Assert.Equal(7, Assert.IsType<BondTransactionLogItemDto>(page.Items[1]).Entry.BondDetailsId);
+        Assert.Equal((3L, 30), (Assert.IsType<InvestmentTransactionLogItemDto>(page.Items[2]).Transaction.Id, page.Items[2].AccountId));
+    }
+
+    [Fact]
+    public async Task ItemsPage_ForbidsOtherUsers_AndRejectsInvalidQueries()
+    {
+        var day = new DateTime(2026, 10, 20);
+
+        Assert.IsType<ForbidResult>(await _controller.ItemsPage(_testUserId + 1, day, day, cancellationToken: TestContext.Current.CancellationToken));
+        var invalid = await _controller.ItemsPage(_testUserId, day, day.AddDays(-1), pageSize: 0, cursorEntryId: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(invalid);
+        Assert.Equal(StatusCodes.Status400BadRequest, objectResult.StatusCode);
+        var problem = Assert.IsAssignableFrom<ValidationProblemDetails>(objectResult.Value);
+        Assert.Contains("pageSize", problem.Errors.Keys);
+        Assert.Contains("start", problem.Errors.Keys);
+        Assert.Contains("cursorDate", problem.Errors.Keys);
+        _transactionLogService.VerifyNoOtherCalls();
     }
 
     [Fact]

@@ -1,4 +1,7 @@
+using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
@@ -193,6 +196,54 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         }
 
         Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(100)]
+    public async Task ItemsPage_WalksTheSameRowsAsPage_AsTypedEntriesWithTheirLabels(int pageSize)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var db = _database!.Context;
+        var label = new FinancialLabel { Name = "Long term" };
+        db.FinancialLabels.Add(label);
+        (await db.InvestmentTransactions.SingleAsync(t => t.EntryId == 1, ct)).Labels = [label];
+        (await db.CurrencyEntries.SingleAsync(e => e.EntryId == 2, ct)).Labels = [label];
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
+        var client = new TransactionLogHttpClient(Client);
+        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize);
+
+        var expected = (await client.GetPage(641, query with { PageSize = 100 }, ct)).Items.Select(e => (e.AccountType, e.EntryId)).ToList();
+        List<TransactionHistoryItem> actual = [];
+        TransactionLogCursor? cursor = null;
+        for (var i = 0; ; i++)
+        {
+            Assert.True(i < 10, "Cursor did not advance.");
+            var page = await client.GetItemsPage(641, query with { Cursor = cursor }, ct);
+            actual.AddRange(page.Items);
+            if ((cursor = page.NextCursor) is null)
+                break;
+        }
+
+        Assert.Equal(7, expected.Count);
+        Assert.Equal(expected, actual.Select(item => (item.AccountType, item.EntryId)));
+        var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.AccountId == 11));
+        Assert.Equal(("Savings", "USD", 1, "Long term"),
+            (savings.Account.Name, savings.Currency, savings.Account.CurrencyId, savings.Entry.Labels.Single().Name));
+        Assert.All(actual.OfType<BondTransactionHistoryItem>(), bond => Assert.Equal(7, bond.Entry.BondDetailsId));
+        var trade = actual.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
+        Assert.Equal(("HIST", "Long term"), (trade.Ticker, Assert.Single(trade.Labels!).Name));
+
+        // Saving the trade as the edit form does (labels from the row's DTO) keeps its label.
+        var investmentClient = new InvestmentTransactionHttpClient(Client);
+        Assert.True(await investmentClient.UpdateAsync(new UpdateInvestmentTransactionRequest(trade.Id, trade.AccountId, trade.AssetListingId,
+            trade.Type, 3m, trade.UnitPrice, trade.Currency, trade.TradeDate, trade.Fee, trade.Notes, [.. trade.Labels!.Select(l => l.Id)])));
+        var reloaded = await client.GetItemsPage(641, query with { PageSize = 100, AccountTypes = [AccountType.Stock] }, ct);
+        var edited = reloaded.Items.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
+        Assert.Equal((3m, "Long term"), (edited.Quantity, Assert.Single(edited.Labels!).Name));
     }
 
     public override void Dispose()

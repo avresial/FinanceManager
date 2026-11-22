@@ -142,3 +142,18 @@
     flex-wrap: wrap;
     row-gap: 8px;
 }
+
+/* Transactions page: the owning-account link above each account-page row. */
+.fm-txlog-scope .fm-txhist-account {
+    color: var(--mud-palette-text-secondary);
+    text-decoration: none;
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.fm-txlog-scope .fm-txhist-account:hover,
+.fm-txlog-scope .fm-txhist-account:focus-visible {
+    color: var(--mud-palette-primary);
+    text-decoration: underline;
+}

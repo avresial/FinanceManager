@@ -1,9 +1,11 @@
 using FinanceManager.Components.Features.Dashboard.Components;
 using FinanceManager.Components.Features.Dashboard.Models;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
+using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -19,9 +21,10 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 /// <summary>
 /// Every transaction of the user's accounts in one newest-first list, grouped by day. The list is read
 /// page by page through the transaction log cursor; changing the date range or the account filters starts
-/// again from the newest entry of the new selection.
+/// again from the newest entry of the new selection. Each entry renders with its account page's own row
+/// (details, labels, valuation, edit and delete); a successful edit or delete reloads from the first page.
 /// </summary>
-public partial class TransactionsPage : ComponentBase, IDisposable
+public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 {
     public const int PageSize = 25;
     private const string _defaultRange = "3M";
@@ -40,13 +43,27 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     private IReadOnlyList<TransactionLogAccountOption> _accounts = [];
     private TransactionLogFilter _filter = TransactionLogFilter.None;
 
-    private List<TransactionLogEntryDto> _entries = [];
-    private List<IGrouping<DateTime, TransactionLogEntryDto>> _dayGroups = [];
+    private List<TransactionHistoryItem> _entries = [];
+    private List<DayGroup> _dayGroups = [];
     private TransactionLogCursor? _nextCursor;
     private bool _isLoading = true;
     private bool _isLoadingMore;
     private bool _hasError;
     private bool _loadMoreFailed;
+
+    private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
+    private bool _isMobile;
+
+    // Row enrichment loaded after a page paints: bond definitions (shared across pages) and investment
+    // valuations. A reset bumps the generation so replies for the previous selection are dropped.
+    private BondDetailsRequestLoader? _bondDetailsLoader;
+    private readonly Dictionary<int, BondDetails> _bondDetails = [];
+    private readonly Dictionary<long, InvestmentTransactionValuationDto> _valuations = [];
+    private CancellationTokenSource _enrichmentCts = new();
+    private int _enrichmentGeneration;
+
+    private InvestmentTransactionDto? _editingInvestment;
+    private bool _investmentFormVisible;
 
     /// <summary><c>?search=</c> pre-fills the text search, so a filtered view can be linked to directly.</summary>
     [SupplyParameterFromQuery(Name = "search")] public string? Search { get; set; }
@@ -58,6 +75,13 @@ public partial class TransactionsPage : ComponentBase, IDisposable
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required InvestmentValuationHttpClient InvestmentValuationHttpClient { get; set; }
+    [Inject] public required InvestmentTransactionHttpClient InvestmentTransactionHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -65,6 +89,9 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         if (TransactionLogToolbar.Ranges.FirstOrDefault(range => range.Equals(Range, StringComparison.OrdinalIgnoreCase)) is string preset)
             _selectedRange = preset;
         ApplyRange();
+        // Rows publish this after a successful cash or bond edit/delete; the list then starts over so moved
+        // or removed entries and recomputed balances show up. Cancelled edits do not publish.
+        AccountDataSynchronizationService.AccountsChanged += OnAccountsChanged;
         var user = await LoginService.GetLoggedUser();
         if (_disposed) return;
 
@@ -75,12 +102,39 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         await accountsTask;
     }
 
-    public void Dispose()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // Same breakpoint as the account pages, so the rows lay out as they do there.
+        await BrowserViewportService.SubscribeAsync(_viewportSubscriptionId, async args =>
+        {
+            var isMobile = args.Breakpoint is Breakpoint.Xs or Breakpoint.Sm or Breakpoint.Md;
+            if (isMobile == _isMobile) return;
+            _isMobile = isMobile;
+            await InvokeAsync(StateHasChanged);
+        }, fireImmediately: true);
+    }
+
+    public async ValueTask DisposeAsync()
     {
         _disposed = true;
+        AccountDataSynchronizationService.AccountsChanged -= OnAccountsChanged;
         _loadCts?.Cancel();
         _loadCts?.Dispose();
+        _enrichmentCts.Cancel();
+        _enrichmentCts.Dispose();
+        try
+        {
+            await BrowserViewportService.UnsubscribeAsync(_viewportSubscriptionId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to unsubscribe from BrowserViewportService");
+        }
     }
+
+    private void OnAccountsChanged() => _ = InvokeAsync(() => _disposed ? Task.CompletedTask : LoadAsync(reset: true));
 
     private Task OnRangeChanged(string range)
     {
@@ -157,6 +211,8 @@ public partial class TransactionsPage : ComponentBase, IDisposable
 
     private async Task LoadAsync(bool reset)
     {
+        // A save or delete can finish after the user left the page; there is nothing left to reload.
+        if (_disposed) return;
         if (!reset && (_isLoadingMore || _nextCursor is null)) return;
 
         // A newer load (a range change, a retry) supersedes whatever is in flight: its request is
@@ -169,6 +225,7 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         var cursor = reset ? null : _nextCursor;
         if (reset)
         {
+            ResetEnrichment();
             _entries = [];
             _dayGroups = [];
             _nextCursor = null;
@@ -185,16 +242,17 @@ public partial class TransactionsPage : ComponentBase, IDisposable
 
         try
         {
-            TransactionLogPage? page = null;
+            TransactionHistoryPage? page = null;
             if (_userId is int userId)
-                page = await TransactionLogHttpClient.GetPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds, _search), cts.Token);
+                page = await TransactionLogHttpClient.GetItemsPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds, _search), cts.Token);
             if (_disposed || !_loadGate.IsCurrent(version)) return;
 
             if (page is not null)
             {
                 _entries = [.. _entries, .. page.Items];
-                _dayGroups = [.. _entries.GroupBy(entry => entry.Date.Date)];
+                _dayGroups = BuildDayGroups(_entries);
                 _nextCursor = page.NextCursor;
+                _ = EnrichAsync(page.Items);
             }
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
@@ -218,6 +276,152 @@ public partial class TransactionsPage : ComponentBase, IDisposable
         _isLoadingMore = false;
         StateHasChanged();
     }
+
+    internal static List<DayGroup> BuildDayGroups(IEnumerable<TransactionHistoryItem> entries) =>
+    [
+        .. entries.GroupBy(entry => entry.Date.Date).Select(day =>
+        {
+            List<TransactionHistoryItem> items = [.. day];
+            // As on the cash account page: a time every cash row of the day shares says nothing, so it is hidden.
+            var cashTimes = items.OfType<CurrencyTransactionHistoryItem>().Select(item => item.Entry.PostingDate.ToLocalTime()).ToList();
+            return new DayGroup(day.Key, items, cashTimes.Count > 1 && TransactionRowPresentation.AllShareSameTime(cashTimes));
+        })
+    ];
+
+    private void ResetEnrichment()
+    {
+        _enrichmentGeneration++;
+        _enrichmentCts.Cancel();
+        _enrichmentCts.Dispose();
+        _enrichmentCts = new CancellationTokenSource();
+        _valuations.Clear();
+    }
+
+    // Loads what the rows need beyond the feed, after the page has painted: bond definitions for the bond
+    // valuation details and, per investment account, the valuations of its purchases (the only trades the
+    // row values). Failures leave the rows on their fallbacks, exactly as on the account pages.
+    private async Task EnrichAsync(IReadOnlyList<TransactionHistoryItem> items)
+    {
+        var generation = _enrichmentGeneration;
+        var token = _enrichmentCts.Token;
+
+        var bondDetailsIds = items.OfType<BondTransactionHistoryItem>().Select(item => item.Entry.BondDetailsId)
+            .Distinct().Where(id => !_bondDetails.ContainsKey(id)).ToList();
+        var buysByAccount = items.OfType<InvestmentTransactionHistoryItem>()
+            .Where(item => item.Transaction.Type == InvestmentTransactionTypeDto.Buy)
+            .GroupBy(item => item.AccountId, item => item.Transaction.Id)
+            .ToList();
+        if (bondDetailsIds.Count == 0 && buysByAccount.Count == 0) return;
+
+        var bondTask = LoadBondDetailsAsync(bondDetailsIds);
+        var valuationTask = LoadValuationsAsync(buysByAccount, token);
+        await Task.WhenAll(bondTask, valuationTask);
+
+        if (_disposed) return;
+        foreach (var details in bondTask.Result)
+            _bondDetails[details.Id] = details;
+        if (generation == _enrichmentGeneration)
+            foreach (var valuation in valuationTask.Result)
+                _valuations[valuation.TransactionId] = valuation;
+        StateHasChanged();
+    }
+
+    // Each definition loads on its own, so one failed lookup leaves the other bond rows' details intact.
+    private async Task<List<BondDetails>> LoadBondDetailsAsync(IReadOnlyCollection<int> ids)
+    {
+        if (ids.Count == 0) return [];
+        var loader = _bondDetailsLoader ??= new(id => BondDetailsHttpClient.GetById(id));
+        var details = await Task.WhenAll(ids.Select(async id =>
+        {
+            try
+            {
+                return await loader.LoadAsync(id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to load bond details {BondDetailsId} for the transactions page.", id);
+                return null;
+            }
+        }));
+        return [.. details.OfType<BondDetails>()];
+    }
+
+    private async Task<List<InvestmentTransactionValuationDto>> LoadValuationsAsync(
+        IReadOnlyList<IGrouping<int, long>> buysByAccount, CancellationToken cancellationToken)
+    {
+        if (buysByAccount.Count == 0) return [];
+        try
+        {
+            var currency = await SettingsService.GetCurrencyAsync();
+            var batches = await Task.WhenAll(buysByAccount.Select(async account =>
+            {
+                try
+                {
+                    return await InvestmentValuationHttpClient.GetTransactionValuationsAsync(account.Key, currency.Id, [.. account], cancellationToken);
+                }
+                // Per account, so one failing or timed-out account keeps the others' valuations; only a
+                // cancellation of this enrichment (a reload or disposal) abandons the whole batch.
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    Logger.LogWarning(ex, "Failed to load transaction valuations for an investment account.");
+                    return [];
+                }
+            }));
+            return [.. batches.SelectMany(batch => batch)];
+        }
+        catch (OperationCanceledException)
+        {
+            return [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to resolve the valuation currency for the transactions page.");
+            return [];
+        }
+    }
+
+    private void ShowInvestmentEdit(InvestmentTransactionDto transaction)
+    {
+        _editingInvestment = transaction;
+        _investmentFormVisible = true;
+    }
+
+    private Task OnInvestmentFormVisibleChanged(bool visible)
+    {
+        _investmentFormVisible = visible;
+        if (!visible) _editingInvestment = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnInvestmentSavedAsync()
+    {
+        _investmentFormVisible = false;
+        _editingInvestment = null;
+        return LoadAsync(reset: true);
+    }
+
+    private async Task DeleteInvestmentAsync(InvestmentTransactionDto transaction)
+    {
+        try
+        {
+            if (await InvestmentTransactionHttpClient.DeleteAsync(transaction.AccountId, transaction.Id))
+            {
+                Snackbar.Add("Transaction removed.", Severity.Success);
+                await LoadAsync(reset: true);
+            }
+            else
+            {
+                Snackbar.Add("Could not remove the transaction.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete investment transaction {TransactionId}", transaction.Id);
+            Snackbar.Add("Could not remove the transaction.", Severity.Error);
+        }
+    }
+
+    internal sealed record DayGroup(DateTime Day, IReadOnlyList<TransactionHistoryItem> Items, bool CashSiblingsShareSameTime);
 
     private string EmptyMessage => _filter.IsActive || !string.IsNullOrWhiteSpace(_search)
         ? $"No transactions match the selected filters between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Adjust the filters or pick a longer date range."

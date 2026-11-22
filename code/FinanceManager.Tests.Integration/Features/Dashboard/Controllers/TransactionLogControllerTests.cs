@@ -1,5 +1,8 @@
+using FinanceManager.Contracts.Dashboard;
+using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Tests.Integration.Shared;
@@ -28,7 +31,44 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
             .ReturnsAsync(new TransactionLogPage(
                 [new(10, "Bank", AccountType.Currency, 1, new DateTime(2024, 3, 5), -50m, "Groceries")],
                 new(new DateTime(2024, 3, 5), AccountType.Currency, 1)));
+        _serviceMock.Setup(x => x.GetItemsPage(_testUserId, It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TransactionLogItemsPage(
+                [new BondTransactionLogItem(20, "Bonds", new BondAccountEntry(20, long.MaxValue, new DateTime(2024, 3, 5), 3, 1, 7))],
+                new(new DateTime(2024, 3, 5), AccountType.Bond, long.MaxValue)));
         services.AddSingleton(_serviceMock.Object);
+    }
+
+    [Fact]
+    public async Task ItemsPage_ForOwner_SerializesTheKindDiscriminatorAndCursor()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/TransactionLog/ItemsPage/{_testUserId}?start=2024-03-01&end=2024-03-06&pageSize=1&accountTypes=Bond",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains("\"kind\":\"bond\"", json);
+        var page = await response.Content.ReadFromJsonAsync<TransactionLogItemsPageDto>(TestContext.Current.CancellationToken);
+        var bond = Assert.IsType<BondTransactionLogItemDto>(Assert.Single(page!.Items));
+        Assert.Equal((long.MaxValue, 7), (bond.Entry.EntryId, bond.Entry.BondDetailsId));
+        Assert.Equal(new TransactionLogCursorDto(new DateTime(2024, 3, 5), AccountTypeDto.Bond, long.MaxValue), page.NextCursor);
+        _serviceMock.Verify(s => s.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+            q.PageSize == 1 && q.AccountTypes!.SequenceEqual(new[] { AccountType.Bond })), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("999", "start=2024-03-01&end=2024-03-06", HttpStatusCode.Forbidden)]
+    [InlineData("641", "start=2024-03-07&end=2024-03-06", HttpStatusCode.BadRequest)]
+    [InlineData("641", "start=2024-03-01&end=2024-03-06&cursorEntryId=1", HttpStatusCode.BadRequest)]
+    public async Task ItemsPage_RejectsOtherUsersAndInvalidQueries(string userId, string query, HttpStatusCode expected)
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/TransactionLog/ItemsPage/{userId}?{query}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, response.StatusCode);
+        _serviceMock.Verify(x => x.GetItemsPage(It.IsAny<int>(), It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
