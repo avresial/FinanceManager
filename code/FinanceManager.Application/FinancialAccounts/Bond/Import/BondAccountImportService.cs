@@ -212,7 +212,7 @@ public class BondAccountImportService(
                     var added = cancellationToken.CanBeCanceled
                         ? await bondAccountEntryRepository.Add(entry, recalculate: true, cancellationToken)
                         : await bondAccountEntryRepository.Add(entry, recalculate: true);
-                    if (!added) logger.LogError("Could not add resolved entry for account {AccountId}", resolvedConflict.AccountId);
+                    if (!added) logger.LogError("Could not add a resolved bond import entry.");
                 }
             }
             catch (OperationCanceledException ex)
