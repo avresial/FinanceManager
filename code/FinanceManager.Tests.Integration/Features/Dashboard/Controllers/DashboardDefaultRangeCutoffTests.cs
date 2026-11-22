@@ -14,8 +14,9 @@ using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 
-// The dashboard's default range ends at the end of today (UTC). The real overview aggregation must
-// count entries posted later today — not clamp them away at "now" — while still leaving out later days. #1120
+// The dashboard requests whole UTC days (yyyy-MM-dd), so its range ends at the last tick of today. The real
+// overview aggregation must count entries posted later today — not clamp them away at "now" — while still
+// leaving out later days, and exact intraday timestamps must keep their own cutoff. #1120
 [Trait("Category", "Integration")]
 public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
@@ -37,7 +38,7 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task DefaultRange_IncludesLaterToday_AndKeepsExactRequestsIsolated(bool defaultFirst)
+    public async Task DateOnlyRange_IncludesLaterToday_AndKeepsExactRequestsIsolated(bool dateOnlyFirst)
     {
         var (start, end) = DateRangeHelper.GetDefaultDashboardRange(DateTime.UtcNow);
         var today = end.Date;
@@ -69,18 +70,28 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
 
-        var url = $"api/Dashboard/overview?userId={_userId}&currencyId={_currencyId}&start={Uri.EscapeDataString(start.ToString("O"))}&end={Uri.EscapeDataString(end.ToString("O"))}";
-        async Task<DashboardOverviewDto> Read(bool defaultRange) =>
+        // The dashboard sends whole UTC days; exact intraday callers still send ISO timestamps.
+        var dateOnly = (Start: start.ToString("yyyy-MM-dd"), End: today.ToString("yyyy-MM-dd"));
+        var intraday = (Start: start.ToString("O"), End: DateTime.UtcNow.ToString("O"));
+        async Task<DashboardOverviewDto> Read((string Start, string End) range) =>
             Assert.IsType<DashboardOverviewDto>(await Client.GetFromJsonAsync<DashboardOverviewDto>(
-                defaultRange ? $"{url}&defaultRange=true" : url, TestContext.Current.CancellationToken));
+                $"api/Dashboard/overview?userId={_userId}&currencyId={_currencyId}&start={Uri.EscapeDataString(range.Start)}&end={Uri.EscapeDataString(range.End)}",
+                TestContext.Current.CancellationToken));
 
-        var first = await Read(defaultFirst);
-        var second = await Read(!defaultFirst);
-        var overview = defaultFirst ? first : second;
-        var exact = defaultFirst ? second : first;
+        var first = await Read(dateOnlyFirst ? dateOnly : intraday);
+        var second = await Read(dateOnlyFirst ? intraday : dateOnly);
+        var overview = dateOnlyFirst ? first : second;
+        var exact = dateOnlyFirst ? second : first;
         Assert.Equal(700m, exact.NetWorthSeries[^1].Value);
-        Assert.Equal(900m, (await Read(true)).NetWorthSeries[^1].Value);
-        // The response is labelled with the exact range requested, so cards pair dates and amounts.
+        Assert.Equal(900m, (await Read(dateOnly)).NetWorthSeries[^1].Value);
+
+        // An ISO timestamp at the day's last tick (in any offset) means the same range as the bare date.
+        var endOfDayInOffset = new DateTimeOffset(end).ToOffset(TimeSpan.FromHours(2)).ToString("O");
+        var endOfDay = await Read((start.ToString("O"), endOfDayInOffset));
+        Assert.Equal(900m, endOfDay.NetWorthSeries[^1].Value);
+        Assert.Equal(-50m, Assert.Single(endOfDay.LabelsValue, row => row.Name == label.Name).Value);
+
+        // The date-only response is labelled with the UTC midnight start and the inclusive last-tick end.
         Assert.Equal(start, overview.StartDate.ToUniversalTime());
         Assert.Equal(end, overview.EndDate.ToUniversalTime());
 

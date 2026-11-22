@@ -10,17 +10,15 @@ public class CachingDashboardQueryService(
 {
     public async Task<DashboardOverviewDto?> GetOverview(
         int userId, int currencyId, DateTime start, DateTime end,
-        CancellationToken cancellationToken = default, bool defaultRange = false)
+        CancellationToken cancellationToken = default)
     {
-        defaultRange = defaultRange && DashboardReadCutoff.IsDefaultWindow(start, end, DateTime.UtcNow);
         var key = $"dash:u{userId}:c{currencyId}:{start:O}:{end:O}";
-        if (defaultRange) key += ":default";
         var loaded = false;
         var overview = await cache.GetOrCreateAsync<DashboardOverviewDto?>(
             key,
             async ct =>
             {
-                var result = await inner.GetOverview(userId, currencyId, start, end, ct, defaultRange);
+                var result = await inner.GetOverview(userId, currencyId, start, end, ct);
                 loaded = true;
                 return result;
             },

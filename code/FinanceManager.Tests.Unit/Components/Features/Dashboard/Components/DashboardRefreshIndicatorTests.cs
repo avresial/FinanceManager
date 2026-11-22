@@ -23,6 +23,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using Moq;
 using MudBlazor.Services;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -72,14 +73,13 @@ public class DashboardRefreshIndicatorTests
         var expected = DateRangeHelper.GetDefaultDashboardRange(DateTime.UtcNow);
         Assert.Equal(expected, (cut.Instance.StartDate, cut.Instance.EndDate));
         var query = System.Web.HttpUtility.ParseQueryString(handler.RequestUri(0).Query);
-        Assert.Equal("true", query["defaultRange"]);
-        var requestedEnd = DateTime.Parse(query["end"]!, null, System.Globalization.DateTimeStyles.RoundtripKind);
-        Assert.Equal(expected.End, requestedEnd);
-        Assert.Equal(DateTimeKind.Utc, requestedEnd.Kind);
+        Assert.Null(query["defaultRange"]);
+        Assert.Equal(expected.Start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), query["start"]);
+        Assert.Equal(expected.End.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), query["end"]);
     }
 
     [Fact]
-    public void DefaultOverviewFailure_UsesExactFallbackAndRetriesTheDefaultRange()
+    public async Task DefaultOverviewFailure_UsesSameFallbackAndDatesAfterManualReselectionAndRetry()
     {
         var handler = new OverviewHandler();
         using var context = CreateContext(handler);
@@ -92,8 +92,14 @@ public class DashboardRefreshIndicatorTests
         var fallback = cut.FindComponent<Stub<NetWorthTimeSeriesCard>>().Instance.Parameters.Get(x => x.EndDateTime);
         Assert.InRange(fallback, before, DateTime.UtcNow);
 
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry").Click();
+        await ChangeRange(cut, cut.Instance.StartDate, cut.Instance.EndDate);
         cut.WaitForAssertion(() => Assert.Equal(handler.RequestUri(0), handler.RequestUri(1)), _timeout);
+        handler.Fail(1);
+        cut.WaitForAssertion(() => Assert.Contains("Individual cards use the time", cut.Find(".mud-alert").TextContent), _timeout);
+        Assert.Equal(fallback, cut.FindComponent<Stub<NetWorthTimeSeriesCard>>().Instance.Parameters.Get(x => x.EndDateTime));
+
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry").Click();
+        cut.WaitForAssertion(() => Assert.Equal(handler.RequestUri(0), handler.RequestUri(2)), _timeout);
     }
 
     [Fact]
@@ -164,10 +170,13 @@ public class DashboardRefreshIndicatorTests
         var originalStart = DisplayedStart(cut);
 
         var (start, end) = NewRange();
+        end = end.AddHours(14).AddTicks(12345);
         await ChangeRange(cut, start, end);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-progress-linear")), _timeout);
 
-        Assert.Null(System.Web.HttpUtility.ParseQueryString(handler.RequestUri(1).Query)["defaultRange"]);
+        var customQuery = System.Web.HttpUtility.ParseQueryString(handler.RequestUri(1).Query);
+        Assert.Equal(start.ToString("O", CultureInfo.InvariantCulture), customQuery["start"]);
+        Assert.Equal(end.ToString("O", CultureInfo.InvariantCulture), customQuery["end"]);
         handler.Fail(1);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);
@@ -180,7 +189,7 @@ public class DashboardRefreshIndicatorTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-progress-linear")), _timeout);
         Assert.Empty(cut.FindAll(".mud-alert"));
 
-        Assert.Null(System.Web.HttpUtility.ParseQueryString(handler.RequestUri(2).Query)["defaultRange"]);
+        Assert.Equal(handler.RequestUri(1), handler.RequestUri(2));
         handler.Complete(2, Overview(start, end));
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-progress-linear")), _timeout);

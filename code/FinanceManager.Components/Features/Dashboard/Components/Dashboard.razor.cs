@@ -53,7 +53,6 @@ public partial class Dashboard : ComponentBase
     ];
 
     private DashboardOverviewDto? _overview;
-    private bool _isDefaultRange = true;
     private DateTime _defaultFallbackEnd;
     private bool _isLoading = true;
     private bool _hasError;
@@ -81,7 +80,9 @@ public partial class Dashboard : ComponentBase
     // (first paint / self-load fallback) they fall back to the live selection.
     private DateTime DisplayStartDate => _overview is null ? StartDate : _overviewStart;
     private DateTime DisplayEndDate => _overview is not null ? _overviewEnd
-        : _isDefaultRange ? _defaultFallbackEnd : EndDate;
+        : IsOpeningRange ? _defaultFallbackEnd : EndDate;
+    private bool IsOpeningRange => StartDate.Kind == DateTimeKind.Utc && EndDate.Kind == DateTimeKind.Utc
+        && (StartDate, EndDate) == DateRangeHelper.GetDefaultDashboardRange(_defaultFallbackEnd);
 
     // The user asked for a range other than the one the held overview shows and that data is still on
     // its way. Compared by day: a picked range ends at "now" (or end of day), and a snapshot from an
@@ -136,7 +137,6 @@ public partial class Dashboard : ComponentBase
     // reload without awaiting; LoadOverview owns its own state and error handling.
     public void DateChanged((DateTime Start, DateTime End) changed)
     {
-        _isDefaultRange = false;
         StartDate = changed.Start;
         EndDate = changed.End;
         _ = LoadOverview();
@@ -152,7 +152,6 @@ public partial class Dashboard : ComponentBase
         var requestVersion = _overviewGate.Claim();
         var startDate = StartDate;
         var endDate = EndDate;
-        var defaultRange = _isDefaultRange;
 
         _hasError = false;
         _isRequestInFlight = true;
@@ -160,7 +159,7 @@ public partial class Dashboard : ComponentBase
 
         try
         {
-            await RefreshOverviewAsync(requestVersion, startDate, endDate, defaultRange);
+            await RefreshOverviewAsync(requestVersion, startDate, endDate);
         }
         finally
         {
@@ -173,7 +172,7 @@ public partial class Dashboard : ComponentBase
         }
     }
 
-    private async Task RefreshOverviewAsync(int requestVersion, DateTime startDate, DateTime endDate, bool defaultRange)
+    private async Task RefreshOverviewAsync(int requestVersion, DateTime startDate, DateTime endDate)
     {
         var user = await LoginService.GetLoggedUser();
         if (user is null)
@@ -195,7 +194,7 @@ public partial class Dashboard : ComponentBase
             Gate = _overviewGate,
             ClaimedVersion = requestVersion,
             ToModel = snapshot => snapshot.ToDto(),
-            FetchAsync = () => DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate, defaultRange),
+            FetchAsync = () => DashboardHttpClient.GetOverview(user.UserId, currency.Id, startDate, endDate),
             ToSnapshot = DashboardOverviewSnapshot.FromDto,
 
             // The snapshot renders the range it was captured for; fresh data renders the requested one.

@@ -38,21 +38,7 @@ public class DashboardReadCutoffTests
     }
 
     [Fact]
-    public void OnlyTheCurrentDefaultWindowQualifiesForTheDayEndCutoff()
-    {
-        var now = new DateTime(2026, 11, 21, 10, 0, 0, DateTimeKind.Utc);
-        var start = now.Date.AddDays(-30);
-        var end = UtcDay.EndOf(now);
-        Assert.True(DashboardReadCutoff.IsDefaultWindow(start, end, now));
-        Assert.False(DashboardReadCutoff.IsDefaultWindow(start, now.AddHours(1), now));
-        Assert.False(DashboardReadCutoff.IsDefaultWindow(start.AddDays(1), end, now));
-        Assert.False(DashboardReadCutoff.IsDefaultWindow(start, end, now.AddDays(1)));
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task DefaultAndCustomOverview_CacheDistinctResultsForIdenticalDates(bool firstDefault)
+    public async Task RepeatedCalendarRange_ReusesOverviewComputedThroughEndOfUtcDay()
     {
         var now = DateTime.UtcNow;
         var start = now.Date.AddDays(-30);
@@ -75,11 +61,11 @@ public class DashboardReadCutoffTests
         services.AddHybridCache();
         using var provider = services.BuildServiceProvider();
         var service = new CachingDashboardQueryService(inner, provider.GetRequiredService<HybridCache>());
-        foreach (var defaultRange in new[] { firstDefault, !firstDefault, firstDefault, !firstDefault })
+        for (var visit = 0; visit < 2; visit++)
         {
-            var result = await service.GetOverview(1, currency.Id, start, end, TestContext.Current.CancellationToken, defaultRange);
-            Assert.Equal(defaultRange ? 2 : 1, Assert.Single(result!.NetWorthSeries).Value);
+            var result = await service.GetOverview(1, currency.Id, start, end, TestContext.Current.CancellationToken);
+            Assert.Equal(2m, Assert.Single(result!.NetWorthSeries).Value);
         }
-        worth.Verify(x => x.GetNetWorth(1, currency, start, end), Times.Exactly(2));
+        worth.Verify(x => x.GetNetWorth(1, currency, start, end), Times.Once);
     }
 }

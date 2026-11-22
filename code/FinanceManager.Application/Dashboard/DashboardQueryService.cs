@@ -6,6 +6,7 @@ using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Shared;
 
 namespace FinanceManager.Application.Dashboard;
 
@@ -51,10 +52,9 @@ public class DashboardQueryService(
         };
     }
 
-    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default, bool defaultRange = false)
+    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
     {
-        var useDayEnd = defaultRange && DashboardReadCutoff.IsDefaultWindow(start, end, DateTime.UtcNow);
-        using var cutoff = DashboardReadCutoff.Enter(useDayEnd ? end : null);
+        using var cutoff = DashboardReadCutoff.Enter(end == UtcDay.EndOf(DateTime.UtcNow) ? end : null);
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return null;
 

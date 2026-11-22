@@ -1,17 +1,12 @@
-using FinanceManager.Domain.Shared;
-
 namespace FinanceManager.Application.Dashboard;
 
 /// <summary>
-/// The default dashboard values the whole current UTC day. The underlying calculators are
+/// Dashboard ranges ending at the last tick of today value the entire UTC day. The underlying calculators are
 /// shared with exact-time reports, so this override follows one asynchronous overview read.
 /// </summary>
 internal static class DashboardReadCutoff
 {
     private static readonly AsyncLocal<DateTime?> _upperBound = new();
-
-    internal static bool IsDefaultWindow(DateTime start, DateTime end, DateTime utcNow) =>
-        start == utcNow.Date.AddDays(-30) && end == UtcDay.EndOf(utcNow);
 
     internal static IDisposable? Enter(DateTime? upperBound)
     {

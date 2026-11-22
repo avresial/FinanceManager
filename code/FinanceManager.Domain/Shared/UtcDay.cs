@@ -8,5 +8,5 @@ public static class UtcDay
 {
     /// <summary>The last tick of <paramref name="instant"/>'s calendar day, as UTC.</summary>
     public static DateTime EndOf(DateTime instant) =>
-        DateTime.SpecifyKind(instant.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+        DateTime.SpecifyKind(instant.Date.AddTicks(TimeSpan.TicksPerDay - 1), DateTimeKind.Utc);
 }

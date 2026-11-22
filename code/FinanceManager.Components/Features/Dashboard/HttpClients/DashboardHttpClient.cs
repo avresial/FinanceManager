@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Dashboard.Dtos;
+using System.Globalization;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.Dashboard.HttpClients;
@@ -10,15 +11,15 @@ namespace FinanceManager.Components.Features.Dashboard.HttpClients;
 /// </summary>
 public class DashboardHttpClient(HttpClient httpClient)
 {
-    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end, bool defaultRange = false)
+    public async Task<DashboardOverviewDto?> GetOverview(int userId, int currencyId, DateTime start, DateTime end)
     {
-        // Encode the round-trip dates: the "O" format contains '+' and ':', which a
-        // query-string decoder would otherwise misread (e.g. '+' becomes a space).
-        var encodedStart = Uri.EscapeDataString(start.ToString("O"));
-        var encodedEnd = Uri.EscapeDataString(end.ToString("O"));
+        var wholeUtcDays = start.Kind == DateTimeKind.Utc && end.Kind == DateTimeKind.Utc
+            && start.TimeOfDay == TimeSpan.Zero && TimeOnly.FromDateTime(end) == TimeOnly.MaxValue;
+        var format = wholeUtcDays ? "yyyy-MM-dd" : "O";
+        var encodedStart = Uri.EscapeDataString(start.ToString(format, CultureInfo.InvariantCulture));
+        var encodedEnd = Uri.EscapeDataString(end.ToString(format, CultureInfo.InvariantCulture));
 
         string endpoint = $"{httpClient.BaseAddress}api/Dashboard/overview?userId={userId}&currencyId={currencyId}&start={encodedStart}&end={encodedEnd}";
-        if (defaultRange) endpoint += "&defaultRange=true";
         return await httpClient.GetFromJsonAsync<DashboardOverviewDto>(endpoint);
     }
 }
