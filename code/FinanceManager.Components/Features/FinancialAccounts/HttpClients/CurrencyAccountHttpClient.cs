@@ -60,12 +60,7 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
             Labels = result.NextYoungerEntry.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()!
         };
 
-        var entries = result.Entries.Select(x => new CurrencyAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange)
-        {
-            Description = x.Description,
-            ContractorDetails = x.ContractorDetails,
-            Labels = x.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()!
-        })
+        var entries = result.Entries.Select(AccountEntryMapping.ToDomain)
         .OrderByDescending(x => x.PostingDate)
         .ThenByDescending(x => x.EntryId);
 

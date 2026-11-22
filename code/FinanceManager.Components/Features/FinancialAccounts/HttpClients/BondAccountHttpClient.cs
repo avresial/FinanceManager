@@ -47,7 +47,7 @@ public class BondAccountHttpClient(HttpClient httpClient)
             result.NextYoungerEntries.ToDictionary(x => x.Key, x => ToBondAccountEntry(x.Value));
 
         var entries = result.Entries
-            .Select(x => new BondAccountEntry(x.AccountId, x.EntryId, x.PostingDate, x.Value, x.ValueChange, x.BondDetailsId) { Description = x.Description, Labels = x.Labels?.Select(FinancialLabelMapping.ToDomain).ToList()! })
+            .Select(AccountEntryMapping.ToDomain)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId);
 

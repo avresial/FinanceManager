@@ -58,6 +58,10 @@ public partial class InvestmentTransactionForm : ComponentBase
     {
         if (Visible && (!_wasVisible || _initializedTransactionId != Transaction?.Id))
         {
+            // Claimed before the first await: a parent re-render while this loads must not start a second
+            // initialization that could finish later and overwrite what the user has typed meanwhile.
+            _wasVisible = true;
+            _initializedTransactionId = Transaction?.Id;
             await LoadLabelsAsync();
             _selectedLabelIds = Transaction?.Labels?.Select(x => x.Id).ToArray() ?? [];
             await EnsureCurrenciesLoadedAsync();

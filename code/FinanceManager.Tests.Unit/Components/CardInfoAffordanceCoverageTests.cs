@@ -239,7 +239,8 @@ public class CardInfoAffordanceCoverageTests
     [
         "Features/FinancialAccounts/Components/BondAccountComponents/TransactionHistory/BondDayGroupCard.razor",
         "Features/FinancialAccounts/Components/CurrencyAccountComponents/TransactionHistory/CurrencyDayGroupCard.razor",
-        "Features/FinancialAccounts/Components/InvestmentAccountComponents/TransactionHistory/InvestmentDayGroupCard.razor"
+        "Features/FinancialAccounts/Components/InvestmentAccountComponents/TransactionHistory/InvestmentDayGroupCard.razor",
+        "Features/Dashboard/Components/TransactionHistoryDayGroupCard.razor"
     ];
 
     private sealed class CardSurface(int lineNumber)

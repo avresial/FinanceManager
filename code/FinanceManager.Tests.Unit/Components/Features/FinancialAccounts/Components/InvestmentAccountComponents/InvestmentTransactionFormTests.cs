@@ -214,7 +214,34 @@ public class InvestmentTransactionFormTests
         cut.WaitForAssertion(() => Assert.Equal("Long term", select.Instance.GetState(x => x.Text)));
     }
 
-    private static BunitContext CreateBunitContext(HttpMessageHandler handler, FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel[]? labels = null)
+    [Fact]
+    public async Task ParentRerenderWhileEditInitializes_DoesNotStartASecondInitialization()
+    {
+        var labelsReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var labelRequests = 0;
+        var labelHandler = new StubHttpHandler(async _ =>
+        {
+            Interlocked.Increment(ref labelRequests);
+            await labelsReleased.Task;
+            return JsonResponse(Array.Empty<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel>());
+        });
+        await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<Currency>()))),
+            labelHandler: labelHandler);
+        var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+            DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        cut.WaitForAssertion(() => Assert.Equal(1, Volatile.Read(ref labelRequests)));
+
+        // The Transactions page re-renders when valuations arrive, handing the form the same trade again.
+        cut.Render(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        labelsReleased.SetResult();
+        await Task.Delay(50, Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, Volatile.Read(ref labelRequests));
+    }
+
+    private static BunitContext CreateBunitContext(HttpMessageHandler handler, FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel[]? labels = null,
+        HttpMessageHandler? labelHandler = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -222,7 +249,7 @@ public class InvestmentTransactionFormTests
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
         context.Services.AddSingleton(new InvestmentTransactionHttpClient(httpClient));
         context.Services.AddSingleton(new CurrencyHttpClient(httpClient));
-        context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(new HttpClient(new StubHttpHandler(_ => Task.FromResult(JsonResponse(labels ?? [])))) { BaseAddress = new Uri("https://localhost/") }));
+        context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(new HttpClient(labelHandler ?? new StubHttpHandler(_ => Task.FromResult(JsonResponse(labels ?? [])))) { BaseAddress = new Uri("https://localhost/") }));
         var settingsService = new Mock<ISettingsService>();
         settingsService.Setup(x => x.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settingsService.Object);

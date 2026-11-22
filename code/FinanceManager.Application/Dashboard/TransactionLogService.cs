@@ -99,6 +99,20 @@ public class TransactionLogService(
 
     public async Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
     {
+        var (rows, next) = await SelectPage(userId, query, cancellationToken);
+        return new TransactionLogPage([.. rows.Select(row => row.Entry)], next);
+    }
+
+    public async Task<TransactionLogItemsPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
+    {
+        var (rows, next) = await SelectPage(userId, query, cancellationToken);
+        return new TransactionLogItemsPage([.. rows.Select(row => row.Item)], next);
+    }
+
+    // Both feeds page the same rows; each row keeps its compact summary (which also drives ordering and the
+    // cursor) next to the source entity the Transactions page renders.
+    private async Task<(List<LogRow> Rows, TransactionLogCursor? NextCursor)> SelectPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken)
+    {
         // Repositories persist posting dates in UTC; date-only trades share UTC midnight.
         query = query with
         {
@@ -117,10 +131,10 @@ public class TransactionLogService(
 
         var end = query.Cursor is TransactionLogCursor cursor && cursor.Date < query.End ? cursor.Date : query.End;
         if (end < query.Start)
-            return new TransactionLogPage([], null);
+            return ([], null);
 
         var take = query.PageSize + 1;
-        List<TransactionLogEntryDto> result = [];
+        List<LogRow> result = [];
         var currencyAccounts = IncludesStream(query, AccountType.Currency)
             ? FilterAccounts(await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken), query)
             : [];
@@ -128,12 +142,14 @@ public class TransactionLogService(
         {
             var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
             var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
+            var currencyIds = currencyAccounts.ToDictionary(a => a.AccountId, a => a.CurrencyId ?? 0);
             var boundary = GetPageBoundary(query.Cursor, AccountType.Currency);
             var entries = await currencyEntryRepository.GetHistoryPage(
                 [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
-                e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
-                e.ValueChange, GetCurrencyDescription(e), currencies[e.AccountId])));
+            result.AddRange(entries.Select(e => new LogRow(
+                new TransactionLogEntryDto(e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
+                    e.ValueChange, GetCurrencyDescription(e), currencies[e.AccountId]),
+                new CurrencyTransactionLogItem(e.AccountId, names[e.AccountId], currencyIds[e.AccountId], currencies[e.AccountId] ?? string.Empty, e))));
         }
 
         var bondAccounts = IncludesStream(query, AccountType.Bond)
@@ -146,9 +162,10 @@ public class TransactionLogService(
             var entries = await bondEntryRepository.GetHistoryPage(
                 [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             var bondNames = await GetBondNames(entries, cancellationToken);
-            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
-                e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
-                e.ValueChange, GetBondDescription(e, bondNames), "units")));
+            result.AddRange(entries.Select(e => new LogRow(
+                new TransactionLogEntryDto(e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
+                    e.ValueChange, GetBondDescription(e, bondNames), "units"),
+                new BondTransactionLogItem(e.AccountId, names[e.AccountId], e))));
         }
 
         // Investment dates represent midnight. A non-midnight start excludes that day's trades.
@@ -173,9 +190,10 @@ public class TransactionLogService(
                 var transactions = await investmentTransactionRepository.GetHistoryPage(
                     [.. names.Keys], startDate, endDate, take,
                     boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-                result.AddRange(transactions.Select(t => new TransactionLogEntryDto(
-                    t.AccountId, names[t.AccountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                    t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency)));
+                result.AddRange(transactions.Select(t => new LogRow(
+                    new TransactionLogEntryDto(t.AccountId, names[t.AccountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                        t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency),
+                    new InvestmentTransactionLogItem(t.AccountId, names[t.AccountId], t))));
             }
         }
 
@@ -218,15 +236,20 @@ public class TransactionLogService(
         _ => throw new ArgumentOutOfRangeException(nameof(type))
     };
 
-    private static TransactionLogPage CreatePage(List<TransactionLogEntryDto> entries, int pageSize)
+    private static (List<LogRow> Rows, TransactionLogCursor? NextCursor) CreatePage(List<LogRow> rows, int pageSize)
     {
-        var ordered = entries.OrderByDescending(e => e.Date).ThenByDescending(e => e.EntryId)
-            .ThenBy(e => AccountTypeOrder(e.AccountType)).Take(pageSize + 1).ToList();
-        TransactionLogCursor? next = ordered.Count > pageSize
-            ? new(ordered[pageSize - 1].Date, ordered[pageSize - 1].AccountType, ordered[pageSize - 1].EntryId)
-            : null;
-        return new TransactionLogPage([.. ordered.Take(pageSize)], next);
+        var ordered = rows.OrderByDescending(r => r.Entry.Date).ThenByDescending(r => r.Entry.EntryId)
+            .ThenBy(r => AccountTypeOrder(r.Entry.AccountType)).Take(pageSize + 1).ToList();
+        TransactionLogCursor? next = null;
+        if (ordered.Count > pageSize)
+        {
+            var last = ordered[pageSize - 1].Entry;
+            next = new(last.Date, last.AccountType, last.EntryId);
+        }
+        return ([.. ordered.Take(pageSize)], next);
     }
+
+    private sealed record LogRow(TransactionLogEntryDto Entry, TransactionLogItem Item);
 
     // The account query must finish streaming before any entry query starts: relational
     // providers reject a second command while the previous reader is still open.

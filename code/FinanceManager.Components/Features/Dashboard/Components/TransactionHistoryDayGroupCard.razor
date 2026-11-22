@@ -1,0 +1,48 @@
+@using FinanceManager.Components.Features.Dashboard.Models
+@using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Contracts.FinancialAccounts.Investments
+@using FinanceManager.Domain.FinancialAccounts.Bond.Entities
+
+@* One day of the Transactions page, framed like the account pages' day cards. Entries of a day can mix
+   currencies, bond units and trades, so the header shows no daily net; a cursor page can also split a
+   day, so the count is of the entries loaded so far. *@
+<MudCard Outlined="true" Class="mb-3" Style="background-color: transparent;" data-testid="transactions-day">
+    <MudCardHeader Class="@(IsMobile ? "py-1 px-4" : "py-1 pl-4 pr-2")">
+        <CardHeaderContent>
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Baseline">
+                <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(Day)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">@DateFormatter.FormatWeekday(Day)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">· @Items.Count @(Items.Count == 1 ? "entry" : "entries")</MudText>
+            </MudStack>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent Class="pa-0">
+        <MudStack Spacing="0">
+            @foreach (var item in Items)
+            {
+                <TransactionHistoryRow @key="item.Key" Item="item" IsMobile="@IsMobile"
+                                       SiblingsShareSameTime="@CashSiblingsShareSameTime"
+                                       BondDetails="@GetBondDetails(item)" Valuation="@GetValuation(item)"
+                                       OnEditInvestment="OnEditInvestment" OnDeleteInvestment="OnDeleteInvestment" />
+                <MudDivider />
+            }
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public DateTime Day { get; set; }
+    [Parameter, EditorRequired] public required IReadOnlyList<TransactionHistoryItem> Items { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public bool CashSiblingsShareSameTime { get; set; }
+    [Parameter] public IReadOnlyDictionary<int, BondDetails>? BondDetails { get; set; }
+    [Parameter] public IReadOnlyDictionary<long, InvestmentTransactionValuationDto>? Valuations { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnEditInvestment { get; set; }
+    [Parameter] public EventCallback<InvestmentTransactionDto> OnDeleteInvestment { get; set; }
+
+    private BondDetails? GetBondDetails(TransactionHistoryItem item) =>
+        item is BondTransactionHistoryItem bond && BondDetails is not null && BondDetails.TryGetValue(bond.Entry.BondDetailsId, out var details) ? details : null;
+
+    private InvestmentTransactionValuationDto? GetValuation(TransactionHistoryItem item) =>
+        item is InvestmentTransactionHistoryItem investment && Valuations is not null && Valuations.TryGetValue(investment.Transaction.Id, out var valuation) ? valuation : null;
+}

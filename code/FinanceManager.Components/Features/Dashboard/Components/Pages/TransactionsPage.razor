@@ -1,5 +1,6 @@
 @page "/Transactions"
 @using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
 
 <PageTitle>Transactions</PageTitle>
 
@@ -67,21 +68,10 @@
     {
         @foreach (var group in _dayGroups)
         {
-            <MudPaper Outlined Class="mb-3" Style="background-color: transparent;" data-testid="transactions-day">
-                <div class="fm-txlog-day-header">
-                    <div class="d-flex align-baseline gap-2">
-                        <MudText Typo="Typo.subtitle2">@DateFormatter.FormatDayMonth(group.Key)</MudText>
-                        <MudText Typo="Typo.caption" Class="fm-muted">@DateFormatter.FormatWeekday(group.Key)</MudText>
-                        <MudText Typo="Typo.caption" Class="fm-muted">· @group.Count() @(group.Count() == 1 ? "entry" : "entries")</MudText>
-                    </div>
-                </div>
-                <div class="fm-txlog-day-rows">
-                    @foreach (var entry in group)
-                    {
-                        <TransactionLogRow @key="@($"{entry.AccountType}-{entry.EntryId}")" Entry="entry" ShowDate="false" />
-                    }
-                </div>
-            </MudPaper>
+            <TransactionHistoryDayGroupCard @key="group.Day" Day="group.Day" Items="group.Items" IsMobile="@_isMobile"
+                                            CashSiblingsShareSameTime="@group.CashSiblingsShareSameTime"
+                                            BondDetails="_bondDetails" Valuations="_valuations"
+                                            OnEditInvestment="ShowInvestmentEdit" OnDeleteInvestment="DeleteInvestmentAsync" />
         }
 
         <div class="d-flex flex-column align-center py-2">
@@ -109,3 +99,11 @@
         </div>
     }
 </MudContainer>
+
+@if (_editingInvestment is not null)
+{
+    @* One form for the whole page, bound to the selected trade's own account. *@
+    <InvestmentTransactionForm @key="_editingInvestment.Id" AccountId="@_editingInvestment.AccountId" Visible="@_investmentFormVisible"
+                               VisibleChanged="OnInvestmentFormVisibleChanged" Transaction="@_editingInvestment"
+                               OnSaved="OnInvestmentSavedAsync" />
+}

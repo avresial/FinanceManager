@@ -12,4 +12,7 @@ public interface ITransactionLogService
 
     /// <summary>Returns an inclusive date-range page in dashboard order, with an exclusive continuation cursor.</summary>
     Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>Same selection, order and cursor as <see cref="GetPage"/>, with each row carrying its full source entry.</summary>
+    Task<TransactionLogItemsPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
 }

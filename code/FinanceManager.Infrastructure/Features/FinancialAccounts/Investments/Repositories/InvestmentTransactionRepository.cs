@@ -362,7 +362,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (cursorTradeDate is DateOnly date && cursorId is long id)
             query = query.Where(x => x.PostingDate < date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) || (x.PostingDate == date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.EntryId < id));
 
+        // Labels are loaded so a trade edited from the Transactions page resubmits them instead of clearing them.
         return await query
+            .AsSplitQuery().Include(x => x.Labels)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
