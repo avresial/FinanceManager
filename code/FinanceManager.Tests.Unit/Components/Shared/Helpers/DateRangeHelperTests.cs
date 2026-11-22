@@ -77,6 +77,40 @@ public class DateRangeHelperTests
         Assert.Equal(DateRangeHelper.GetLast31DaysRange(_now), DateRangeHelper.GetDefaultOverviewRange(_now));
     }
 
+    // The dashboard keeps the 31-day start but ends at the last tick of today (UTC), so entries
+    // posted later today still count. #1120
+    [Fact]
+    public void GetDefaultDashboardRange_EndsAtEndOfTodayUtc()
+    {
+        var range = DateRangeHelper.GetDefaultDashboardRange(_now);
+
+        Assert.Equal(DateRangeHelper.GetDefaultOverviewRange(_now).Start, range.Start);
+        Assert.Equal(new DateTime(2026, 7, 13, 0, 0, 0, DateTimeKind.Utc).AddTicks(-1), range.End);
+        Assert.Equal(DateTimeKind.Utc, range.End.Kind);
+    }
+
+    // Every visit on the same UTC day asks for the identical range, so the server's overview cache
+    // key does not change with the time of day. #1120
+    [Fact]
+    public void GetDefaultDashboardRange_IsStableWithinTheSameUtcDay()
+    {
+        var firstVisit = DateRangeHelper.GetDefaultDashboardRange(_now.Date);
+        var lastVisit = DateRangeHelper.GetDefaultDashboardRange(_now.Date.AddDays(1).AddTicks(-1));
+
+        Assert.Equal(firstVisit, DateRangeHelper.GetDefaultDashboardRange(_now));
+        Assert.Equal(firstVisit, lastVisit);
+    }
+
+    [Fact]
+    public void GetDefaultDashboardRange_RollsOverAtUtcMidnight()
+    {
+        var today = DateRangeHelper.GetDefaultDashboardRange(_now.Date.AddDays(1).AddTicks(-1));
+        var tomorrow = DateRangeHelper.GetDefaultDashboardRange(_now.Date.AddDays(1));
+
+        Assert.Equal(today.Start.AddDays(1), tomorrow.Start);
+        Assert.Equal(today.End.AddDays(1), tomorrow.End);
+    }
+
     [Fact]
     public void GetExpandedStart_ReturnsOnlyOlderEntry()
     {

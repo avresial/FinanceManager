@@ -65,4 +65,19 @@ public class DashboardControllerTests(OptionsProvider optionsProvider) : Control
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Theory]
+    [InlineData("2024-13-01", "2024-01-31")]
+    [InlineData("2024-01-01", "10000-01-01")]
+    [InlineData("2024-01-01", "9999-12-31T23:00:00-05:00")]
+    [InlineData("2024-02-01", "2024-01-31")]
+    public async Task GetOverview_WithInvalidRange_ReturnsBadRequest(string start, string end)
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/Dashboard/overview?userId={_testUserId}&currencyId=0&start={Uri.EscapeDataString(start)}&end={Uri.EscapeDataString(end)}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _dashboardQueryServiceMock.Verify(x => x.GetOverview(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

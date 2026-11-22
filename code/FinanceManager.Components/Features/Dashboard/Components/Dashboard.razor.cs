@@ -53,6 +53,7 @@ public partial class Dashboard : ComponentBase
     ];
 
     private DashboardOverviewDto? _overview;
+    private DateTime _defaultFallbackEnd;
     private bool _isLoading = true;
     private bool _hasError;
 
@@ -78,11 +79,14 @@ public partial class Dashboard : ComponentBase
     // range so amounts and period labels stay paired during a reload; with no overview
     // (first paint / self-load fallback) they fall back to the live selection.
     private DateTime DisplayStartDate => _overview is null ? StartDate : _overviewStart;
-    private DateTime DisplayEndDate => _overview is null ? EndDate : _overviewEnd;
+    private DateTime DisplayEndDate => _overview is not null ? _overviewEnd
+        : IsOpeningRange ? _defaultFallbackEnd : EndDate;
+    private bool IsOpeningRange => StartDate.Kind == DateTimeKind.Utc && EndDate.Kind == DateTimeKind.Utc
+        && (StartDate, EndDate) == DateRangeHelper.GetDefaultDashboardRange(_defaultFallbackEnd);
 
     // The user asked for a range other than the one the held overview shows and that data is still on
-    // its way. Compared by day: the default end is "now", which moves between visits without
-    // changing what the user sees.
+    // its way. Compared by day: a picked range ends at "now" (or end of day), and a snapshot from an
+    // earlier visit today can carry another time of day without changing what the user sees.
     private bool IsRefreshing => _isRequestInFlight && ShowsDifferentRange;
 
     // The held overview covers another period than the one requested (loading it, or it failed to load).
@@ -100,20 +104,26 @@ public partial class Dashboard : ComponentBase
     // Card-specific models mapped from the single overview response. They are null
     // until the first load resolves (and when the overview is unavailable), in which
     // case the cards fall back to their existing standalone self-loading behavior.
-    private TimeSeriesCardModel? NetWorthModel => _overview is null ? null : new(_overview.NetWorthSeries);
-    private TimeSeriesCardModel? NetCashFlowModel => _overview is null ? null : new(_overview.NetCashFlowSeries);
-    private TimeSeriesCardModel? ClosingBalanceModel => _overview is null ? null : new(_overview.ClosingBalanceSeries);
-    private DistributionCardModel? LiabilitiesModel => _overview is null ? null : new(_overview.LiabilitiesPerType, _overview.LiabilitiesPerAccount);
-    private NameValueListCardModel? LabelsModel => _overview is null ? null : new(_overview.LabelsValue);
-    private DistributionCardModel? AssetsModel => _overview is null ? null : new(_overview.AssetsPerType, _overview.AssetsPerAccount);
-    private NameValueListCardModel? ExpenseModel => _overview is null ? null : new(_overview.ExpenseDistribution);
+    // Mapped once per overview (see SetOverview) rather than on every render, so a dashboard
+    // re-render that does not change the data hands each card the same model instance and the
+    // card can skip re-processing its chart.
+    private TimeSeriesCardModel? NetWorthModel { get; set; }
+    private TimeSeriesCardModel? NetCashFlowModel { get; set; }
+    private TimeSeriesCardModel? ClosingBalanceModel { get; set; }
+    private DistributionCardModel? LiabilitiesModel { get; set; }
+    private NameValueListCardModel? LabelsModel { get; set; }
+    private DistributionCardModel? AssetsModel { get; set; }
+    private NameValueListCardModel? ExpenseModel { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         // A rolling last-31-days window rather than the current calendar month, so charts always have
         // ~a month of history — the current-month range is nearly empty on the 1st. #685
-        // Shared with the Assets and Liabilities pages so the three cannot drift apart. #700
-        var (Start, End) = DateRangeHelper.GetDefaultOverviewRange(DateTime.UtcNow);
+        // Same window as the Assets and Liabilities pages (#700), but ending at the end of today so
+        // later-timed entries posted today count and the range is stable within the day. #1120
+        // Standalone endpoints use exact timestamps if the initial aggregate request fails.
+        _defaultFallbackEnd = DateTime.UtcNow;
+        var (Start, End) = DateRangeHelper.GetDefaultDashboardRange(_defaultFallbackEnd);
         StartDate = Start;
         EndDate = End;
 
@@ -169,7 +179,7 @@ public partial class Dashboard : ComponentBase
         {
             if (_overviewGate.IsCurrent(requestVersion))
             {
-                _overview = null;
+                SetOverview(null);
                 _isLoading = false;
                 StateHasChanged();
             }
@@ -213,12 +223,44 @@ public partial class Dashboard : ComponentBase
 
     private Task ShowOverview(DashboardOverviewDto overview, DateTime start, DateTime end)
     {
-        _overview = overview;
+        SetOverview(overview);
         _overviewStart = start;
         _overviewEnd = end;
         _isLoading = false;
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    // The only place _overview changes, so the card models always match it. The models share the
+    // overview's lists; the cards copy them before transforming, so neither side mutates the other.
+    private void SetOverview(DashboardOverviewDto? overview)
+    {
+        if (overview is null)
+            NetWorthModel = null;
+        else if (_overview is null || _overview.UserId != overview.UserId || _overview.CurrencyId != overview.CurrencyId
+            || !SameNetWorthSeries(_overview, overview))
+            NetWorthModel = new(overview.NetWorthSeries);
+
+        _overview = overview;
+        NetCashFlowModel = overview is null ? null : new(overview.NetCashFlowSeries);
+        ClosingBalanceModel = overview is null ? null : new(overview.ClosingBalanceSeries);
+        LiabilitiesModel = overview is null ? null : new(overview.LiabilitiesPerType, overview.LiabilitiesPerAccount);
+        LabelsModel = overview is null ? null : new(overview.LabelsValue);
+        AssetsModel = overview is null ? null : new(overview.AssetsPerType, overview.AssetsPerAccount);
+        ExpenseModel = overview is null ? null : new(overview.ExpenseDistribution);
+    }
+
+    private static bool SameNetWorthSeries(DashboardOverviewDto previous, DashboardOverviewDto current)
+    {
+        var left = previous.NetWorthSeries;
+        var right = current.NetWorthSeries;
+        if (left.Count != right.Count) return false;
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (left[i].DateTime != right[i].DateTime || left[i].Value != right[i].Value || left[i].Name != right[i].Name)
+                return false;
+        }
+        return true;
     }
 
     // Per-user key with no date component, so a single snapshot per user is overwritten each save.

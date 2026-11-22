@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
@@ -59,7 +60,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
 
     private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<CurrencyAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var result = InitializeDailyResult(start, end);
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
@@ -83,7 +84,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
 
     private async Task<Dictionary<DateTime, decimal>> AggregateClosingBalanceByDay(int userId, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var result = InitializeDailyResult(start, end);
         var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];

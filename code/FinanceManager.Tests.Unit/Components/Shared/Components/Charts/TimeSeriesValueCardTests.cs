@@ -4,6 +4,7 @@ using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using System.Text.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
 
@@ -27,6 +28,46 @@ public class TimeSeriesValueCardTests
             .Add(x => x.Data, points));
 
         Assert.Equal("Current value \u00B7 30 Oct 2026", cut.Find(".fm-card-header-subtitle").TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(false, false)]
+    public async Task Chart_DrawAnimationFollowsCardPreference(bool? animateChart, bool expected)
+    {
+        var options = await RenderedOptionsAsync(Points(1, 2), "250px", animateChart);
+
+        Assert.Equal(expected, options.Chart.Animations.Enabled);
+    }
+
+    [Fact]
+    public async Task ChangingAnimationPreference_SendsUpdatedOptionsToTheChartOnce()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var module = context.JSInterop.SetupModule();
+        var charts = module.SetupModule("get_apexcharts", _ => true);
+        var render = charts.SetupVoid("blazor_apexchart.renderChart", _ => true);
+        render.SetVoidResult();
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+
+        bool[] RenderedPreferences() => [.. render.Invocations.Select(call =>
+        {
+            using var options = JsonDocument.Parse(Assert.IsType<string>(call.Arguments[2]));
+            return options.RootElement.GetProperty("chart").GetProperty("animations").GetProperty("enabled").GetBoolean();
+        })];
+
+        var points = Points(1, 2);
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, points));
+        cut.WaitForAssertion(() => Assert.Equal([true], RenderedPreferences()));
+
+        cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
+        cut.WaitForAssertion(() => Assert.Equal([true, false], RenderedPreferences()));
+
+        cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
+        await cut.InvokeAsync(Task.Yield);
+        Assert.Equal([true, false], RenderedPreferences());
     }
 
     [Fact]
@@ -90,17 +131,21 @@ public class TimeSeriesValueCardTests
     private static List<TimeSeriesModel> Points(params decimal[] values) =>
         [.. values.Select((value, i) => new TimeSeriesModel(_start.AddDays(i), value))];
 
-    private static async Task<ApexChartOptions<TimeSeriesModel>> RenderedOptionsAsync(List<TimeSeriesModel> points, string height)
+    private static async Task<ApexChartOptions<TimeSeriesModel>> RenderedOptionsAsync(List<TimeSeriesModel> points, string height, bool? animateChart = null)
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddMudServices();
 
-        var cut = context.Render<TimeSeriesValueCard>(p => p
-            .Add(x => x.Title, "Net worth over time")
-            .Add(x => x.Data, points)
-            .Add(x => x.Height, height));
+        var cut = context.Render<TimeSeriesValueCard>(p =>
+        {
+            p.Add(x => x.Title, "Net worth over time")
+                .Add(x => x.Data, points)
+                .Add(x => x.Height, height);
+            if (animateChart.HasValue)
+                p.Add(x => x.AnimateChart, animateChart.Value);
+        });
 
         return cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance.Options;
     }

@@ -1,3 +1,4 @@
+using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -13,7 +14,7 @@ public class CurrencyExpenseDistributionService(IFinancialAccountRepository fina
 {
     public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
     {
-        if (end > DateTime.UtcNow) end = DateTime.UtcNow;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         Dictionary<string, decimal> totals = [];
 
