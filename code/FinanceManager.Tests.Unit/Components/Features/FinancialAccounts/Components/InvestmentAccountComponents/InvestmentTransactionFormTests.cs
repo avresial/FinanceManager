@@ -262,7 +262,11 @@ public class InvestmentTransactionFormTests
         var picker = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>();
         await cut.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync(new InvestmentInstrumentOptionDto
         {
-            ResultId = "ext-1", Source = InstrumentOptionSource.External, Ticker = "VWCE", DisplayName = "VWCE", TradingCurrency = "USD"
+            ResultId = "ext-1",
+            Source = InstrumentOptionSource.External,
+            Ticker = "VWCE",
+            DisplayName = "VWCE",
+            TradingCurrency = "USD"
         }));
         Assert.True(save().Instance.Disabled);
         labelsReleased.SetResult();
