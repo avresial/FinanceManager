@@ -4,6 +4,7 @@ using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using System.Text.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
 
@@ -40,23 +41,33 @@ public class TimeSeriesValueCardTests
     }
 
     [Fact]
-    public async Task ChangingAnimationPreference_RemountsTheChartOnceWithTheNewOptions()
+    public async Task ChangingAnimationPreference_SendsUpdatedOptionsToTheChartOnce()
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
+        var module = context.JSInterop.SetupModule();
+        var charts = module.SetupModule("get_apexcharts", _ => true);
+        var render = charts.SetupVoid("blazor_apexchart.renderChart", _ => true);
+        render.SetVoidResult();
         context.Services.AddLogging();
         context.Services.AddMudServices();
+
+        bool[] RenderedPreferences() => [.. render.Invocations.Select(call =>
+        {
+            using var options = JsonDocument.Parse(Assert.IsType<string>(call.Arguments[2]));
+            return options.RootElement.GetProperty("chart").GetProperty("animations").GetProperty("enabled").GetBoolean();
+        })];
+
         var points = Points(1, 2);
         var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, points));
-        var original = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+        cut.WaitForAssertion(() => Assert.Equal([true], RenderedPreferences()));
 
         cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
-        var updated = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
-        Assert.NotSame(original, updated);
-        Assert.False(updated.Options.Chart.Animations.Enabled);
+        cut.WaitForAssertion(() => Assert.Equal([true, false], RenderedPreferences()));
 
         cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
-        Assert.Same(updated, cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance);
+        await cut.InvokeAsync(Task.Yield);
+        Assert.Equal([true, false], RenderedPreferences());
     }
 
     [Fact]
