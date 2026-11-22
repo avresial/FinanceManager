@@ -584,6 +584,29 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task GetHoldingMetadata_RecoversMissingPriceForReturnedHolding()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tradeDate = new DateOnly(2024, 1, 10);
+        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
+        Authorize("testuser", _testUserId, UserRole.User);
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "USD"), tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(321.45m);
+
+        var metadata = await new InvestmentTransactionHttpClient(Client).GetHoldingMetadataAsync(
+            _testAccountId,
+            new DateTime(2024, 2, 1),
+            ct);
+
+        var holding = Assert.Single(metadata);
+        Assert.Equal(id, holding.Id);
+        Assert.Equal(321.45m, holding.UnitPrice);
+        _testDatabase!.Context.ChangeTracker.Clear();
+        Assert.Equal(321.45m, (await _testDatabase.Context.InvestmentTransactions.AsNoTracking().SingleAsync(x => x.EntryId == id, ct)).UnitPrice);
+    }
+
+    [Fact]
     public async Task GetByAccount_RecoversAllMissingPrices()
     {
         var tradeDate = new DateOnly(2024, 1, 10);
