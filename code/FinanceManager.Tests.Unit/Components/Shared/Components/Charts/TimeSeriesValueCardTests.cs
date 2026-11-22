@@ -40,6 +40,26 @@ public class TimeSeriesValueCardTests
     }
 
     [Fact]
+    public async Task ChangingAnimationPreference_RemountsTheChartOnceWithTheNewOptions()
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        var points = Points(1, 2);
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, points));
+        var original = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+
+        cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
+        var updated = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
+        Assert.NotSame(original, updated);
+        Assert.False(updated.Options.Chart.Animations.Enabled);
+
+        cut.Render(p => p.Add(x => x.Data, points).Add(x => x.AnimateChart, false));
+        Assert.Same(updated, cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance);
+    }
+
+    [Fact]
     public async Task YAxis_ReservesALeftGutterAndInsetsTheRightEdge()
     {
         var options = await RenderedOptionsAsync(Points(-21400, -21600, -22000), "250px");

@@ -46,6 +46,16 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
 
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
+        var label = new FinancialLabel
+        {
+            Name = "Loan payment",
+            Classifications = [new FinancialLabelClassification
+            {
+                Kind = FinancialLabelClassificationCatalog.SpendingNecessityKind,
+                Value = FinancialLabelClassificationCatalog.EssentialValue
+            }]
+        };
+        context.FinancialLabels.Add(label);
         context.Accounts.AddRange(
             new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Cash },
             new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Loan });
@@ -54,7 +64,8 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
             new CurrencyAccountEntry(_cashAccountId, 2, laterToday, 1250m, 250m),
             new CurrencyAccountEntry(_cashAccountId, 3, tomorrow, 9250m, 8000m),
             new CurrencyAccountEntry(_loanAccountId, 4, today.AddDays(-2), -300m, -300m),
-            new CurrencyAccountEntry(_loanAccountId, 5, laterToday, -350m, -50m));
+            new CurrencyAccountEntry(_loanAccountId, 5, laterToday, -350m, -50m) { Labels = [label] },
+            new CurrencyAccountEntry(_loanAccountId, 6, tomorrow, -425m, -75m) { Labels = [label] });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
 
@@ -79,6 +90,11 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         Assert.Equal(900m, overview.ClosingBalanceSeries[^1].Value);
         Assert.Equal(900m, overview.NetCashFlowSeries.Sum(point => point.Value));
         Assert.Equal(-350m, Assert.Single(overview.LiabilitiesPerAccount).Value);
+        Assert.Equal(-50m, Assert.Single(overview.LabelsValue, row => row.Name == label.Name).Value);
+        Assert.Equal(0m, Assert.Single(exact.LabelsValue, row => row.Name == label.Name).Value);
+        var essential = FinancialLabelClassificationCatalog.EssentialValue;
+        Assert.Equal(50m, Assert.Single(overview.ExpenseDistribution, row => row.Name == essential).Value);
+        Assert.DoesNotContain(exact.ExpenseDistribution, row => row.Name == essential);
     }
 
     public override void Dispose()

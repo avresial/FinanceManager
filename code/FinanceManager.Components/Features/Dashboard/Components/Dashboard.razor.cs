@@ -236,14 +236,32 @@ public partial class Dashboard : ComponentBase
     // overview's lists; the cards copy them before transforming, so neither side mutates the other.
     private void SetOverview(DashboardOverviewDto? overview)
     {
+        if (overview is null)
+            NetWorthModel = null;
+        else if (_overview is null || _overview.UserId != overview.UserId || _overview.CurrencyId != overview.CurrencyId
+            || !SameNetWorthSeries(_overview, overview))
+            NetWorthModel = new(overview.NetWorthSeries);
+
         _overview = overview;
-        NetWorthModel = overview is null ? null : new(overview.NetWorthSeries);
         NetCashFlowModel = overview is null ? null : new(overview.NetCashFlowSeries);
         ClosingBalanceModel = overview is null ? null : new(overview.ClosingBalanceSeries);
         LiabilitiesModel = overview is null ? null : new(overview.LiabilitiesPerType, overview.LiabilitiesPerAccount);
         LabelsModel = overview is null ? null : new(overview.LabelsValue);
         AssetsModel = overview is null ? null : new(overview.AssetsPerType, overview.AssetsPerAccount);
         ExpenseModel = overview is null ? null : new(overview.ExpenseDistribution);
+    }
+
+    private static bool SameNetWorthSeries(DashboardOverviewDto previous, DashboardOverviewDto current)
+    {
+        var left = previous.NetWorthSeries;
+        var right = current.NetWorthSeries;
+        if (left.Count != right.Count) return false;
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (left[i].DateTime != right[i].DateTime || left[i].Value != right[i].Value || left[i].Name != right[i].Name)
+                return false;
+        }
+        return true;
     }
 
     // Per-user key with no date component, so a single snapshot per user is overwritten each save.

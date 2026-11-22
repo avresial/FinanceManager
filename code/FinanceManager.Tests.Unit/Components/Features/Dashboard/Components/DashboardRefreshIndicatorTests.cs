@@ -216,10 +216,13 @@ public class DashboardRefreshIndicatorTests
         else
         {
             var fresh = Overview(cut.Instance.StartDate, cut.Instance.EndDate);
+            var heldNetWorth = NetWorthModel(cut);
+            fresh.NetWorthSeries = stored.NetWorthSeries;
             fresh.AssetsPerType = [new("Stock", 420m)];
             fresh.AssetsPerAccount = [new("Investment", 420m)];
             handler.Complete(0, fresh);
             cut.WaitForAssertion(() => Assert.Equal(420m, DisplayedStock()), _timeout);
+            Assert.Same(heldNetWorth, NetWorthModel(cut));
             cut.WaitForAssertion(() => snapshots.Verify(x => x.SetAsync("dashboard-overview:1:0",
                 It.Is<DashboardOverviewSnapshot>(snapshot => snapshot.AssetsPerType.Single().Value == 420m)), Times.Once), _timeout);
         }
