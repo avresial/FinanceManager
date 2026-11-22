@@ -677,6 +677,22 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task Get_ForUnlinkedTrade_ReturnsNotFound()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
+        var context = _testDatabase!.Context;
+        var trade = await context.InvestmentTransactions.SingleAsync(x => x.EntryId == id, ct);
+        trade.AccountId = null;
+        await context.SaveChangesAsync(ct);
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        using var response = await Client.GetAsync($"api/InvestmentTransaction/Get/{id}", ct);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Update_ForUnknownTransaction_ReturnsFalse()
     {
         await SeedAccount();
