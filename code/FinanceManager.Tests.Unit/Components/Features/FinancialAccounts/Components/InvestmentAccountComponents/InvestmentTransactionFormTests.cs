@@ -240,6 +240,35 @@ public class InvestmentTransactionFormTests
         Assert.Equal(1, Volatile.Read(ref labelRequests));
     }
 
+    [Fact]
+    public async Task EditForm_KeepsSaveDisabled_UntilTheTradeIsLoadedIntoTheForm()
+    {
+        var labelsReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var labelHandler = new StubHttpHandler(async _ =>
+        {
+            await labelsReleased.Task;
+            return JsonResponse(Array.Empty<FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel>());
+        });
+        await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<Currency>()))),
+            labelHandler: labelHandler);
+        var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+            DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
+
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        var save = () => cut.FindComponents<MudButton>().Single(b => b.Markup.Contains("Save"));
+
+        // The user picks an instrument while the trade is still loading; saving now would add a new trade
+        // instead of updating this one.
+        var picker = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>();
+        await cut.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync(new InvestmentInstrumentOptionDto
+        {
+            ResultId = "ext-1", Source = InstrumentOptionSource.External, Ticker = "VWCE", DisplayName = "VWCE", TradingCurrency = "USD"
+        }));
+        Assert.True(save().Instance.Disabled);
+        labelsReleased.SetResult();
+        cut.WaitForAssertion(() => Assert.False(save().Instance.Disabled));
+    }
+
     private static BunitContext CreateBunitContext(HttpMessageHandler handler, FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel[]? labels = null,
         HttpMessageHandler? labelHandler = null)
     {

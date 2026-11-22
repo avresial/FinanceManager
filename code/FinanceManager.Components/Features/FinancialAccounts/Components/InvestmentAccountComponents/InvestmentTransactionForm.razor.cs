@@ -46,6 +46,7 @@ public partial class InvestmentTransactionForm : ComponentBase
     private decimal? _formFee;
     private string? _formNotes;
     private bool _saving;
+    private bool _initializing;
     private int _priceRequestVersion;
     private bool _isPriceLoading;
     private bool _noPriceAvailable;
@@ -62,10 +63,19 @@ public partial class InvestmentTransactionForm : ComponentBase
             // initialization that could finish later and overwrite what the user has typed meanwhile.
             _wasVisible = true;
             _initializedTransactionId = Transaction?.Id;
-            await LoadLabelsAsync();
-            _selectedLabelIds = Transaction?.Labels?.Select(x => x.Id).ToArray() ?? [];
-            await EnsureCurrenciesLoadedAsync();
-            await ResetFormAsync();
+            // Save stays off until the form holds the trade being edited; saving earlier would add a new trade.
+            _initializing = true;
+            try
+            {
+                await LoadLabelsAsync();
+                _selectedLabelIds = Transaction?.Labels?.Select(x => x.Id).ToArray() ?? [];
+                await EnsureCurrenciesLoadedAsync();
+                await ResetFormAsync();
+            }
+            finally
+            {
+                _initializing = false;
+            }
         }
 
         _wasVisible = Visible;
@@ -174,7 +184,7 @@ public partial class InvestmentTransactionForm : ComponentBase
         && _lastSearchReturnedEmpty
         && !string.IsNullOrWhiteSpace(_lastSearchQuery);
 
-    private bool CanSave => !_isPriceLoading && !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
+    private bool CanSave => !_initializing && !_isPriceLoading && !IsUnsupportedExternalEdit && HasInstrument && _formQuantity > 0 && _formUnitPrice >= 0
         && _formTradeDate is not null && !string.IsNullOrWhiteSpace(_formCurrency);
 
     private async Task CloseAsync() => await VisibleChanged.InvokeAsync(false);
