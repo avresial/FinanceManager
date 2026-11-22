@@ -134,11 +134,11 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         context.CurrencyEntries
             .AsNoTracking()
             .Where(entry => entry.PostingDate <= endDate)
-            .Where(entry => context.Accounts
+            .Where(entry => entry.AccountId.HasValue && context.Accounts
                 .AsNoTracking()
                 .Where(account => account.UserId == userId)
                 .Select(account => account.AccountId)
-                .Contains(entry.AccountId));
+                .Contains(entry.AccountId.Value));
 
     private static IQueryable<CurrencyAccountEntry> BuildMatchingEntries(
         IQueryable<CurrencyAccountEntry> entries,

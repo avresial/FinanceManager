@@ -63,7 +63,7 @@ internal static class McpResponseMapper
 
     public static McpTransaction Transaction(CurrencyAccountEntry entry, string accountName) => new(
         entry.EntryId,
-        entry.AccountId,
+        entry.AccountId!.Value,
         accountName,
         "currency",
         DateOnly.FromDateTime(entry.PostingDate),
@@ -73,7 +73,7 @@ internal static class McpResponseMapper
 
     public static McpTransaction Transaction(BondAccountEntry entry, string accountName, string bondName) => new(
         entry.EntryId,
-        entry.AccountId,
+        entry.AccountId!.Value,
         accountName,
         "bond",
         DateOnly.FromDateTime(entry.PostingDate),
@@ -83,7 +83,7 @@ internal static class McpResponseMapper
 
     public static McpTransaction Transaction(InvestmentTransaction transaction, string accountName) => new(
         transaction.EntryId,
-        transaction.AccountId,
+        transaction.AccountId!.Value,
         accountName,
         "investment",
         transaction.TradeDate,

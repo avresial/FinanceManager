@@ -146,7 +146,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             ? await currencyEntryRepository.GetRange(accountIds, dateStart, dateEnd)
             : await currencyEntryRepository.GetValueRange(accountIds, dateStart, dateEnd);
         var entriesByAccount = rangeEntries
-            .GroupBy(e => e.AccountId)
+            .Where(e => e.AccountId.HasValue)
+            .GroupBy(e => e.AccountId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await currencyEntryRepository.GetNextOlder(accountIds, dateStart);
         var nextYounger = await currencyEntryRepository.GetNextYounger(accountIds, dateEnd);
@@ -177,7 +178,8 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             ? await bondEntryRepository.GetRange(accountIds, dateStart, dateEnd)
             : await bondEntryRepository.GetValueRange(accountIds, dateStart, dateEnd);
         var entriesByAccount = rangeEntries
-            .GroupBy(e => e.AccountId)
+            .Where(e => e.AccountId.HasValue)
+            .GroupBy(e => e.AccountId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
         var nextOlder = await bondEntryRepository.GetNextOlderPerInstrument(accountIds, dateStart);
         var nextYounger = await bondEntryRepository.GetNextYoungerPerInstrument(accountIds, dateEnd);
@@ -206,10 +208,10 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
             case CurrencyAccount currencyAccount:
                 var currencyAccountId = await currencyAccountRepository.Add(currencyAccount.UserId, currencyAccount.Name, currencyAccount.AccountType, currencyAccount.CurrencyId);
 
-                if (currencyAccount is not null && currencyAccount.Entries is not null)
+                if (currencyAccountId.HasValue && currencyAccount.Entries is not null)
                     await currencyEntryRepository.Add(currencyAccount.Entries.Select(x =>
                     {
-                        x.AccountId = currencyAccountId ?? 0;
+                        x.AccountId = currencyAccountId;
                         return x;
                     }));
 
@@ -222,10 +224,10 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
                 var bondAccountId = await bondAccountRepository.Add(account.UserId, account.Name);
 
-                if (bondAccount is not null && bondAccount.Entries is not null)
+                if (bondAccountId.HasValue && bondAccount.Entries is not null)
                     await bondEntryRepository.Add(bondAccount.Entries.Select(x =>
                     {
-                        x.AccountId = bondAccountId ?? 0;
+                        x.AccountId = bondAccountId;
                         return x;
                     }));
 

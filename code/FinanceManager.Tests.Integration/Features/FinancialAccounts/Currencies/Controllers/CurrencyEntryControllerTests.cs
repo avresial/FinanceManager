@@ -183,6 +183,8 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
                                      e.Description == addEntry.Description,
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
+        Assert.Equal(_testUserId, dbEntry.UserId);
+        Assert.Equal(0, dbEntry.CurrencyId);
         Assert.True(dbEntry.EntryId > 0);
         Assert.NotEqual(requestedEntryId, dbEntry.EntryId);
         Assert.Equal(addEntry.ValueChange, dbEntry.ValueChange);

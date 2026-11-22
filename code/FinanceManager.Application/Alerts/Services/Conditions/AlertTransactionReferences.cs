@@ -11,7 +11,7 @@ internal static class AlertTransactionReferences
         IEnumerable<CurrencyAccountEntry> entries,
         bool includeAllMatchingTransactions)
     {
-        IEnumerable<CurrencyAccountEntry> orderedEntries = entries
+        IEnumerable<CurrencyAccountEntry> orderedEntries = entries.Where(entry => entry.AccountId.HasValue)
             .OrderByDescending(entry => Math.Abs(entry.ValueChange))
             .ThenByDescending(entry => entry.PostingDate)
             .ThenByDescending(entry => entry.EntryId);
@@ -20,7 +20,7 @@ internal static class AlertTransactionReferences
             orderedEntries = orderedEntries.Take(_maxMatchingTransactions);
 
         return orderedEntries.Select(entry => new AlertTransactionReference(
-                entry.AccountId,
+                entry.AccountId!.Value,
                 entry.EntryId,
                 entry.PostingDate,
                 Math.Abs(entry.ValueChange),

@@ -7,7 +7,7 @@ public class DividendPayment
 {
     public long Id { get; set; }
     public int UserId { get; set; }
-    public int AccountId { get; set; }
+    public int? AccountId { get; set; }
     public long AssetListingId { get; set; }
     public AssetListing AssetListing { get; set; } = null!;
     public DateOnly PaymentDate { get; set; }

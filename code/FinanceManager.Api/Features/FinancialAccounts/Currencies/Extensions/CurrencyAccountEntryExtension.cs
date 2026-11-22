@@ -9,7 +9,7 @@ public static class CurrencyAccountEntryExtension
 {
     public static CurrencyAccountEntryDto ToDto(this CurrencyAccountEntry currencyAccountEntry) => new()
     {
-        AccountId = currencyAccountEntry.AccountId,
+        AccountId = currencyAccountEntry.AccountId!.Value,
         EntryId = currencyAccountEntry.EntryId,
         ValueChange = currencyAccountEntry.ValueChange,
         Value = currencyAccountEntry.Value,

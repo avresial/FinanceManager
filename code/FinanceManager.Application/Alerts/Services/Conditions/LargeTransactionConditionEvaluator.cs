@@ -68,7 +68,7 @@ public sealed class LargeTransactionConditionEvaluator : IAlertConditionEvaluato
         var inv = CultureInfo.InvariantCulture;
         var context = new Dictionary<string, string>
         {
-            ["TriggeringAccountId"] = largest.AccountId.ToString(inv),
+            ["TriggeringAccountId"] = largest.AccountId!.Value.ToString(inv),
             ["TriggeringEntryId"] = largest.EntryId.ToString(inv),
             ["Amount"] = largestAmount.ToString("F2", inv),
             ["PostingDate"] = largest.PostingDate.ToString("yyyy-MM-dd"),

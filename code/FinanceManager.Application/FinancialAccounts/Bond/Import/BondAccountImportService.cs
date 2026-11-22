@@ -209,10 +209,10 @@ public class BondAccountImportService(
                 if (resolvedConflict.AddImported && resolvedConflict.ImportData is not null)
                 {
                     var entry = resolvedConflict.ToEntry();
-                    if (cancellationToken.CanBeCanceled)
-                        await bondAccountEntryRepository.Add(entry, recalculate: true, cancellationToken);
-                    else
-                        await bondAccountEntryRepository.Add(entry, recalculate: true);
+                    var added = cancellationToken.CanBeCanceled
+                        ? await bondAccountEntryRepository.Add(entry, recalculate: true, cancellationToken)
+                        : await bondAccountEntryRepository.Add(entry, recalculate: true);
+                    if (!added) logger.LogError("Could not add resolved entry for account {AccountId}", resolvedConflict.AccountId);
                 }
             }
             catch (OperationCanceledException ex)

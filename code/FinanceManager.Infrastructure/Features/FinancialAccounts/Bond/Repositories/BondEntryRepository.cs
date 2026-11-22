@@ -2,6 +2,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
@@ -21,53 +22,9 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     public Task<bool> Add(BondAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
 
-    public async Task<bool> Add(BondAccountEntry entry, bool recalculate, CancellationToken cancellationToken)
-    {
-        // Don't use entry.Value as it may be a placeholder (-1)
-        // The correct value will be calculated during recalculation
-        var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
-         0, entry.ValueChange, entry.BondDetailsId)
-        {
-            Description = entry.Description,
-            Labels = await ResolveTrackedLabels(entry.Labels, cancellationToken),
-        };
+    public Task<bool> Add(BondAccountEntry entry, bool recalculate, CancellationToken cancellationToken) =>
+        Add([entry], recalculate, cancellationToken);
 
-        if (context.Database.IsRelational() && recalculate)
-        {
-            // Relational: transactional mutation + recalculation commit together atomically.
-            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            context.BondEntries.Add(newEntry);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            if (entry.EntryId == 0 && newEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
-            context.ChangeTracker.Clear();
-        }
-        else
-        {
-            // Non-relational or no recalculation: persist entry first.
-            context.BondEntries.Add(newEntry);
-            await context.SaveChangesAsync(cancellationToken);
-            if (entry.EntryId == 0 && newEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newEntry.EntryId);
-            if (recalculate)
-            {
-                // Post-commit repair: complete recalculation before propagating cancellation.
-                try
-                {
-                    await RecalculateValues(newEntry.AccountId, newEntry.EntryId, cancellationToken);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                    await RecalculateValues(newEntry.AccountId, newEntry.EntryId, CancellationToken.None);
-                }
-            }
-            context.ChangeTracker.Clear();
-        }
-        return true;
-    }
     public Task<bool> Add(IEnumerable<BondAccountEntry> entries, bool recalculate = true) =>
         Add(entries, recalculate, CancellationToken.None);
 
@@ -78,6 +35,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     {
         var entryList = entries as IList<BondAccountEntry> ?? entries.ToList();
         if (entryList.Count == 0) return true;
+        var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Bond, entryList.Select(e => e.AccountId), cancellationToken);
+        if (accounts is null) return false;
 
         var existingLabelIds = entryList.SelectMany(e => e.Labels).Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
         var trackedById = existingLabelIds.Count == 0
@@ -85,7 +44,6 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             : await context.FinancialLabels.Where(l => existingLabelIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
 
         List<(BondAccountEntry Source, BondAccountEntry Target)> pairs = new(entryList.Count);
-        BondAccountEntry? oldestEntry = null;
 
         foreach (var entry in entryList)
         {
@@ -94,73 +52,48 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
              0, entry.ValueChange, entry.BondDetailsId)
             {
+                UserId = accounts[entry.AccountId!.Value].UserId,
                 Description = entry.Description,
                 Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
             pairs.Add((entry, newEntry));
-            if (oldestEntry is null || newEntry.PostingDate < oldestEntry.PostingDate)
-                oldestEntry = newEntry;
-
             context.BondEntries.Add(newEntry);
         }
 
-        if (context.Database.IsRelational() && recalculate && oldestEntry is not null)
+        async Task RecalculateAccounts(CancellationToken token)
         {
-            // Relational: transactional mutation + recalculation commit together atomically.
-            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+            foreach (var group in pairs.GroupBy(p => p.Target.AccountId!.Value))
+                await RecalculateValues(group.Key, group.MinBy(p => p.Target.PostingDate).Target.EntryId, token);
+        }
+
+        await using var transaction = context.Database.IsRelational() && recalculate
+            ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
+        await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await RecalculateAccounts(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            foreach (var (source, target) in pairs)
-            {
-                if (source.EntryId == 0 && target.EntryId != 0)
-                    _entryIdProperty?.SetValue(source, target.EntryId);
-            }
-            context.ChangeTracker.Clear();
         }
-        else
+        foreach (var (source, target) in pairs)
         {
-            // Non-relational or no recalculation: persist entries first.
-            await context.SaveChangesAsync(cancellationToken);
-            foreach (var (source, target) in pairs)
-            {
-                if (source.EntryId == 0 && target.EntryId != 0)
-                    _entryIdProperty?.SetValue(source, target.EntryId);
-            }
-            if (recalculate && oldestEntry is not null)
-            {
-                // Post-commit repair: complete recalculation before propagating cancellation.
-                try
-                {
-                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
-                }
-            }
-            context.ChangeTracker.Clear();
+            if (source.EntryId == 0 && target.EntryId != 0)
+                _entryIdProperty?.SetValue(source, target.EntryId);
         }
-
+        if (recalculate && transaction is null)
+        {
+            try
+            {
+                await RecalculateAccounts(cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // The insert already committed. Finish the repair after a provider timeout.
+                await RecalculateAccounts(CancellationToken.None);
+            }
+        }
+        context.ChangeTracker.Clear();
         return true;
-    }
-
-    private async Task<List<FinancialLabel>> ResolveTrackedLabels(
-        ICollection<FinancialLabel> labels,
-        CancellationToken cancellationToken)
-    {
-        if (labels.Count == 0) return [];
-
-        var existingIds = labels.Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
-        var trackedById = existingIds.Count == 0
-            ? []
-            : await context.FinancialLabels.Where(l => existingIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
-
-        return labels
-            .Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l)
-            .ToList();
     }
 
     public Task<bool> Delete(int accountId, long entryId) =>
@@ -173,7 +106,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (entryToDelete is null) return false;
         context.BondEntries.Remove(entryToDelete);
         await context.SaveChangesAsync(cancellationToken);
-        await RecalculateValues(entryToDelete.AccountId, entryToDelete.PostingDate, cancellationToken);
+        await RecalculateValues(accountId, entryToDelete.PostingDate, cancellationToken);
 
         return true;
     }
@@ -346,7 +279,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         return await context.BondEntries
             .AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .AsSplitQuery()
             .OrderByDescending(x => x.PostingDate)
@@ -360,7 +293,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         return await context.BondEntries
             .AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .ToListAsync();
@@ -372,12 +305,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         var rows = await context.BondEntries
             .AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate < date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
                 && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
             .ToListAsync();
 
-        return rows.ToDictionary(e => e.AccountId);
+        return rows.ToDictionary(e => e.AccountId!.Value);
     }
 
     public async Task<Dictionary<int, BondAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
@@ -386,12 +319,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         var rows = await context.BondEntries
             .AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate > date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
                 && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
             .ToListAsync();
 
-        return rows.ToDictionary(e => e.AccountId);
+        return rows.ToDictionary(e => e.AccountId!.Value);
     }
 
     public async Task<Dictionary<int, Dictionary<int, BondAccountEntry>>> GetNextOlderPerInstrument(IReadOnlyCollection<int> accountIds, DateTime date)
@@ -402,12 +335,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         // account+bond beats on (PostingDate, EntryId).
         var rows = await context.BondEntries
             .AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate < date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate < date
                 && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
             .ToListAsync();
 
-        return rows.GroupBy(e => e.AccountId)
+        return rows.GroupBy(e => e.AccountId!.Value)
             .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
     }
 
@@ -417,12 +350,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         var rows = await context.BondEntries
             .AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate > date)
             .Where(e => !context.BondEntries.Any(o => o.AccountId == e.AccountId && o.BondDetailsId == e.BondDetailsId && o.PostingDate > date
                 && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
             .ToListAsync();
 
-        return rows.GroupBy(e => e.AccountId)
+        return rows.GroupBy(e => e.AccountId!.Value)
             .ToDictionary(g => g.Key, g => g.ToDictionary(e => e.BondDetailsId));
     }
 
@@ -440,7 +373,10 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
     public async Task<bool> Update(BondAccountEntry entry)
     {
-        var existingEntry = await context.BondEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
+        if (entry.AccountId is not int accountId) return false;
+        var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Bond, [accountId], CancellationToken.None);
+        if (accounts is null) return false;
+        var existingEntry = await context.BondEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
 
         List<FinancialLabel> newLabels = [];
@@ -455,8 +391,9 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         entry.Labels = newLabels;
 
         existingEntry.Update(entry);
+        existingEntry.UserId = accounts[accountId].UserId;
         await context.SaveChangesAsync();
-        await RecalculateValues(entry.AccountId, entry.EntryId);
+        await RecalculateValues(accountId, entry.EntryId);
         return true;
     }
 
@@ -502,7 +439,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
     {
         var entry = await context.BondEntries
             .Include(e => e.Labels)
-            .FirstOrDefaultAsync(e => e.EntryId == entryId);
+            .FirstOrDefaultAsync(e => e.AccountId.HasValue && e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
@@ -526,7 +463,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         // Fetch all relevant entries and labels at once
         var entries = await context.BondEntries
-            .Where(e => entryIds.Contains(e.EntryId))
+            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
             .ToListAsync(cancellationToken);
 
@@ -565,7 +502,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         return await context.BondEntries
             .AsNoTracking()
-            .Where(e => entryIds.Contains(e.EntryId))
+            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
     }
 
@@ -587,7 +524,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (accountIds.Count == 0 || take <= 0) return [];
 
         var query = context.BondEntries.AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate);
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate >= startDate && e.PostingDate <= endDate);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -596,7 +533,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             query = from entry in query
                     join details in context.Bonds on entry.BondDetailsId equals details.Id into bonds
                     from details in bonds.DefaultIfEmpty()
-                    where matchedAccounts.Contains(entry.AccountId) ||
+                    where entry.AccountId.HasValue && matchedAccounts.Contains(entry.AccountId.Value) ||
                         entry.Description.ToUpper().Contains(term) ||
                         (details != null && details.Name != null && details.Name.ToUpper().Contains(term))
                     select entry;
@@ -627,7 +564,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         {
             results.AddRange(await context.BondEntries
                 .AsNoTracking()
-                .Where(e => accountIdChunk.Contains(e.AccountId))
+                .Where(e => e.AccountId.HasValue && accountIdChunk.Contains(e.AccountId.Value))
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
                 // The dashboard only needs account, ordering, value-change, bond id and description fields.

@@ -68,7 +68,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             {
                 if (item is CurrencyAccountEntry currencyEntry)
                 {
-                    await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate,
+                    await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId ?? throw new InvalidOperationException("An account-linked entry is required."), currencyEntry.EntryId, currencyEntry.PostingDate,
                         currencyEntry.Value, currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails));
                 }
             }
@@ -83,7 +83,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
             await bondAccountHttpClient.AddAccountAsync(new(accountName));
             foreach (var item in data)
                 if (item is BondAccountEntry bondEntry)
-                    await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId, bondEntry.EntryId, bondEntry.PostingDate,
+                    await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId ?? throw new InvalidOperationException("An account-linked entry is required."), bondEntry.EntryId, bondEntry.PostingDate,
                         bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId, bondEntry.Description));
         }
         else
@@ -98,12 +98,12 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         switch (accountEntry)
         {
             case CurrencyAccountEntry currencyEntry:
-                await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId, currencyEntry.EntryId, currencyEntry.PostingDate, currencyEntry.Value,
+                await currencyEntryHttpClient.AddEntryAsync(new(currencyEntry.AccountId ?? throw new InvalidOperationException("An account-linked entry is required."), currencyEntry.EntryId, currencyEntry.PostingDate, currencyEntry.Value,
                     currencyEntry.ValueChange, currencyEntry.Description, currencyEntry.ContractorDetails));
                 break;
 
             case BondAccountEntry bondEntry:
-                await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId, bondEntry.EntryId, bondEntry.PostingDate,
+                await bondEntryHttpClient.AddEntryAsync(new(bondEntry.AccountId ?? throw new InvalidOperationException("An account-linked entry is required."), bondEntry.EntryId, bondEntry.PostingDate,
                     bondEntry.Value, bondEntry.ValueChange, bondEntry.BondDetailsId, bondEntry.Description));
                 break;
 
@@ -305,7 +305,7 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
         }
         else if (accountEntry is BondAccountEntry bondAccountEntry)
         {
-            UpdateBondAccountEntry updateBondAccountEntry = new(bondAccountEntry.AccountId, bondAccountEntry.EntryId,
+            UpdateBondAccountEntry updateBondAccountEntry = new(bondAccountEntry.AccountId ?? throw new InvalidOperationException("An account-linked entry is required."), bondAccountEntry.EntryId,
                 bondAccountEntry.PostingDate, bondAccountEntry.Value, bondAccountEntry.ValueChange, bondAccountEntry.BondDetailsId, bondAccountEntry.Description);
             await bondEntryHttpClient.UpdateEntryAsync(updateBondAccountEntry);
             return;

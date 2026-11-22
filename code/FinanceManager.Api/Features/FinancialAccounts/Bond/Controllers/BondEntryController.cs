@@ -83,7 +83,7 @@ public class BondEntryController(
             Description = addEntry.Description ?? string.Empty,
         };
 
-        await bondAccountEntryRepository.Add(newEntry);
+        if (!await bondAccountEntryRepository.Add(newEntry)) return BadRequest("Cannot add an entry to this bond account.");
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
 

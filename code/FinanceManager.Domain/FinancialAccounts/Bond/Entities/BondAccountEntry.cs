@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 
-public class BondAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : ILedgerEntry
+public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : ILedgerEntry
 {
     [JsonPropertyOrder(-2)]
     public int BondDetailsId { get; set; } = bondDetailsId;
@@ -31,8 +31,11 @@ public class BondAccountEntry(int accountId, long entryId, DateTime postingDate,
     [JsonPropertyOrder(6)]
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
+    [JsonIgnore]
+    public int? UserId { get; set; }
+
     [JsonPropertyOrder(2)]
-    public int AccountId { get; set; } = accountId;
+    public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
     public decimal ValueChange { get; set; } = valueChange;
@@ -46,13 +49,13 @@ public class BondAccountEntry(int accountId, long entryId, DateTime postingDate,
         var valueChangeChange = entry.ValueChange - ValueChange;
         Value += valueChangeChange;
         ValueChange = entry.ValueChange;
-        AccountId = entry.AccountId;
         Labels = entry.Labels ?? [];
         BondDetailsId = entry.BondDetailsId;
     }
 
     public BondAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange, BondDetailsId)
     {
+        UserId = UserId,
         Description = Description,
         Labels = [.. Labels],
     };

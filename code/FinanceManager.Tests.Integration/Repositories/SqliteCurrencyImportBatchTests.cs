@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Infrastructure.Persistence;
@@ -30,6 +31,8 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
 
         _context.Database.EnsureCreated();
         _repo = new CurrencyEntryRepository(_context);
+        _context.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = 1, AccountType = AccountType.Currency });
+        _context.SaveChanges();
     }
 
     public void Dispose()

@@ -1,5 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Infrastructure.Persistence;
@@ -29,6 +31,7 @@ namespace FinanceManager.Tests.Integration.Repositories;
 public sealed class SqliteRecalculateValuesTests : IDisposable
 {
     private const int _accountId = 9101;
+    private const int _bondAccountId = _accountId + 1;
 
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _context;
@@ -47,6 +50,10 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
 
         // Migrations in this repo are generated for SQL Server, so the schema is created from the model.
         _context.Database.EnsureCreated();
+        _context.Accounts.AddRange(
+            new FinancialAccountBaseDto { AccountId = _accountId, UserId = 1, AccountType = AccountType.Currency },
+            new FinancialAccountBaseDto { AccountId = _bondAccountId, UserId = 1, AccountType = AccountType.Bond });
+        _context.SaveChanges();
     }
 
     public void Dispose()
@@ -114,13 +121,13 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 100m, 100m, bondA), recalculate: false, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan15, 100m, 100m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
         // A second bond in the same account must keep its own running total.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId, ct);
+        await repo.RecalculateValues(_bondAccountId, ct);
 
         var bondAEntries = await ReadBondEntries(bondA, ct);
         var bondBEntries = await ReadBondEntries(bondB, ct);
@@ -146,12 +153,12 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
 
         // Exercises the per-bond anchor selection: bondA anchors on its own jan10 row, not bondB's.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
 
         var bondAEntries = await ReadBondEntries(bondA, ct);
         var bondBEntries = await ReadBondEntries(bondB, ct);
@@ -186,7 +193,7 @@ public sealed class SqliteRecalculateValuesTests : IDisposable
     private async Task<List<BondAccountEntry>> ReadBondEntries(int bondDetailsId, CancellationToken ct) =>
         await _context.BondEntries
             .AsNoTracking()
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondDetailsId)
+            .Where(e => e.AccountId == _bondAccountId && e.BondDetailsId == bondDetailsId)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 }
