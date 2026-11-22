@@ -100,6 +100,7 @@ internal static class Registration
                 .AddScoped<AdminAssetDiscoveryService>()
                 .AddScoped<IncompleteAssetQueueService>()
                 .AddScoped<IInvestmentTransactionService, InvestmentTransactionService>()
+                .AddScoped<InvestmentTransactionPriceRecoveryService>()
                 .AddScoped<DividendPaymentService>()
                 .AddScoped<IBondUnrealizedGainLossCalculator, BondUnrealizedGainLossCalculator>()
                 .AddScoped<IBondService, BondService>();
