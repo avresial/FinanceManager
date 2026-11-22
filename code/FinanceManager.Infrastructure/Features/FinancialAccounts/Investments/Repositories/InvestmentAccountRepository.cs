@@ -31,9 +31,9 @@ internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepos
         if (context.Database.IsRelational())
         {
             await using var transaction = await context.Database.BeginTransactionAsync();
-            if (await account.ExecuteUpdateAsync(s => s.SetProperty(a => a.Name, a => a.Name)) == 0) return false;
             await context.DividendPayments.Where(d => d.AccountId == accountId).ExecuteDeleteAsync();
-            await account.ExecuteDeleteAsync();
+            // Disposing the uncommitted transaction rolls the dividend delete back when no investment account matched.
+            if (await account.ExecuteDeleteAsync() == 0) return false;
             await transaction.CommitAsync();
             return true;
         }
