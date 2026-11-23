@@ -100,10 +100,11 @@ public partial class BondEntryConflictResolver
             {
                 if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
                 if (choice != ResolveChoice.Imported) continue;
-                foreach (var c in g.Conflicts)
+                // The account import review only handles conflicts that carry an account.
+                foreach (var c in g.Conflicts.Where(c => c.AccountId is not null))
                 {
                     resolvedImports.Add(new ResolvedBondImportConflict(
-                        c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId));
+                        c.AccountId!.Value, true, c.ImportEntry, false, c.ExistingEntry?.EntryId));
                 }
             }
 

@@ -47,39 +47,43 @@ public sealed class CurrencyImportBackgroundService(
                     .Select(x => new CurrencyEntryImport(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
                     .ToList();
 
-                var result = await importService.ImportEntries(
-                    request.UserId,
-                    request.AccountId,
-                    domainEntries,
-                    onConflicts: async conflicts =>
+                async Task OnConflicts(IReadOnlyList<ImportConflict> conflicts)
+                {
+                    foreach (var conflict in conflicts.Where(x => !x.IsExactMatch))
                     {
-                        foreach (var conflict in conflicts.Where(x => !x.IsExactMatch))
+                        var added = jobStore.TryAddConflict(request.JobId, conflict);
+                        if (added is null)
+                            continue;
+
+                        if (!added.IsResolved)
                         {
-                            var added = jobStore.TryAddConflict(request.JobId, conflict);
-                            if (added is null)
-                                continue;
-
-                            if (!added.IsResolved)
-                            {
-                                await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
-                                    .SendAsync("ConflictDiscovered", added, stoppingToken);
-                            }
+                            await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
+                                .SendAsync("ConflictDiscovered", added, stoppingToken);
                         }
+                    }
 
+                    await PublishStatus(request.JobId, request.UserId, stoppingToken);
+                }
+
+                async Task OnProgress(int processed, int imported, int failed)
+                {
+                    jobStore.TryUpdateProgress(request.JobId, processed, imported, failed);
+
+                    var timeSinceLastUpdate = DateTime.UtcNow - lastStatusUpdate;
+                    if (timeSinceLastUpdate >= TimeSpan.FromMilliseconds(200) || processed == domainEntries.Count)
+                    {
+                        lastStatusUpdate = DateTime.UtcNow;
                         await PublishStatus(request.JobId, request.UserId, stoppingToken);
-                    },
-                    onProgress: async (processed, imported, failed) =>
-                    {
-                        jobStore.TryUpdateProgress(request.JobId, processed, imported, failed);
+                    }
+                }
 
-                        var timeSinceLastUpdate = DateTime.UtcNow - lastStatusUpdate;
-                        if (timeSinceLastUpdate >= TimeSpan.FromMilliseconds(200) || processed == domainEntries.Count)
-                        {
-                            lastStatusUpdate = DateTime.UtcNow;
-                            await PublishStatus(request.JobId, request.UserId, stoppingToken);
-                        }
-                    },
-                    cancellationToken: stoppingToken);
+                // The job's own scope decides the target: a legacy account, or the owner's pool of one currency.
+                var result = request.AccountId is int accountId
+                    ? await importService.ImportEntries(
+                        request.UserId, accountId, domainEntries, stoppingToken, OnConflicts, OnProgress)
+                    : await importService.ImportOwnerEntries(
+                        request.UserId, request.CurrencyId ?? throw new InvalidOperationException("An owner import needs a currency."),
+                        domainEntries, stoppingToken, OnConflicts, OnProgress);
 
                 await financialAlertService.EvaluateAlertsAsync(request.UserId, CancellationToken.None);
 

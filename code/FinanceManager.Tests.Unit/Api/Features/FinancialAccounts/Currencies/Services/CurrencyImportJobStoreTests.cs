@@ -156,4 +156,64 @@ public class CurrencyImportJobStoreTests
         Assert.True(status.IsCompleted);
         Assert.Equal(0, status.ConflictCount - status.ResolvedConflictCount);
     }
+
+    [Fact]
+    public void CreateOwnerJob_StoresTheCurrencyScopeWithoutAnAccount_AndOnlyTheOwnerCanReadIt()
+    {
+        var store = new CurrencyImportJobStore();
+        var legacy = store.CreateJob(userId: 1, accountId: 10, totalEntries: 1);
+        var owner = store.CreateOwnerJob(userId: 1, currencyId: 3, totalEntries: 1);
+        var sameOwnerOtherCurrency = store.CreateOwnerJob(userId: 1, currencyId: 4, totalEntries: 1);
+
+        Assert.True(store.TryGetScope(legacy, 1, out var legacyScope));
+        Assert.Equal(new CurrencyImportJobScope(10, null), legacyScope);
+        Assert.True(store.TryGetScope(owner, 1, out var ownerScope));
+        Assert.Equal(new CurrencyImportJobScope(null, 3), ownerScope);
+        Assert.True(store.TryGetScope(sameOwnerOtherCurrency, 1, out var otherScope));
+        Assert.Equal(new CurrencyImportJobScope(null, 4), otherScope);
+        Assert.NotEqual(owner, sameOwnerOtherCurrency);
+        Assert.False(store.TryGetScope(owner, 2, out _));
+        Assert.False(store.TryGetStatus(owner, 2, out _));
+        Assert.False(store.CanAccessJob(owner, 2));
+        Assert.False(store.TryGetScope(Guid.NewGuid(), 1, out _));
+    }
+
+    [Fact]
+    public void TryResolveConflict_OwnerConflictWithoutAnAccount_ResolvesAgainstTheJobScope_AndRejectsAnotherJobsConflictId()
+    {
+        var store = new CurrencyImportJobStore();
+        var job = store.CreateOwnerJob(userId: 1, currencyId: 3, totalEntries: 1);
+        var otherJob = store.CreateOwnerJob(userId: 1, currencyId: 4, totalEntries: 1);
+        var conflict = new ImportConflict(null, new CurrencyEntryImport(DateTime.UtcNow.Date, 100m, "Shop", "Surplus"), null, "Import not found in existing");
+        var added = store.TryAddConflict(job, conflict);
+
+        Assert.False(store.TryResolveConflict(otherJob, 1, new(added!.ConflictId, PickImported: true, PickExisting: false), out _));
+        Assert.True(store.TryResolveConflict(job, 1, new(added.ConflictId, PickImported: true, PickExisting: false), out var resolved));
+        Assert.True(resolved!.AddImported);
+        Assert.Equal("Surplus", resolved.ImportData!.Description);
+        Assert.Null(resolved.ExistingId);
+
+        // A repeated decision is a no-op.
+        Assert.True(store.TryResolveConflict(job, 1, new(added.ConflictId, PickImported: true, PickExisting: false), out var again));
+        Assert.Null(again);
+    }
+
+    [Fact]
+    public void TryReopenConflict_MakesAFailedDecisionRetryable()
+    {
+        var store = new CurrencyImportJobStore();
+        var job = store.CreateOwnerJob(userId: 1, currencyId: 3, totalEntries: 1);
+        var added = store.TryAddConflict(job, new ImportConflict(null, new CurrencyEntryImport(DateTime.UtcNow.Date, 1m), null, "Import not found in existing"));
+        var decision = new CurrencyImportConflictResolutionDecisionDto(added!.ConflictId, PickImported: true, PickExisting: false);
+        store.TryResolveConflict(job, 1, decision, out _);
+
+        Assert.False(store.TryReopenConflict(job, 2, added.ConflictId)); // not the owner
+        Assert.False(store.TryReopenConflict(job, 1, "unknown"));
+        Assert.True(store.TryReopenConflict(job, 1, added.ConflictId));
+
+        store.TryGetStatus(job, 1, out var status);
+        Assert.Equal(0, status!.ResolvedConflictCount);
+        Assert.True(store.TryResolveConflict(job, 1, decision, out var retried));
+        Assert.NotNull(retried);
+    }
 }

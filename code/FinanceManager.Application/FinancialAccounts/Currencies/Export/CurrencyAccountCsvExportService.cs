@@ -10,15 +10,20 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.Export;
 
 public class CurrencyAccountCsvExportService(ICurrencyAccountExportService currencyAccountExportService) : IAccountCsvExportService<CurrencyAccountExportDto>
 {
-    public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        await WriteCsv(new CurrencyAccountExportDtoMap(), currencyAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken), cancellationToken);
+
+    public async Task<string> GetOwnerExportResults(UserId userId, int partitionId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        await WriteCsv(new CurrencyAccountExportDtoMap(includeValue: false), currencyAccountExportService.GetOwnerExportResults(userId, partitionId, start, end, cancellationToken), cancellationToken);
+
+    private static async Task<string> WriteCsv(CurrencyAccountExportDtoMap map, IAsyncEnumerable<CurrencyAccountExportDto> exportItems, CancellationToken cancellationToken)
     {
         using var writer = new StringWriter(CultureInfo.InvariantCulture);
         using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.Context.RegisterClassMap<CurrencyAccountExportDtoMap>();
+        csv.Context.RegisterClassMap(map);
         csv.WriteHeader<CurrencyAccountExportDto>();
         await csv.NextRecordAsync();
 
-        var exportItems = currencyAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken);
         await foreach (var exportItem in exportItems.WithCancellation(cancellationToken))
         {
             csv.WriteRecord(exportItem);
@@ -27,5 +32,4 @@ public class CurrencyAccountCsvExportService(ICurrencyAccountExportService curre
 
         return writer.ToString();
     }
-
 }

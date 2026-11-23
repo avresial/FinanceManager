@@ -27,7 +27,7 @@ public static class ImportConflictDetector
     }
 
     // Imports whose key occurs more often in the import set than in existing entries.
-    // The surplus is reported using the first import of the group, matching legacy behavior.
+    // The surplus is the trailing imports of the group, so each one keeps its own description and contractor.
     public static IEnumerable<TImport> GetImportsMissingFromExisting<TImport, TExisting, TKey>(
         IReadOnlyCollection<TImport> imports,
         IReadOnlyCollection<TExisting> existing,
@@ -39,8 +39,8 @@ public static class ImportConflictDetector
             var importItems = group.ToList();
             var matchingExistingCount = existing.Count(e => EqualityComparer<TKey>.Default.Equals(existingKey(e), group.Key));
 
-            for (int i = 0; i < importItems.Count - matchingExistingCount; i++)
-                yield return importItems[0];
+            for (int i = matchingExistingCount; i < importItems.Count; i++)
+                yield return importItems[i];
         }
     }
 

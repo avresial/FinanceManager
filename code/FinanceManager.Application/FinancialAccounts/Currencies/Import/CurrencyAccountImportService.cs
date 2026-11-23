@@ -19,13 +19,37 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     // do not create an unbounded EF change tracker or provider command batch.
     private const int _persistenceBatchSize = 500;
 
-    public async Task<ImportResult> ImportEntries(
+    public Task<ImportResult> ImportEntries(
         int userId,
         int accountId,
         IEnumerable<CurrencyEntryImport> entries,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
+        Func<int, int, int, Task>? onProgress = null) =>
+        Import(userId, accountId, currencyId: null, entries, cancellationToken, onConflicts, onProgress);
+
+    public Task<ImportResult> ImportOwnerEntries(
+        int userId,
+        int currencyId,
+        IEnumerable<CurrencyEntryImport> entries,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
         Func<int, int, int, Task>? onProgress = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        return Import(userId, accountId: null, currencyId, entries, cancellationToken, onConflicts, onProgress);
+    }
+
+    // One import flow for both scopes. A concrete account id is the legacy account import; without one the
+    // owner's pool of the selected currency is imported and nothing depends on a running value.
+    private async Task<ImportResult> Import(
+        int userId,
+        int? accountId,
+        int? currencyId,
+        IEnumerable<CurrencyEntryImport> entries,
+        CancellationToken cancellationToken,
+        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts,
+        Func<int, int, int, Task>? onProgress)
     {
         ArgumentNullException.ThrowIfNull(entries);
         cancellationToken.ThrowIfCancellationRequested();
@@ -36,10 +60,13 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
         await importAccountValidator.EnsureWithinPlanLimit(userId, entryList.Count);
 
-        var account = cancellationToken.CanBeCanceled
-            ? await currencyAccountRepository.Get(accountId, cancellationToken)
-            : await currencyAccountRepository.Get(accountId);
-        importAccountValidator.EnsureOwnership(account, userId);
+        if (accountId is int linkedAccountId)
+        {
+            var account = cancellationToken.CanBeCanceled
+                ? await currencyAccountRepository.Get(linkedAccountId, cancellationToken)
+                : await currencyAccountRepository.Get(linkedAccountId);
+            importAccountValidator.EnsureOwnership(account, userId);
+        }
 
         var minDay = entryList.Min(x => x.PostingDate).Date;
         var maxDay = entryList.Max(x => x.PostingDate).Date;
@@ -51,13 +78,19 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         var conflicts = new List<ImportConflict>();
         CurrencyAccountEntry? oldestInserted = null;
 
-        var existingEntries = cancellationToken.CanBeCanceled
-            ? await currencyAccountEntryRepository
-                .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
-                .ToListAsync(cancellationToken)
+        var existingEntries = accountId is int existingAccountId
+            ? cancellationToken.CanBeCanceled
+                ? await currencyAccountEntryRepository
+                    .Get(existingAccountId, minDay.AddDays(-1), maxDay.AddDays(1), cancellationToken)
+                    .ToListAsync(cancellationToken)
+                : await currencyAccountEntryRepository
+                    .Get(existingAccountId, minDay.AddDays(-1), maxDay.AddDays(1))
+                    .ToListAsync()
+            // Owner rows of this currency from the first through the last imported UTC day, whatever their link.
             : await currencyAccountEntryRepository
-                .Get(accountId, minDay.AddDays(-1), maxDay.AddDays(1))
-                .ToListAsync();
+                .GetByOwner(userId, currencyId!.Value, DateTime.SpecifyKind(minDay, DateTimeKind.Utc),
+                    DateTime.SpecifyKind(maxDay.AddDays(1).AddTicks(-1), DateTimeKind.Utc), cancellationToken)
+                .ToListAsync(cancellationToken);
         var importsByDay = entryList
             .GroupBy(x => x.PostingDate.Date)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -78,10 +111,14 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
 
                 var exactMatches = ImportConflictDetector.GetExactMatches(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
                 var importsOnly = ImportConflictDetector.GetImportsMissingFromExisting(importsThisDay, existingThisDay, ImportKey, ExistingKey).ToList();
-                var existingOnly = ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
 
-                if (exactMatches.Count != 0 || existingOnly.Count != 0)
+                // Only a real overlap needs review; unrelated rows already on the day never block an import.
+                if (exactMatches.Count != 0)
                 {
+                    // Existing-only rows may come from unrelated statements, so they are reviewed in a legacy account import only.
+                    var existingOnly = accountId is null
+                        ? []
+                        : ImportConflictDetector.GetExistingMissingFromImports(existingThisDay, importsThisDay, ExistingKey, ImportKey).ToList();
                     var dailyConflicts = new List<ImportConflict>();
                     dailyConflicts.AddRange(exactMatches.Select(x => new ImportConflict(accountId, x.Import, x.Existing, "Exact match")));
                     dailyConflicts.AddRange(importsOnly.Select(x => new ImportConflict(accountId, x, null, "Import not found in existing")));
@@ -107,12 +144,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                         if (import.PostingDate.Kind != DateTimeKind.Utc)
                             throw new Exception($"Date kind of this entry posting date: {import.PostingDate}, value change: {import.ValueChange} is not UTC - {import.PostingDate.Kind}");
 
-                        CurrencyAccountEntry newEntry = new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.ValueChange)
-                        {
-                            Description = import.Description ?? string.Empty,
-                            ContractorDetails = import.ContractorDetails,
-                            Labels = []
-                        };
+                        var newEntry = NewEntry(userId, accountId, currencyId, import);
                         transactionRuleApplication?.ApplyTo(newEntry);
                         entriesToInsert.Add(newEntry);
                     }
@@ -181,14 +213,14 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                     await onProgress(processed, imported, failed);
             }
 
-            if (oldestInserted is not null)
+            if (accountId is int recalculatedAccountId && oldestInserted is not null)
             {
                 try
                 {
                     if (cancellationToken.CanBeCanceled)
-                        await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId, cancellationToken);
+                        await currencyAccountEntryRepository.RecalculateValues(recalculatedAccountId, oldestInserted.EntryId, cancellationToken);
                     else
-                        await currencyAccountEntryRepository.RecalculateValues(accountId, oldestInserted.EntryId);
+                        await currencyAccountEntryRepository.RecalculateValues(recalculatedAccountId, oldestInserted.EntryId);
                 }
                 catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
                 {
@@ -197,7 +229,7 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                 }
                 catch (OperationCanceledException ex)
                 {
-                    await RecalculateCommittedEntries(accountId, oldestInserted);
+                    await RecalculateCommittedEntries(recalculatedAccountId, oldestInserted);
                     failed++;
                     errors.Add("Recalculation cancelled or timed out.");
                     logger.LogDebug(ex, "Currency account import recalculation cancelled or timed out; marking it failed.");
@@ -206,12 +238,62 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await RecalculateCommittedEntries(accountId, oldestInserted);
+            if (accountId is int canceledAccountId)
+                await RecalculateCommittedEntries(canceledAccountId, oldestInserted);
             throw;
         }
 
         return new(accountId, imported, failed, errors, conflicts);
     }
+
+    public async Task<bool> ApplyOwnerConflict(int userId, int currencyId, CurrencyEntryImport entry, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (entry.PostingDate.Kind != DateTimeKind.Utc)
+        {
+            logger.LogError("Could not add a resolved currency import entry: its posting date is not UTC.");
+            return false;
+        }
+
+        // An approved addition counts against the plan like an initial admission.
+        await importAccountValidator.EnsureWithinPlanLimit(userId, 1);
+
+        var newEntry = NewEntry(userId, accountId: null, currencyId, entry);
+        if (transactionRuleService is not null)
+            (await transactionRuleService.LoadApplicationAsync(userId, cancellationToken)).ApplyTo(newEntry);
+
+        try
+        {
+            var added = await currencyAccountEntryRepository.Add(newEntry, recalculate: false, cancellationToken);
+            if (!added) logger.LogError("Could not add a resolved currency import entry.");
+            return added;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogDebug(ex, "Applying resolved currency import conflict cancelled.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error applying resolved currency import conflict.");
+            return false;
+        }
+    }
+
+    // A linked entry is stamped by the repository from its account and carries the running value; an owner entry
+    // carries the validated owner and currency and keeps no running value.
+    private static CurrencyAccountEntry NewEntry(int userId, int? accountId, int? currencyId, CurrencyEntryImport import) =>
+        new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), accountId is null ? 0 : import.ValueChange, import.ValueChange)
+        {
+            UserId = accountId is null ? userId : null,
+            CurrencyId = accountId is null ? currencyId : null,
+            Description = import.Description ?? string.Empty,
+            ContractorDetails = import.ContractorDetails,
+            Labels = []
+        };
 
     private Task RecalculateCommittedEntries(int accountId, CurrencyAccountEntry? oldestInserted) =>
         oldestInserted is null

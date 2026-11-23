@@ -99,6 +99,70 @@ public class CurrencyImportBackgroundServiceTests
         Assert.Null(guestIdSeenWhenResolving);
     }
 
+    [Fact]
+    public async Task OwnerJob_ImportsIntoTheOwnersPoolOfTheJobsCurrency_NotAnAccount()
+    {
+        var importService = new Mock<ICurrencyAccountImportService>();
+        importService
+            .Setup(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
+                It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
+            .ReturnsAsync(new ImportResult(null, 1, 0, [], []));
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+        services.AddScoped(_ => importService.Object);
+        services.AddScoped(_ => Mock.Of<IFinancialAlertService>());
+        await using var provider = services.BuildServiceProvider();
+
+        var channel = new CurrencyImportJobChannel();
+        var store = new CurrencyImportJobStore();
+        var jobId = store.CreateOwnerJob(5, currencyId: 3, totalEntries: 1);
+        await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, null,
+            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)], CurrencyId: 3), TestContext.Current.CancellationToken);
+
+        using var service = new CurrencyImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
+            CreateHub(), NullLogger<CurrencyImportBackgroundService>.Instance);
+
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await WaitForCompletion(store, jobId, userId: 5);
+        await service.StopAsync(TestContext.Current.CancellationToken);
+
+        importService.Verify(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
+            It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Once);
+        importService.Verify(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
+            It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Never);
+        store.TryGetStatus(jobId, 5, out var status);
+        Assert.Equal(AsyncImportJobState.Completed, status!.Status);
+    }
+
+    [Fact]
+    public async Task OwnerJobWithoutACurrency_FailsInsteadOfGuessing()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+        services.AddScoped(_ => Mock.Of<ICurrencyAccountImportService>());
+        services.AddScoped(_ => Mock.Of<IFinancialAlertService>());
+        await using var provider = services.BuildServiceProvider();
+
+        var channel = new CurrencyImportJobChannel();
+        var store = new CurrencyImportJobStore();
+        var jobId = store.CreateOwnerJob(5, currencyId: 3, totalEntries: 1);
+        await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, null, [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, 1m)]),
+            TestContext.Current.CancellationToken);
+
+        using var service = new CurrencyImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
+            CreateHub(), NullLogger<CurrencyImportBackgroundService>.Instance);
+
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await WaitForCompletion(store, jobId, userId: 5);
+        await service.StopAsync(TestContext.Current.CancellationToken);
+
+        store.TryGetStatus(jobId, 5, out var status);
+        Assert.Equal(AsyncImportJobState.Failed, status!.Status);
+    }
+
     private static IHubContext<CurrencyImportHub> CreateHub()
     {
         var proxy = new Mock<IClientProxy>();

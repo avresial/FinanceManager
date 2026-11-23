@@ -58,4 +58,22 @@ public class RequestBodySizeLimitMiddlewareTests
     {
         public bool CanHaveBody => canHaveBody;
     }
+
+    [Theory]
+    [InlineData(RequestBodySizeLimits.OwnerCashImportPath)]
+    [InlineData(RequestBodySizeLimits.OwnerBondImportPath)]
+    [InlineData(RequestBodySizeLimits.OwnerBondImportResolvePath)]
+    [InlineData("/API/Transactions/Cash/Import")]
+    public void GetLimitForPath_OwnerImportUploads_UseTheImportLimit(string path)
+    {
+        Assert.Equal(RequestBodySizeLimits.ImportEndpointBytes, RequestBodySizeLimits.GetLimitForPath(path));
+    }
+
+    [Theory]
+    [InlineData("/api/transactions/cash")]
+    [InlineData("/api/transactions/bonds/export")]
+    public void GetLimitForPath_OtherOwnerRoutes_KeepTheGlobalLimit(string path)
+    {
+        Assert.Equal(RequestBodySizeLimits.GlobalRequestBodyBytes, RequestBodySizeLimits.GetLimitForPath(path));
+    }
 }

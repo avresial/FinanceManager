@@ -129,10 +129,11 @@ public partial class CurrencyEntryConflictResolver
                 foreach (var g in _dayGroups)
                 {
                     if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
-                    foreach (var c in g.Conflicts)
+                    // The account import review only handles conflicts that carry an account.
+                    foreach (var c in g.Conflicts.Where(c => c.Conflict.AccountId is not null))
                     {
                         resolvedImports.Add(new ResolvedImportConflict(
-                            c.Conflict.AccountId,
+                            c.Conflict.AccountId!.Value,
                             choice == ResolveChoice.Imported,
                             c.Conflict.ImportEntry,
                             choice == ResolveChoice.Existing,

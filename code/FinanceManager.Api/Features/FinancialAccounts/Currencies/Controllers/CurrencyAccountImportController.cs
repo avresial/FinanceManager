@@ -60,7 +60,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         Guid jobId,
         [FromServices] ICurrencyImportJobStore jobStore)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
             return NotFound("Import job not found.");
 
@@ -71,6 +71,7 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyImportJobStatusDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ResolveAsyncImportConflicts(
         [FromBody] CurrencyImportResolveConflictsRequestDto request,
         [FromServices] ICurrencyImportJobStore jobStore,
@@ -79,7 +80,11 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         if (request is null || request.Decisions.Count == 0)
             return BadRequest("No conflict decisions provided.");
 
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        // The job's own scope, fixed when it was created, decides how its decisions are saved.
+        if (jobStore.TryGetScope(request.JobId, userId, out var scope) && scope is { AccountId: null, CurrencyId: int currencyId })
+            return await ResolveOwnerConflicts(request, userId, currencyId, jobStore, hub);
 
         var resolvedConflicts = new List<ResolvedImportConflict>();
         foreach (var decision in request.Decisions)
@@ -107,6 +112,76 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
         await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId))
             .SendAsync("ImportStatusUpdated", status);
 
+        return Ok(status);
+    }
+
+    // An owner job's decisions only ever add the reviewed incoming rows: picking the existing side is a skip, and no
+    // existing row is deleted through a conflict. A decision that cannot be saved is reopened so it can be retried.
+    private async Task<IActionResult> ResolveOwnerConflicts(
+        CurrencyImportResolveConflictsRequestDto request,
+        int userId,
+        int currencyId,
+        ICurrencyImportJobStore jobStore,
+        IHubContext<CurrencyImportHub> hub)
+    {
+        if (request.Decisions.Any(decision => decision.PickImported == decision.PickExisting))
+            return BadRequest("Each decision must pick exactly one side.");
+        if (!jobStore.TryGetStatus(request.JobId, userId, out var current) || current is null)
+            return NotFound("Import job not found.");
+        var unknown = request.Decisions.FirstOrDefault(decision => current.Conflicts.All(conflict => conflict.ConflictId != decision.ConflictId));
+        if (unknown is not null)
+            return NotFound($"Conflict {unknown.ConflictId} was not found.");
+
+        var anyApplied = false;
+        try
+        {
+            foreach (var decision in request.Decisions)
+            {
+                if (!jobStore.TryResolveConflict(request.JobId, userId, decision, out var resolved))
+                    return NotFound($"Conflict {decision.ConflictId} was not found.");
+                // An already resolved decision comes back empty and stays a no-op.
+                if (resolved is not { AddImported: true, ImportData: not null })
+                    continue;
+
+                bool added;
+                try
+                {
+                    added = await importService.ApplyOwnerConflict(userId, currencyId, resolved.ImportData, HttpContext.RequestAborted);
+                }
+                catch
+                {
+                    jobStore.TryReopenConflict(request.JobId, userId, decision.ConflictId);
+                    throw;
+                }
+
+                if (!added)
+                {
+                    jobStore.TryReopenConflict(request.JobId, userId, decision.ConflictId);
+                    return Problem(statusCode: StatusCodes.Status500InternalServerError, title: "Could not save the decision.",
+                        detail: $"Conflict {decision.ConflictId} could not be saved; check the import status and retry.");
+                }
+
+                anyApplied = true;
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The plan limit is rechecked for every approved addition.
+            return BadRequest(ex.Message);
+        }
+        finally
+        {
+            if (anyApplied)
+            {
+                await dashboardCacheInvalidator.InvalidateUser(userId);
+                await financialAlertService.EvaluateAlertsAsync(userId, CancellationToken.None);
+            }
+        }
+
+        if (!jobStore.TryGetStatus(request.JobId, userId, out var status) || status is null)
+            return NotFound("Import job not found.");
+
+        await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(request.JobId)).SendAsync("ImportStatusUpdated", status);
         return Ok(status);
     }
 
