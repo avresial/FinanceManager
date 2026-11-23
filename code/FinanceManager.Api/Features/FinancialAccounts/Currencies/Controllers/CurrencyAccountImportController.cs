@@ -25,7 +25,8 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 [Tags("Currency Imports")]
 public class CurrencyAccountImportController(ICurrencyAccountImportService importService, ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     ICacheInvalidator dashboardCacheInvalidator,
-    IFinancialAlertService financialAlertService)
+    IFinancialAlertService financialAlertService,
+    ILogger<CurrencyAccountImportController> logger)
     : ControllerBase
 {
     [HttpPost(RequestBodySizeLimits.CurrencyStartAsyncImportPath)]
@@ -174,7 +175,15 @@ public class CurrencyAccountImportController(ICurrencyAccountImportService impor
             if (anyApplied)
             {
                 await dashboardCacheInvalidator.InvalidateUser(userId);
-                await financialAlertService.EvaluateAlertsAsync(userId, CancellationToken.None);
+                // Alerts are a side effect: a failure here must not replace the response the decisions earned.
+                try
+                {
+                    await financialAlertService.EvaluateAlertsAsync(userId, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Alert evaluation failed after resolving import conflicts.");
+                }
             }
         }
 

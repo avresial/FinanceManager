@@ -534,6 +534,11 @@ public class BondAccountImportServiceTests
         Assert.Equal("third", surplus.ImportEntry!.Description);
         Assert.Null(surplus.AccountId);
         Assert.DoesNotContain(result.Conflicts, x => x.ExistingEntry?.EntryId == 3);
+
+        // The existing side of a match carries neither the legacy account link nor a running value.
+        var matched = result.Conflicts.Where(x => x.IsExactMatch).Select(x => x.ExistingEntry!).ToList();
+        Assert.Contains(matched, x => x.EntryId == 1);
+        Assert.All(matched, x => { Assert.Null(x.AccountId); Assert.Equal(0m, x.Value); });
     }
 
     [Fact]

@@ -21,6 +21,10 @@ internal static class OwnerTransactionsHttpResponse
         return new CsvDownload(content, FileName(response.Content.Headers.ContentDisposition) ?? fallbackFileName);
     }
 
+    /// <summary>Formats a date as an invariant UTC query value; an unspecified kind is taken as UTC.</summary>
+    public static string Utc(DateTime date) => (date.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(date, DateTimeKind.Utc) : date.ToUniversalTime())
+        .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", System.Globalization.CultureInfo.InvariantCulture);
+
     private static string? FileName(ContentDispositionHeaderValue? disposition) =>
         (disposition?.FileNameStar ?? disposition?.FileName)?.Trim('"');
 }

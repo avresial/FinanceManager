@@ -43,12 +43,9 @@ public class CashTransactionsHttpClient(HttpClient httpClient)
     public async Task<CsvDownload> ExportCsvAsync(int currencyId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync(
-            $"{Endpoint}/export?currencyId={currencyId}&startDate={Uri.EscapeDataString(Utc(startDate))}&endDate={Uri.EscapeDataString(Utc(endDate))}", cancellationToken);
+            $"{Endpoint}/export?currencyId={currencyId}&startDate={Uri.EscapeDataString(OwnerTransactionsHttpResponse.Utc(startDate))}&endDate={Uri.EscapeDataString(OwnerTransactionsHttpResponse.Utc(endDate))}", cancellationToken);
         return await OwnerTransactionsHttpResponse.ReadCsv(response, $"cash-{currencyId}.csv", cancellationToken);
     }
-
-    private static string Utc(DateTime date) => (date.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(date, DateTimeKind.Utc) : date.ToUniversalTime())
-        .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", System.Globalization.CultureInfo.InvariantCulture);
 
     private static async Task<CurrencyTransactionLogItemDto> ReadEntry(HttpResponseMessage response, CancellationToken cancellationToken)
     {

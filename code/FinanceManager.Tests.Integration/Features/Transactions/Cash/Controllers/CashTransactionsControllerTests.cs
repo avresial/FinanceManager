@@ -410,6 +410,42 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
+    public async Task ImportDecision_OfAnotherOwnerOrAnotherJobsConflictId_IsNotFoundAndSavesNothing()
+    {
+        Seed();
+        await SeedEntry(_owner, null, _pln, _day.AddHours(8), 10m);
+        await SeedEntry(_owner, null, _usd, _day.AddHours(8), 10m);
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        var plnConflict = await StartJobWithASurplus(_pln, ct);
+        var usdConflict = await StartJobWithASurplus(_usd, ct);
+        var rowsBefore = await Db.CurrencyEntries.CountAsync(ct);
+
+        // The conflict id of the caller's own job in another currency does not resolve here.
+        using var crossJob = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+            new CurrencyImportResolveConflictsRequestDto { JobId = plnConflict.JobId, Decisions = [new(usdConflict.ConflictId, true, false)] }, ct);
+        Assert.Equal(HttpStatusCode.NotFound, crossJob.StatusCode);
+
+        // Another owner cannot resolve the job even with a valid conflict id.
+        Authorize("other", _other, UserRole.User);
+        using var foreign = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+            new CurrencyImportResolveConflictsRequestDto { JobId = plnConflict.JobId, Decisions = [new(plnConflict.ConflictId, true, false)] }, ct);
+        Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
+
+        Db.ChangeTracker.Clear();
+        Assert.Equal(rowsBefore, await Db.CurrencyEntries.CountAsync(ct));
+    }
+
+    private async Task<(Guid JobId, string ConflictId)> StartJobWithASurplus(int currencyId, CancellationToken ct)
+    {
+        CurrencyEntryImportRecordDto[] rows = [new(_day.AddHours(8), 10m, null, "present"), new(_day.AddHours(8), 10m, null, "surplus")];
+        using var start = await Client.PostAsJsonAsync($"{_route}/import?currencyId={currencyId}", rows, ct);
+        var jobId = (await start.Content.ReadFromJsonAsync<CurrencyImportJobStartResponseDto>(ct))!.JobId;
+        var conflict = Assert.Single((await WaitForJob(jobId, ct)).Conflicts, c => !c.Conflict.IsExactMatch);
+        return (jobId, conflict.ConflictId);
+    }
+
+    [Fact]
     public async Task Import_RejectsAnUnknownCurrencyAndAnEmptyBody()
     {
         Seed();

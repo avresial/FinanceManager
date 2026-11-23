@@ -49,12 +49,9 @@ public class BondTransactionsHttpClient(HttpClient httpClient)
     public async Task<CsvDownload> ExportCsvAsync(int bondDetailsId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync(
-            $"{Endpoint}/export?bondDetailsId={bondDetailsId}&startDate={Uri.EscapeDataString(Utc(startDate))}&endDate={Uri.EscapeDataString(Utc(endDate))}", cancellationToken);
+            $"{Endpoint}/export?bondDetailsId={bondDetailsId}&startDate={Uri.EscapeDataString(OwnerTransactionsHttpResponse.Utc(startDate))}&endDate={Uri.EscapeDataString(OwnerTransactionsHttpResponse.Utc(endDate))}", cancellationToken);
         return await OwnerTransactionsHttpResponse.ReadCsv(response, $"bond-{bondDetailsId}.csv", cancellationToken);
     }
-
-    private static string Utc(DateTime date) => (date.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(date, DateTimeKind.Utc) : date.ToUniversalTime())
-        .ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", CultureInfo.InvariantCulture);
 
     private static async Task<BondTransactionLogItemDto> ReadEntry(HttpResponseMessage response, CancellationToken cancellationToken)
     {
