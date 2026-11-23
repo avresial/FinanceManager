@@ -5,6 +5,7 @@ public interface ILedgerEntry
 {
     long EntryId { get; }
     int? AccountId { get; }
+    int? UserId { get; }
     DateTime PostingDate { get; }
     decimal Value { get; set; }
     decimal ValueChange { get; }

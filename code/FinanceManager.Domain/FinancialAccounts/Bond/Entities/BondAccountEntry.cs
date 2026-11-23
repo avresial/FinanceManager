@@ -46,8 +46,9 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
 
         PostingDate = entry.PostingDate;
         Description = entry.Description;
-        var valueChangeChange = entry.ValueChange - ValueChange;
-        Value += valueChangeChange;
+        // An entry without an account link has no running balance to keep in step.
+        if (AccountId is not null)
+            Value += entry.ValueChange - ValueChange;
         ValueChange = entry.ValueChange;
         Labels = entry.Labels ?? [];
         BondDetailsId = entry.BondDetailsId;

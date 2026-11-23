@@ -58,10 +58,10 @@ public interface IAccountEntryRepository<T>
     Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date);
 
     /// <summary>
-    /// Counts entries of this type for each of the supplied users in a single grouped query that joins the
-    /// entry table to the accounts table on <c>AccountId</c> and groups by <c>UserId</c>. Users with no
-    /// entries of this type are omitted from the result, so callers should treat a missing key as a count
-    /// of zero. Used for plan record-capacity calculations.
+    /// Counts entries of this type for each of the supplied users in a single grouped query on the entry's
+    /// own <c>UserId</c>, so account-linked and unlinked entries are counted alike. Users with no entries of
+    /// this type are omitted from the result, so callers should treat a missing key as a count of zero.
+    /// Used for plan record-capacity calculations.
     /// </summary>
     Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
@@ -83,6 +83,27 @@ public interface IAccountEntryRepository<T>
     Task<bool> AddLabel(long entryId, int labelId);
     Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
+
+    // ----- Owner-scoped access: the entry's own UserId is the only ownership check -----
+
+    /// <summary>One entry of the owner, linked to an account or not, with its labels; null when it is missing or belongs to someone else.</summary>
+    Task<T?> GetByOwner(int userId, long entryId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The owner's entries of one partition (currency or bond definition) between two timestamps (both inclusive),
+    /// linked or not, oldest first, without labels. Streams from the database.
+    /// </summary>
+    IAsyncEnumerable<T> GetByOwner(int userId, int partitionId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the editable fields and labels of the owner's entry. The owner and account link are never taken from
+    /// <paramref name="entry"/>. A linked entry also repairs its account's running values; an unlinked entry has none.
+    /// Returns false when the entry is missing or belongs to someone else.
+    /// </summary>
+    Task<bool> UpdateByOwner(int userId, T entry, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes the owner's entry, repairing the running values of its account when it is linked. Returns false when the entry is missing or belongs to someone else.</summary>
+    Task<bool> DeleteByOwner(int userId, long entryId, CancellationToken cancellationToken = default);
     Task<bool> Delete(int accountId, long entryId);
     Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken);
     Task<bool> Delete(int accountId);

@@ -233,4 +233,34 @@ public class AccountEntryContractTests
         Assert.Equal(entryId, roundTripped!.EntryId);
         Assert.Equal(3, roundTripped.AccountId);
     }
+
+    [Fact]
+    public void Update_LinkedEntry_KeepsTheRunningValueInStepWithTheChange()
+    {
+        var cash = new CurrencyAccountEntry(1, 2, _postingDate, 100m, 10m);
+        var bond = new BondAccountEntry(1, 2, _postingDate, 100m, 10m, 3);
+
+        cash.Update(new CurrencyAccountEntry(1, 2, _postingDate, 0m, 25m));
+        bond.Update(new BondAccountEntry(1, 2, _postingDate, 0m, 25m, 3));
+
+        Assert.Equal(115m, cash.Value);
+        Assert.Equal(115m, bond.Value);
+    }
+
+    [Fact]
+    public void Update_UnlinkedEntry_ChangesTheDeltaButLeavesTheUnusedValueAlone()
+    {
+        var cash = new CurrencyAccountEntry(null, 2, _postingDate, 0m, 10m);
+        var bond = new BondAccountEntry(null, 2, _postingDate, 0m, 10m, 3);
+
+        cash.Update(new CurrencyAccountEntry(null, 2, _postingDate, 0m, 25m) { Description = "changed" });
+        bond.Update(new BondAccountEntry(null, 2, _postingDate, 0m, 25m, 4));
+
+        Assert.Equal(25m, cash.ValueChange);
+        Assert.Equal("changed", cash.Description);
+        Assert.Equal(0m, cash.Value);
+        Assert.Equal(25m, bond.ValueChange);
+        Assert.Equal(4, bond.BondDetailsId);
+        Assert.Equal(0m, bond.Value);
+    }
 }
