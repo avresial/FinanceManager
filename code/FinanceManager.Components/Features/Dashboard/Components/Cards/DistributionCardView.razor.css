@@ -143,6 +143,11 @@
     margin-block: auto;
 }
 
+/* A list of rows (mixed currencies, error) starts under the header; only the single-category hero figure is centred. */
+.fm-distribution-container--top {
+    margin-block: 0 auto;
+}
+
 /* Wide fixed-height desktop cards have height to spare: a larger donut, and the amount fits beside the name.
    Below 960px cards are auto-height, so a larger donut would only make them taller. */
 @media (min-width: 960px) {
@@ -233,6 +238,6 @@
     padding: 0 16px 4px;
 }
 
-.fm-distribution-note .fm-unconverted-chip {
+.fm-distribution-note ::deep .fm-unconverted-chip {
     margin-left: 0;
 }
