@@ -13,9 +13,9 @@ public sealed class LabelSetterChannel(ILabelSetterProgressTracker progressTrack
         });
     private int _queuedCount;
 
-    public async ValueTask QueueEntries(int accountId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
+    public async ValueTask QueueEntries(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
     {
-        await _channel.Writer.WriteAsync(new LabelSetterRequest(accountId, entryIds), cancellationToken);
+        await _channel.Writer.WriteAsync(new LabelSetterRequest(userId, entryIds), cancellationToken);
         progressTracker.SetQueuedJobsCount(Interlocked.Increment(ref _queuedCount));
     }
 

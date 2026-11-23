@@ -20,10 +20,11 @@ internal sealed class LabelSetterAiService(
     private const string _modelId = "gpt-5-mini";
 
     public async Task<Dictionary<long, string>> AssignLabels(
+        int userId,
         IReadOnlyCollection<long> entryIds,
         CancellationToken cancellationToken = default)
     {
-        if (entryIds.Count == 0)
+        if (userId == 0 || entryIds.Count == 0)
             return [];
 
         var allLabels = await financialLabelsRepository.GetLabels(cancellationToken).ToListAsync(cancellationToken);
@@ -38,7 +39,7 @@ internal sealed class LabelSetterAiService(
 
         logger.LogTrace("Retrieving {Count} entries for label assignment.", entryIds.Count);
 
-        var entries = await currencyEntryRepository.GetByIds(entryIds, cancellationToken);
+        var entries = await currencyEntryRepository.GetByIds(userId, entryIds, cancellationToken);
         if (entries.Count == 0)
         {
             logger.LogTrace("No entries found for {Count} entry IDs.", entryIds.Count);

@@ -53,7 +53,7 @@ public sealed class LabelSetterProgressCardTests
         await coordinator.NextCompletion();
 
         cut.WaitForAssertion(() => Assert.Contains("6 / 10", cut.Markup), _timeout);
-        snapshots.Verify(s => s.SetAsync("admin-label-setter-progress:7", It.Is<LabelSetterProgressCardSnapshot>(
+        snapshots.Verify(s => s.SetAsync("admin-label-setter-progress:v2:7", It.Is<LabelSetterProgressCardSnapshot>(
             snapshot => snapshot.UserId == 7 && snapshot.Progress!.CurrentJob!.ProcessedEntries == 6)), Times.Once);
     }
 
@@ -88,7 +88,7 @@ public sealed class LabelSetterProgressCardTests
         await cut.InvokeAsync(() => cut.Instance.ApplyLiveProgressAsync(Progress(processed: 8)));
 
         cut.WaitForAssertion(() => Assert.Contains("8 / 10", cut.Markup), _timeout);
-        snapshots.Verify(s => s.SetAsync("admin-label-setter-progress:7", It.Is<LabelSetterProgressCardSnapshot>(
+        snapshots.Verify(s => s.SetAsync("admin-label-setter-progress:v2:7", It.Is<LabelSetterProgressCardSnapshot>(
             snapshot => snapshot.Progress!.CurrentJob!.ProcessedEntries == 8)), Times.Once);
         response.SetResult(Json(Progress(processed: 3)));
     }
@@ -172,7 +172,7 @@ public sealed class LabelSetterProgressCardTests
     public async Task OtherUsersSnapshot_IsNotPainted_AndKeysArePerUser()
     {
         var snapshots = new Mock<ISnapshotService>();
-        snapshots.Setup(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:7"))
+        snapshots.Setup(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:v2:7"))
             .ReturnsAsync(new LabelSetterProgressCardSnapshot { UserId = 99, Progress = Progress(processed: 3) });
         var response = new TaskCompletionSource<HttpResponseMessage>();
         using var handler = new StubHandler(response.Task);
@@ -182,8 +182,8 @@ public sealed class LabelSetterProgressCardTests
         cut.WaitForAssertion(() => Assert.Equal(1, handler.Requests), _timeout);
 
         Assert.DoesNotContain("3 / 10", cut.Markup);
-        snapshots.Verify(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:7"), Times.Once);
-        snapshots.Verify(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:99"), Times.Never);
+        snapshots.Verify(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:v2:7"), Times.Once);
+        snapshots.Verify(s => s.GetAsync<LabelSetterProgressCardSnapshot>("admin-label-setter-progress:v2:99"), Times.Never);
         response.SetResult(Json(Progress(processed: 1)));
     }
 
@@ -266,14 +266,14 @@ public sealed class LabelSetterProgressCardTests
     }
 
     private static LabelSetterProgressSnapshot Progress(int processed, int queued = 0) =>
-        new(new LabelSetterJobProgress(5, 7, 10, processed, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)), queued);
+        new(new LabelSetterJobProgress(7, 10, processed, new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)), queued);
 
     private static HttpResponseMessage Json(LabelSetterProgressSnapshot value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 
     private static Mock<ISnapshotService> SnapshotsWith(int userId, LabelSetterProgressSnapshot progress)
     {
         var snapshots = new Mock<ISnapshotService>();
-        snapshots.Setup(s => s.GetAsync<LabelSetterProgressCardSnapshot>($"admin-label-setter-progress:{userId}"))
+        snapshots.Setup(s => s.GetAsync<LabelSetterProgressCardSnapshot>($"admin-label-setter-progress:v2:{userId}"))
             .ReturnsAsync(new LabelSetterProgressCardSnapshot { UserId = userId, Progress = progress, FetchedAtUtc = DateTime.UtcNow.AddDays(-30) });
         return snapshots;
     }

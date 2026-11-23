@@ -50,7 +50,7 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
         LabelSetterProgressSnapshot? fetched = null;
         var result = await SnapshotRefreshCoordinator.RunAsync(new SnapshotRefreshRequest<LabelSetterProgressCardSnapshot, LabelSetterProgressSnapshot>
         {
-            Key = $"admin-label-setter-progress:{userId}",
+            Key = $"admin-label-setter-progress:v2:{userId}",
             Gate = _gate,
             ClaimedVersion = version,
             ToModel = snapshot => snapshot.UserId == userId ? snapshot.Progress : null,
@@ -112,7 +112,7 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
 
         try
         {
-            await SnapshotService.SetAsync($"admin-label-setter-progress:{userId}", ToSnapshot(userId, progress));
+            await SnapshotService.SetAsync($"admin-label-setter-progress:v2:{userId}", ToSnapshot(userId, progress));
         }
         catch (Exception ex)
         {
@@ -197,7 +197,6 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
             if (x.CurrentJob is null || y.CurrentJob is null)
                 return x.CurrentJob is null && y.CurrentJob is null;
             return x.CurrentJob.UserId == y.CurrentJob.UserId
-                && x.CurrentJob.AccountId == y.CurrentJob.AccountId
                 && x.CurrentJob.ProcessedEntries == y.CurrentJob.ProcessedEntries
                 && x.CurrentJob.TotalEntries == y.CurrentJob.TotalEntries;
         }
@@ -205,7 +204,6 @@ public partial class LabelSetterProgressCard : ComponentBase, IAsyncDisposable
         public int GetHashCode(LabelSetterProgressSnapshot obj) => HashCode.Combine(
             obj.QueuedJobsCount,
             obj.CurrentJob?.UserId,
-            obj.CurrentJob?.AccountId,
             obj.CurrentJob?.ProcessedEntries,
             obj.CurrentJob?.TotalEntries);
     }

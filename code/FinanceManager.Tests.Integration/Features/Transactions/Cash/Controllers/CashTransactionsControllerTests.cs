@@ -1,3 +1,4 @@
+using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
@@ -31,6 +32,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     private const int _usd = 1;
     private static readonly DateTime _day = new(2024, 6, 3, 0, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IUserPlanVerifier> _planVerifier = new();
+    private readonly Mock<ILabelSetterChannel> _labelSetter = new();
     private TestDatabase? _database;
 
     protected override bool ReuseApplicationHost => false;
@@ -44,6 +46,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
 
         _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(_planVerifier.Object);
+        services.AddSingleton(_labelSetter.Object);
     }
 
     public override void Dispose()
@@ -102,6 +105,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
             await Client.DeleteAsync(_route + "/1", ct),
             await Client.PostAsJsonAsync(_route + "/import?currencyId=0", new[] { new CurrencyEntryImportRecordDto(_day, 1m) }, ct),
             await Client.GetAsync(_route + "/export?currencyId=0&startDate=2024-01-01&endDate=2024-12-31", ct),
+            await Client.GetAsync(_route + "?entryIds=1", ct),
         };
         Assert.All(responses, x => Assert.Equal(HttpStatusCode.Unauthorized, x.StatusCode));
     }
@@ -133,6 +137,87 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Assert.Equal(_pln, stored.CurrencyId);
         Assert.Equal(0m, stored.Value);
         Assert.Equal(_day.AddHours(9), stored.PostingDate);
+    }
+
+    [Fact]
+    public async Task Create_QueuesAnUnlabelledDescribedEntryForAiLabelingUnderItsOwner()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var response = await Client.PostAsJsonAsync(_route, Create(), ct);
+
+        var dto = await response.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
+        _labelSetter.Verify(x => x.QueueEntries(_owner,
+            It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new[] { dto!.EntryId })), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Create_DoesNotQueuePreLabelledEntriesOrGuestSandboxes()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        var label = await SeedLabel("food");
+        Authorize("owner", _owner, UserRole.User);
+        using var labelled = await Client.PostAsJsonAsync(_route, Create(labels: [label]), ct);
+        Authorize("guest", _guest, UserRole.User);
+        using var guest = await Client.PostAsJsonAsync(_route, Create(), ct);
+
+        Assert.Equal(HttpStatusCode.OK, labelled.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, guest.StatusCode);
+        _labelSetter.Verify(x => x.QueueEntries(It.IsAny<int>(), It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIds_ReturnsTheOwnersLinkedAndUnlinkedEntriesNewestFirst_AndSkipsForeignAndMissingIds()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        if (!Db.Currencies.Any(currency => currency.Id == _pln)) Db.Currencies.Add(new Currency(_pln, "PLN", "zł"));
+        var unlinked = await SeedEntry(_owner, null, _pln, _day, -5m, description: "unlinked");
+        var linked = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(2), -7m, value: 100m, description: "linked");
+        var foreign = await SeedEntry(_other, null, _pln, _day.AddDays(1), -9m);
+
+        var response = await Client.GetFromJsonAsync<List<CurrencyTransactionLogItemDto>>(
+            $"{_route}?entryIds={unlinked}&entryIds={linked}&entryIds={foreign}&entryIds=9999&entryIds={linked}", ct);
+
+        Assert.Equal([linked, unlinked], response!.Select(entry => entry.EntryId));
+        Assert.Equal(new int?[] { _accountId, null }, response!.Select(entry => entry.LegacyAccountId));
+        Assert.All(response!, entry => Assert.Equal("PLN", entry.Currency));
+    }
+
+    [Fact]
+    public async Task GetByIds_RejectsAnEmptyOversizedOrNonPositiveIdList()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var none = await Client.GetAsync(_route, ct);
+        using var tooMany = await Client.GetAsync($"{_route}?{string.Join('&', Enumerable.Range(1, 101).Select(id => $"entryIds={id}"))}", ct);
+        using var maximum = await Client.GetAsync($"{_route}?{string.Join('&', Enumerable.Range(1, 100).Select(id => $"entryIds={id}"))}", ct);
+        using var nonPositive = await Client.GetAsync($"{_route}?entryIds=0", ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, none.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, tooMany.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, maximum.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, nonPositive.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByIds_ForAGuest_ReadsOnlyTheGuestsOwnEntries()
+    {
+        Seed();
+        Authorize("guest", _guest, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        var own = await SeedEntry(_guest, null, _pln, _day, -5m);
+        var owners = await SeedEntry(_owner, null, _pln, _day, -5m);
+
+        var response = await Client.GetFromJsonAsync<List<CurrencyTransactionLogItemDto>>($"{_route}?entryIds={own}&entryIds={owners}", ct);
+
+        Assert.Equal([own], response!.Select(entry => entry.EntryId));
     }
 
     [Fact]

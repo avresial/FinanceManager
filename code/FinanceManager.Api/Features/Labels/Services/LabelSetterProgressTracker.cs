@@ -1,5 +1,4 @@
 using FinanceManager.Api.Features.Labels.Hubs;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.Labels.Dtos;
 using Microsoft.AspNetCore.SignalR;
 
@@ -17,11 +16,11 @@ public sealed class LabelSetterProgressTracker(IHubContext<LabelSetterProgressHu
             return new LabelSetterProgressSnapshot(_currentJob, _queuedJobsCount);
     }
 
-    public void StartJob(int accountId, int? userId, int totalEntries)
+    public void StartJob(int userId, int totalEntries)
     {
         lock (_lock)
         {
-            _currentJob = new LabelSetterJobProgress(accountId, userId, totalEntries, 0, DateTime.UtcNow);
+            _currentJob = new LabelSetterJobProgress(userId, totalEntries, 0, DateTime.UtcNow);
         }
         Broadcast();
     }

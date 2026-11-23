@@ -148,27 +148,6 @@ public class FinancialLabelControllerTests(OptionsProvider optionsProvider) : Co
         Assert.Empty(finalLabels);
     }
 
-    [Fact]
-    public async Task GetByAccountId_ReturnsLabel()
-    {
-        Authorize("TestUser", 1, UserRole.User);
-        var addLabel = new AddFinancialLabel("Test Label");
-        await new FinancialLabelHttpClient(Client).Add(addLabel, TestContext.Current.CancellationToken);
-        var label = await _testDatabase!.Context.FinancialLabels.FirstAsync(x => x.Name == addLabel.Name, TestContext.Current.CancellationToken);
-        _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(1, 0, DateTime.UtcNow, 1, 1)
-        {
-            Labels = [label]
-        });
-        await _testDatabase!.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        // Add a label to verify it exists
-
-        // GetByAccountId currently returns empty list because FinancialLabel.Entries collection was removed
-        var result = await Client.GetFromJsonAsync<List<FinancialLabel>>("api/FinancialLabel/get-by-account-id?accountId=1", TestContext.Current.CancellationToken);
-
-        Assert.NotNull(result);
-        Assert.Single(result);
-    }
-
     public override void Dispose()
     {
         base.Dispose();

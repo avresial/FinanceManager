@@ -1,4 +1,3 @@
-@using FinanceManager.Domain.FinancialAccounts.Shared.Dtos
 @implements IAsyncDisposable
 
 <MudCard Outlined Class="h-100">
@@ -54,7 +53,7 @@
                     : 0d;
 
                 <MudText Typo="Typo.body2">
-                    <b>User #@(job.UserId?.ToString() ?? "?")</b> · Account #@job.AccountId
+                    <b>User #@job.UserId</b>
                 </MudText>
                 <MudProgressLinear Color="Color.Primary" Value="@percent" Class="my-1" Size="Size.Large" />
                 <MudStack Row AlignItems="AlignItems.Center" Spacing="1">

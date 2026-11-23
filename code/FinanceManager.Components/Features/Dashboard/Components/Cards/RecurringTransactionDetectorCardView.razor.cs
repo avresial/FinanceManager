@@ -1,5 +1,5 @@
 using FinanceManager.Components.Shared.Helpers;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.AspNetCore.Components;
@@ -20,7 +20,7 @@ public partial class RecurringTransactionDetectorCardView
     [Parameter] public decimal TotalMonthlySpend { get; set; }
     [Parameter] public string Currency { get; set; } = "PLN";
     [Parameter] public RecurringTransactionResult? SelectedItem { get; set; }
-    [Parameter] public List<CurrencyAccountEntry> DetailEntries { get; set; } = [];
+    [Parameter] public List<CurrencyTransactionLogItemDto> DetailEntries { get; set; } = [];
     [Parameter] public EventCallback<RecurringTransactionResult> OnItemSelected { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
 
@@ -66,6 +66,6 @@ public partial class RecurringTransactionDetectorCardView
         return max == 0 ? 0 : (double)(Math.Abs(value) / max * 100);
     }
 
-    private string FormatFlow(bool isIncome, decimal value) =>
-        MoneyFormatter.FormatSigned(isIncome ? Math.Abs(value) : -Math.Abs(value), Currency);
+    private string FormatFlow(bool isIncome, decimal value, string? currency = null) =>
+        MoneyFormatter.FormatSigned(isIncome ? Math.Abs(value) : -Math.Abs(value), currency ?? Currency);
 }

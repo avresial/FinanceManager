@@ -1,7 +1,6 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
@@ -21,11 +20,12 @@ public sealed class LabelSetterBackgroundService(
 
         await foreach (var request in channel.ReadAll(stoppingToken))
         {
-            if (request.EntryIds.Count == 0) continue;
+            // Guest sandboxes (negative ids) are ephemeral and never run background AI labeling against the shared database.
+            if (request.UserId <= 0 || request.EntryIds.Count == 0) continue;
 
             logger.LogDebug(
-                "Processing label assignment for account {AccountId} with {Count} entries. Entry IDs range: {FirstEntryId} - {LastEntryId}",
-                request.AccountId,
+                "Processing label assignment for user {UserId} with {Count} entries. Entry IDs range: {FirstEntryId} - {LastEntryId}",
+                request.UserId,
                 request.EntryIds.Count,
                 request.EntryIds.First(),
                 request.EntryIds.Last());
@@ -37,7 +37,6 @@ public sealed class LabelSetterBackgroundService(
                 var labelSetterAiService = scope.ServiceProvider.GetRequiredService<ILabelSetterAiService>();
                 var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<IAccountEntryRepository<CurrencyAccountEntry>>();
                 var financialLabelsRepository = scope.ServiceProvider.GetRequiredService<IFinancialLabelsRepository>();
-                var currencyAccountRepository = scope.ServiceProvider.GetRequiredService<ICurrencyAccountRepository<CurrencyAccount>>();
                 var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
 
                 // Build name → id lookup once
@@ -47,14 +46,13 @@ public sealed class LabelSetterBackgroundService(
 
                 var labelsById = allLabels.ToDictionary(l => l.Name, l => l.Id, StringComparer.Ordinal);
 
-                var account = await currencyAccountRepository.Get(request.AccountId);
-                progressTracker.StartJob(request.AccountId, account?.UserId, request.EntryIds.Count);
+                progressTracker.StartJob(request.UserId, request.EntryIds.Count);
 
                 // Pre-calculate batch count
                 var batches = request.EntryIds.Chunk(20).ToList();
                 logger.LogInformation(
-                    "Adding labels for AccountId {AccountId} started. Processing {TotalEntries} entries in {BatchCount} batches.",
-                    request.AccountId,
+                    "Adding labels for user {UserId} started. Processing {TotalEntries} entries in {BatchCount} batches.",
+                    request.UserId,
                     request.EntryIds.Count,
                     batches.Count);
 
@@ -67,23 +65,24 @@ public sealed class LabelSetterBackgroundService(
                     totalProcessed += entryIdBatch.Length;
 
                     logger.LogInformation(
-                        "Batch {BatchNumber}/{TotalBatches} started for AccountId {AccountId}. Processing {BatchSize} entries, with Entry IDs range: {FirstEntryId} - {LastEntryId}.",
+                        "Batch {BatchNumber}/{TotalBatches} started for user {UserId}. Processing {BatchSize} entries, with Entry IDs range: {FirstEntryId} - {LastEntryId}.",
                         currentBatchNumber,
                         batches.Count,
-                        request.AccountId,
+                        request.UserId,
                         entryIdBatch.Length,
                         entryIdBatch.First(),
                         entryIdBatch.Last());
 
                     // Get AI label assignments for this batch
-                    var assignments = await labelSetterAiService.AssignLabels(entryIdBatch, stoppingToken);
+                    var assignments = await labelSetterAiService.AssignLabels(request.UserId, entryIdBatch, stoppingToken);
                     if (assignments.Count == 0)
                     {
                         logger.LogDebug(
-                            "No label assignments returned for account {AccountId} batch {BatchNumber}/{TotalBatches}.",
-                            request.AccountId,
+                            "No label assignments returned for user {UserId} batch {BatchNumber}/{TotalBatches}.",
+                            request.UserId,
                             currentBatchNumber,
                             batches.Count);
+                        progressTracker.ReportBatchCompleted(entryIdBatch.Length);
                         continue;
                     }
 
@@ -94,10 +93,10 @@ public sealed class LabelSetterBackgroundService(
                         if (!labelsById.TryGetValue(labelName, out var labelId))
                         {
                             logger.LogTrace(
-                                "Skipping unknown label '{LabelName}' for entry {EntryId} in account {AccountId}.",
+                                "Skipping unknown label '{LabelName}' for entry {EntryId} for user {UserId}.",
                                 labelName,
                                 entryId,
-                                request.AccountId);
+                                request.UserId);
                             continue;
                         }
 
@@ -107,44 +106,43 @@ public sealed class LabelSetterBackgroundService(
                     // Persist all labels for this batch at once
                     if (validAssignments.Count > 0)
                     {
-                        var addedCount = await currencyEntryRepository.AddLabels(validAssignments, stoppingToken);
+                        var addedCount = await currencyEntryRepository.AddLabels(request.UserId, validAssignments, stoppingToken);
                         logger.LogDebug(
-                            "Persisted {AddedCount} labels for {BatchSize} entries in batch {BatchNumber}/{TotalBatches} for account {AccountId}.",
+                            "Persisted {AddedCount} labels for {BatchSize} entries in batch {BatchNumber}/{TotalBatches} for user {UserId}.",
                             addedCount,
                             entryIdBatch.Length,
                             currentBatchNumber,
                             batches.Count,
-                            request.AccountId);
+                            request.UserId);
                     }
 
                     progressTracker.ReportBatchCompleted(entryIdBatch.Length);
                 }
 
                 logger.LogInformation(
-                    "Adding labels for AccountId {AccountId} finished. Successfully processed {TotalProcessed}/{TotalEntries} entries in {BatchCount} batches.",
-                    request.AccountId,
+                    "Adding labels for user {UserId} finished. Successfully processed {TotalProcessed}/{TotalEntries} entries in {BatchCount} batches.",
+                    request.UserId,
                     totalProcessed,
                     request.EntryIds.Count,
                     batches.Count);
 
-                if (account is not null)
-                    await financialAlertService.EvaluateAlertsAsync(account.UserId, CancellationToken.None);
+                await financialAlertService.EvaluateAlertsAsync(request.UserId, CancellationToken.None);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
-                logger.LogDebug(ex, "Label assignment cancelled during application shutdown for account {AccountId}.", request.AccountId);
+                logger.LogDebug(ex, "Label assignment cancelled during application shutdown for user {UserId}.", request.UserId);
                 break;
             }
             catch (OperationCanceledException ex)
             {
-                logger.LogDebug(ex, "Label assignment cancelled or timed out for account {AccountId}.", request.AccountId);
+                logger.LogDebug(ex, "Label assignment cancelled or timed out for user {UserId}.", request.UserId);
             }
             catch (Exception ex)
             {
                 logger.LogError(
                     ex,
-                    "Error occurred in label setter background worker for account {AccountId} and {Count} entries.",
-                    request.AccountId,
+                    "Error occurred in label setter background worker for user {UserId} and {Count} entries.",
+                    request.UserId,
                     request.EntryIds.Count);
             }
             finally

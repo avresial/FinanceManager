@@ -70,7 +70,7 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task RecurringTransactions_RejectsAnotherUsersSnapshot()
     {
-        const string key = "recurring-transactions:1";
+        const string key = "recurring-transactions:v2:1";
         _snapshots.Setup(x => x.GetAsync<RecurringTransactionsSnapshot>(key))
             .ReturnsAsync(new RecurringTransactionsSnapshot
             {
@@ -100,7 +100,7 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task RecurringTransactions_FailedRefresh_KeepsPaintedModel()
     {
-        const string key = "recurring-transactions:1";
+        const string key = "recurring-transactions:v2:1";
         _snapshots.Setup(x => x.GetAsync<RecurringTransactionsSnapshot>(key))
             .ReturnsAsync(new RecurringTransactionsSnapshot
             {

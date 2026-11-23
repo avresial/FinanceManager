@@ -1,7 +1,5 @@
 namespace FinanceManager.Domain.Labels.Entities;
 
-public record RecurringTransactionEntryReference(int AccountId, long EntryId);
-
 public class RecurringTransactionResult(string name, decimal value)
 {
     public Guid PatternId { get; set; }
