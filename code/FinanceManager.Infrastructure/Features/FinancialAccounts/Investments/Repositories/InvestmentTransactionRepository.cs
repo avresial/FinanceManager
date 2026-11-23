@@ -62,6 +62,20 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
+    {
+        // Trades carry their owner as a long; ids are ints everywhere else, so the grouped keys narrow back safely.
+        var owners = userIds.Where(id => id != 0).Select(id => (long)id).Distinct().ToList();
+        if (owners.Count == 0) return new Dictionary<int, int>();
+
+        var rows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => owners.Contains(x.UserId))
+            .GroupBy(x => x.UserId)
+            .Select(grouped => new { UserId = grouped.Key, Count = grouped.Count() })
+            .ToListAsync(cancellationToken);
+        return rows.ToDictionary(x => (int)x.UserId, x => x.Count);
+    }
+
     private IQueryable<InvestmentTransaction> OwnedTrades(long userId, DateTime? start, DateTime? end)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);

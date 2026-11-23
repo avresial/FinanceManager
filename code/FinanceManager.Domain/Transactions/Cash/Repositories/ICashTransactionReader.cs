@@ -21,4 +21,23 @@ public interface ICashTransactionReader
     /// ordered by posting date, then entry id. Returns an empty range when <paramref name="end"/> is before <paramref name="start"/>.
     /// </summary>
     Task<OwnerLedgerRange> GetValueRange(int userId, DateTime start, DateTime end, CancellationToken ct = default);
+
+    /// <summary>True when the user has at least one cash entry, linked to an account or not.</summary>
+    Task<bool> HasAnyEntries(int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// The summed <c>ValueChange</c> per label id of the entries posted in [<paramref name="start"/>, <paramref name="end"/>] (both inclusive).
+    /// An entry with several labels counts towards each of them; labels without entries are omitted.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetLabelTotals(int userId, DateTime start, DateTime end, CancellationToken ct = default);
+
+    /// <summary>
+    /// The entries posted in [<paramref name="start"/>, <paramref name="end"/>] (<paramref name="end"/> excluded unless <paramref name="endInclusive"/>) with the ids of all their labels.
+    /// <paramref name="outflowsOnly"/> keeps negative changes; <paramref name="labelId"/> keeps entries carrying that label. Returns an empty list when <paramref name="end"/> is before <paramref name="start"/>.
+    /// </summary>
+    Task<IReadOnlyList<LabeledCashEntry>> GetLabeledEntries(int userId, DateTime start, DateTime end,
+        bool endInclusive = false, bool outflowsOnly = false, int? labelId = null, CancellationToken ct = default);
+
+    /// <summary>The non-zero entries posted in [<paramref name="startInclusive"/>, <paramref name="endExclusive"/>), the input of recurring-payment detection.</summary>
+    Task<IReadOnlyList<RecurringCashCandidate>> GetRecurringCandidates(int userId, DateTime startInclusive, DateTime endExclusive, CancellationToken ct = default);
 }

@@ -1,12 +1,11 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Commands;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Labels.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -14,7 +13,7 @@ using System.Text;
 namespace FinanceManager.Application.Labels.RecurringTransactions;
 
 public class RecurringTransactionDetectorService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
     IRecurringSubscriptionRepository subscriptionRepository,
     IDateTimeProvider dateTimeProvider) : IRecurringTransactionDetectorService
 {
@@ -23,19 +22,14 @@ public class RecurringTransactionDetectorService(
         CancellationToken cancellationToken = default)
     {
         var asOfDate = dateTimeProvider.TodayUtc;
+        var candidates = await LoadCandidates(userId, asOfDate, cancellationToken);
         var expenses = await GetRecurringTransactionsCore(
             userId,
             asOfDate,
-            cancellationToken,
+            candidates,
             persistSubscriptions: true,
-            includeAccount: null);
-        var incomes = await DetectPatterns(
-            userId,
-            asOfDate,
-            static entry => entry.ValueChange > 0,
-            isIncome: true,
-            static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
+        var incomes = DetectPatterns(asOfDate, candidates, isIncome: true);
 
         return expenses
             .Concat(incomes.Select(x => x.Result))
@@ -48,17 +42,11 @@ public class RecurringTransactionDetectorService(
     private async Task<List<RecurringTransactionResult>> GetRecurringTransactionsCore(
         int userId,
         DateTime asOfDate,
-        CancellationToken cancellationToken,
+        IReadOnlyList<RecurringCashCandidate> candidates,
         bool persistSubscriptions,
-        Func<CurrencyAccount, bool>? includeAccount)
+        CancellationToken cancellationToken)
     {
-        var detected = await DetectPatterns(
-            userId,
-            asOfDate,
-            static entry => entry.ValueChange < 0,
-            isIncome: false,
-            includeAccount,
-            cancellationToken);
+        var detected = DetectPatterns(asOfDate, candidates, isIncome: false);
 
         var subscriptions = await subscriptionRepository.GetAll(userId, cancellationToken);
         var added = new List<RecurringSubscription>();
@@ -130,19 +118,14 @@ public class RecurringTransactionDetectorService(
         // Keep the existing detector as the source of expense/subscription state. This preserves
         // muted/cancelled semantics and stable subscription ids while the second, positive-value
         // pass adds recurring income without changing the subscriptions page contract.
+        var candidates = await LoadCandidates(userId, asOfDate, cancellationToken);
         var expenses = await GetRecurringTransactionsCore(
             userId,
             asOfDate,
-            cancellationToken,
+            candidates,
             persistSubscriptions: false,
-            static account => account.AccountType == AccountLabel.Cash);
-        var incomes = await DetectPatterns(
-            userId,
-            asOfDate,
-            static entry => entry.ValueChange > 0,
-            isIncome: true,
-            static account => account.AccountType == AccountLabel.Cash,
             cancellationToken);
+        var incomes = DetectPatterns(asOfDate, candidates, isIncome: true);
 
         return expenses
             .Select(expense => new RecurringCashFlow
@@ -177,42 +160,30 @@ public class RecurringTransactionDetectorService(
         CancellationToken cancellationToken = default) =>
         subscriptionRepository.Update(userId, patternId, command, cancellationToken);
 
-    // Loads the candidate entries; the recurrence analysis itself lives in RecurringPatternDetector.
-    private async Task<List<RecurringPattern>> DetectPatterns(
-        int userId,
-        DateTime today,
-        Func<CurrencyAccountEntry, bool> includeEntry,
-        bool isIncome,
-        Func<CurrencyAccount, bool>? includeAccount,
-        CancellationToken cancellationToken)
-    {
-        var start = today.AddMonths(-25);
-        var end = today.AddDays(1);
-        var rawEntries = new List<RecurringEntry>();
+    // One read serves both the expense and the income pass; the recurrence analysis itself lives in RecurringPatternDetector.
+    private Task<IReadOnlyList<RecurringCashCandidate>> LoadCandidates(int userId, DateTime today, CancellationToken cancellationToken) =>
+        cashTransactionReader.GetRecurringCandidates(userId, today.AddMonths(-25), today.AddDays(1), cancellationToken);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+    private static List<RecurringPattern> DetectPatterns(DateTime today, IReadOnlyList<RecurringCashCandidate> candidates, bool isIncome)
+    {
+        var rawEntries = new List<RecurringEntry>();
+        foreach (var candidate in candidates)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (includeAccount is not null && !includeAccount(account))
+            if (isIncome ? candidate.ValueChange <= 0 : candidate.ValueChange >= 0)
                 continue;
 
-            foreach (var entry in account.Entries)
-            {
-                if (!includeEntry(entry) || entry.PostingDate < start || entry.PostingDate >= end)
-                    continue;
+            var merchant = string.IsNullOrWhiteSpace(candidate.ContractorDetails)
+                ? candidate.Description
+                : candidate.ContractorDetails;
+            if (string.IsNullOrWhiteSpace(merchant)) continue;
 
-                var merchant = string.IsNullOrWhiteSpace(entry.ContractorDetails)
-                    ? entry.Description
-                    : entry.ContractorDetails;
-                if (string.IsNullOrWhiteSpace(merchant)) continue;
-
-                rawEntries.Add(new(
-                    merchant.Trim(),
-                    entry.PostingDate,
-                    Math.Abs(entry.ValueChange),
-                    account.AccountId,
-                    entry.EntryId));
-            }
+            // Unlinked entries have no account; 0 is the transitional placeholder until recurring references stop carrying an account id (#1135).
+            rawEntries.Add(new(
+                merchant.Trim(),
+                candidate.PostingDate,
+                Math.Abs(candidate.ValueChange),
+                candidate.AccountId ?? 0,
+                candidate.EntryId));
         }
 
         return RecurringPatternDetector.Detect(rawEntries, today, isIncome);

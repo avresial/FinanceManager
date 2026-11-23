@@ -13,8 +13,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Re
 internal class CurrencyAccountRepository(AppDbContext context) : ICurrencyAccountRepository<CurrencyAccount>
 {
 
-    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().CountAsync();
-
     public Task<int?> Add(int userId, string accountName) => Add(userId, accountName, AccountLabel.Other);
     public Task<int?> Add(int userId, string accountName, AccountLabel accountLabel) =>
         Add(userId, accountName, accountLabel, 0);

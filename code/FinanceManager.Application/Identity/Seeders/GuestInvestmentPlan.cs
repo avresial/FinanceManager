@@ -1,8 +1,8 @@
 namespace FinanceManager.Application.Identity.Seeders;
 
-// Single source of truth for the guest demo's correlated money flows so every account seeder stays in sync:
-// the cash account is the hub, and loan proceeds flow into it while stock and bond purchases flow out of it.
-// Keeping the amounts and calendar days here lets the cash, loan, stock, and bond seeders book matching
+// Single source of truth for the guest demo's correlated money flows so every seeder stays in sync:
+// the pooled cash is the hub, and stock purchases, bond purchases and loan repayments flow out of it.
+// Keeping the amounts and calendar days here lets the cash, stock and bond seeders book matching
 // entries without depending on each other directly.
 internal static class GuestInvestmentPlan
 {
@@ -15,13 +15,11 @@ internal static class GuestInvestmentPlan
     public const decimal BondMonthlyAmount = 300m;
     public const int BondDayOfMonth = 5;
 
-    // Loan: borrowed in full on the guest's first day (cash sees the matching inflow), then repaid in equal
-    // monthly instalments that shrink the debt toward zero with a matching cash outflow.
-    public const decimal LoanPrincipal = 24_000m;
+    // Loan: repaid in equal monthly instalments, a plain recurring cash outflow. There is no disbursement entry and no
+    // loan account, so the demo's net worth is not inflated by borrowed money it never shows as a liability.
     public const decimal LoanMonthlyRepayment = 400m;
     public const int LoanRepaymentDayOfMonth = 6;
 
     public static bool IsStockInvestmentDay(DateTime date) => date.Day == StockDayOfMonth;
     public static bool IsBondInvestmentDay(DateTime date) => date.Day == BondDayOfMonth;
-    public static bool IsLoanRepaymentDay(DateTime date) => date.Day == LoanRepaymentDayOfMonth;
 }

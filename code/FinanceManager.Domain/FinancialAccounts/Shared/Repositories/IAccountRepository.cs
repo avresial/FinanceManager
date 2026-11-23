@@ -4,7 +4,6 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 public interface IAccountRepository<T>
 {
-    Task<int> GetAccountsCount();
     IAsyncEnumerable<AvailableAccount> GetAvailableAccounts(int userId);
 
     /// <summary>

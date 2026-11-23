@@ -21,4 +21,7 @@ public interface IBondTransactionReader
     /// ordered by posting date, then entry id. Returns an empty range when <paramref name="end"/> is before <paramref name="start"/>.
     /// </summary>
     Task<OwnerLedgerRange> GetValueRange(int userId, DateTime start, DateTime end, CancellationToken ct = default);
+
+    /// <summary>True when the user has at least one bond entry, linked to an account or not.</summary>
+    Task<bool> HasAnyEntries(int userId, CancellationToken ct = default);
 }

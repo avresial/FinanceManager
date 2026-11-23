@@ -2,17 +2,17 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 
 namespace FinanceManager.Application.MoneyFlow.SavingsRate;
 
 public class SavingsRateService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
     IFinancialLabelsRepository financialLabelsRepository,
     ICurrencyRepository currencyRepository,
     ICurrencyExchangeService currencyExchangeService) : ISavingsRateService
@@ -24,27 +24,26 @@ public class SavingsRateService(
         var currencies = await currencyRepository.GetCurrencies().ToDictionaryAsync(x => x.Id);
         decimal salary = 0;
         decimal spending = 0;
+        var labelsById = labels.ToDictionary(label => label.Id);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+        foreach (var entry in await cashTransactionReader.GetLabeledEntries(userId, start, end, endInclusive: true))
         {
-            var accountCurrency = currencies[account.CurrencyId];
-            foreach (var entry in account.Entries.Where(entry => entry.PostingDate >= start && entry.PostingDate <= end))
+            var entryLabels = entry.LabelIds.Select(id => labelsById.GetValueOrDefault(id)).OfType<FinancialLabel>().ToList();
+            var isSalary = entry.LabelIds.Contains(salaryLabel.Id);
+            var isSpending = entry.ValueChange < 0 && FinancialLabelClassificationCatalog.ResolveClassification(entryLabels) != FinancialLabelClassificationCatalog.InvestmentValue;
+            if (!isSalary && !isSpending) continue;
+
+            var entryCurrency = currencies[entry.CurrencyId];
+            var amount = entry.ValueChange;
+            if (!string.Equals(entryCurrency.ShortName, currency.ShortName, StringComparison.OrdinalIgnoreCase))
             {
-                var isSalary = entry.Labels?.Any(label => label.Id == salaryLabel.Id) == true;
-                var isSpending = entry.ValueChange < 0 && FinancialLabelClassificationCatalog.ResolveClassification(entry.Labels ?? []) != FinancialLabelClassificationCatalog.InvestmentValue;
-                if (!isSalary && !isSpending) continue;
-
-                var amount = entry.ValueChange;
-                if (!string.Equals(accountCurrency.ShortName, currency.ShortName, StringComparison.OrdinalIgnoreCase))
-                {
-                    var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(accountCurrency, currency, entry.PostingDate);
-                    var rate = exchangeRate ?? throw new InvalidOperationException($"No exchange rate from {accountCurrency.ShortName} to {currency.ShortName} on {entry.PostingDate:d}.");
-                    amount *= rate;
-                }
-
-                if (isSalary) salary += amount;
-                if (isSpending) spending += Math.Abs(amount);
+                var exchangeRate = await currencyExchangeService.GetExchangeRateAsync(entryCurrency, currency, entry.PostingDate);
+                var rate = exchangeRate ?? throw new InvalidOperationException($"No exchange rate from {entryCurrency.ShortName} to {currency.ShortName} on {entry.PostingDate:d}.");
+                amount *= rate;
             }
+
+            if (isSalary) salary += amount;
+            if (isSpending) spending += Math.Abs(amount);
         }
 
         if (salary == 0 && spending == 0) yield break;

@@ -21,6 +21,12 @@ public interface IInvestmentTransactionRepository
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The number of trades per user in one grouped query, linked to an account or not. Users without trades are omitted,
+    /// so callers should treat a missing key as zero. Id 0 is never a user and is ignored.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Insert a new transaction and return the persisted entity (with its generated id).</summary>
     Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
 

@@ -50,7 +50,12 @@ public interface IUserRepository
     /// </summary>
     Task<bool> AddUserWithId(int userId, string login, string password, PricingLevel pricingLevel, UserRole userRole, string? firstName = null, string? lastName = null);
 
-    Task<bool> RemoveUser(int userId);
+    /// <summary>
+    /// Deletes the user and everything they own (entries and trades linked to an account or not, legacy accounts, alerts, insights,
+    /// rules, subscriptions and tokens) in one transaction. Shared labels and audit rows (gift codes, active-user history) stay.
+    /// Returns <c>false</c> when the user does not exist.
+    /// </summary>
+    Task<bool> RemoveUser(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The distinct preferred-currency ids across all users, resolved in a single grouped query.

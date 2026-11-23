@@ -1,37 +1,30 @@
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Extensions;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 
 namespace FinanceManager.Application.MoneyFlow.Spending;
 
-public class CurrencyExpenseDistributionService(IFinancialAccountRepository financialAccountRepository) : IExpenseDistributionServiceTyped
+public class CurrencyExpenseDistributionService(ICashTransactionReader cashTransactionReader, IFinancialLabelsRepository financialLabelsRepository) : IExpenseDistributionServiceTyped
 {
     public async Task<List<NameValueResult>> GetExpenseDistribution(int userId, Currency currency, DateTime start, DateTime end)
     {
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
+        var labelsById = (await financialLabelsRepository.GetLabels().ToListAsync()).ToDictionary(label => label.Id);
         Dictionary<string, decimal> totals = [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
+        foreach (var entry in await cashTransactionReader.GetLabeledEntries(userId, start, end, endInclusive: true, outflowsOnly: true))
         {
-            if (account?.Entries is null) continue;
+            var category = FinancialLabelClassificationCatalog.ResolveClassification(entry.LabelIds.Select(id => labelsById.GetValueOrDefault(id)).OfType<FinancialLabel>());
+            if (category is null) continue;
 
-            foreach (var entry in account.Entries)
-            {
-                if (entry.ValueChange >= 0) continue;
-                if (entry.PostingDate < start || entry.PostingDate > end) continue;
-
-                var category = FinancialLabelClassificationCatalog.ResolveClassification(entry.Labels);
-                if (category is null) continue;
-
-                totals[category] = totals.GetValueOrDefault(category) + Math.Abs(entry.ValueChange);
-            }
+            totals[category] = totals.GetValueOrDefault(category) + Math.Abs(entry.ValueChange);
         }
 
         return totals

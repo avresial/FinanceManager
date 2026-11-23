@@ -85,6 +85,12 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
         return new OwnerLedgerRange(opening, points);
     }
 
+    public async Task<bool> HasAnyEntries(int userId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        return await OwnerEntries(userId).AnyAsync(ct);
+    }
+
     private IQueryable<BondAccountEntry> OwnerEntries(int userId) => context.BondEntries.AsNoTracking().Where(e => e.UserId == userId);
 
     private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<BondAccountEntry> entries) =>

@@ -1,20 +1,20 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 
 public class CurrencyAccountSeeder(
-    IFinancialAccountRepository accountRepository,
-    ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
+    ICashTransactionReader cashTransactionReader,
+    IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,
     IFinancialLabelsRepository financialLabelsRepository,
     ILogger<CurrencyAccountSeeder> logger)
 {
@@ -67,21 +67,29 @@ public class CurrencyAccountSeeder(
 
     public async Task Seed(int userId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken = default)
     {
-        if (await currencyAccountRepository.GetAvailableAccounts(userId).AnyAsync(cancellationToken)) return;
+        if (userId == 0 || await cashTransactionReader.HasAnyEntries(userId, cancellationToken)) return;
 
         var labels = await GetSeedableLabels(cancellationToken);
         var labelByName = labels.ToDictionary(l => l.Name, StringComparer.OrdinalIgnoreCase);
 
-        logger.LogTrace("Seeding cash currency account.");
-        await SeedCashAccount(userId, labelByName, start, end, random, cancellationToken);
-
-        logger.LogTrace("Seeding loan currency account.");
-        await SeedLoanAccount(userId, labelByName, start, end, cancellationToken);
+        logger.LogTrace("Seeding pooled cash entries.");
+        await SeedCash(userId, labelByName, start, end, random, cancellationToken);
     }
 
-    private async Task SeedCashAccount(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, Random random, CancellationToken cancellationToken)
+    // The demo owns one pooled PLN cash stream: no account, no loan account. The loan shows up as its monthly repayments,
+    // a plain recurring outflow, so there is no disbursement inflow to inflate net worth. Monthly outflows stay below the
+    // salary and the opening balance equals one salary, so the pooled balance never goes negative.
+    private async Task SeedCash(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, Random random, CancellationToken cancellationToken)
     {
-        var account = new CurrencyAccount(userId, 0, $"{AccountLabel.Cash} 1", AccountLabel.Cash);
+        List<CurrencyAccountEntry> entries = [];
+        void Add(DateTime date, decimal valueChange, string description, List<FinancialLabel> labels) =>
+            entries.Add(new CurrencyAccountEntry(null, 0, date, 0m, valueChange)
+            {
+                UserId = userId,
+                CurrencyId = DefaultCurrency.PLN.Id,
+                Description = description,
+                Labels = labels
+            });
 
         var salaryLabels = LabelsFor(labelByName, "Salary");
         var investmentLabels = LabelsFor(labelByName, "Investment");
@@ -91,11 +99,7 @@ public class CurrencyAccountSeeder(
 
         // Opening balance equals one month's salary so the partial first month can absorb random expenses
         // before the first day-1 paycheck lands.
-        account.AddEntry(new AddCurrencyEntryDto(start, _monthlySalary, "Opening balance", null, []), false);
-
-        // The loan is taken out on the guest's very first day: its proceeds land in cash here while the loan
-        // account books the matching debt (see SeedLoanAccount).
-        account.AddEntry(new AddCurrencyEntryDto(start, GuestInvestmentPlan.LoanPrincipal, "Loan disbursement", null, loanLabels), false);
+        Add(start, _monthlySalary, "Opening balance", []);
 
         var currentMonth = CalendarMonth.Of(start);
         decimal negativesThisMonth = 0m;
@@ -115,40 +119,39 @@ public class CurrencyAccountSeeder(
             switch (date.Day)
             {
                 case 1:
-                    account.AddEntry(new AddCurrencyEntryDto(date, _monthlySalary, "Monthly salary", null, salaryLabels), false);
+                    Add(date, _monthlySalary, "Monthly salary", salaryLabels);
                     break;
                 case GuestInvestmentPlan.StockDayOfMonth:
                     // Pays for the matching stock purchase StockAccountSeeder books on the same day.
-                    account.AddEntry(new AddCurrencyEntryDto(date, -GuestInvestmentPlan.StockMonthlyAmount, "Investment — iShares Core S&P 500 ETF (CSPX.LON)", null, investmentLabels), false);
+                    Add(date, -GuestInvestmentPlan.StockMonthlyAmount, "Investment — iShares Core S&P 500 ETF (CSPX.LON)", investmentLabels);
                     negativesThisMonth += GuestInvestmentPlan.StockMonthlyAmount;
                     break;
                 case 4:
-                    account.AddEntry(new AddCurrencyEntryDto(date, -_monthlyRent, "Rent payment", null, rentLabels), false);
-                    account.AddEntry(new AddCurrencyEntryDto(date, -_monthlyUtilities, "Utilities bill", null, utilitiesLabels), false);
+                    Add(date, -_monthlyRent, "Rent payment", rentLabels);
+                    Add(date, -_monthlyUtilities, "Utilities bill", utilitiesLabels);
                     negativesThisMonth += _monthlyRent + _monthlyUtilities;
                     break;
                 case GuestInvestmentPlan.BondDayOfMonth:
                     // Pays for the matching bond purchase BondAccountSeeder books on the same day.
-                    account.AddEntry(new AddCurrencyEntryDto(date, -GuestInvestmentPlan.BondMonthlyAmount, "Investment — Polish Treasury inflation bond", null, investmentLabels), false);
+                    Add(date, -GuestInvestmentPlan.BondMonthlyAmount, "Investment — Polish Treasury inflation bond", investmentLabels);
                     negativesThisMonth += GuestInvestmentPlan.BondMonthlyAmount;
                     break;
                 case GuestInvestmentPlan.LoanRepaymentDayOfMonth:
-                    // Mirrors the loan repayment SeedLoanAccount books on the same day.
-                    account.AddEntry(new AddCurrencyEntryDto(date, -GuestInvestmentPlan.LoanMonthlyRepayment, "Loan repayment", null, loanLabels), false);
+                    Add(date, -GuestInvestmentPlan.LoanMonthlyRepayment, "Loan repayment", loanLabels);
                     negativesThisMonth += GuestInvestmentPlan.LoanMonthlyRepayment;
                     break;
                 default:
-                    negativesThisMonth = AddRandomNegatives(account, date, labelByName, negativesThisMonth, randomAmountsByMerchant, random);
+                    negativesThisMonth = AddRandomNegatives(Add, date, labelByName, negativesThisMonth, randomAmountsByMerchant, random);
                     break;
             }
         }
 
-        account.RecalculateEntryValues(account.Entries.Count - 1);
-        await accountRepository.AddAccount(account);
+        // Unlinked entries carry no running value, so there is nothing to recalculate.
+        await currencyEntryRepository.Add(entries, false, cancellationToken);
     }
 
     private static decimal AddRandomNegatives(
-        CurrencyAccount account,
+        Action<DateTime, decimal, string, List<FinancialLabel>> add,
         DateTime date,
         Dictionary<string, FinancialLabel> labelByName,
         decimal negativesThisMonth,
@@ -172,7 +175,7 @@ public class CurrencyAccountSeeder(
             usedAmounts.Add(amount);
 
             var labels = LabelsFor(labelByName, merchant.LabelName);
-            account.AddEntry(new AddCurrencyEntryDto(date, -amount, merchant.Description, null, labels), false);
+            add(date, -amount, merchant.Description, labels);
             negativesThisMonth += amount;
         }
         return negativesThisMonth;
@@ -202,27 +205,6 @@ public class CurrencyAccountSeeder(
 
     private static List<FinancialLabel> LabelsFor(Dictionary<string, FinancialLabel> labelByName, string name) =>
         labelByName.TryGetValue(name, out var label) ? [label] : [];
-
-    private async Task SeedLoanAccount(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, CancellationToken cancellationToken)
-    {
-        var account = new CurrencyAccount(userId, 0, $"{AccountLabel.Loan} 1", AccountLabel.Loan);
-        var loanLabels = LabelsFor(labelByName, "Loan");
-
-        // Borrowed in full on the guest's first day; the matching cash inflow is booked by SeedCashAccount.
-        account.AddEntry(new AddCurrencyEntryDto(start, -GuestInvestmentPlan.LoanPrincipal, "Loan principal", null, loanLabels), false);
-
-        // Equal monthly repayments shrink the debt toward zero, each mirrored by a cash outflow on the same day.
-        for (var date = start.AddDays(1); date <= end; date = date.AddDays(1))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!GuestInvestmentPlan.IsLoanRepaymentDay(date)) continue;
-
-            account.AddEntry(new AddCurrencyEntryDto(date, GuestInvestmentPlan.LoanMonthlyRepayment, "Loan repayment", null, loanLabels), false);
-        }
-
-        account.RecalculateEntryValues(account.Entries.Count - 1);
-        await accountRepository.AddAccount(account);
-    }
 
     private async Task<List<FinancialLabel>> GetSeedableLabels(CancellationToken cancellationToken)
     {

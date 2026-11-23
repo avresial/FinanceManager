@@ -1,34 +1,25 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Identity.Users;
 
-public class UsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository, ILogger<UsersService> logger)
+public class UsersService(IUserRepository userRepository, ICacheInvalidator cacheInvalidator, ILogger<UsersService> logger)
 {
-    public async Task<bool> DeleteUser(int userId)
+    public async Task<bool> DeleteUser(int userId, CancellationToken cancellationToken = default)
     {
-        var user = await userRepository.GetUser(userId);
-        if (user is null) return false;
+        if (!await userRepository.RemoveUser(userId, cancellationToken)) return false;
 
-        foreach (var account in await financialAccountRepository.GetAvailableAccounts(userId))
+        // The delete is committed, so a cache failure must not turn it into an error, and a cancelled request must still bust the cache.
+        try
         {
-            try
-            {
-                await financialAccountRepository.RemoveAccount(account.Value, account.Key);
-            }
-            catch (OperationCanceledException ex)
-            {
-                logger.LogDebug(ex, "Deleting user {UserId} cancelled or timed out while removing account {AccountId}.", userId, account.Value);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, ex.Message);
-                throw;
-            }
+            await cacheInvalidator.InvalidateUser(userId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Deleted user {UserId} but could not invalidate their cached data.", userId);
         }
 
-        return await userRepository.RemoveUser(userId);
+        return true;
     }
 }

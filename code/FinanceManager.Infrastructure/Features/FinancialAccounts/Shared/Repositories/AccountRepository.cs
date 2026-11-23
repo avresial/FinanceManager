@@ -30,14 +30,6 @@ public class AccountRepository(ICurrencyAccountRepository<CurrencyAccount> curre
 
         return result;
     }
-    public async Task<int> GetAccountsCount()
-    {
-        int currencyAccountsCount = await currencyAccountRepository.GetAccountsCount();
-        int investmentAccountsCount = await investmentAccountRepository.GetAccountsCount();
-        int bondAccountsCount = await bondAccountRepository.GetAccountsCount();
-
-        return currencyAccountsCount + investmentAccountsCount + bondAccountsCount;
-    }
     public async Task<T?> GetAccount<T>(int userId, int accountId, DateTime dateStart, DateTime dateEnd) where T : class, IAccount
     {
         switch (typeof(T))

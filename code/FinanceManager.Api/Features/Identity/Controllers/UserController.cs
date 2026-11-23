@@ -102,7 +102,7 @@ public class UserController(
         if (!ApiAuthenticationHelper.IsAdminOrAuthenticatedUser(User, userId))
             return Forbid();
 
-        return Ok(await usersService.DeleteUser(userId));
+        return Ok(await usersService.DeleteUser(userId, cancellationToken));
     }
 
     [Authorize(Roles = "Admin, User")]

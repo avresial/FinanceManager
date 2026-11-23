@@ -1,25 +1,26 @@
 using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 using ForecastModel = FinanceManager.Domain.MoneyFlow.Entities.CashFlowForecast;
 
 namespace FinanceManager.Application.MoneyFlow.CashFlowForecast;
 
 /// <summary>
-/// Builds a deterministic, read-only cash projection from the latest account balances and
+/// Builds a deterministic, read-only cash projection from the owner's pooled cash balance and
 /// strongly recurring cash movements. No forecast point is persisted as a transaction.
 /// </summary>
 public sealed class CashFlowForecastService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
     IRecurringTransactionDetectorService recurringTransactionDetectorService,
     ICurrencyExchangeService currencyExchangeService,
     IDateTimeProvider dateTimeProvider) : ICashFlowForecastService
@@ -39,9 +40,9 @@ public sealed class CashFlowForecastService(
         var asOf = dateTimeProvider.UtcNow;
         var asOfDate = asOf.Date;
         var historyStart = asOfDate.AddDays(-_historyDays);
-        var accounts = await LoadCashAccounts(userId, historyStart, asOf, cancellationToken);
-        // Cash accounts and recurring detector results use the application's base denomination;
-        // neither model carries a per-account currency, so value both from PLN into the requested currency.
+        var cashRange = await cashTransactionReader.GetValueRange(userId, historyStart, asOf, cancellationToken);
+        // The pooled cash balance and the recurring detector results are summed as stored (the application's base
+        // denomination), so value both from PLN into the requested currency.
         var rates = await CurrencyRateSeries.LoadAsync(
             currencyExchangeService,
             DefaultCurrency.PLN,
@@ -58,7 +59,7 @@ public sealed class CashFlowForecastService(
                 $"No exchange rates are available from {DefaultCurrency.PLN.ShortName} to {currency.ShortName} for the forecast period.");
         }
 
-        var historicalSeries = BuildHistoricalSeries(accounts, rates, historyStart, asOfDate);
+        var historicalSeries = BuildHistoricalSeries(cashRange, rates, historyStart, asOfDate);
         var currentBalance = historicalSeries.Count == 0 ? 0m : historicalSeries[^1].Value;
 
         var recurringFlows = await recurringTransactionDetectorService.GetRecurringCashFlows(
@@ -86,62 +87,16 @@ public sealed class CashFlowForecastService(
         };
     }
 
-    private async Task<List<CurrencyAccount>> LoadCashAccounts(
-        int userId,
-        DateTime start,
-        DateTime end,
-        CancellationToken cancellationToken)
-    {
-        var accounts = new List<CurrencyAccount>();
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (account is not null && account.AccountType == AccountLabel.Cash)
-                accounts.Add(account);
-        }
-
-        return accounts;
-    }
-
     private static List<TimeSeriesModel> BuildHistoricalSeries(
-        IReadOnlyCollection<CurrencyAccount> accounts,
+        OwnerLedgerRange cashRange,
         IReadOnlyDictionary<DateTime, decimal> rates,
         DateTime start,
         DateTime end)
     {
-        var balances = InitializeSeries(start, end);
-
-        foreach (var account in accounts)
-        {
-            var entries = account.Entries
-                .OrderBy(entry => entry.PostingDate)
-                .ThenBy(entry => entry.EntryId)
-                .ToList();
-            var runningBalance = account.NextOlderEntry?.Value ?? 0m;
-            var entryIndex = 0;
-
-            while (entryIndex < entries.Count && entries[entryIndex].PostingDate.Date < start.Date)
-            {
-                runningBalance = entries[entryIndex].Value;
-                entryIndex++;
-            }
-
-            for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
-            {
-                while (entryIndex < entries.Count && entries[entryIndex].PostingDate.Date <= date)
-                {
-                    runningBalance = entries[entryIndex].Value;
-                    entryIndex++;
-                }
-
-                if (CurrencyRateSeries.TryGet(rates, date, out var rate))
-                    balances[date] += runningBalance * rate;
-            }
-        }
-
-        return balances
-            .Select(point => new TimeSeriesModel(point.Key, Math.Round(point.Value, 2)))
-            .ToList();
+        var walk = new OwnerLedgerWalk(cashRange);
+        return [.. walk.EachDayEnd(start, end).Select(day => new TimeSeriesModel(
+            day.Day,
+            CurrencyRateSeries.TryGet(rates, day.Day, out var rate) ? Math.Round(day.Positions.Sum(position => position.Value) * rate, 2) : 0m))];
     }
 
     private static List<CashFlowForecastTransaction> BuildExpectedTransactions(
@@ -207,14 +162,6 @@ public sealed class CashFlowForecastService(
             result.Add(new TimeSeriesModel(date, Math.Round(balance, 2)));
         }
 
-        return result;
-    }
-
-    private static Dictionary<DateTime, decimal> InitializeSeries(DateTime start, DateTime end)
-    {
-        var result = new Dictionary<DateTime, decimal>();
-        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
-            result[date] = 0m;
         return result;
     }
 

@@ -5,7 +5,6 @@ namespace FinanceManager.Domain.Administration.Users;
 
 public interface IAdministrationUsersService
 {
-    Task<int> GetAccountsCount();
     IAsyncEnumerable<ChartEntryModel> GetDailyActiveUsers();
     IAsyncEnumerable<ChartEntryModel> GetNewUsersDaily();
     Task<decimal?> GetTotalTrackedMoney();
