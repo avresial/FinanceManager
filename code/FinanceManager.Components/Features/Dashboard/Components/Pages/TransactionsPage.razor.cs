@@ -16,6 +16,7 @@ using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using System.Globalization;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
@@ -83,6 +84,9 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     /// <summary><c>?range=</c> picks one of the toolbar's preset ranges (e.g. 1M, YTD); anything else keeps the default.</summary>
     [SupplyParameterFromQuery(Name = "range")] public string? Range { get; set; }
 
+    /// <summary><c>?from=yyyy-MM-dd</c> opens a custom range from that day to today, for links to transactions older than every preset; a valid <c>from</c> wins over <c>range</c>.</summary>
+    [SupplyParameterFromQuery(Name = "from")] public string? From { get; set; }
+
     [Inject] public required ILogger<TransactionsPage> Logger { get; set; }
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -100,6 +104,11 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         if (!string.IsNullOrWhiteSpace(Search)) _search = Search.Trim();
         if (TransactionLogToolbar.Ranges.FirstOrDefault(range => range.Equals(Range, StringComparison.OrdinalIgnoreCase)) is string preset)
             _selectedRange = preset;
+        if (DateTime.TryParseExact(From, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var from))
+        {
+            _selectedRange = DateRangeHelper.CustomRangeKey;
+            _customRange = new DateRange(from, DateTime.UtcNow.Date);
+        }
         if (!string.IsNullOrWhiteSpace(Currency))
             _filter = new TransactionLogFilter([TransactionKind.Cash], [Currency.Trim().ToUpperInvariant()]);
         ApplyRange();

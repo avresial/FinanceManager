@@ -103,6 +103,36 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
+    public async Task QueryString_From_OpensACustomRangeReachingBackToThatDay()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(5, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?search=rent&from=2024-02-29");
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        var query = QueryHelpers.ParseQuery(Assert.Single(handler.Requests).Query);
+        Assert.Equal(new DateTime(2024, 2, 29), ParseDate(query["start"]!).Date);
+        var toolbar = cut.FindComponent<TransactionLogToolbar>();
+        Assert.Equal("Custom", toolbar.Instance.SelectedRange);
+        Assert.Equal(new DateTime(2024, 2, 29), toolbar.Instance.CustomDateRange!.Start);
+    }
+
+    [Fact]
+    public async Task QueryString_InvalidFrom_KeepsTheDefault()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(5, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?from=yesterday");
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        Assert.Equal("3M", cut.FindComponent<TransactionLogToolbar>().Instance.SelectedRange);
+    }
+
+    [Fact]
     public async Task QueryString_UnknownRange_KeepsTheDefault()
     {
         using var handler = new PageHandler((_, _) => Respond(Page([Entry(5, _oct15)], null)));

@@ -251,6 +251,21 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
     }
 
     [Fact]
+    public async Task SetEnabled_ReturnsBadRequest_WhenTheStoredCurrencyNoLongerExists()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var alertId = Guid.NewGuid();
+        _serviceMock
+            .Setup(x => x.SetEnabledAsync(_testUserId, alertId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SetAlertEnabledStatus.CurrencyInvalid);
+
+        var response = await Client.PatchAsJsonAsync($"api/FinancialAlerts/{alertId}/enabled", true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("currency does not exist", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task SetEnabled_ReturnsNotFound_ForUnknownAlert()
     {
         Authorize("user", _testUserId, UserRole.User);

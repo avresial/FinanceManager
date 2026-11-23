@@ -56,6 +56,9 @@ public class MigrateAlertsToCurrencyScopeMigrationTests
         Assert.Contains(sqlServer ? "IsEnabled = 0" : "IsEnabled = FALSE", up);
         Assert.Contains("LastStatus = 1", up);
         Assert.Contains("LastTriggeredConditionFingerprint = NULL", up);
+        // The old per-account trigger time and value would show under the new currency scope.
+        Assert.Contains("LastTriggeredAt = NULL", up);
+        Assert.Contains("LastTriggeredValue = NULL", up);
         // No fingerprint translation or seeding: the evaluators produce fresh fingerprints once the alert is re-enabled.
         Assert.DoesNotContain("SUBSTRING", up);
         Assert.DoesNotContain("STRING_AGG", up);
@@ -72,6 +75,21 @@ public class MigrateAlertsToCurrencyScopeMigrationTests
         Assert.Contains("fa.CurrencyId IS NULL", up);
         Assert.Contains(sqlServer ? "IsEnabled = 1 OR LastStatus <> 1" : "IsEnabled = TRUE OR LastStatus <> 1", up);
         Assert.Contains("WHERE AccountId IS NOT NULL", up);
+        // Already-disabled rows that still carry stale trigger history are reset once.
+        Assert.Contains("LastTriggeredAt IS NOT NULL OR LastTriggeredValue IS NOT NULL", up);
+    }
+
+    [Fact]
+    public void SqlServerScript_BindsTheNewCurrencyColumnInsideExecAfterTheAlterTable()
+    {
+        var up = Script(true, _previous, _migration);
+
+        // SQL Server compiles the whole generated script as one batch: a plain UPDATE naming the column added by the
+        // preceding ALTER TABLE fails with error 207, so the statement must be compiled later by EXEC.
+        var alter = up.IndexOf("ALTER TABLE [FinancialAlerts] ADD [CurrencyId]", StringComparison.Ordinal);
+        var exec = up.IndexOf("EXEC(N'UPDATE fa", StringComparison.Ordinal);
+        Assert.True(alter >= 0 && exec > alter, "the backfill runs as EXEC after the column is added");
+        Assert.DoesNotContain("\nUPDATE fa", up);
     }
 
     [Theory]

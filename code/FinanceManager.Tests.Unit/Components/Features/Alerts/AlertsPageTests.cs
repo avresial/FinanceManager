@@ -4,6 +4,7 @@ using FinanceManager.Components.Features.Alerts.Components;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Alerts.Models;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
@@ -84,7 +85,8 @@ public sealed class AlertsPageTests
         cut.WaitForAssertion(() =>
         {
             var items = popovers.FindAll(".mud-list-item").Select(item => item.TextContent.Trim()).ToList();
-            Assert.Equal(["EUR", "PLN", "USD"], items);
+            // EUR exists in the catalog but the user has no EUR transactions.
+            Assert.Equal(["PLN", "USD"], items);
         });
     }
 
@@ -99,25 +101,48 @@ public sealed class AlertsPageTests
 
         OpenCurrencySelect(cut);
         cut.WaitForAssertion(() => Assert.NotEmpty(popovers.FindAll(".mud-list-item")));
-        popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "EUR").Click();
+        popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "USD").Click();
 
-        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim() == "EUR"));
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim() == "USD"));
     }
 
     [Fact]
-    public async Task MigratedAlertWithoutCurrency_CannotBeEnabledUntilACurrencyIsChosenAndSaved()
+    public async Task MigratedAlertWithoutCurrency_SaysWhatToDoAndCannotBeEnabledFromTheSwitch()
     {
         var handler = new AlertsHandler { Migrated = true };
         await using var context = CreateContext(handler, new SnapshotStore());
-        var popovers = context.Render<MudPopoverProvider>();
         var cut = context.Render<AlertsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Migrated alert", cut.Markup));
         Assert.Contains("(currency required)", cut.Markup);
         Assert.True(cut.Find("input[aria-label='Enable Migrated alert']").HasAttribute("disabled"));
+        // A neutral "Disabled" chip would read as a finished state; this one is waiting for the user.
+        var status = cut.Find("td[data-label='Status'] .mud-chip");
+        Assert.Equal("Needs currency", status.TextContent.Trim());
+        Assert.Contains("mud-chip-color-warning", status.ClassName);
+        Assert.DoesNotContain("0.00", cut.Find("td[data-label='Observed']").TextContent);
+        Assert.Contains("Choose a currency to turn it back on", cut.Find("td[data-label='Observed']").TextContent);
+        var tooltip = cut.FindComponents<MudTooltip>().Single().Instance;
+        Assert.False(tooltip.Disabled);
+        Assert.Contains("Choose a currency first", tooltip.Text);
+    }
 
-        cut.Find("button[aria-label='Edit Migrated alert']").Click();
+    [Fact]
+    public async Task ChooseCurrency_OpensTheEditorAndSavingTurnsTheAlertOnByDefault()
+    {
+        var handler = new AlertsHandler { Migrated = true };
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Migrated alert", cut.Markup));
+
+        cut.Find("[data-testid='alert-choose-currency']").Click();
+
+        Assert.NotEmpty(cut.FindAll("[data-testid='alert-needs-currency-hint']"));
         Assert.True(string.IsNullOrEmpty(SelectedCurrency(cut)));
+        // No currency chosen yet, so the threshold shows no (wrong) code.
+        Assert.DoesNotContain(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim().Length == 3);
+        Assert.NotEmpty(cut.FindAll("[data-testid='alert-enable-on-save']"));
 
         cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes")).Click();
         cut.WaitForAssertion(() => Assert.Contains("Select a currency for this alert.", cut.Markup));
@@ -126,10 +151,88 @@ public sealed class AlertsPageTests
         OpenCurrencySelect(cut);
         cut.WaitForAssertion(() => Assert.NotEmpty(popovers.FindAll(".mud-list-item")));
         popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "USD").Click();
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim() == "USD"));
         cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes")).Click();
 
         cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
         Assert.Contains("\"currencyId\":2", handler.LastUpdate);
+        Assert.Contains("\"isEnabled\":true", handler.LastUpdate);
+    }
+
+    [Fact]
+    public async Task ChooseCurrency_LetsTheUserSaveTheCurrencyWithoutTurningTheAlertOn()
+    {
+        var handler = new AlertsHandler { Migrated = true };
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Migrated alert", cut.Markup));
+        cut.Find("[data-testid='alert-choose-currency']").Click();
+        OpenCurrencySelect(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(popovers.FindAll(".mud-list-item")));
+        popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "USD").Click();
+
+        var enableOnSave = cut.FindComponent<MudCheckBox<bool>>();
+        await cut.InvokeAsync(() => enableOnSave.Instance.ValueChanged.InvokeAsync(false));
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes")).Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
+        Assert.Contains("\"isEnabled\":false", handler.LastUpdate);
+    }
+
+    [Fact]
+    public async Task AlertWhoseStoredCurrencyIsNotInTheCatalog_IsTreatedAsNeedingACurrency()
+    {
+        var handler = new AlertsHandler { StoredCurrencyId = 999, StartDisabled = true };
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var cut = context.Render<AlertsPage>();
+
+        cut.WaitForAssertion(() => Assert.Equal("Needs currency", cut.Find("td[data-label='Status'] .mud-chip").TextContent.Trim()));
+        Assert.True(cut.Find("input[aria-label='Enable Fresh alert']").HasAttribute("disabled"));
+
+        cut.Find("button[aria-label='Edit Fresh alert']").Click();
+
+        Assert.True(string.IsNullOrEmpty(SelectedCurrency(cut)));
+    }
+
+    [Fact]
+    public async Task EditingAnAlertInACurrencyWithoutTransactions_StillOffersThatCurrency()
+    {
+        var handler = new AlertsHandler { StoredCurrencyId = 1 };
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Contains("Fresh alert", cut.Markup));
+
+        cut.Find("button[aria-label='Edit Fresh alert']").Click();
+        OpenCurrencySelect(cut);
+
+        cut.WaitForAssertion(() => Assert.Equal(["EUR", "PLN", "USD"], popovers.FindAll(".mud-list-item").Select(item => item.TextContent.Trim())));
+    }
+
+    [Fact]
+    public async Task CurrencyOptions_FallBackToTheWholeCatalogWhenTheUsersCurrenciesAreUnknown()
+    {
+        await using var context = CreateContext(new AlertsHandler(), new SnapshotStore(), ownedCurrencies: HttpStatusCode.ServiceUnavailable);
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Equal("0", SelectedCurrency(cut)));
+
+        OpenCurrencySelect(cut);
+
+        cut.WaitForAssertion(() => Assert.Equal(["EUR", "PLN", "USD"], popovers.FindAll(".mud-list-item").Select(item => item.TextContent.Trim())));
+    }
+
+    [Fact]
+    public async Task CurrencyHelperText_DoesNotClaimThatAmountsAreSummed()
+    {
+        await using var context = CreateContext(new AlertsHandler(), new SnapshotStore());
+        var cut = context.Render<AlertsPage>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='alert-currency-select']")));
+
+        Assert.Contains("Only transactions in this currency are checked.", cut.Markup);
+        Assert.DoesNotContain("summed", cut.Markup);
     }
 
     [Fact]
@@ -252,10 +355,10 @@ public sealed class AlertsPageTests
         Outcomes = [Outcome()],
     };
 
-    private static FinancialAlertDto Alert(string title, bool migrated = false) => new(
-        _alertId, 7, title, AlertType.AccountBalance, !migrated,
+    private static FinancialAlertDto Alert(string title, bool migrated = false, int? currencyId = 0, bool disabled = false) => new(
+        _alertId, 7, title, AlertType.AccountBalance, !migrated && !disabled,
         AlertComparisonOperator.GreaterThan, 100m, AlertEvaluationPeriod.CurrentMonth,
-        migrated ? null : DefaultCurrency.PLN.Id, null, null, null, null, AlertTriggerStatus.Healthy,
+        migrated ? null : currencyId, null, null, null, null, AlertTriggerStatus.Healthy,
         null, null, new DateTime(2026, 9, 1), null);
 
     private static AlertEvaluationOutcome Outcome(bool migrated = false) => new(
@@ -265,7 +368,7 @@ public sealed class AlertsPageTests
         AlertComparisonOperator.GreaterThan, "stable", "Healthy",
         DateTime.UtcNow, new Dictionary<string, string>());
 
-    private static BunitContext CreateContext(AlertsHandler handler, SnapshotStore snapshots)
+    private static BunitContext CreateContext(AlertsHandler handler, SnapshotStore snapshots, HttpStatusCode ownedCurrencies = HttpStatusCode.OK)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -291,11 +394,25 @@ public sealed class AlertsPageTests
         {
             BaseAddress = new Uri("http://localhost/")
         }));
+        context.Services.AddSingleton(new TransactionLogHttpClient(new HttpClient(new OwnedCurrenciesHandler(ownedCurrencies))
+        {
+            BaseAddress = new Uri("http://localhost/")
+        }));
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
         settings.Setup(service => service.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.PLN);
         context.Services.AddSingleton(settings.Object);
         return context;
+    }
+
+    // The currency codes of the user's own transactions: PLN and USD, but none in EUR.
+    private sealed class OwnedCurrenciesHandler(HttpStatusCode status) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(status)
+            {
+                Content = status == HttpStatusCode.OK ? JsonContent.Create(new List<string> { "PLN", "USD" }) : new StringContent("unavailable")
+            });
     }
 
     private sealed class CurrenciesHandler : HttpMessageHandler
@@ -342,6 +459,8 @@ public sealed class AlertsPageTests
         public string AlertTitle { get; set; } = "Fresh alert";
         public bool DelayFirstEvaluation { get; init; }
         public bool Migrated { get; init; }
+        public int? StoredCurrencyId { get; init; } = 0;
+        public bool StartDisabled { get; init; }
         public string? LastUpdate { get; private set; }
         public int GetCount { get; private set; }
         public int EvaluateCount { get; private set; }
@@ -368,7 +487,7 @@ public sealed class AlertsPageTests
                 GetCount++;
                 return new(HttpStatusCode.OK)
                 {
-                    Content = JsonContent.Create(_deleted ? new List<FinancialAlertDto>() : [Alert(Migrated ? "Migrated alert" : AlertTitle, Migrated)])
+                    Content = JsonContent.Create(_deleted ? new List<FinancialAlertDto>() : [Alert(Migrated ? "Migrated alert" : AlertTitle, Migrated, StoredCurrencyId, StartDisabled)])
                 };
             }
 

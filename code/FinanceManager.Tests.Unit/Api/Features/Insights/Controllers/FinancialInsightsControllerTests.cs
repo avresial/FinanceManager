@@ -65,6 +65,34 @@ public class FinancialInsightsControllerTests
         Assert.Single(returnValue);
     }
 
+    [Theory]
+    [InlineData("accountId")]
+    [InlineData("AccountId")]
+    public async Task GetLatest_RejectsTheRetiredAccountScope_WithoutReadingOrQueueing(string key)
+    {
+        _controller.ControllerContext.HttpContext.Request.QueryString = new QueryString($"?{key}=7");
+
+        var result = await _controller.GetLatest(3, TestContext.Current.CancellationToken);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        _mockRepository.Verify(repo => repo.GetLatestByUser(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("accountId")]
+    [InlineData("AccountId")]
+    public async Task Generate_RejectsTheRetiredAccountScope_WithoutCallingTheGenerator(string key)
+    {
+        _controller.ControllerContext.HttpContext.Request.QueryString = new QueryString($"?{key}=7");
+
+        var result = await _controller.Generate(3, TestContext.Current.CancellationToken);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        _mockGenerator.Verify(g => g.GenerateInsights(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(repo => repo.AddRange(It.IsAny<IEnumerable<FinancialInsight>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task GetLatest_QueuesRegeneration_WhenNewestInsightIsOlderThanSevenDays()
     {

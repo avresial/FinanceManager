@@ -116,6 +116,21 @@ public class FinancialAlertEvaluatorTests
         Assert.Contains("Currency #7", outcome.Message);
     }
 
+    [Theory]
+    [InlineData(AlertType.CategorySpending)]
+    [InlineData(AlertType.MerchantSpending)]
+    [InlineData(AlertType.LargeTransaction)]
+    public void Evaluate_UnsupportedStoredPeriod_ReportsAnErrorInsteadOfWideningToAllTime(AlertType type)
+    {
+        var alert = new FinancialAlert(1, "Malformed", type, AlertComparisonOperator.GreaterThan, 10m,
+            evaluationPeriod: (AlertEvaluationPeriod)99, currencyId: _pln);
+
+        var outcome = _evaluator.Evaluate(alert, Snapshot(entries: [Cash(1, new DateTime(2026, 9, 3, 10, 0, 0, DateTimeKind.Utc), -600m)]));
+
+        Assert.Equal(AlertTriggerStatus.Error, outcome.Status);
+        Assert.False(outcome.IsTriggered);
+    }
+
     [Fact]
     public void Evaluate_CategorySpending_TriggersWhenSpendingExceedsThresholdInPeriod()
     {

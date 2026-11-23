@@ -22,11 +22,14 @@ namespace FinanceManager.Api.Migrations
             // so a stored trigger or fingerprint would not carry over. The migration therefore:
             //   1. prefills CurrencyId only where it is exact: the alert had an account and that account is a Currency account of the
             //      same user. Alerts without an account, or whose account is gone or of another kind, stay without a currency;
-            //   2. disables all four cash types and resets their trigger state (Healthy, no fingerprint), so the user reviews the
+            //   2. disables all four cash types and resets their trigger state (Healthy, no fingerprint, no last trigger time or value,
+            //      which belonged to the old per-account meaning), so the user reviews the
             //      currency and re-enables them, and the first evaluation after that is a normal fresh trigger;
             //   3. clears the legacy AccountId on every alert. SubscriptionPriceChange (5) alerts never used it and stay enabled.
             // Nothing is guessed, no row can fail the statements, and a second run changes nothing. The AccountId column stays until the
             // contract step. Statuses: 1 = Healthy.
+            // SQL Server compiles the generated script as one batch, so the statement that reads the new CurrencyId column is wrapped
+            // in EXEC to bind it after ALTER TABLE has run.
             if (ActiveProvider == "Npgsql.EntityFrameworkCore.PostgreSQL")
                 migrationBuilder.Sql("""
                     UPDATE "FinancialAlerts" AS fa
@@ -43,9 +46,12 @@ namespace FinanceManager.Api.Migrations
                     SET "IsEnabled" = FALSE,
                         "LastStatus" = 1,
                         "LastTriggeredConditionFingerprint" = NULL,
+                        "LastTriggeredAt" = NULL,
+                        "LastTriggeredValue" = NULL,
                         "UpdatedAt" = CURRENT_TIMESTAMP
                     WHERE "AlertType" IN (1, 2, 3, 4)
-                      AND ("IsEnabled" = TRUE OR "LastStatus" <> 1 OR "LastTriggeredConditionFingerprint" IS NOT NULL);
+                      AND ("IsEnabled" = TRUE OR "LastStatus" <> 1 OR "LastTriggeredConditionFingerprint" IS NOT NULL
+                           OR "LastTriggeredAt" IS NOT NULL OR "LastTriggeredValue" IS NOT NULL);
 
                     UPDATE "FinancialAlerts"
                     SET "AccountId" = NULL
@@ -53,7 +59,7 @@ namespace FinanceManager.Api.Migrations
                     """);
             else if (ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer")
                 migrationBuilder.Sql("""
-                    UPDATE fa
+                    EXEC(N'UPDATE fa
                     SET fa.[CurrencyId] = (
                         SELECT a.[CurrencyId]
                         FROM [Accounts] AS a
@@ -62,15 +68,18 @@ namespace FinanceManager.Api.Migrations
                     FROM [FinancialAlerts] AS fa
                     WHERE fa.[AccountId] IS NOT NULL
                       AND fa.[CurrencyId] IS NULL
-                      AND fa.[AlertType] IN (1, 2, 3, 4);
+                      AND fa.[AlertType] IN (1, 2, 3, 4);');
 
                     UPDATE [FinancialAlerts]
                     SET [IsEnabled] = 0,
                         [LastStatus] = 1,
                         [LastTriggeredConditionFingerprint] = NULL,
+                        [LastTriggeredAt] = NULL,
+                        [LastTriggeredValue] = NULL,
                         [UpdatedAt] = SYSUTCDATETIME()
                     WHERE [AlertType] IN (1, 2, 3, 4)
-                      AND ([IsEnabled] = 1 OR [LastStatus] <> 1 OR [LastTriggeredConditionFingerprint] IS NOT NULL);
+                      AND ([IsEnabled] = 1 OR [LastStatus] <> 1 OR [LastTriggeredConditionFingerprint] IS NOT NULL
+                           OR [LastTriggeredAt] IS NOT NULL OR [LastTriggeredValue] IS NOT NULL);
 
                     UPDATE [FinancialAlerts]
                     SET [AccountId] = NULL

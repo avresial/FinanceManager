@@ -14,6 +14,7 @@ namespace FinanceManager.Tests.Integration.Features.Insights.Controllers;
 public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private TestDatabase? _testDatabase;
+    private StubInsightsAiGenerator? _generator;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
@@ -25,13 +26,19 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
 
         services.AddSingleton(_testDatabase.Context);
 
-        services.AddSingleton<IFinancialInsightsAiGenerator>(new StubInsightsAiGenerator());
+        _generator = new StubInsightsAiGenerator();
+        services.AddSingleton<IFinancialInsightsAiGenerator>(_generator);
     }
 
     private sealed class StubInsightsAiGenerator : IFinancialInsightsAiGenerator
     {
-        public Task<List<FinancialInsight>> GenerateInsights(int userId, int count, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new List<FinancialInsight>());
+        public int Calls { get; private set; }
+
+        public Task<List<FinancialInsight>> GenerateInsights(int userId, int count, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(new List<FinancialInsight>());
+        }
     }
 
     [Fact]
@@ -74,6 +81,30 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
 
         Assert.Equal(["Owner wide", "Legacy"], result.Select(x => x.Title));
         Assert.All(result, x => Assert.Null(x.AccountId));
+    }
+
+    [Theory]
+    [InlineData("POST", "api/FinancialInsights/generate?accountId=7")]
+    [InlineData("GET", "api/FinancialInsights/get-latest?accountId=7")]
+    public async Task RetiredAccountScope_IsRejected_InsteadOfBecomingAnOwnerWideRequest(string method, string url)
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.SendAsync(new HttpRequestMessage(new HttpMethod(method), url), TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, _generator!.Calls);
+    }
+
+    [Fact]
+    public async Task Generate_WithoutTheRetiredScope_StillRunsOwnerWide()
+    {
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.PostAsync("api/FinancialInsights/generate?count=2", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, _generator!.Calls);
     }
 
     public override void Dispose()

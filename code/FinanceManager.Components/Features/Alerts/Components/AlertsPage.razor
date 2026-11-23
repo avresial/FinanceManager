@@ -42,6 +42,14 @@
             </MudAlert>
         }
 
+        @if (_editingNeedsCurrency)
+        {
+            <MudAlert Severity="Severity.Warning" Dense Class="mb-3" data-testid="alert-needs-currency-hint">
+                This alert was switched off when alerts moved from accounts to currencies. Choose the currency it should check,
+                then save to turn it back on.
+            </MudAlert>
+        }
+
         @* Keyed on the form version so a reset after saving mounts fresh inputs instead of
            flagging the now-empty required name as an error. *@
         <MudGrid Spacing="2" Class="mx-0 w-100" @key="_formVersion">
@@ -58,7 +66,7 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
+            <MudItem xs="12" sm="6" md="@FieldColumns">
                 <MudSelect T="AlertComparisonOperator" @bind-Value="_form.ComparisonOperator" Label="Comparison"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_isSaving">
                     @foreach (var comparison in Enum.GetValues<AlertComparisonOperator>())
@@ -67,12 +75,27 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" sm="6" md="4">
+            <MudItem xs="12" sm="6" md="@FieldColumns">
                 <MudNumericField T="decimal" @bind-Value="_form.Threshold" Label="Threshold"
-                                 Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 Adornment="@(ThresholdCurrencyCode is null ? Adornment.None : Adornment.End)"
                                  AdornmentText="@ThresholdCurrencyCode" Disabled="@_isSaving" />
             </MudItem>
-            <MudItem xs="12" md="4">
+            @if (_form.RequiresCurrency)
+            {
+                <MudItem xs="12" sm="6" md="@FieldColumns">
+                    <MudSelect T="int?" @bind-Value="_form.CurrencyId" Label="Currency" Required="true"
+                               HelperText="Only transactions in this currency are checked."
+                               Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="alert-currency-select"
+                               Disabled="@(_isSaving || _isLoadingCurrencies || _currencyOptionsFailed)">
+                        @foreach (var currency in _currencyOptions)
+                        {
+                            <MudSelectItem T="int?" Value="@((int?)currency.Id)">@currency.ShortName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            }
+            <MudItem xs="12" sm="6" md="@FieldColumns">
                 <MudSelect T="AlertEvaluationPeriod" @bind-Value="_form.EvaluationPeriod" Label="Evaluation period"
                            Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_isSaving">
                     @foreach (var period in Enum.GetValues<AlertEvaluationPeriod>())
@@ -81,20 +104,6 @@
                     }
                 </MudSelect>
             </MudItem>
-            @if (_form.RequiresCurrency)
-            {
-                <MudItem xs="12" md="6">
-                    <MudSelect T="int?" @bind-Value="_form.CurrencyId" Label="Currency" Required="true"
-                               HelperText="Amounts are compared in this currency, summed over all your transactions."
-                               Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="alert-currency-select"
-                               Disabled="@(_isSaving || _isLoadingCurrencies || _currencyOptionsFailed)">
-                        @foreach (var currency in _currencies)
-                        {
-                            <MudSelectItem T="int?" Value="@((int?)currency.Id)">@currency.ShortName</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-            }
             @if (_form.AlertType == AlertType.CategorySpending)
             {
                 <MudItem xs="12" md="6">
@@ -107,6 +116,13 @@
                 <MudItem xs="12" md="6">
                     <MudTextField T="string" @bind-Value="_form.MerchantName" Label="Merchant (optional)"
                                   HelperText="Matches contractor or description text." Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@_isSaving" />
+                </MudItem>
+            }
+            @if (_editingId is not null && _editingWasDisabled)
+            {
+                <MudItem xs="12">
+                    <MudCheckBox T="bool" @bind-Value="_form.IsEnabled" Disabled="@_isSaving" Dense
+                                 Label="Turn this alert on when saving" data-testid="alert-enable-on-save" />
                 </MudItem>
             }
         </MudGrid>
@@ -153,17 +169,24 @@
                 <MudTd DataLabel="Condition">
                     <div class="alerts-cell">
                         <MudText Typo="Typo.body2">@TypeLabel(context.AlertType)</MudText>
-                        <MudText Typo="Typo.caption">@ConditionLabel(context, CurrencyCodeOf(context))</MudText>
+                        <MudText Typo="Typo.caption">@ConditionLabel(context, CurrencyCodeOf(context), _knownCurrencyIds)</MudText>
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Status">
-                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context, _outcomes.GetValueOrDefault(context.Id))" Variant="Variant.Outlined">
-                        @(context.IsEnabled ? StatusLabel(context, _outcomes.GetValueOrDefault(context.Id)) : "Disabled")
+                    <MudChip T="string" Size="Size.Small" Color="@StatusColor(context, _outcomes.GetValueOrDefault(context.Id), _knownCurrencyIds)" Variant="Variant.Outlined">
+                        @StatusLabel(context, _outcomes.GetValueOrDefault(context.Id), _knownCurrencyIds)
                     </MudChip>
                 </MudTd>
                 <MudTd DataLabel="Observed">
                     <div class="alerts-cell">
-                        @if (_outcomes.TryGetValue(context.Id, out var outcome))
+                        @if (!context.IsEnabled && NeedsCurrency(context, _knownCurrencyIds))
+                        {
+                            <MudText Typo="Typo.body2">Choose a currency to turn it back on</MudText>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" Class="px-0"
+                                       Disabled="@(_isSaving || _pendingAlertIds.Contains(context.Id))"
+                                       OnClick="@(() => BeginEdit(context))" data-testid="alert-choose-currency">Choose currency</MudButton>
+                        }
+                        else if (_outcomes.TryGetValue(context.Id, out var outcome))
                         {
                             @if (outcome.Status == AlertTriggerStatus.Error)
                             {
@@ -194,9 +217,12 @@
                     </div>
                 </MudTd>
                 <MudTd DataLabel="Actions" Style="text-align:right; white-space:nowrap">
-                    <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleEnabledAsync(context, value))"
-                               Color="Color.Primary" Size="Size.Small" aria-label="@(string.Concat("Enable ", context.Title))"
-                               Disabled="@(_isSaving || _pendingAlertIds.Contains(context.Id) || (!context.IsEnabled && NeedsCurrency(context)))" />
+                    @{ var needsCurrency = !context.IsEnabled && NeedsCurrency(context, _knownCurrencyIds); }
+                    <MudTooltip Text="Choose a currency first, then turn this alert on" Disabled="@(!needsCurrency)">
+                        <MudSwitch T="bool" Value="@context.IsEnabled" ValueChanged="@(value => ToggleEnabledAsync(context, value))"
+                                   Color="Color.Primary" Size="Size.Small" aria-label="@(string.Concat("Enable ", context.Title))"
+                                   Disabled="@(_isSaving || _pendingAlertIds.Contains(context.Id) || needsCurrency)" />
+                    </MudTooltip>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => BeginEdit(context))"
                                    aria-label="@(string.Concat("Edit ", context.Title))" Disabled="@(_isSaving || _pendingAlertIds.Contains(context.Id))" />
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"

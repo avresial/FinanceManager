@@ -27,12 +27,21 @@ public class FinancialInsightsController(
     // The count goes straight into the AI request and the query, so it is bounded.
     private const int _maxCount = 10;
 
+    // Insights used to be generated per financial account. Dropping the action parameter would make ASP.NET ignore this key
+    // and turn an old scoped call into an owner-wide request that sends the owner's other transactions to the AI provider.
+    private const string _retiredAccountScopeKey = "accountId";
+    private const string _retiredAccountScopeMessage =
+        "Insights are no longer scoped to a financial account. Remove the accountId query parameter to request owner-wide insights.";
+
     [HttpGet("get-latest")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<FinancialInsight>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetLatest([FromQuery] int count = 3, CancellationToken cancellationToken = default)
     {
+        if (Request.Query.ContainsKey(_retiredAccountScopeKey))
+            return BadRequest(_retiredAccountScopeMessage);
+
         if (count <= 0)
             return BadRequest("Count must be greater than zero.");
 
@@ -59,6 +68,9 @@ public class FinancialInsightsController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Generate([FromQuery] int count = 3, CancellationToken cancellationToken = default)
     {
+        if (Request.Query.ContainsKey(_retiredAccountScopeKey))
+            return BadRequest(_retiredAccountScopeMessage);
+
         if (count <= 0)
             return BadRequest("Count must be greater than zero.");
 

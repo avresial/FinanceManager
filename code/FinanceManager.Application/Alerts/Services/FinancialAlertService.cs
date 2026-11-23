@@ -85,9 +85,14 @@ public class FinancialAlertService(
         var alert = await alertRepository.GetById(userId, alertId, cancellationToken);
         if (alert is null) return SetAlertEnabledStatus.NotFound;
 
-        // Migrated cash alerts come back disabled without a currency; they cannot be re-enabled before one is chosen.
-        if (isEnabled && alert.AlertType.RequiresCurrency() && alert.CurrencyId is null)
-            return SetAlertEnabledStatus.CurrencyRequired;
+        // Migrated cash alerts come back disabled without a currency, or with one copied from a legacy account that has no
+        // currency foreign key. Enabling goes through the same currency check as saving, so neither can be switched on.
+        if (isEnabled && alert.AlertType.RequiresCurrency())
+        {
+            if (alert.CurrencyId is null) return SetAlertEnabledStatus.CurrencyRequired;
+            if (await ValidateCurrencyAsync(alert.AlertType, alert.CurrencyId, cancellationToken) is not null)
+                return SetAlertEnabledStatus.CurrencyInvalid;
+        }
 
         alert.IsEnabled = isEnabled;
         alert.UpdatedAt = dateTimeProvider.UtcNow;
@@ -204,7 +209,7 @@ public class FinancialAlertService(
             : [];
 
         var boundedAlerts = cashAlerts
-            .Where(alert => alert.EvaluationPeriod != AlertEvaluationPeriod.AllTime && IsSpendingOrLarge(alert.AlertType))
+            .Where(alert => AlertPeriod.IsBounded(alert.EvaluationPeriod) && IsSpendingOrLarge(alert.AlertType))
             .ToList();
         var recentEntries = boundedAlerts.Count == 0
             ? []

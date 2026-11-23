@@ -4,5 +4,6 @@ public enum SetAlertEnabledStatus
 {
     Updated,
     NotFound,
-    CurrencyRequired
+    CurrencyRequired,
+    CurrencyInvalid
 }

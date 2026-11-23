@@ -21,8 +21,14 @@ public static class AlertPresentation
         return $"{count} {(count == 1 ? "match" : "matches")}";
     }
 
-    public static string ComparisonDetail(AlertEvaluationOutcome outcome) =>
-        $"{MoneyFormatter.FormatNumber(outcome.CurrentValue)} {ComparisonSymbol(outcome.ComparisonOperator)} {MoneyFormatter.FormatNumber(outcome.Threshold)}";
+    /// <summary>Observed value and threshold, each with the alert's currency code so alerts in different currencies read apart.</summary>
+    public static string ComparisonDetail(AlertEvaluationOutcome outcome)
+    {
+        var code = outcome.Context is not null && outcome.Context.TryGetValue("CurrencyCode", out var value) && !string.IsNullOrWhiteSpace(value)
+            ? $" {value}"
+            : string.Empty;
+        return $"{MoneyFormatter.FormatNumber(outcome.CurrentValue)}{code} {ComparisonSymbol(outcome.ComparisonOperator)} {MoneyFormatter.FormatNumber(outcome.Threshold)}{code}";
+    }
 
     public static string ComparisonSymbol(AlertComparisonOperator comparison) => comparison switch
     {
@@ -35,8 +41,15 @@ public static class AlertPresentation
         _ => comparison.ToString()
     };
 
-    /// <summary>Opens the transaction log filtered to the transaction's text and currency; its description is preferred so counterparty names stay out of URLs.</summary>
-    public static string TransactionHref(AlertTransactionReference transaction)
+    // Presets of the transaction log's range menu, from the shortest to the longest window they can open on.
+    private static readonly string[] _logRangePresets = ["Month", "1M", "3M", "6M", "YTD"];
+
+    /// <summary>
+    /// Opens the transaction log filtered to the transaction's text and currency; its description is preferred so counterparty
+    /// names stay out of URLs. The range always contains the posting date: the narrowest preset that reaches it, or an explicit
+    /// start day when the transaction is older than every preset (the log opens on its three-month default otherwise).
+    /// </summary>
+    public static string TransactionHref(AlertTransactionReference transaction, DateTime? now = null)
     {
         var term = !string.IsNullOrWhiteSpace(transaction.Description) ? transaction.Description : transaction.ContractorDetails;
         var parameters = new List<string>();
@@ -44,8 +57,26 @@ public static class AlertPresentation
             parameters.Add($"search={Uri.EscapeDataString(term.Trim())}");
         if (!string.IsNullOrWhiteSpace(transaction.CurrencyCode))
             parameters.Add($"currency={Uri.EscapeDataString(transaction.CurrencyCode)}");
+        parameters.Add(RangeParameter(transaction.PostingDate, now ?? DateTime.UtcNow));
 
-        return parameters.Count == 0 ? "/Transactions" : $"/Transactions?{string.Join('&', parameters)}";
+        return $"/Transactions?{string.Join('&', parameters)}";
+    }
+
+    private static string RangeParameter(DateTime postingDate, DateTime now)
+    {
+        string? best = null;
+        var bestStart = DateTime.MinValue;
+        foreach (var preset in _logRangePresets)
+        {
+            var start = DateRangeHelper.GetAccountDetailsRange(preset, null, null, now, now, now).Start.Date;
+            if (start > postingDate.Date || start <= bestStart) continue;
+            best = preset;
+            bestStart = start;
+        }
+
+        return best is null
+            ? $"from={postingDate.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}"
+            : $"range={best}";
     }
 
     public static string TransactionTitle(AlertTransactionReference transaction) =>
@@ -99,21 +130,33 @@ public static class AlertPresentation
         _ => period.ToString()
     };
 
-    public static bool NeedsCurrency(FinancialAlertDto alert) =>
-        alert.AlertType.RequiresCurrency() && alert.CurrencyId is null;
+    /// <summary>
+    /// A cash alert that cannot run until the user picks a currency: none is stored (migrated from an account scope), or the
+    /// stored one is not in the currency catalog. <paramref name="knownCurrencyIds"/> is null while the catalog is not loaded.
+    /// </summary>
+    public static bool NeedsCurrency(FinancialAlertDto alert, IReadOnlySet<int>? knownCurrencyIds = null) =>
+        alert.AlertType.RequiresCurrency()
+        && (alert.CurrencyId is null || (alert.CurrencyId is int id && knownCurrencyIds is not null && !knownCurrencyIds.Contains(id)));
 
-    public static string ConditionLabel(FinancialAlertDto alert, string? currencyCode = null)
+    public static string ConditionLabel(FinancialAlertDto alert, string? currencyCode = null, IReadOnlySet<int>? knownCurrencyIds = null)
     {
         var condition = $"{ComparisonLabel(alert.ComparisonOperator)} {MoneyFormatter.FormatNumber(alert.Threshold)}";
-        if (NeedsCurrency(alert))
+        if (NeedsCurrency(alert, knownCurrencyIds))
             return $"{condition} (currency required)";
 
         return string.IsNullOrWhiteSpace(currencyCode) ? condition : $"{condition} {currencyCode}";
     }
 
-    /// <summary>Status from the latest evaluation when there is one, otherwise from the alert's stored last status.</summary>
-    public static string StatusLabel(FinancialAlertDto alert, AlertEvaluationOutcome? outcome) =>
-        outcome is not null
+    /// <summary>
+    /// Status from the latest evaluation when there is one, otherwise from the alert's stored last status. A disabled alert
+    /// is "Needs currency" when it waits for the user's currency choice, otherwise plain "Disabled".
+    /// </summary>
+    public static string StatusLabel(FinancialAlertDto alert, AlertEvaluationOutcome? outcome, IReadOnlySet<int>? knownCurrencyIds = null)
+    {
+        if (!alert.IsEnabled)
+            return NeedsCurrency(alert, knownCurrencyIds) ? "Needs currency" : "Disabled";
+
+        return outcome is not null
             ? outcome.Status switch
             {
                 AlertTriggerStatus.Triggered => "Triggered",
@@ -121,12 +164,14 @@ public static class AlertPresentation
                 _ => "Healthy"
             }
             : alert.LastStatus == AlertTriggerStatus.Triggered ? "Triggered" : "Healthy";
+    }
 
-    public static Color StatusColor(FinancialAlertDto alert, AlertEvaluationOutcome? outcome) =>
-        StatusLabel(alert, outcome) switch
+    public static Color StatusColor(FinancialAlertDto alert, AlertEvaluationOutcome? outcome, IReadOnlySet<int>? knownCurrencyIds = null) =>
+        StatusLabel(alert, outcome, knownCurrencyIds) switch
         {
-            "Triggered" => Color.Warning,
+            "Triggered" or "Needs currency" => Color.Warning,
             "Error" => Color.Error,
+            "Disabled" => Color.Default,
             _ => Color.Success
         };
 }

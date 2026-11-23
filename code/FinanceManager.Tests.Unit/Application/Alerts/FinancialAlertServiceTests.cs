@@ -159,6 +159,59 @@ public class FinancialAlertServiceTests
     }
 
     [Fact]
+    public async Task SetEnabledAsync_CashAlertWithAnUnknownCurrency_CannotBeEnabled()
+    {
+        // The legacy account table had no currency foreign key, so a migrated alert can carry an orphaned id.
+        var existing = new FinancialAlert(-3, "Migrated", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m, currencyId: 99) { IsEnabled = false };
+        _alertRepositoryMock.Setup(r => r.GetById(-3, existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var result = await _service.SetEnabledAsync(-3, existing.Id, true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SetAlertEnabledStatus.CurrencyInvalid, result);
+        Assert.False(existing.IsEnabled);
+        _alertRepositoryMock.Verify(r => r.Update(It.IsAny<FinancialAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetEnabledAsync_DisablingAnAlertWithAnUnknownCurrency_IsStillAllowed()
+    {
+        var existing = new FinancialAlert(-3, "Migrated", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m, currencyId: 99) { IsEnabled = true };
+        _alertRepositoryMock.Setup(r => r.GetById(-3, existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var result = await _service.SetEnabledAsync(-3, existing.Id, false, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SetAlertEnabledStatus.Updated, result);
+        Assert.False(existing.IsEnabled);
+    }
+
+    [Fact]
+    public async Task SetEnabledAsync_SubscriptionAlert_CanBeEnabledWithoutACurrency()
+    {
+        var existing = new FinancialAlert(-3, "Subscription", AlertType.SubscriptionPriceChange, AlertComparisonOperator.GreaterThan, 1m) { IsEnabled = false };
+        _alertRepositoryMock.Setup(r => r.GetById(-3, existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var result = await _service.SetEnabledAsync(-3, existing.Id, true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SetAlertEnabledStatus.Updated, result);
+        Assert.True(existing.IsEnabled);
+    }
+
+    [Fact]
+    public async Task EvaluateAlertsAsync_UnsupportedPeriodDoesNotWidenTheHistoryRead()
+    {
+        var malformed = new FinancialAlert(-5, "Malformed", AlertType.LargeTransaction, AlertComparisonOperator.GreaterThan, 10m,
+            evaluationPeriod: (AlertEvaluationPeriod)99, currencyId: 0);
+        _alertRepositoryMock.Setup(r => r.GetAlertsByUserId(-5, It.IsAny<CancellationToken>())).ReturnsAsync([malformed]);
+        _evaluatorMock.Setup(e => e.EvaluateAll(It.IsAny<IEnumerable<FinancialAlert>>(), It.IsAny<AlertEvaluationSnapshot>())).Returns([]);
+
+        await _service.EvaluateAlertsAsync(-5, TestContext.Current.CancellationToken);
+
+        _cashReaderMock.Verify(r => r.GetHistory(It.IsAny<int>(), It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+        _alertRepositoryMock.Verify(r => r.GetAllTimeEvaluationData(It.IsAny<int>(), It.IsAny<IReadOnlyCollection<FinancialAlert>>(),
+            It.IsAny<DateTime>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
     public async Task SetEnabledAsync_CashAlertWithPlnCurrency_CanBeEnabled()
     {
         var existing = new FinancialAlert(-3, "Migrated", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m, currencyId: 0) { IsEnabled = false };

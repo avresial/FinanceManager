@@ -87,6 +87,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         {
             SetAlertEnabledStatus.Updated => NoContent(),
             SetAlertEnabledStatus.CurrencyRequired => BadRequest("Select a currency before enabling this alert."),
+            SetAlertEnabledStatus.CurrencyInvalid => BadRequest("The alert's currency does not exist. Choose a valid currency before enabling this alert."),
             _ => NotFound()
         };
     }
