@@ -119,7 +119,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<bool> Update(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
-        if (await GetAccountId(transaction.EntryId, cancellationToken) is not { } link) return false;
+        if (await GetAccountId(transaction.EntryId, cancellationToken) is not AccountLink link) return false;
         var accountId = link.AccountId;
 
         var updated = false;
@@ -131,11 +131,12 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             // A changed listing moves the row between two running-sum partitions, so both must be recalculated.
             // Original values are used because a caller may pass the tracked instance with its listing already changed.
             var entry = context.Entry(existing);
-            var previousPartition = (existing.AccountId, entry.Property(x => x.AssetListingId).OriginalValue);
+            var originalAccountId = entry.Property(x => x.AccountId).OriginalValue;
+            var previousPartition = (originalAccountId, entry.Property(x => x.AssetListingId).OriginalValue);
             await entry.Collection(x => x.Labels).LoadAsync(cancellationToken);
             existing.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
             // Owner and account link are never reassigned; an unlinked (owner-wide) trade stays unlinked.
-            existing.AccountId = entry.Property(x => x.AccountId).OriginalValue;
+            existing.AccountId = originalAccountId;
             existing.UserId = entry.Property(x => x.UserId).OriginalValue;
             existing.AssetListingId = transaction.AssetListingId;
             existing.Type = transaction.Type;
@@ -155,7 +156,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)
     {
-        if (await GetAccountId(id, cancellationToken) is not { } link) return false;
+        if (await GetAccountId(id, cancellationToken) is not AccountLink link) return false;
         var accountId = link.AccountId;
 
         var deleted = false;
@@ -240,7 +241,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
 
-        var units = (await context.InvestmentTransactions.AsNoTracking()
+        var units = await context.InvestmentTransactions.AsNoTracking()
             .Where(x => x.UserId == userId && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => x.AssetListingId)
             .Select(g => new
@@ -250,10 +251,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                     ? t.Quantity
                     : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
             })
-            .ToListAsync(cancellationToken))
             .Where(x => x.Units != 0m)
             .OrderBy(x => x.ListingId)
-            .ToList();
+            .ToListAsync(cancellationToken);
         if (units.Count == 0) return [];
 
         var ids = units.Select(x => x.ListingId).ToArray();

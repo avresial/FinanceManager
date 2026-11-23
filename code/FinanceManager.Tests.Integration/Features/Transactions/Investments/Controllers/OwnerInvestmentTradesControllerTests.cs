@@ -3,6 +3,7 @@ using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -31,18 +32,23 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     private const long _listing = 8;
     private const long _sameTickerListing = 9;
     private const long _flatListing = 10;
+    // The API host is reused across test instances, so it keeps the first instance's mocks: they must be static and reset per instance.
     private static readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
+    private static readonly Mock<ICacheInvalidator> _cacheInvalidator = new();
     private TestDatabase? _database;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
         _priceProvider.Reset();
+        _cacheInvalidator.Reset();
         _database = new TestDatabase();
         var descriptor = services.SingleOrDefault(x => x.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor is not null) services.Remove(descriptor);
         services.AddSingleton(_database.Context);
         services.RemoveAll<IInvestmentPriceProvider>();
         services.AddSingleton(_priceProvider.Object);
+        services.RemoveAll<ICacheInvalidator>();
+        services.AddSingleton(_cacheInvalidator.Object);
     }
 
     private AppDbContext Db => _database!.Context;
@@ -246,10 +252,80 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync(_route, Create() with { Type = (InvestmentTransactionTypeDto)9 }, ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"{_route}/{id}", Update(quantity: 0m), ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"{_route}/{id}", Update() with { AssetListingId = 404 }, ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"{_route}/{id}", Update() with { Currency = "USDX" }, ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.PutAsJsonAsync($"{_route}/{id}", Update() with { Notes = new string('n', 513) }, ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync($"{_route}?cursor=nope", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync($"{_route}?pageSize=0", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync($"{_route}?pageSize=101", ct)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync($"{_route}?type=7", ct)).StatusCode);
+    }
+
+    [Fact]
+    public async Task UserIdZero_IsForbiddenOnEveryRoute_AndNeverInvalidatesCache()
+    {
+        Seed();
+        Authorize("zero", 0, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        var responses = new[]
+        {
+            await Client.GetAsync(_route, ct),
+            await Client.GetAsync(_route + "/holdings", ct),
+            await Client.GetAsync(_route + "/1", ct),
+            await Client.PostAsJsonAsync(_route, Create(), ct),
+            await Client.PutAsJsonAsync(_route + "/1", Update(), ct),
+            await Client.DeleteAsync(_route + "/1", ct)
+        };
+
+        Assert.All(responses, x => Assert.Equal(HttpStatusCode.Forbidden, x.StatusCode));
+        Assert.Empty(await Db.InvestmentTransactions.ToListAsync(ct));
+        _cacheInvalidator.Verify(x => x.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAndDelete_InvalidateOwnerCache_OnlyWhenTheTradeIsChanged()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        Authorize("owner", _owner, UserRole.User);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.PutAsJsonAsync($"{_route}/{id + 1000}", Update(), ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.DeleteAsync($"{_route}/{id + 1000}", ct)).StatusCode);
+        _cacheInvalidator.Verify(x => x.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync($"{_route}/{id}", Update(), ct)).StatusCode);
+        _cacheInvalidator.Verify(x => x.InvalidateUser(_owner, It.IsAny<CancellationToken>()), Times.Once);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync($"{_route}/{id}", ct)).StatusCode);
+        _cacheInvalidator.Verify(x => x.InvalidateUser(_owner, It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task UpdateAndDelete_ForForeignTrade_DoNotInvalidateAnyCache()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        Authorize("other", _other, UserRole.User);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.PutAsJsonAsync($"{_route}/{id}", Update(), ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.DeleteAsync($"{_route}/{id}", ct)).StatusCode);
+        _cacheInvalidator.Verify(x => x.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAndDelete_StillSucceed_WhenCacheInvalidationFails()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        _cacheInvalidator.Setup(x => x.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>())).Throws(new InvalidOperationException("cache down"));
+        Authorize("owner", _owner, UserRole.User);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync($"{_route}/{id}", Update(), ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync($"{_route}/{id}", ct)).StatusCode);
+        Db.ChangeTracker.Clear();
+        Assert.Empty(await Db.InvestmentTransactions.ToListAsync(ct));
     }
 
     [Fact]

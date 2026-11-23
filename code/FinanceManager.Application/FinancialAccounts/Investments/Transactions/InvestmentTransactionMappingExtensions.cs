@@ -87,7 +87,7 @@ public static class InvestmentTransactionMappingExtensions
         Type = (InvestmentTransactionType)request.Type,
         Quantity = request.Quantity,
         UnitPrice = request.UnitPrice,
-        Currency = request.Currency,
+        Currency = request.Currency.Trim().ToUpperInvariant(),
         TradeDate = request.TradeDate,
         Fee = request.Fee,
         Description = request.Notes ?? string.Empty,
