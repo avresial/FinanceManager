@@ -23,9 +23,9 @@ The audit in #993 found these problems. The tables below refer to them by number
 | P7 | Thin identity: no time, label or currency; two "Online course" rows on 21 Oct cannot be told apart. |
 | P8 | A bare "Load more" button with no sense of how much is loaded. |
 
-### What the endpoint returns today
+### Endpoint at the time of the design study
 
-`GET api/TransactionLog/Page/{userId}` ([controller](../../../code/FinanceManager.Api/Features/Dashboard/Controllers/TransactionLogController.cs)) returns a [`TransactionLogPage`](../../../code/FinanceManager.Domain/Dashboard/Dtos/TransactionLogPage.cs): the items and a next cursor. It returns no total count and no totals. Each [`TransactionLogEntryDto`](../../../code/FinanceManager.Domain/Dashboard/Dtos/TransactionLogEntryDto.cs) has `AccountId, AccountName, AccountType, EntryId, Date, ValueChange, Description`.
+`GET api/TransactionLog/Page/{userId}` ([controller](../../../code/FinanceManager.Api/Features/Dashboard/Controllers/TransactionLogController.cs)) returned a `TransactionLogPage`: the items and a next cursor. It returns no total count and no totals. Each [`TransactionLogEntryDto`](../../../code/FinanceManager.Domain/Dashboard/Dtos/TransactionLogEntryDto.cs) has `AccountId, AccountName, AccountType, EntryId, Date, ValueChange, Description`.
 
 Two facts the tables rely on:
 

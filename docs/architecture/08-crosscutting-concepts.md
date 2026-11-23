@@ -105,3 +105,7 @@ Both themes must keep muted text readable; production renders dark, local sandbo
 ### Historical cash dividends
 
 [DividendPayment](../../code/FinanceManager.Domain/FinancialAccounts/Investments/Entities/DividendPayment.cs) records cash actually received, with an explicit payout currency and historical received date. API requests must supply the received date. Receipt amounts display two to eight fractional digits, retaining significant recorded precision. It is independent of the Buy/Sell trade ledger. Create, correction and deletion do not post cash entries, change quantities, alter portfolio valuation/returns or feed the Paycheck Estimator. Values are displayed in their recorded currency without FX conversion or mixed-currency totals. The first slice deliberately excludes tax/per-share calculations, forecasts, imports and reinvestment. These boundaries keep a manual income record from silently changing existing financial calculations.
+
+### Transaction history and running values
+
+Mixed-kind and filtered history shows cash and bond deltas. Legacy running values belong to individual accounts and are available on account details. The history page reads live. The compact dashboard card uses the owner- and count-scoped `transaction-log:v2` snapshot key. Its existing refresh and invalidation rules apply. Deposits, bond quantities and trades keep their original denominations.
