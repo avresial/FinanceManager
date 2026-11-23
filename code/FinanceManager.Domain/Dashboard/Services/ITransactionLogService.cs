@@ -11,4 +11,7 @@ public interface ITransactionLogService
     Task<List<TransactionLogEntryDto>> GetLastTransactions(int userId, int count, CancellationToken cancellationToken = default);
 
     Task<TransactionLogItemsPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>The currencies of the user's own transactions, sorted, for the currency filter options.</summary>
+    Task<List<string>> GetCurrencies(int userId, CancellationToken cancellationToken = default);
 }

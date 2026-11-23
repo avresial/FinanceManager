@@ -93,7 +93,7 @@ public sealed class TransactionLogToolbarTests
     }
 
     [Fact]
-    public async Task CurrencySelect_OffersAllAccounts_WhenNoTypeIsSelected()
+    public async Task CurrencySelect_OffersAllCurrencies_WhenNoKindIsSelected()
     {
         await using var context = CreateContext();
         var cut = RenderToolbar(context, TransactionLogFilter.None, _ => { });
@@ -115,7 +115,7 @@ public sealed class TransactionLogToolbarTests
     }
 
     [Fact]
-    public async Task PickingAnAccount_RaisesFilterChangedWithItsId_AndKeepsTheTypes()
+    public async Task PickingACurrency_RaisesFilterChangedWithIt_AndKeepsTheKinds()
     {
         await using var context = CreateContext();
         TransactionLogFilter? raised = null;
@@ -130,7 +130,7 @@ public sealed class TransactionLogToolbarTests
     }
 
     [Fact]
-    public async Task CurrencySelect_ShowsTheSelectedAccountName()
+    public async Task CurrencySelect_ShowsTheSelectedCurrency()
     {
         await using var context = CreateContext();
 
@@ -140,13 +140,26 @@ public sealed class TransactionLogToolbarTests
     }
 
     [Fact]
-    public async Task CurrencySelect_IsDisabled_WhenThereAreNoAccounts()
+    public async Task CurrencySelect_IsHidden_WhenTheUserHasOneCurrencyOrNone()
+    {
+        await using var noneContext = CreateContext();
+        await using var oneContext = CreateContext();
+
+        var none = RenderToolbar(noneContext, TransactionLogFilter.None, _ => { }, currencies: []);
+        var one = RenderToolbar(oneContext, TransactionLogFilter.None, _ => { }, currencies: ["PLN"]);
+
+        Assert.Empty(none.FindAll("input[data-testid='transactions-currency-filter']"));
+        Assert.Empty(one.FindAll("input[data-testid='transactions-currency-filter']"));
+    }
+
+    [Fact]
+    public async Task CurrencySelect_StaysVisible_WhileACurrencyIsSelected()
     {
         await using var context = CreateContext();
 
-        var cut = RenderToolbar(context, TransactionLogFilter.None, _ => { }, currencies: []);
+        var cut = RenderToolbar(context, new([], ["PLN"]), _ => { }, currencies: ["PLN"]);
 
-        Assert.NotNull(cut.Find("input[data-testid='transactions-currency-filter']").GetAttribute("disabled"));
+        Assert.NotEmpty(cut.FindAll("input[data-testid='transactions-currency-filter']"));
     }
 
     [Fact]

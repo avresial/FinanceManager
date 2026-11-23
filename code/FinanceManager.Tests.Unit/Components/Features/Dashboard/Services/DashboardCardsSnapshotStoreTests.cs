@@ -3,7 +3,6 @@ using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.Logging.Abstractions;

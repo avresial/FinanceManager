@@ -1,12 +1,9 @@
 using FinanceManager.Api.Features.Dashboard.Controllers;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -141,7 +138,7 @@ public class TransactionLogControllerTests
     }
 
     [Fact]
-    public async Task Page_WithFilters_PassesKindsAndIdsToTheQuery()
+    public async Task Page_WithFilters_PassesKindsAndCurrenciesToTheQuery()
     {
         var day = new DateTime(2024, 3, 5);
         var page = new TransactionLogItemsPage([], null);
@@ -199,12 +196,12 @@ public class TransactionLogControllerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-3)]
-    public async Task Page_WithNonPositiveAccountId_ReturnsValidationProblem(int accountId)
+    public async Task Page_WithMalformedCurrencyCode_ReturnsValidationProblem(int code)
     {
         var day = new DateTime(2024, 3, 5);
 
         var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
-            currencies: ["USD", accountId.ToString()], cancellationToken: TestContext.Current.CancellationToken);
+            currencies: ["USD", code.ToString()], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
         _transactionLogService.VerifyNoOtherCalls();
@@ -219,6 +216,23 @@ public class TransactionLogControllerTests
             currencies: [.. Enumerable.Repeat("USD", 101)], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        _transactionLogService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Currencies_ReturnsTheOwnersCurrencies()
+    {
+        _transactionLogService.Setup(x => x.GetCurrencies(_testUserId, TestContext.Current.CancellationToken)).ReturnsAsync(["PLN", "USD"]);
+
+        var result = await _controller.Currencies(_testUserId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["PLN", "USD"], Assert.IsType<List<string>>(Assert.IsType<OkObjectResult>(result).Value));
+    }
+
+    [Fact]
+    public async Task Currencies_ForOtherUser_DoesNotCallService()
+    {
+        Assert.IsType<ForbidResult>(await _controller.Currencies(_testUserId + 1, TestContext.Current.CancellationToken));
         _transactionLogService.VerifyNoOtherCalls();
     }
 

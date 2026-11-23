@@ -12,6 +12,7 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
     public async Task<IReadOnlyList<BondLogEntry>> GetHistory(int userId, OwnerHistoryQuery query, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (query.Take <= 0) return [];
         var entries = context.BondEntries.AsNoTracking().Where(e => e.UserId == userId);
         if (query.Start is DateTime start) entries = entries.Where(e => e.PostingDate >= start);
         if (query.End is DateTime end) entries = entries.Where(e => e.PostingDate <= end);
@@ -19,13 +20,12 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
             entries = entries.Where(e => e.PostingDate < cursor.Date || e.PostingDate == cursor.Date &&
                 (cursor.IncludeEqualId ? e.EntryId <= cursor.EntryId : e.EntryId < cursor.EntryId));
 
-        var rows = entries.Select(e => new
-        {
-            Entry = e,
-            Currency = context.Bonds.Where(b => b.Id == e.BondDetailsId).Select(b => b.Currency.ShortName).FirstOrDefault(),
-            BondName = context.Bonds.Where(b => b.Id == e.BondDetailsId).Select(b => b.Name).FirstOrDefault()
-        });
-        if (query.Currencies is { Count: > 0 } currencies)
+        // A bond definition that is missing keeps its entry visible, just without a currency or name.
+        var rows = from e in entries
+                   join b in context.Bonds on e.BondDetailsId equals b.Id into bonds
+                   from b in bonds.DefaultIfEmpty()
+                   select new { Entry = e, Currency = b != null ? b.Currency.ShortName : null, BondName = b != null ? b.Name : null };
+        if (query.NormalizedCurrencies() is { Count: > 0 } currencies)
             rows = rows.Where(x => x.Currency != null && currencies.Contains(x.Currency.ToUpper()));
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -52,5 +52,12 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
                 }).ToList()
             }).ToDictionaryAsync(x => x.EntryId, x => x.Labels, ct);
         return [.. page.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
+    }
+
+    public async Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var bondIds = context.BondEntries.Where(e => e.UserId == userId).Select(e => e.BondDetailsId);
+        return await context.Bonds.AsNoTracking().Where(b => bondIds.Contains(b.Id)).Select(b => b.Currency.ShortName).Distinct().ToListAsync(ct);
     }
 }

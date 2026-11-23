@@ -1,9 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;

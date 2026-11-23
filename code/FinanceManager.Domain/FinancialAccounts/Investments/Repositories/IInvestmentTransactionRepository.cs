@@ -8,6 +8,9 @@ public interface IInvestmentTransactionRepository
 {
     Task<IReadOnlyList<InvestmentTransaction>> GetHistoryByUser(long userId, OwnerHistoryQuery query, CancellationToken ct = default);
 
+    /// <summary>Distinct currency codes of the user's trades.</summary>
+    Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default);
+
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
 

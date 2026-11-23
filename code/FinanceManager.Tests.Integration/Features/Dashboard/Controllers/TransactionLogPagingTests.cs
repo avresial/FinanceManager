@@ -14,6 +14,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
@@ -108,6 +109,44 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         var page = await new TransactionLogHttpClient(Client).GetItemsPage(641, new(day, day.AddDays(1), Kinds: [kind], Currencies: [code]), ct);
         Assert.Equal(expected, page.Items.Count);
         Assert.All(page.Items, row => Assert.Equal(kind, row.Kind));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task FilteredPage_WalksEveryPageOfTheSelectionWithoutGapsOrDuplicates(int pageSize)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var client = new TransactionLogHttpClient(Client);
+        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize, Kinds: [TransactionKind.Cash, TransactionKind.Bond], Currencies: [" pln "]);
+
+        List<(TransactionKind Kind, long EntryId)> walked = [];
+        TransactionLogCursor? cursor = null;
+        for (var i = 0; ; i++)
+        {
+            Assert.True(i < 10, "Cursor did not advance.");
+            var page = await client.GetItemsPage(641, query with { Cursor = cursor }, ct);
+            Assert.True(page.Items.Count <= pageSize);
+            walked.AddRange(page.Items.Select(item => (item.Kind, item.EntryId)));
+            if ((cursor = page.NextCursor) is null)
+                break;
+        }
+
+        // Owner 641's PLN cash entries 3 and 1 and bond entries 1 and 2, newest first with ties broken by id, then kind;
+        // USD cash entry 2 and every GBX trade are filtered out.
+        Assert.Equal([(TransactionKind.Cash, 3L), (TransactionKind.Bond, 2L), (TransactionKind.Cash, 1L), (TransactionKind.Bond, 1L)], walked);
+    }
+
+    [Fact]
+    public async Task Currencies_ListsTheOwnersCurrenciesWithoutQuoteUnits()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedHistoryAsync(ct);
+
+        // Owner 641 holds PLN and USD cash, PLN bonds and GBX trades; the GBX quote unit is never offered.
+        Assert.Equal(["PLN", "USD"], await new TransactionLogHttpClient(Client).GetCurrencies(641, ct));
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client.GetAsync("api/TransactionLog/Currencies/999", ct)).StatusCode);
     }
 
     [Theory]
