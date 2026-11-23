@@ -135,8 +135,12 @@
                 </MudItem>
             }
             <MudItem xs="12">
-                <MudButton Variant="Variant.Text" OnClick="ShowEditOverlay">Edit</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ShowRemoveOverlay">Remove</MudButton>
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
+                </MudStack>
             </MudItem>
         </MudGrid>
     </div>

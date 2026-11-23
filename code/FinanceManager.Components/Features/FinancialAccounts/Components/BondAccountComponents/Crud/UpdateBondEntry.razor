@@ -25,7 +25,7 @@
                                      Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect Variant="Variant.Outlined" T="BondDetails" Label="Bond" @bind-Value="_selectedBond" ToStringFunc="@(b => b?.Name)">
+                    <MudSelect Variant="Variant.Outlined" T="BondDetails" Label="Bond" Required="true" RequiredError="Bond selection is required." @bind-Value="_selectedBond" ToStringFunc="@(b => b?.Name)">
                         @foreach (var bond in _possibleBonds)
                         {
                             <MudSelectItem T="BondDetails" Value="@bond">@bond.Name</MudSelectItem>

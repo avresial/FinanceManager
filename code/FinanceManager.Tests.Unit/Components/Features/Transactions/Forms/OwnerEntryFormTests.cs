@@ -100,6 +100,19 @@ public class OwnerEntryFormTests
     }
 
     [Fact]
+    public async Task EditCash_ShowsTheLocalTimeTheRowShows()
+    {
+        await using var context = CreateContext(RecordingHttpHandler.ForEntryForms([_food], saved: CashItem()));
+        var entry = new CurrencyAccountEntry(null, 42, new DateTime(2026, 11, 23, 0, 0, 0, DateTimeKind.Utc), 0m, -3m) { Description = "Old", CurrencyId = DefaultCurrency.USD.Id };
+
+        var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CurrencyAccountEntry, entry));
+
+        // Rows show PostingDate.ToLocalTime(); an edit form that showed the raw UTC hour would disagree with the row it came from.
+        var shown = entry.PostingDate.ToLocalTime().ToString("HH:mm");
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll("input"), input => input.GetAttribute("value") == shown));
+    }
+
+    [Fact]
     public async Task AddBond_PostsTheSelectedBond()
     {
         var handler = RecordingHttpHandler.ForEntryForms([_food], [_bond], saved: BondItem());

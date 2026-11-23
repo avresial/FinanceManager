@@ -65,8 +65,10 @@ public partial class UpdateBondEntry
         _loadedEntryId = BondAccountEntry.EntryId;
 
         _currency = SettingsService.GetCurrency();
-        _postingDate = BondAccountEntry.PostingDate;
-        _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
+        // Entries are stored as UTC and the rows show them in local time, so the form edits the same local wall-clock time.
+        var posted = BondAccountEntry.PostingDate.ToLocalTime();
+        _postingDate = posted;
+        _time = new TimeSpan(posted.Hour, posted.Minute, posted.Second);
         _valueChange = BondAccountEntry.ValueChange;
         _description = BondAccountEntry.Description;
 
@@ -118,6 +120,12 @@ public partial class UpdateBondEntry
                     };
                     await FinancialAccountService.UpdateEntry(bondAccountEntry);
                 }
+            }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (BondAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry update");
+                _errors = [ex.Message];
             }
             catch (Exception ex)
             {

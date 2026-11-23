@@ -4,12 +4,14 @@
 @using FinanceManager.Domain.Dashboard.Dtos
 
 @* Add a cash, bond or investment transaction without picking an account: the existing entry forms in owner mode. *@
-<MudOverlay Visible="@Visible" DarkBackground="true" ZIndex="1300">
+@* Top-aligned, so the kind toggle stays put when the form below it changes height. Escape closes it, and focus moves into it on open. *@
+<MudOverlay Visible="@Visible" DarkBackground="true" ZIndex="1300" Class="fm-entry-overlay--top">
     <MudPaper Class="pa-4 pa-sm-6 fm-entry-dialog" role="dialog" aria-modal="true" aria-label="Add transaction">
+        <div @ref="_dialogBody" tabindex="-1" class="fm-entry-dialog-body" data-testid="add-transaction-dialog" @onkeydown="OnKeyDown">
         <MudText Typo="Typo.h6" Class="mb-3">Add transaction</MudText>
         <div class="fm-view-toggle fm-view-toggle--block mb-4">
             <MudToggleGroup T="TransactionKind" Value="_kind" ValueChanged="OnKindChanged"
-                            SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="Size.Small" Color="Color.Default"
+                            SelectionMode="SelectionMode.SingleSelection" Size="Size.Small" Color="Color.Default"
                             aria-label="Transaction kind" data-testid="add-transaction-kind">
                 <MudToggleItem Value="TransactionKind.Cash" Text="Cash" />
                 <MudToggleItem Value="TransactionKind.Bond" Text="Bond" />
@@ -29,5 +31,6 @@
                 <AddCurrencyEntry @key="_kind" ActionCompleted="CloseAsync" />
                 break;
         }
+        </div>
     </MudPaper>
 </MudOverlay>

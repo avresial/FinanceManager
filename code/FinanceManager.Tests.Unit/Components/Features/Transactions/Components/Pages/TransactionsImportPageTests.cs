@@ -1,6 +1,7 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import;
 using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import;
+using FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
@@ -8,6 +9,7 @@ using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Features.Transactions.Components.Pages;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using MudBlazor;
@@ -43,6 +45,18 @@ public class TransactionsImportPageTests
         Assert.Empty(cut.FindComponents<ImportCurrencyEntriesComponent>());
     }
 
+    [Theory]
+    [InlineData("cash")]
+    [InlineData("bond")]
+    public async Task EveryStep_OffersAWayBackToTransactions(string kind)
+    {
+        await using var context = CreateContext();
+
+        var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, kind));
+
+        Assert.Equal("/Transactions", cut.Find("[data-testid=import-back]").GetAttribute("href"));
+    }
+
     [Fact]
     public async Task AnUnknownKind_ShowsAnInfoAlertLinkingBack()
     {
@@ -67,6 +81,25 @@ public class TransactionsImportPageTests
     }
 
     [Fact]
+    public async Task CashWizard_WithoutACurrency_DoesNotCompleteStep1WhenAFileIsLoaded()
+    {
+        // No currencies load, so there is nothing to import into; a parsed file must not unlock the later steps.
+        await using var context = CreateContext(new RecordingHttpHandler(request => request.RequestUri!.AbsolutePath == "/api/Currency/GetAll"
+            ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(new List<Currency>()) }
+            : new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(Array.Empty<int>()) }));
+        var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, "cash"));
+        var file = new Mock<IBrowserFile>();
+        file.SetupGet(x => x.Name).Returns("statement.csv");
+        file.SetupGet(x => x.Size).Returns(40);
+        file.Setup(x => x.OpenReadStream(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .Returns(() => new MemoryStream("Date;Amount\n2026-01-01;5\n2026-01-02;6\n"u8.ToArray()));
+
+        await cut.InvokeAsync(() => cut.FindComponent<ImportCsvFileStep>().Instance.OnFilesChanged.InvokeAsync(new InputFileChangeEventArgs([file.Object])));
+
+        cut.WaitForAssertion(() => Assert.Contains("Select a currency before continuing.", cut.Markup));
+    }
+
+    [Fact]
     public async Task CashWizardOfAnAccount_HasNoCurrencyChoice()
     {
         await using var context = CreateContext();
@@ -76,13 +109,15 @@ public class TransactionsImportPageTests
         Assert.Empty(cut.FindAll("[data-testid=import-currency]"));
     }
 
-    private static BunitContext CreateContext()
+    private static BunitContext CreateContext() => CreateContext(RecordingHttpHandler.ForEntryForms());
+
+    private static BunitContext CreateContext(RecordingHttpHandler handler)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddMudServices();
-        var http = RecordingHttpHandler.ForEntryForms().CreateClient();
+        var http = handler.CreateClient();
         context.Services.AddSingleton(Mock.Of<ILoginService>());
         context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(http);

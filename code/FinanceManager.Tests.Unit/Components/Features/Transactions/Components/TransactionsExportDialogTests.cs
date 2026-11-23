@@ -5,8 +5,10 @@ using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Features.Transactions.Components;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -52,7 +54,39 @@ public class TransactionsExportDialogTests
         Assert.Contains($"currencyId={DefaultCurrency.USD.Id}", request.PathAndQuery);
         Assert.Contains(Uri.EscapeDataString(startUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", System.Globalization.CultureInfo.InvariantCulture)), request.PathAndQuery);
         Assert.Contains(Uri.EscapeDataString(endUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ", System.Globalization.CultureInfo.InvariantCulture)), request.PathAndQuery);
-        Assert.Equal("cash-usd.csv", Assert.Single(download.Invocations).Arguments[0]);
+        // Named from the days the user picked, not from the UTC bounds the server used.
+        Assert.Equal("cash-usd-20260301-20260315.csv", Assert.Single(download.Invocations).Arguments[0]);
+    }
+
+    [Fact]
+    public async Task BondExport_RequestsTheBondRoute_AndNamesTheFileFromThePickedDays()
+    {
+        var csv = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent("a;b"u8.ToArray()) };
+        var handler = CreateHandler(csv, [Bond(5)]);
+        await using var context = CreateContext(handler);
+        var download = context.JSInterop.SetupVoid("financeManager.downloadFileFromBase64", _ => true);
+        var (cut, _) = await Open(context, TransactionKind.Bond, null);
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid=export-submit]").HasAttribute("disabled")));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid=export-submit]").Click());
+
+        var request = Assert.Single(handler.Requests, r => r.PathAndQuery.StartsWith("/api/transactions/bonds/export", StringComparison.Ordinal));
+        Assert.Contains("bondDetailsId=5", request.PathAndQuery);
+        Assert.Equal("bond-5-20260301-20260315.csv", Assert.Single(download.Invocations).Arguments[0]);
+    }
+
+    [Fact]
+    public async Task ANonHttpFailure_ShowsAGenericMessage_NotTheExceptionText()
+    {
+        var csv = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent("a;b"u8.ToArray()) };
+        await using var context = CreateContext(csv);
+        context.JSInterop.SetupVoid("financeManager.downloadFileFromBase64", _ => true).SetException(new InvalidOperationException("js interop internals"));
+        var (cut, _) = await Open(context, TransactionKind.Cash, null);
+        cut.WaitForAssertion(() => Assert.False(cut.Find("[data-testid=export-submit]").HasAttribute("disabled")));
+
+        await cut.InvokeAsync(() => cut.Find("[data-testid=export-submit]").Click());
+
+        Assert.Equal("Could not export the transactions.", cut.Find("[data-testid=export-message]").TextContent);
     }
 
     [Fact]
@@ -97,11 +131,15 @@ public class TransactionsExportDialogTests
         return (provider, dialog);
     }
 
-    private static RecordingHttpHandler CreateHandler(HttpResponseMessage export) => new(request =>
+    private static BondDetails Bond(int id) => new($"Bond {id}", "Issuer", new DateOnly(2023, 1, 1), new DateOnly(2030, 1, 1),
+        [new BondCalculationMethod { Id = id, DateOperator = DateOperator.UntilDate, DateValue = "2030-01-01", Rate = 0.05m }])
+    { Id = id };
+
+    private static RecordingHttpHandler CreateHandler(HttpResponseMessage export, IReadOnlyList<BondDetails>? bonds = null) => new(request =>
         request.RequestUri!.AbsolutePath switch
         {
             "/api/Currency/GetAll" => new HttpResponseMessage(HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(new List<Currency> { DefaultCurrency.PLN, DefaultCurrency.USD }) },
-            "/api/BondDetails" => new HttpResponseMessage(HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(Array.Empty<int>()) },
+            "/api/BondDetails" => new HttpResponseMessage(HttpStatusCode.OK) { Content = System.Net.Http.Json.JsonContent.Create(bonds ?? []) },
             _ => export
         });
 

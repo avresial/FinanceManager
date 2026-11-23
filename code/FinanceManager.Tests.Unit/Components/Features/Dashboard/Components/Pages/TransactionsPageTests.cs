@@ -550,6 +550,8 @@ public sealed class TransactionsPageTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
         Assert.Contains(services.Requests, uri => uri.AbsolutePath == "/api/transactions/investment/3");
         Assert.Equal(2, handler.Requests.Count);
+        // Deleting the last trade of a currency must drop it from the filter options.
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.CurrencyRequests.Count));
     }
 
     [Fact]
@@ -592,7 +594,8 @@ public sealed class TransactionsPageTests
         Assert.DoesNotContain("position ", cut.Markup, StringComparison.OrdinalIgnoreCase);
         var actions = cut.FindAll("button").Select(button => button.TextContent.Trim()).ToList();
         Assert.Equal(3, actions.Count(action => action == "Edit"));
-        Assert.Equal(["Delete", "Delete", "Remove"], actions.Where(action => action is "Delete" or "Remove").Order());
+        Assert.Equal(3, actions.Count(action => action == "Delete"));
+        Assert.DoesNotContain("Remove", actions);
     }
 
     [Fact]
@@ -664,6 +667,20 @@ public sealed class TransactionsPageTests
         await cut.InvokeAsync(() => cut.FindComponent<AddTransactionDialog>().Instance.OnSaved.InvokeAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(2, handler.Requests.Count));
+        // A first trade in a new currency must reach the filter options too.
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.CurrencyRequests.Count));
+    }
+
+    [Fact]
+    public async Task DialogQuery_WithAnUndefinedKind_OpensOnCash()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?dialog=add-entry&kind=999");
+
+        var cut = context.Render<TransactionsPage>();
+
+        Assert.Equal(TransactionKind.Cash, cut.FindComponent<AddTransactionDialog>().Instance.InitialKind);
     }
 
     [Fact]
@@ -680,6 +697,9 @@ public sealed class TransactionsPageTests
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
         await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Cash], [])));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-clear-filters']")));
+        // The header already offers Import and Add, so a filtered view shows only the way out of the filters.
+        Assert.Empty(cut.FindAll("[data-testid='transactions-empty'] a"));
+        Assert.Single(cut.FindAll("[data-testid='transactions-empty'] button"));
         cut.Find("[data-testid='transactions-clear-filters']").Click();
 
         cut.WaitForAssertion(() => Assert.False(toolbar.Instance.Filter.IsActive));

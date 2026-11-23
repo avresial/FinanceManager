@@ -28,7 +28,6 @@ public partial class ImportCurrencyEntriesComponent :
     private Currency? _currency;
 
     [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
-    [Inject] public required CurrencyAccountHttpClient AccountHttpClient { get; set; }
     [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -102,6 +101,9 @@ public partial class ImportCurrencyEntriesComponent :
     private void OnCurrencySelected(Currency? currency)
     {
         _currency = currency;
+        // A parsed file only counts as a finished step 1 while a currency is selected: the stepper header can jump ahead otherwise.
+        _step1Complete = HasImportTarget && _rawPreview.Count != 0;
+        if (HasImportTarget) _erorrs.Clear();
         AccountName = currency is null ? string.Empty : $"{currency.ShortName} cash";
     }
 
@@ -200,6 +202,9 @@ public partial class ImportCurrencyEntriesComponent :
                     data)
                 .Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
                 .ToList();
+
+            if (AccountId is null && _currency is null)
+                throw new InvalidOperationException("Select a currency before importing.");
 
             var startResponse = AccountId is int accountId
                 ? await AccountImportHttpClient.StartAsyncCurrencyImportAsync(new(accountId, entries))

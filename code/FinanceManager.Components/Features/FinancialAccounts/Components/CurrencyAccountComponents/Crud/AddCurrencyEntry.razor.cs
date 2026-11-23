@@ -120,6 +120,12 @@ public partial class AddCurrencyEntry : ComponentBase
                     await FinancialAccountService.AddEntry(accountEntry);
                 }
             }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (CurrencyAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry add");
+                _errors = [ex.Message];
+            }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error adding entry");

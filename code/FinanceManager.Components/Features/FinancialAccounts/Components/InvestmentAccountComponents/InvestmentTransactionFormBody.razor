@@ -51,36 +51,55 @@
     {
         <MudAlert Severity="Severity.Error" Dense="true">@_error</MudAlert>
     }
-    <MudSelect Variant="Variant.Outlined" T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
-        <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
-        <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
-    </MudSelect>
-    <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
-    <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.0001M"
-                     Disabled="@(_selectedInstrument is null || _isPriceLoading)" />
-    @if (_isPriceLoading)
-    {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="Loading price" />
-    }
-    @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
-    {
-        <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. Enter the unit price manually or keep 0 — automatic prices will update once available.</MudAlert>
-    }
-    @if (RequiresManualCurrencySelection)
-    {
-        <MudSelect Variant="Variant.Outlined" T="string" Label="Currency" @bind-Value="_formCurrency" Dense="true">
-            @foreach (var currencyCode in _availableCurrencies)
+    @* Two columns from tablet width up, like the cash and bond forms, so Save stays within reach. *@
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="6">
+            <MudSelect Variant="Variant.Outlined" T="InvestmentTransactionType" Label="Type" @bind-Value="_formType" Dense="true">
+                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Buy">Buy</MudSelectItem>
+                <MudSelectItem T="InvestmentTransactionType" Value="InvestmentTransactionType.Sell">Sell</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Units" @bind-Value="_formQuantity" Min="0" Step="0.0001M" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudNumericField Variant="Variant.Outlined" T="decimal" Label="Unit price" @bind-Value="_formUnitPrice" Min="0" Step="0.0001M"
+                             Disabled="@(_selectedInstrument is null || _isPriceLoading)" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            @if (RequiresManualCurrencySelection)
             {
-                <MudSelectItem T="string" Value="@currencyCode">@currencyCode</MudSelectItem>
+                <MudSelect Variant="Variant.Outlined" T="string" Label="Currency" @bind-Value="_formCurrency" Dense="true">
+                    @foreach (var currencyCode in _availableCurrencies)
+                    {
+                        <MudSelectItem T="string" Value="@currencyCode">@currencyCode</MudSelectItem>
+                    }
+                </MudSelect>
             }
-        </MudSelect>
-    }
-    else
-    {
-        <MudTextField Variant="Variant.Outlined" T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
-    }
-    <MudDatePicker Variant="Variant.Outlined" Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
-    <MudNumericField Variant="Variant.Outlined" T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
+            else
+            {
+                <MudTextField Variant="Variant.Outlined" T="string" Label="Currency" Value="@_formCurrency" ReadOnly="true" Disabled="true" />
+            }
+        </MudItem>
+        @if (_isPriceLoading)
+        {
+            <MudItem xs="12">
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" aria-label="Loading price" />
+            </MudItem>
+        }
+        @if (_noPriceAvailable && _selectedInstrument?.Source == InstrumentOptionSource.Existing)
+        {
+            <MudItem xs="12">
+                <MudAlert Severity="Severity.Info" Dense="true">No price data found for this instrument. Enter the unit price manually or keep 0 — automatic prices will update once available.</MudAlert>
+            </MudItem>
+        }
+        <MudItem xs="12" sm="6">
+            <MudDatePicker Variant="Variant.Outlined" Label="Trade date" Date="_formTradeDate" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" DateChanged="OnTradeDateChangedAsync" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudNumericField Variant="Variant.Outlined" T="decimal?" Label="Fee (optional)" @bind-Value="_formFee" Min="0" Step="0.01M" />
+        </MudItem>
+    </MudGrid>
     <MudSelect Variant="Variant.Outlined" T="int" Label="Labels (optional)" ToStringFunc="@(id => _possibleLabels.FirstOrDefault(x => x.Id == id)?.Name ?? id.ToString())" MultiSelection="true" @bind-SelectedValues="_selectedLabelIds">
         @foreach (var label in _possibleLabels)
         {

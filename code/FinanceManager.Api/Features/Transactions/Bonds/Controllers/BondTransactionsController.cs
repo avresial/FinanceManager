@@ -57,7 +57,8 @@ public class BondTransactionsController(
         if (!await userPlanVerifier.CanAddMoreEntries(ownerId))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        var entry = new BondAccountEntry(null, 0, request.PostingDate, 0, request.ValueChange, bond.Id)
+        // The repository stamps a non-UTC time as UTC without converting it; convert here, as the persistence converter does for updates and cash.
+        var entry = new BondAccountEntry(null, 0, request.PostingDate.ToUniversalTime(), 0, request.ValueChange, bond.Id)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,

@@ -17,8 +17,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
-using System.Net;
-using System.Net.Http.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Features.Transactions.Components;
 
@@ -81,6 +79,34 @@ public class AddTransactionDialogTests
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Cancel").Click();
 
         Assert.False(visible);
+    }
+
+    [Fact]
+    public async Task EscapeClosesTheDialog_AndOtherKeysDoNot()
+    {
+        await using var context = CreateContext();
+        bool? visible = null;
+        var cut = context.Render<AddTransactionDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.VisibleChanged, value => visible = value));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<AddCurrencyEntry>()));
+
+        await cut.Find("[data-testid=add-transaction-dialog]").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "a" });
+        Assert.Null(visible);
+        await cut.Find("[data-testid=add-transaction-dialog]").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+        Assert.False(visible);
+    }
+
+    [Fact]
+    public async Task OpeningTheDialog_MovesFocusIntoIt()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AddTransactionDialog>(p => p.Add(x => x.Visible, false));
+
+        cut.Render(p => p.Add(x => x.Visible, true));
+
+        cut.WaitForAssertion(() => context.JSInterop.VerifyFocusAsyncInvoke());
     }
 
     [Fact]

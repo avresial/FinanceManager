@@ -23,20 +23,25 @@ internal static class OwnerTransactionsHttpResponse
         {
             using var document = JsonDocument.Parse(body);
             var root = document.RootElement;
-            if (root.ValueKind == JsonValueKind.String) return root.GetString();
+            if (root.ValueKind == JsonValueKind.String) return NonBlank(root.GetString());
             if (root.ValueKind != JsonValueKind.Object) return body;
-            if (root.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String) return detail.GetString();
+            if (root.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String && NonBlank(detail.GetString()) is string detailMessage) return detailMessage;
             if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
                 foreach (var field in errors.EnumerateObject())
+                {
+                    if (field.Value.ValueKind != JsonValueKind.Array) continue;
                     foreach (var message in field.Value.EnumerateArray())
-                        if (message.ValueKind == JsonValueKind.String) return message.GetString();
-            return root.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String ? title.GetString() : null;
+                        if (message.ValueKind == JsonValueKind.String && NonBlank(message.GetString()) is string fieldMessage) return fieldMessage;
+                }
+            return root.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String ? NonBlank(title.GetString()) : null;
         }
         catch (JsonException)
         {
             return body;
         }
     }
+
+    private static string? NonBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
     public static async Task<CsvDownload> ReadCsv(HttpResponseMessage response, string fallbackFileName, CancellationToken cancellationToken)
     {
