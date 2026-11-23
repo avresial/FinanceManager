@@ -186,6 +186,35 @@ public sealed class SqliteInvestmentRunningValueTests : IDisposable
     }
 
     [Fact]
+    public async Task UnlinkedTrades_AreAddedEditedAndDeletedWithoutTouchingAnyAccountPartition()
+    {
+        await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);
+        var linkedBefore = await Snapshot();
+
+        var unlinked = Trade(1, 10, InvestmentTransactionType.Buy, 3, 2);
+        unlinked.AccountId = null;
+        var added = await _repository.Add(unlinked, Ct);
+        Assert.Null(added.AccountId);
+        Assert.Equal(0m, added.Value);
+
+        Assert.True(await Update(added.EntryId, t => { t.Quantity = 9; t.AssetListingId = 11; }));
+        var edited = (await Read()).Single(t => t.EntryId == added.EntryId);
+        Assert.Null(edited.AccountId);
+        Assert.Equal(70, edited.UserId);
+        Assert.Equal(9m, edited.Quantity);
+        Assert.Equal(11, edited.AssetListingId);
+        Assert.Equal(0m, edited.Value);
+
+        // A caller-supplied account is never applied to an unlinked trade.
+        Assert.True(await Update(added.EntryId, t => t.AccountId = 1));
+        Assert.Null((await Read()).Single(t => t.EntryId == added.EntryId).AccountId);
+
+        Assert.True(await _repository.Delete(added.EntryId, Ct));
+        Assert.False(await _repository.Delete(added.EntryId, Ct));
+        Assert.Equal(linkedBefore, await Snapshot());
+    }
+
+    [Fact]
     public async Task RandomMutations_KeepEveryValueEqualToRecomputedRunningSum()
     {
         var random = new Random(1084);

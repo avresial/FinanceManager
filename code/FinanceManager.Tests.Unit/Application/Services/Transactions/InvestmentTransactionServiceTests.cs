@@ -2,6 +2,7 @@ using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Application.Shared.Persistence;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
@@ -303,6 +304,55 @@ public class InvestmentTransactionServiceTests
         Assert.Equal("PLN", result.Currency);
         Assert.Null(existingIncomplete.TradingCurrency);
         Assert.False(result.AutomaticPricesAvailable);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(12)]
+    public async Task AddAsync_StampsTheCallerAndTheAccountLinkOfTheEntryPoint(int? accountId)
+    {
+        InvestmentTransaction? added = null;
+        _listingRepository.Setup(x => x.Get(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetListing { Id = 42, Ticker = "VWCE", TradingCurrency = "EUR" });
+        _atomicOperation
+            .Setup(x => x.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, Task<InvestmentTransactionDto>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, Task<InvestmentTransactionDto>> operation, CancellationToken ct) => operation(ct));
+        _transactionRepository
+            .Setup(x => x.Add(It.IsAny<InvestmentTransaction>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((InvestmentTransaction transaction, CancellationToken _) => { added = transaction; transaction.EntryId = 7; return transaction; });
+        _transactionRepository
+            .Setup(x => x.Get(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => added);
+        var service = CreateService();
+
+        var result = accountId is int account
+            ? await service.AddAsync(new AddInvestmentTransactionRequest(account, 42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken)
+            : await service.AddOwnerAsync(new CreateInvestmentTradeRequest(42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken);
+
+        Assert.Equal(accountId, added!.AccountId);
+        Assert.Equal(91, added.UserId);
+        Assert.Equal("EUR", added.Currency);
+        Assert.Equal(accountId, result.AccountId);
+        _cacheInvalidator.Verify(x => x.InvalidateUser(91, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddOwnerAsync_AppliesTheSameCurrencyAndValidationRules()
+    {
+        _listingRepository.Setup(x => x.Get(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssetListing { Id = 42, Ticker = "VWCE", TradingCurrency = "EUR" });
+        var service = CreateService();
+
+        var mismatch = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() => service.AddOwnerAsync(
+            new CreateInvestmentTradeRequest(42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "USD", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken));
+        var invalid = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() => service.AddOwnerAsync(
+            new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "EUR", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken));
+
+        Assert.Equal("currency_mismatch", mismatch.Code);
+        Assert.Equal("instrument_source_invalid", invalid.Code);
+        _transactionRepository.Verify(x => x.Add(It.IsAny<InvestmentTransaction>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private InvestmentTransactionService CreateService() => new(
