@@ -3,7 +3,7 @@
   "features": [
     { "id": "dashboard", "page": "/", "route": "", "description": "Dashboard: net worth, balances and summary cards." },
     { "id": "assets", "page": "/Assets", "route": "Assets", "description": "Assets overview and distribution." },
-    { "id": "liabilities", "page": "/Liabilities", "route": "Liabilities", "description": "Liabilities (loans) overview." },
+    { "id": "liabilities", "page": "/Liabilities", "route": "Liabilities", "description": "Liabilities (negative currency balances) overview." },
     { "id": "investments", "page": "/Investments", "route": "Investments", "description": "Investments dashboard across all investment accounts." },
     { "id": "transactions", "page": "/Transactions", "route": "Transactions", "description": "Owner history grouped by day, with transaction-kind, currency, date and text filters. Add (cash, bond or investment), Import / Export menu, and edit/delete on every row.", "ready": "[data-testid=transactions-day], [data-testid=transactions-empty]" },
     { "id": "transactions-search", "page": "/Transactions", "route": "Transactions?search=Netflix&range=6M", "description": "Owner history filtered by description, counterparty or instrument and date range from the URL (?search=<text>&range=Month|1M|3M|6M|YTD).", "ready": "[data-testid=transactions-day], [data-testid=transactions-empty]" },

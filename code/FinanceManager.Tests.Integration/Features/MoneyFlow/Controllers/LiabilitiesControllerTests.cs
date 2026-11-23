@@ -23,7 +23,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     protected override void ConfigureServices(IServiceCollection services)
     {
         _nowUtc = DateTime.UtcNow;
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
 
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
@@ -53,6 +53,8 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         int days = 100;
         _value = (2 + days) * _valueChange * -1;
+        // Balances are the sum of the entries' changes, so the debt is booked as an opening entry the later repayments work off.
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, DateTime.UtcNow.AddDays(-days - 1).Date, _value, _value));
 
         for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
             _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
@@ -82,7 +84,8 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Currency Account", result[0].Name);
+        Assert.Equal("PLN", result[0].Name);
+        Assert.Null(result[0].AccountId);
         Assert.Equal(_value, result[0].Value);
     }
 
@@ -97,7 +100,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal(AccountLabel.Loan.ToString(), result[0].Name);
+        Assert.Equal("Cash", result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 

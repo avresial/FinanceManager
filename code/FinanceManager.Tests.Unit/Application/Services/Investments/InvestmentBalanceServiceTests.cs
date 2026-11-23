@@ -23,40 +23,20 @@ public class InvestmentBalanceServiceTests
     }
 
     [Fact]
-    public async Task GetClosingBalance_AggregatesValuationSeriesAcrossInvestmentAccounts()
+    public async Task GetClosingBalance_Unfiltered_UsesThePooledOwnerSeriesAndZeroFillsMissingDays()
     {
         DateTime start = new(2024, 1, 1);
         DateTime end = new(2024, 1, 3);
 
-        var account1 = new InvestmentAccount(_userId, 10, "Investments A");
-        var account2 = new InvestmentAccount(_userId, 20, "Investments B");
-
-        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-                                   .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
-
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(It.Is<IReadOnlyCollection<int>>(a => a.Contains(10) && a.Contains(20)), DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>
-                         {
-                             [10] = new Dictionary<DateTime, decimal>
-                             {
-                                 [start] = 100,
-                                 [start.AddDays(1)] = 110,
-                                 [end] = 120
-                             },
-                             [20] = new Dictionary<DateTime, decimal>
-                             {
-                                 [start] = 5,
-                                 [end] = 7
-                             }
-                         });
+        // The pooled series omits the middle day (valued to zero); the closing balance still reports that day.
+        _valuationService.Setup(x => x.GetUserValueSeriesAsync(_userId, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
+                         .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 105, [end] = 127 });
 
         var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end);
 
-        Assert.Equal(3, result.Count);
-        Assert.Equal(105, result.Single(x => x.DateTime == start).Value);
-        // account2 omitted the middle day (valued to zero), so only account1 contributes there.
-        Assert.Equal(110, result.Single(x => x.DateTime == start.AddDays(1)).Value);
-        Assert.Equal(127, result.Single(x => x.DateTime == end).Value);
+        Assert.Equal([105m, 0m, 127m], result.Select(x => x.Value));
+        // Account enumeration is only needed for account-filtered charts.
+        _financialAccountRepository.Verify(repo => repo.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
     }
 
     [Fact]
@@ -127,24 +107,14 @@ public class InvestmentBalanceServiceTests
     }
 
     [Fact]
-    public async Task GetClosingBalance_LegacyStockAccountWithEmptySeries_ContributesNothing()
+    public async Task GetClosingBalance_Unfiltered_IsEmpty_WhenTheOwnerHoldsNothing()
     {
         DateTime start = new(2024, 1, 1);
         DateTime end = new(2024, 1, 2);
+        _valuationService.Setup(x => x.GetUserValueSeriesAsync(_userId, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
+                         .ReturnsAsync(new Dictionary<DateTime, decimal>());
 
-        var legacyStockAccount = new InvestmentAccount(_userId, 30, "Legacy stocks");
-
-        _financialAccountRepository.Setup(repo => repo.GetAccounts<InvestmentAccount>(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-                                   .Returns(new[] { legacyStockAccount }.ToAsyncEnumerable());
-
-        // Legacy stock accounts hold no investment transactions, so the batched valuation result
-        // simply omits them (empty dictionary).
-        _valuationService.Setup(x => x.GetAccountValueSeriesAsync(It.IsAny<IReadOnlyCollection<int>>(), DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>());
-
-        var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end);
-
-        Assert.All(result, point => Assert.Equal(0, point.Value));
+        Assert.Empty(await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end));
     }
 
     [Fact]

@@ -31,7 +31,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         // Legacy individual seeder hosted services removed; no need to unregister.
 
         _nowUtc = DateTime.UtcNow;
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
 
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
@@ -48,7 +48,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
             return;
 
-        _value = _valueChange;
+        _value = 0;
 
         var test = new FinancialAccountBaseDto
         {
@@ -109,7 +109,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Currency Account", result[0].Name);
+        // Cash is pooled per currency and named by it, not by the account the entries were booked in.
+        Assert.Equal("PLN", result[0].Name);
+        Assert.Null(result[0].AccountId);
         Assert.Equal(_value, result[0].Value);
     }
 

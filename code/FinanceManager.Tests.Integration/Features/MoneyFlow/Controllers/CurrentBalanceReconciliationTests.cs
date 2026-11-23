@@ -33,7 +33,7 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase();
+        _database = new TestDatabase(stampOwnerKeys: true);
         services.AddSingleton(_database.Context);
         var clock = new Mock<IDateTimeProvider>();
         clock.SetupGet(x => x.UtcNow).Returns(_asOf);

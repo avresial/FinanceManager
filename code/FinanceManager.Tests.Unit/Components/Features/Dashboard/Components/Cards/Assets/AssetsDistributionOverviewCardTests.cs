@@ -21,7 +21,7 @@ public class AssetsDistributionOverviewCardTests
 {
     private static readonly DateTime _start = new(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = _start.AddDays(30).AddHours(12);
-    private static readonly string _key = $"assets-distribution:1:{DefaultCurrency.PLN.Id}";
+    private static readonly string _key = $"assets-distribution:v2:1:{DefaultCurrency.PLN.Id}";
     private readonly Mock<ISnapshotService> _snapshots = new();
     private int _userId = 1;
     private Currency _currency = DefaultCurrency.PLN;
@@ -125,7 +125,7 @@ public class AssetsDistributionOverviewCardTests
         await Drain(cut);
 
         var read = new TaskCompletionSource<AssetsDistributionSnapshot?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _snapshots.Setup(x => x.GetAsync<AssetsDistributionSnapshot>("assets-distribution:2:0")).Returns(read.Task);
+        _snapshots.Setup(x => x.GetAsync<AssetsDistributionSnapshot>("assets-distribution:v2:2:0")).Returns(read.Task);
         _userId = 2;
         cut.Render(parameters => parameters.Add(x => x.Height, "301px"));
 
@@ -149,7 +149,7 @@ public class AssetsDistributionOverviewCardTests
         await Drain(cut);
 
         var read = new TaskCompletionSource<AssetsDistributionSnapshot?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _snapshots.Setup(x => x.GetAsync<AssetsDistributionSnapshot>("assets-distribution:1:1")).Returns(read.Task);
+        _snapshots.Setup(x => x.GetAsync<AssetsDistributionSnapshot>("assets-distribution:v2:1:1")).Returns(read.Task);
         _currency = DefaultCurrency.USD;
         cut.Render(parameters => parameters.Add(x => x.Height, "301px"));
 

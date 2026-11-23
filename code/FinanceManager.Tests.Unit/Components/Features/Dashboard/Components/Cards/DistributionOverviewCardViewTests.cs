@@ -78,7 +78,7 @@ public class DistributionOverviewCardViewTests
     [Theory]
     [InlineData(0)]
     [InlineData(75)]
-    public async Task Assets_AccountToggle_UsesAccountTotal(decimal typeTotal)
+    public async Task Assets_BreakdownToggle_UsesBreakdownTotal(decimal typeTotal)
     {
         await using var context = CreateContext();
         List<NameValueResult> typeData = typeTotal == 0 ? [] : [new("Stock", typeTotal)];
@@ -86,7 +86,7 @@ public class DistributionOverviewCardViewTests
             .Add(x => x.TypeData, typeData)
             .Add(x => x.WalletData, [new("Main wallet", 100m)]));
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Breakdown")).Click();
 
         AssertSingleCategoryFigure(cut);
         Assert.Single(cut.FindAll(".fm-legend-row"));
@@ -174,17 +174,17 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task AccountView_LinksRowsWithAccountIds_AndKeepsOldSnapshotRowsPlain()
+    public async Task CurrencyView_LinksRowsWithAccountIds_AndKeepsOwnerRowsPlain()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
             .Add(x => x.TypeData, [new("Loan", 75m) { AccountId = 3 }, new("Mortgage", 25m) { AccountId = 4 }])
-            .Add(x => x.AccountData, [new("Car loan", 75m) { AccountId = 7 }, new("Old snapshot row", 25m)]));
+            .Add(x => x.AccountData, [new("Car loan", 75m) { AccountId = 7 }, new("PLN", 25m)]));
 
         // Type rows never link, even when the data happens to carry ids.
         Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
 
         // Switching views replaces the chart, so the new rows arrive after the click's render completes.
         var link = cut.WaitForElement("a[data-testid=distribution-row]", TimeSpan.FromSeconds(3));
@@ -192,6 +192,30 @@ public class DistributionOverviewCardViewTests
         Assert.Equal("/AccountDetails/7", link.GetAttribute("href"));
         Assert.Contains("Car loan", link.TextContent);
         Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+    }
+
+    [Fact]
+    public async Task SlicesThatShareAName_RenderAsSeparateRows()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 60m), new("Cash", 40m)]));
+
+        Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+    }
+
+    [Fact]
+    public async Task OwnerBreakdownRows_AreNotLinks()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 100m), new("Bond", 50m)])
+            .Add(x => x.WalletData, [new("PLN", 100m) { AccountId = null }, new("Bond 1", 50m) { AccountId = null }]));
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Breakdown")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count));
+        Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
     }
 
     [Fact]
@@ -252,14 +276,14 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task Liabilities_AccountToggle_SwitchesBetweenFigureAndChart()
+    public async Task Liabilities_CurrencyToggle_SwitchesBetweenFigureAndChart()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
             .Add(x => x.TypeData, _single).Add(x => x.AccountData, _two));
         AssertSingleCategoryFigure(cut);
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Account")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
         Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
         Assert.Empty(cut.FindAll("[class*=legend--single]"));
 

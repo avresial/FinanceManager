@@ -14,7 +14,7 @@ public class DistributionViewToggleTests
     private static readonly List<NameValueResult> _two = [new("Mortgage", 75m), new("Loan", 25m)];
 
     [Fact]
-    public async Task Render_ShowsTypeAndAccountLabels()
+    public async Task Render_ShowsTypeAndBreakdownLabels()
     {
         await using var context = CreateContext();
         var cut = context.Render<DistributionViewToggle>();
@@ -22,8 +22,18 @@ public class DistributionViewToggleTests
         var items = cut.FindAll(".mud-toggle-item");
         Assert.Equal(2, items.Count);
         Assert.Contains("Type", items[0].TextContent);
-        Assert.Contains("Account", items[1].TextContent);
+        Assert.Contains("Breakdown", items[1].TextContent);
+        Assert.DoesNotContain("Account", items[1].TextContent);
         Assert.DoesNotContain("Wallet", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Render_UsesTheCustomDetailLabel()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<DistributionViewToggle>(p => p.Add(x => x.DetailLabel, "Currency"));
+
+        Assert.Contains("Currency", cut.FindAll(".mud-toggle-item")[1].TextContent);
     }
 
     [Fact]
@@ -34,7 +44,7 @@ public class DistributionViewToggleTests
 
         var selected = cut.FindAll(".mud-toggle-item-selected");
         Assert.Single(selected);
-        Assert.Contains("Account", selected[0].TextContent);
+        Assert.Contains("Breakdown", selected[0].TextContent);
     }
 
     [Fact]
@@ -68,7 +78,7 @@ public class DistributionViewToggleTests
     }
 
     [Fact]
-    public async Task AssetsCard_UsesAccountLabelAndSwitchesToAccountData()
+    public async Task AssetsCard_UsesBreakdownLabelAndSwitchesToBreakdownData()
     {
         await using var context = CreateContext();
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
@@ -89,14 +99,14 @@ public class DistributionViewToggleTests
     }
 
     [Fact]
-    public async Task LiabilitiesCard_UsesAccountLabelAndSwitchesToAccountData()
+    public async Task LiabilitiesCard_UsesCurrencyLabelAndSwitchesToCurrencyData()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
             .Add(x => x.TypeData, _two)
             .Add(x => x.AccountData, [new("Loan 1", 100m)]));
 
-        Assert.Contains("Account", cut.FindAll(".mud-toggle-item")[1].TextContent);
+        Assert.Contains("Currency", cut.FindAll(".mud-toggle-item")[1].TextContent);
         Assert.Equal(2, cut.FindAll(".fm-legend-row").Count);
 
         cut.FindAll(".mud-toggle-item")[1].Click();

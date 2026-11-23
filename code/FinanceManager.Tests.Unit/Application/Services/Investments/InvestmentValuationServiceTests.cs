@@ -164,6 +164,64 @@ public class InvestmentValuationServiceTests
     }
 
     [Fact]
+    public async Task GetUserValueByListing_PricesPooledHoldingsPerListing_AndOmitsUnpricedAndClosedOnes()
+    {
+        var asOf = new DateTime(2024, 6, 30, 12, 0, 0);
+        _transactionRepository
+            .Setup(x => x.GetHoldingsByUserAsOf(7, DateOnly.FromDateTime(asOf), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Holding(10, 5m), Holding(20, -2m), Holding(30, 4m)]);
+        _priceProvider.Setup(x => x.GetPricePerUnitAsync(10, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(3m);
+        _priceProvider.Setup(x => x.GetPricePerUnitAsync(20, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(10m);
+        _priceProvider.Setup(x => x.GetPricePerUnitAsync(30, _usd, asOf, It.IsAny<CancellationToken>())).ReturnsAsync(0m);
+
+        var values = await CreateSut().GetUserValueByListingAsync(7, _usd, asOf, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new Dictionary<long, decimal> { [10] = 15m, [20] = -20m }, values);
+    }
+
+    [Fact]
+    public async Task GetUserValueSeries_PoolsTradesAcrossAccountsAndUnlinkedTrades_WithAnExplicitClosingZero()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 4);
+        _transactionRepository
+            .Setup(x => x.GetValuationInputsByUser(7, DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IInvestmentTransactionRepository.UserValuationInputs(
+                [new(10, 2m)],
+                [new(10, new DateOnly(2024, 1, 2), 3m), new(10, new DateOnly(2024, 1, 4), -5m)]));
+        _priceProvider
+            .Setup(x => x.GetPricePerUnitSeriesAsync(10, _usd, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>
+            {
+                [new DateTime(2024, 1, 1)] = 10m,
+                [new DateTime(2024, 1, 2)] = 10m,
+                [new DateTime(2024, 1, 3)] = 10m,
+                [new DateTime(2024, 1, 4)] = 10m
+            });
+
+        var series = await CreateSut().GetUserValueSeriesAsync(7, _usd, start, end, TestContext.Current.CancellationToken);
+
+        Assert.Equal([20m, 50m, 50m, 0m], series.OrderBy(x => x.Key).Select(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetUserValueSeries_SkipsPositionsClosedBeforeTheWindow_AndReturnsEmptyWithoutTrades()
+    {
+        var start = new DateTime(2024, 2, 1);
+        var end = new DateTime(2024, 2, 3);
+        _transactionRepository
+            .Setup(x => x.GetValuationInputsByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IInvestmentTransactionRepository.UserValuationInputs([], []));
+
+        Assert.Empty(await CreateSut().GetUserValueSeriesAsync(-5, _usd, start, end, TestContext.Current.CancellationToken));
+        _priceProvider.Verify(x => x.GetPricePerUnitSeriesAsync(It.IsAny<long>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Empty(await CreateSut().GetUserValueSeriesAsync(7, _usd, end, start, TestContext.Current.CancellationToken));
+    }
+
+    private static FinanceManager.Domain.FinancialAccounts.Investments.Dtos.InvestmentHolding Holding(long listingId, decimal units) =>
+        new(listingId, $"T{listingId}", "XLON", FinanceManager.Domain.Assets.Entities.AssetType.ETF, units);
+
+    [Fact]
     public async Task GetAccountValueSeries_CarriesHoldingsForward_AndPricesPerDay()
     {
         var start = new DateTime(2024, 1, 1); // Monday

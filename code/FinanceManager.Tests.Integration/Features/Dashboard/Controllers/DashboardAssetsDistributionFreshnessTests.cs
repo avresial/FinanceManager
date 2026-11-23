@@ -41,7 +41,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase();
+        _database = new TestDatabase(stampOwnerKeys: true);
         services.AddSingleton(_database.Context);
 
         // Keep production Dashboard caching, AssetsService and InvestmentValuationService.
@@ -96,14 +96,15 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
     }
 
     [Fact]
-    public async Task CachedOverview_AfterAccountAndTransactionChanges_RefreshesWithoutMutatingOriginal()
+    public async Task CachedOverview_AfterListingAndTransactionChanges_RefreshesWithoutMutatingOriginal()
     {
         await Seed();
         var dashboard = new DashboardHttpClient(Client);
         var initial = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
         var context = _database!.Context;
-        var account = await context.Accounts.SingleAsync(x => x.AccountId == _accountId, TestContext.Current.CancellationToken);
-        account.Name = "Renamed investment";
+        // The breakdown is per held listing, so a renamed listing (not an account) shows up on the next refresh.
+        var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, TestContext.Current.CancellationToken);
+        listing.Ticker = "RENAMED";
         var transaction = await context.InvestmentTransactions.SingleAsync(x => x.AccountId == _accountId, TestContext.Current.CancellationToken);
         transaction.Quantity = 5m;
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -119,9 +120,10 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         Assert.Equal(types.Select(x => (x.Name, x.Value)), refreshed!.AssetsPerType.Select(x => (x.Name, x.Value)));
         Assert.Equal(accounts.Select(x => (x.AccountId, x.Name, x.Value)), refreshed.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
         Assert.Equal(500m, Assert.Single(refreshed.AssetsPerType).Value);
-        Assert.Equal("Renamed investment", Assert.Single(refreshed.AssetsPerAccount).Name);
+        var refreshedRow = Assert.Single(refreshed.AssetsPerAccount);
+        Assert.Equal(("RENAMED", null), (refreshedRow.Name, refreshedRow.AccountId));
         Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
-        Assert.Equal("Investment", Assert.Single(initial.AssetsPerAccount).Name);
+        Assert.Equal("TEST", Assert.Single(initial.AssetsPerAccount).Name);
         _netWorth.Verify(x => x.GetNetWorth(_userId, It.IsAny<Currency>(), _start, _end), Times.Once);
     }
 

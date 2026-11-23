@@ -15,6 +15,42 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class AssetsServiceInvestmentTests
 {
+    private static AssetsServiceInvestment CreateService(
+        Mock<IInvestmentValuationService> valuation, Mock<IInvestmentTransactionRepository>? transactions = null) =>
+        new(Mock.Of<IFinancialAccountRepository>(), Mock.Of<IAccountRepository<InvestmentAccount>>(), valuation.Object,
+            (transactions ?? new Mock<IInvestmentTransactionRepository>()).Object, Mock.Of<IInvestmentPriceProvider>(),
+            Mock.Of<ICurrencyExchangeService>());
+
+    [Fact]
+    public async Task IsAnyAccountWithAssets_CountsAnyNonZeroPooledHolding_IncludingGuestUsers()
+    {
+        var transactions = new Mock<IInvestmentTransactionRepository>();
+        transactions.Setup(x => x.GetHoldingsByUserAsOf(4, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        transactions.Setup(x => x.GetHoldingsByUserAsOf(-3, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new FinanceManager.Domain.FinancialAccounts.Investments.Dtos.InvestmentHolding(1, "CSPX", "XLON", AssetType.ETF, -1m)]);
+        var service = CreateService(new Mock<IInvestmentValuationService>(), transactions);
+
+        Assert.True(await service.IsAnyAccountWithAssets(-3));
+        Assert.False(await service.IsAnyAccountWithAssets(4));
+    }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_UsesThePooledOwnerSeries_AndAnswersOnlyForStock()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 3);
+        var valuation = new Mock<IInvestmentValuationService>();
+        valuation.Setup(x => x.GetUserValueSeriesAsync(1, DefaultCurrency.PLN, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 10m, [end] = 20m });
+        var service = CreateService(valuation);
+
+        var all = await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end);
+
+        Assert.Equal([(start, 10m), (end, 20m)], all.Select(x => (x.DateTime, x.Value)));
+        Assert.Equal(2, (await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end, InvestmentType.Stock)).Count);
+        Assert.Empty(await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end, InvestmentType.Bond));
+    }
+
     [Fact]
     public async Task GetUnrealizedGainLossPerAccount_PreservesRemainingBuyCostAfterListingCurrencyEnrichment()
     {

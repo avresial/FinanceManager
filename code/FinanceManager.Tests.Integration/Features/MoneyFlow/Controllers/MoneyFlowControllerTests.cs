@@ -35,7 +35,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     protected override void ConfigureServices(IServiceCollection services)
     {
         _nowUtc = DateTime.UtcNow.Date;
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
 
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
@@ -79,7 +79,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         FinancialLabel salary = new() { Name = "salary" };
         _testDatabase!.Context.FinancialLabels.Add(salary);
-        _value = _valueChange;
+        _value = 0;
 
         var test = new FinancialAccountBaseDto
         {
@@ -725,6 +725,29 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         Assert.Equal(1000m, result.Single(x => x.DateTime == day0).Value);
         Assert.Equal(1000m, result.Single(x => x.DateTime == day0.AddDays(1)).Value);
         Assert.Equal(1000m, result.Single(x => x.DateTime == day0.AddDays(2)).Value);
+    }
+
+    [Fact]
+    public async Task NetWorthAndBalances_PoolAccountLinkedAndUnlinkedEntries_PerOwner()
+    {
+        var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        _testDatabase!.Context.Accounts.Add(new FinancialAccountBaseDto { UserId = 1, AccountId = 60, Name = "Linked", AccountLabel = AccountLabel.Cash, AccountType = AccountType.Currency });
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(60, 1, day0, 0, 1000m) { Labels = [] },
+            // Entries without an account still belong to their owner; another owner's entry never counts.
+            new CurrencyAccountEntry(null, 2, day0.AddDays(1), 0, 250m) { Labels = [], UserId = 1, CurrencyId = 0 },
+            new CurrencyAccountEntry(null, 3, day0.AddDays(1), 0, 9999m) { Labels = [], UserId = 2, CurrencyId = 0 });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+        var client = new MoneyFlowHttpClient(Client);
+
+        var netWorth = await client.GetNetWorth(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+        var closing = await client.GetClosingBalance(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+        var net = await client.GetNetCashFlow(1, DefaultCurrency.USD, day0, day0.AddDays(2));
+
+        Assert.Equal([1000m, 1250m, 1250m], netWorth.OrderBy(x => x.Key).Select(x => x.Value));
+        Assert.Equal([1000m, 1250m, 1250m], closing.OrderBy(x => x.DateTime).Select(x => x.Value));
+        Assert.Equal(1250m, net.Sum(x => x.Value));
     }
 
     [Fact]

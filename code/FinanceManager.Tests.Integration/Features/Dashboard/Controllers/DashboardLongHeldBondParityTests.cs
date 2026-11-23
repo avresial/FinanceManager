@@ -39,7 +39,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase();
+        _database = new TestDatabase(stampOwnerKeys: true);
         services.AddSingleton(_database.Context);
         services.AddScoped<INetWorthService>(provider =>
         {

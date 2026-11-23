@@ -16,14 +16,15 @@ internal sealed class TestDatabase : IDisposable
 
     public AppDbContext Context { get; }
 
-    public TestDatabase()
+    /// <param name="stampOwnerKeys">Stamps the owner keys of account-linked rows seeded through the context, see <see cref="OwnerKeyStampingInterceptor"/>.</param>
+    public TestDatabase(bool stampOwnerKeys = false)
     {
         _databaseName = _scopedDatabaseName.Value
             ?? Guid.NewGuid().ToString();
         _shared = _scopedDatabaseName.Value is not null;
         Context = _shared
-            ? _sharedContexts.GetOrAdd(_databaseName, static name => CreateContext(name))
-            : CreateContext(_databaseName);
+            ? _sharedContexts.GetOrAdd(_databaseName, name => CreateContext(name, stampOwnerKeys))
+            : CreateContext(_databaseName, stampOwnerKeys);
     }
 
     internal static IDisposable UseDatabase(string databaseName) => new DatabaseScope(databaseName);
@@ -45,12 +46,12 @@ internal sealed class TestDatabase : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private static AppDbContext CreateContext(string databaseName)
+    private static AppDbContext CreateContext(string databaseName, bool stampOwnerKeys)
     {
         var databaseRoot = _databaseRoots.GetOrAdd(databaseName, static _ => new InMemoryDatabaseRoot());
-        return new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName, databaseRoot)
-            .Options);
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(databaseName, databaseRoot);
+        if (stampOwnerKeys) options.AddInterceptors(new OwnerKeyStampingInterceptor());
+        return new AppDbContext(options.Options);
     }
 
     private sealed class DatabaseScope : IDisposable

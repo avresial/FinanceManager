@@ -14,12 +14,57 @@ public class CurrencyBalanceServiceTests
     private readonly DateTime _startDate = new(DateTime.UtcNow.Year - 1, 1, 1);
     private readonly DateTime _endDate = DateTime.UtcNow;
 
+    private readonly InMemoryOwnerLedger _ledger = new();
     private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly CurrencyBalanceService _balanceService;
 
     public CurrencyBalanceServiceTests()
     {
-        _balanceService = new CurrencyBalanceService(_financialAccountRepositoryMock.Object);
+        _balanceService = new CurrencyBalanceService(_ledger, _financialAccountRepositoryMock.Object);
+    }
+
+    // Without an account filter the balances pool the owner's cash entries by currency; the tests below it keep the account-filtered path covered.
+    [Fact]
+    public async Task GetClosingBalance_Unfiltered_PoolsEveryCurrencyAndCarriesBalancesAcrossEmptyDays()
+    {
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        _ledger.Add(0, start.AddDays(-1), 100m)
+            .Add(0, start.AddDays(2).AddHours(9), 50m)
+            .Add(2, start.AddDays(1).AddHours(9), 30m)
+            .Add(0, start.AddDays(2).AddHours(10), -20m);
+
+        var result = await _balanceService.GetClosingBalance(1, DefaultCurrency.PLN, start, start.AddDays(3));
+
+        Assert.Equal([100m, 130m, 160m, 160m], result.Select(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetClosingBalance_Unfiltered_StartsFromTheBalanceBeforeTheRange_AndAcceptsNegativeGuestIds()
+    {
+        var start = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        _ledger.Add(0, start.AddDays(-10), 70m).Add(0, start.AddDays(-3), -5m);
+
+        var result = await _balanceService.GetClosingBalance(-3, DefaultCurrency.PLN, start, start.AddDays(1));
+
+        Assert.Equal([65m, 65m], result.Select(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetFlows_Unfiltered_AggregateTheOwnersEntriesPerDayAcrossCurrenciesAndIgnoreOutOfRangeOnes()
+    {
+        var start = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc);
+        _ledger.Add(0, start.AddDays(-2), 500m)
+            .Add(0, start.AddDays(1), 100m)
+            .Add(2, start.AddDays(1).AddHours(2), -30m)
+            .Add(0, start.AddDays(10), 230m);
+
+        var inflow = await _balanceService.GetInflow(1, DefaultCurrency.PLN, start, start.AddDays(3));
+        var outflow = await _balanceService.GetOutflow(1, DefaultCurrency.PLN, start, start.AddDays(3));
+        var net = await _balanceService.GetNetCashFlow(1, DefaultCurrency.PLN, start, start.AddDays(3));
+
+        Assert.Equal([0m, 100m, 0m, 0m], inflow.Select(x => x.Value));
+        Assert.Equal([0m, -30m, 0m, 0m], outflow.Select(x => x.Value));
+        Assert.Equal([0m, 70m, 0m, 0m], net.Select(x => x.Value));
     }
 
     [Fact]
@@ -32,7 +77,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetInflow(userId, DefaultCurrency.PLN, _startDate, _endDate);
+        var result = await _balanceService.GetInflow(userId, DefaultCurrency.PLN, _startDate, _endDate, [1]);
 
         Assert.NotEmpty(result);
         Assert.Contains(result, ts => ts.Value > 0);
@@ -68,7 +113,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetOutflow(userId, DefaultCurrency.PLN, _startDate, _endDate);
+        var result = await _balanceService.GetOutflow(userId, DefaultCurrency.PLN, _startDate, _endDate, [1]);
 
         Assert.NotEmpty(result);
         Assert.Contains(result, ts => ts.Value < 0);
@@ -92,7 +137,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, _startDate, laterDate);
+        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, _startDate, laterDate, [1]);
 
         Assert.NotEmpty(result);
         Assert.Equal(3, result.Count);
@@ -122,7 +167,7 @@ public class CurrencyBalanceServiceTests
             .Setup(repo => repo.GetAccounts<CurrencyAccount>(1, date.Date.AddDays(-1), date))
             .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetClosingBalance(1, DefaultCurrency.PLN, date.Date.AddDays(-1), date);
+        var result = await _balanceService.GetClosingBalance(1, DefaultCurrency.PLN, date.Date.AddDays(-1), date, [1]);
 
         Assert.Equal(900m, result[0].Value);
         Assert.Equal(634m, result[^1].Value);
@@ -150,7 +195,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate);
+        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, startDate, endDate, [1]);
 
         Assert.Equal(4, result.Count);
         Assert.Equal(10, result.Single(x => x.DateTime == new DateTime(2024, 1, 1)).Value);
@@ -170,7 +215,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetNetCashFlow(userId, DefaultCurrency.PLN, _startDate, _startDate);
+        var result = await _balanceService.GetNetCashFlow(userId, DefaultCurrency.PLN, _startDate, _startDate, [1]);
 
         Assert.NotEmpty(result);
         Assert.Single(result);
@@ -198,7 +243,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, start, end);
+        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, start, end, [1]);
 
         Assert.Equal(7, result.Count);
         Assert.Equal(100, result.Single(x => x.DateTime == start).Value);
@@ -232,7 +277,7 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, start, end);
+        var result = await _balanceService.GetClosingBalance(userId, DefaultCurrency.PLN, start, end, [1]);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(120, result.Single(x => x.DateTime == start).Value);
@@ -299,9 +344,9 @@ public class CurrencyBalanceServiceTests
         _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                                        .Returns(new[] { account }.ToAsyncEnumerable());
 
-        var inflow = await _balanceService.GetInflow(userId, DefaultCurrency.PLN, start, end);
-        var outflow = await _balanceService.GetOutflow(userId, DefaultCurrency.PLN, start, end);
-        var netFlow = await _balanceService.GetNetCashFlow(userId, DefaultCurrency.PLN, start, end);
+        var inflow = await _balanceService.GetInflow(userId, DefaultCurrency.PLN, start, end, [1]);
+        var outflow = await _balanceService.GetOutflow(userId, DefaultCurrency.PLN, start, end, [1]);
+        var netFlow = await _balanceService.GetNetCashFlow(userId, DefaultCurrency.PLN, start, end, [1]);
 
         Assert.Equal(4, inflow.Count);
         Assert.Equal(0, inflow.Single(x => x.DateTime == start).Value);
