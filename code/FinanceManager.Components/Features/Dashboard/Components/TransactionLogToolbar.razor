@@ -54,16 +54,19 @@
             }
         </MudChipSet>
 
-        <MudSelect T="string" Placeholder="All currencies" aria-label="Currencies" MultiSelection="true" Dense="true" Margin="Margin.Dense"
-                   Variant="Variant.Outlined" Clearable="true" Disabled="@(Currencies.Count == 0)"
-                   SelectedValues="Filter.Currencies" SelectedValuesChanged="OnCurrenciesChanged"
-                   Class="fm-txlog-currency-select" AnchorOrigin="Origin.BottomLeft"
-                   data-testid="transactions-currency-filter">
-            @foreach (var currency in Currencies)
-            {
-                <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
-            }
-        </MudSelect>
+        @if (Currencies.Count > 1 || Filter.Currencies.Count > 0)
+        {
+            <MudSelect T="string" Placeholder="All currencies" aria-label="Currencies" MultiSelection="true" Dense="true" Margin="Margin.Dense"
+                       Variant="Variant.Outlined" Clearable="true"
+                       SelectedValues="Filter.Currencies" SelectedValuesChanged="OnCurrenciesChanged"
+                       Class="fm-txlog-currency-select" AnchorOrigin="Origin.BottomLeft"
+                       data-testid="transactions-currency-filter">
+                @foreach (var currency in Currencies)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
+        }
     </div>
 
     <MudCollapse Expanded="_isSearchExpanded">

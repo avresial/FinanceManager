@@ -19,6 +19,9 @@ public class TransactionLogHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public async Task<List<string>> GetCurrencies(int userId, CancellationToken cancellationToken = default) =>
+        await httpClient.GetFromJsonAsync<List<string>>($"api/TransactionLog/Currencies/{userId}", cancellationToken) ?? [];
+
     public async Task<TransactionHistoryPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
     {
         var page = await httpClient.GetFromJsonAsync<TransactionLogItemsPageDto>(BuildEndpoint(userId, query), cancellationToken);

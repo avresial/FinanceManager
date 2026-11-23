@@ -1,9 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Components;
-using MudBlazor;
 
 namespace FinanceManager.Components.Features.Dashboard.Components;
 

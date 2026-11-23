@@ -1,7 +1,5 @@
 using FinanceManager.Application.Dashboard;
-using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
@@ -34,8 +32,9 @@ public class TransactionLogServiceTests
     {
         var ct = TestContext.Current.CancellationToken;
         var sequence = new MockSequence();
-        _cash.InSequence(sequence).Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
-            .ReturnsAsync([new(null, 1, _day, -11m, "", 0, "PLN", "Bakery", [])]);
+        // The summary captions a cash entry with its first label, so only the cash stream loads details.
+        _cash.InSequence(sequence).Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && q.IncludeDetails), ct))
+            .ReturnsAsync([new(null, 1, _day, -11m, "", 0, "PLN", "Bakery", [new FinancialLabel { Name = "Groceries" }, new FinancialLabel { Name = "Other" }])]);
         _bonds.InSequence(sequence).Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
             .ReturnsAsync([new(null, 1, _day, 2m, "", 1, "PLN", "Treasury", [])]);
         _trades.InSequence(sequence).Setup(r => r.GetHistoryByUser(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
@@ -43,9 +42,26 @@ public class TransactionLogServiceTests
                 Currency = "GBX", PostingDate = _day, AssetListing = new() { Ticker = "ABC" } }]);
         var rows = await Service.GetLastTransactions(_guestId, 3, ct);
         Assert.Equal([
-            new(TransactionKind.Cash, 1, _day, -11, "Bakery", "PLN"),
-            new(TransactionKind.Bond, 1, _day, 2, "Treasury", "units"),
-            new(TransactionKind.Investment, 1, _day, -15, "Sell 3 ABC", "GBX")], rows);
+            new(TransactionKind.Cash, 1, _day, -11, "Bakery", "PLN", "Groceries"),
+            new(TransactionKind.Bond, 1, _day, 2, "Treasury", "units", "Treasury"),
+            new(TransactionKind.Investment, 1, _day, -15, "Sell 3 ABC", "GBX", "ABC")], rows);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task BondWithoutDescriptionOrUsableName_FallsBackToBond(string? bondName)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _cash.Setup(r => r.GetHistory(_guestId, It.IsAny<OwnerHistoryQuery>(), ct)).ReturnsAsync([]);
+        _trades.Setup(r => r.GetHistoryByUser(_guestId, It.IsAny<OwnerHistoryQuery>(), ct)).ReturnsAsync([]);
+        _bonds.Setup(r => r.GetHistory(_guestId, It.IsAny<OwnerHistoryQuery>(), ct))
+            .ReturnsAsync([new(null, 1, _day, 2m, " ", 1, "PLN", bondName, [])]);
+
+        var row = Assert.Single(await Service.GetLastTransactions(_guestId, 1, ct));
+
+        Assert.Equal("Bond", row.Description);
     }
 
     [Fact]
@@ -77,6 +93,43 @@ public class TransactionLogServiceTests
             Kinds: [TransactionKind.Investment]), ct);
         Assert.IsType<InvestmentTransactionLogItem>(Assert.Single(page.Items));
         Assert.Null(page.NextCursor);
+    }
+
+    [Fact]
+    public async Task GetCurrencies_MergesTheStreamsSortedWithoutQuoteUnits()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sequence = new MockSequence();
+        _cash.InSequence(sequence).Setup(r => r.GetCurrencies(_guestId, ct)).ReturnsAsync(["usd", "PLN"]);
+        _bonds.InSequence(sequence).Setup(r => r.GetCurrencies(_guestId, ct)).ReturnsAsync(["PLN"]);
+        _trades.InSequence(sequence).Setup(r => r.GetCurrenciesByUser(_guestId, ct)).ReturnsAsync(["GBX", "ILA", "ZAC", " eur ", "GBP"]);
+
+        Assert.Equal(["EUR", "GBP", "PLN", "USD"], await Service.GetCurrencies(_guestId, ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.GetCurrencies(0, ct));
+    }
+
+    [Fact]
+    public async Task FilteredCursorWalkReadsEveryPageOnce()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var noon = _day.AddHours(12);
+        var query = new TransactionLogQuery(_day, _day.AddDays(1), 2, Kinds: [TransactionKind.Cash], Currencies: ["PLN"], Search: "shop");
+        // First page: pageSize + 1 rows are requested with the filters; the extra row only yields the next cursor.
+        _cash.Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Boundary == null && q.Take == 3 && q.End == _day.AddDays(1)
+            && q.Currencies!.Contains("PLN") && q.Search == "shop"), ct))
+            .ReturnsAsync([new(null, 5, noon, 1, "shop", 0, "PLN", null, []), new(null, 4, noon, 1, "shop", 0, "PLN", null, []), new(null, 3, _day, 1, "shop", 0, "PLN", null, [])]);
+        var first = await Service.GetItemsPage(_guestId, query, ct);
+        Assert.Equal([5L, 4L], first.Items.Cast<CurrencyTransactionLogItem>().Select(item => item.Entry.EntryId));
+        Assert.Equal(new(noon, TransactionKind.Cash, 4), first.NextCursor);
+
+        // Second page resumes strictly after the cursor row (same kind, so the id is exclusive) and ends the walk.
+        _cash.Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Boundary == new OwnerHistoryBoundary(noon, 4, false) && q.End == noon && q.Take == 3), ct))
+            .ReturnsAsync([new(null, 3, _day, 1, "shop", 0, "PLN", null, [])]);
+        var second = await Service.GetItemsPage(_guestId, query with { Cursor = first.NextCursor }, ct);
+        Assert.Equal([3L], second.Items.Cast<CurrencyTransactionLogItem>().Select(item => item.Entry.EntryId));
+        Assert.Null(second.NextCursor);
+        _bonds.VerifyNoOtherCalls();
+        _trades.VerifyNoOtherCalls();
     }
 
     [Fact]

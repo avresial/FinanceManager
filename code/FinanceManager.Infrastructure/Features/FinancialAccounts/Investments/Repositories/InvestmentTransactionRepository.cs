@@ -73,11 +73,12 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetHistoryByUser(long userId, OwnerHistoryQuery query, CancellationToken ct = default)
     {
+        if (query.Take <= 0) return [];
         var trades = OwnedTrades(userId, query.Start, query.End);
         if (query.Boundary is OwnerHistoryBoundary cursor)
             trades = trades.Where(x => x.PostingDate < cursor.Date || x.PostingDate == cursor.Date &&
                 (cursor.IncludeEqualId ? x.EntryId <= cursor.EntryId : x.EntryId < cursor.EntryId));
-        if (query.Currencies is { Count: > 0 } currencies)
+        if (query.NormalizedCurrencies() is { Count: > 0 } currencies)
             trades = trades.Where(x => currencies.Contains(x.Currency.ToUpper()));
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -99,6 +100,9 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             AssetListing = new() { Ticker = x.AssetListing.Ticker }
         }).ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default) =>
+        await OwnedTrades(userId, null, null).Select(x => x.Currency).Distinct().ToListAsync(ct);
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {

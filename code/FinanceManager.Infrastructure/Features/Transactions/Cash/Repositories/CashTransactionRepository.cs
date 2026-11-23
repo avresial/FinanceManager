@@ -12,6 +12,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     public async Task<IReadOnlyList<CashLogEntry>> GetHistory(int userId, OwnerHistoryQuery query, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (query.Take <= 0) return [];
         var entries = context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && e.CurrencyId != null);
         if (query.Start is DateTime start) entries = entries.Where(e => e.PostingDate >= start);
         if (query.End is DateTime end) entries = entries.Where(e => e.PostingDate <= end);
@@ -24,7 +25,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
             Entry = e,
             Currency = context.Currencies.Where(c => c.Id == e.CurrencyId).Select(c => c.ShortName).FirstOrDefault()
         });
-        if (query.Currencies is { Count: > 0 } currencies)
+        if (query.NormalizedCurrencies() is { Count: > 0 } currencies)
             rows = rows.Where(x => x.Currency != null && currencies.Contains(x.Currency.ToUpper()));
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -51,5 +52,12 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
                 }).ToList()
             }).ToDictionaryAsync(x => x.EntryId, x => x.Labels, ct);
         return [.. page.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
+    }
+
+    public async Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var currencyIds = context.CurrencyEntries.Where(e => e.UserId == userId && e.CurrencyId != null).Select(e => e.CurrencyId);
+        return await context.Currencies.AsNoTracking().Where(c => currencyIds.Contains(c.Id)).Select(c => c.ShortName).Distinct().ToListAsync(ct);
     }
 }

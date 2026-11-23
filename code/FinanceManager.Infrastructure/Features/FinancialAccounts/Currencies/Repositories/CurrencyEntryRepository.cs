@@ -10,10 +10,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Re
 
 public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryRepository<CurrencyAccountEntry>
 {
-    // SQL Server permits at most 2,100 parameters per command. Keep room for the Take parameter and
-    // future predicates when a user has an unusually large number of accounts.
-    private const int _maxAccountIdsPerQuery = 2_000;
-
     private readonly CurrencyEntryValueCalculator _valueCalculator = new(context);
     private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
         typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId));
