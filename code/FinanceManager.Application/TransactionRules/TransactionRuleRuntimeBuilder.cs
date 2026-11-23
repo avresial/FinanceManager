@@ -36,8 +36,8 @@ internal static class TransactionRuleRuntimeBuilder
             definition.IsEnabled && !hasRetiredCondition);
     }
 
-    private static bool IsRetiredAccountCondition(TransactionRuleConditionDto dto) =>
-        string.Equals(dto.Type?.Trim(), _retiredAccountConditionType, StringComparison.OrdinalIgnoreCase);
+    private static bool IsRetiredAccountCondition(TransactionRuleConditionDto? dto) =>
+        dto is not null && string.Equals(dto.Type?.Trim(), _retiredAccountConditionType, StringComparison.OrdinalIgnoreCase);
 
     public static void ValidateConditions(IEnumerable<TransactionRuleConditionDto> source)
     {

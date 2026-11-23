@@ -573,6 +573,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         return await context.BondEntries
             .AsNoTracking()
+            .Include(e => e.Labels)
             .Where(e => e.UserId == userId && entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
     }

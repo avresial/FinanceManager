@@ -31,13 +31,13 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get()
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         var accounts = await accountRepository.GetAvailableAccounts(userId).ToListAsync();
 
-        return accounts.Count == 0 ? NotFound() : Ok(accounts);
+        // Users without accounts are the norm now, so an empty list is a normal answer rather than a 404 logged on every page.
+        return Ok(accounts);
     }
 
     [HttpGet("{accountId:int}")]

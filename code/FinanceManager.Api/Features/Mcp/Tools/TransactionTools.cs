@@ -1,7 +1,10 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
@@ -89,21 +92,21 @@ public sealed class TransactionTools(
         switch (parsedKind)
         {
             case TransactionKind.Cash:
-                return (await cashTransactions.GetByIds(userId, [transactionId], cancellationToken)).SingleOrDefault() is { } cash
+                return (await cashTransactions.GetByIds(userId, [transactionId], cancellationToken)).SingleOrDefault() is CashLogEntry cash
                     ? McpResponseMapper.Transaction(cash)
                     : null;
             case TransactionKind.Bond:
-                return await bondTransactions.GetById(userId, transactionId, cancellationToken) is { } bond
+                return await bondTransactions.GetById(userId, transactionId, cancellationToken) is BondLogEntry bond
                     ? McpResponseMapper.Transaction(bond)
                     : null;
             default:
-                return await investmentTransactions.Get(transactionId, cancellationToken) is { } trade && trade.UserId == userId
+                return await investmentTransactions.Get(transactionId, cancellationToken) is InvestmentTransaction trade && trade.UserId == userId
                     ? McpResponseMapper.Transaction(trade)
                     : null;
         }
     }
 
-    private static TransactionKind ParseKind(string kind) => kind.Trim().ToLowerInvariant() switch
+    private static TransactionKind ParseKind(string? kind) => (kind ?? throw new ArgumentException("Kind must be cash, bond, or investment.", nameof(kind))).Trim().ToLowerInvariant() switch
     {
         "cash" => TransactionKind.Cash,
         "bond" => TransactionKind.Bond,

@@ -19,14 +19,12 @@ public class InvestmentAccountController(
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<AvailableAccount>))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<List<AvailableAccount>>> Get()
     {
         var accounts = await investmentAccountRepository.GetAvailableAccounts(ApiAuthenticationHelper.GetUserId(User))
             .ToListAsync();
 
-        if (accounts.Count == 0) return NotFound();
-
+        // An empty list is a normal answer for users without accounts, not a 404 logged on every page.
         return Ok(accounts);
     }
 

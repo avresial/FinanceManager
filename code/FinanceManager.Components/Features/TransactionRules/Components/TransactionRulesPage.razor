@@ -101,6 +101,10 @@
                                                         <li>@DescribeCondition(condition, true)</li>
                                                     }
                                                 </ul>
+                                                @if (rule.Conditions.Count == 0 && !rule.IsEnabled)
+                                                {
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Disabled with no conditions. Rules that relied on an Account condition were disabled when accounts were removed — review before enabling.</MudText>
+                                                }
                                             </div>
                                         </div>
                                         <div class="rule-step">
@@ -115,14 +119,14 @@
                                                 </ol>
                                             </div>
                                         </div>
-                                        <div class="rule-options">
+                                        <div class="rule-options" id="@EnableSwitchId(rule.Id)">
                                             <MudSwitch @key="@($"{rule.Id}-{_switchVersion}")" T="bool" Value="@rule.IsEnabled" ValueChanged="@(value => ToggleAsync(rule, value))" Disabled="@IsBusy" Color="Color.Primary" Label="Enabled" aria-label="@($"Enable {rule.Name}")" />
                                             @if (_confirmEnableId == rule.Id)
                                             {
                                                 <MudAlert Severity="Severity.Warning" Dense="true" Class="enable-confirmation" role="alert">
                                                     <MudText Typo="Typo.body2">This rule will apply to all cash transactions.</MudText>
-                                                    <MudButton Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => ConfirmEnableAsync(rule))">Enable rule</MudButton>
-                                                    <MudButton Size="Size.Small" Disabled="@IsBusy" OnClick="CancelEnable">Cancel</MudButton>
+                                                    <MudButton @ref="_confirmEnableButton" Color="Color.Warning" Variant="Variant.Filled" Disabled="@IsBusy" OnClick="@(() => ConfirmEnableAsync(rule))">Enable rule</MudButton>
+                                                    <MudButton Disabled="@IsBusy" OnClick="CancelEnable">Cancel</MudButton>
                                                 </MudAlert>
                                             }
                                             <MudText Typo="Typo.body2"><strong>Stop after match:</strong> @(rule.StopProcessing ? "On" : "Off")</MudText>
@@ -141,8 +145,8 @@
                                 {
                                     <div class="delete-confirmation" role="alert">
                                         <MudText Typo="Typo.body2">Delete “@rule.Name”? This cannot be undone.</MudText>
-                                        <MudButton Color="Color.Error" Variant="Variant.Filled" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => DeleteAsync(rule))">Confirm delete</MudButton>
-                                        <MudButton Size="Size.Small" OnClick="@(() => _confirmDeleteId = null)">Cancel</MudButton>
+                                        <MudButton Color="Color.Error" Variant="Variant.Filled" Disabled="@IsBusy" OnClick="@(() => DeleteAsync(rule))">Confirm delete</MudButton>
+                                        <MudButton OnClick="@(() => _confirmDeleteId = null)">Cancel</MudButton>
                                     </div>
                                 }
                                 else
@@ -262,6 +266,12 @@
                 Add condition
             </MudButton>
         </div>
+        @if (_draft.Conditions.Count == 0)
+        {
+            <MudAlert Severity="@(_draft.Enabled ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-3" role="status">
+                No conditions: this rule matches every cash transaction@(_draft.Enabled ? ", and it is enabled" : ""). Rules that relied on an Account condition lost it when accounts were removed. Add a condition to narrow the rule.
+            </MudAlert>
+        }
         @for (var index = 0; index < _draft.Conditions.Count; index++)
         {
             var condition = _draft.Conditions[index];
@@ -270,7 +280,7 @@
                 <div class="d-flex justify-space-between align-center mb-2">
                     <MudText Typo="Typo.subtitle2">Condition @(conditionIndex + 1)</MudText>
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                   Disabled="@(_draft.Conditions.Count == 1)" OnClick="@(() => RemoveCondition(condition))"
+                                   OnClick="@(() => RemoveCondition(condition))"
                                    aria-label="@(string.Concat("Remove condition ", conditionIndex + 1))" />
                 </div>
                 <MudGrid Spacing="2" Class="mx-0 w-100">
@@ -285,7 +295,8 @@
                     @if (condition.Type is "Contractor" or "Description")
                     {
                         <MudItem xs="12" sm="4">
-                            <MudTextField T="string" @bind-Value="condition.Pattern" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            <MudTextField T="string" @bind-Value="condition.Pattern" Label="Text" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Required="true" RequiredError="Enter the text to match" />
                         </MudItem>
                         <MudItem xs="6" sm="2">
                             <MudSelect T="TextMatchOperator" @bind-Value="condition.MatchOperator" Label="Match" Variant="Variant.Outlined" Margin="Margin.Dense">

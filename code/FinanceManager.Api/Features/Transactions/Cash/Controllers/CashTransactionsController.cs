@@ -195,7 +195,7 @@ public class CashTransactionsController(
     // Guest sandboxes are ephemeral and never reach the shared label worker; only real owners' unlabelled, described entries are queued.
     private async Task QueueLabeling(int ownerId, CurrencyAccountEntry entry, CancellationToken cancellationToken)
     {
-        if (guestSessionAccessor.IsGuest || ownerId < 0 || entry.EntryId == 0 || entry.Labels.Count != 0) return;
+        if (guestSessionAccessor.IsGuest || ownerId <= 0 || entry.EntryId == 0 || entry.Labels.Count != 0) return;
         if (string.IsNullOrWhiteSpace(entry.Description) && string.IsNullOrWhiteSpace(entry.ContractorDetails)) return;
 
         await labelSetterChannel.QueueEntries(ownerId, [entry.EntryId], cancellationToken);

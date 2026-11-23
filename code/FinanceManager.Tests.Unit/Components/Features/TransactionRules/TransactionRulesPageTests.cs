@@ -46,6 +46,7 @@ public sealed class TransactionRulesPageTests
         cut.Find("button[aria-label='Create a new rule']").Click();
         var nameLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Rule name", StringComparison.Ordinal));
         cut.Find($"#{nameLabel.GetAttribute("for")}").Change("First rule");
+        SetConditionText(cut, 0, "acme");
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Create rule" && button.GetAttribute("aria-label") is null).Click();
 
         cut.WaitForAssertion(() =>
@@ -168,6 +169,47 @@ public sealed class TransactionRulesPageTests
     }
 
     [Fact]
+    public async Task EditingARuleWithoutConditions_ExplainsWhy_AndAllowsSavingANameOnlyChange()
+    {
+        var handler = new RulesHandler(MigratedRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".rule-row")));
+        cut.Find(".rule-row").Click();
+        Assert.Contains("Disabled with no conditions", cut.Markup);
+
+        cut.Find("button[aria-label='Edit Migrated rule']").Click();
+
+        Assert.Contains("lost it when accounts were removed", cut.Markup);
+        Assert.DoesNotContain("Condition 1", cut.Markup);
+        var nameLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Rule name", StringComparison.Ordinal));
+        cut.Find($"#{nameLabel.GetAttribute("for")}").Change("Renamed");
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
+        Assert.Equal("Renamed", handler.LastUpdate!.Name);
+        Assert.Empty(handler.LastUpdate.Conditions);
+        Assert.False(handler.LastUpdate.IsEnabled);
+    }
+
+    [Fact]
+    public async Task SavingABlankConditionText_ShowsTheRequiredErrorOnTheField_AndSendsNothing()
+    {
+        var handler = new RulesHandler(MigratedRule());
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRulesPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".rule-row")));
+        cut.Find(".rule-row").Click();
+        cut.Find("button[aria-label='Edit Migrated rule']").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Add condition", StringComparison.Ordinal)).Click();
+
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes", StringComparison.Ordinal)).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Enter the text to match", cut.Markup));
+        Assert.Null(handler.LastUpdate);
+    }
+
+    [Fact]
     public async Task EnablingARuleWithoutConditions_CanBeCancelled()
     {
         var handler = new RulesHandler(MigratedRule());
@@ -198,6 +240,12 @@ public sealed class TransactionRulesPageTests
 
         Assert.Empty(cut.FindAll(".enable-confirmation"));
         cut.WaitForAssertion(() => Assert.Equal([true], handler.EnabledRequests));
+    }
+
+    private static void SetConditionText(IRenderedComponent<TransactionRulesPage> cut, int index, string value)
+    {
+        var label = cut.FindAll("label").Where(label => label.TextContent.Trim() == "Text").ElementAt(index);
+        cut.Find($"#{label.GetAttribute("for")}").Change(value);
     }
 
     private static async Task SwitchEnabled(IRenderedComponent<TransactionRulesPage> cut, string ariaLabel, bool value)
@@ -247,6 +295,7 @@ public sealed class TransactionRulesPageTests
         Assert.Contains("Condition 3", cut.Markup);
         Assert.Contains("Action 3", cut.Markup);
 
+        SetConditionText(cut, 1, "rent");
         cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes", StringComparison.Ordinal)).Click();
         cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
         Assert.Equal(3, handler.LastUpdate!.Conditions.Count);

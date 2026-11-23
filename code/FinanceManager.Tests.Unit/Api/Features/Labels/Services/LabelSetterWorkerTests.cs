@@ -146,6 +146,27 @@ public sealed class LabelSetterWorkerTests
         entries.Verify(repository => repository.GetByIds(7, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 1, 2 })), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task AiService_NeverReturnsAnAssignmentForAnEntryTheUserDoesNotOwn()
+    {
+        var owned = new CurrencyAccountEntry(null, 10, new DateTime(2026, 1, 1), 0, -5m) { Description = "Lunch" };
+        var entries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        // The repository filters by owner: entry 20 is requested but belongs to someone else.
+        entries.Setup(repository => repository.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([owned]);
+        var labels = new Mock<IFinancialLabelsRepository>();
+        labels.Setup(repository => repository.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { new FinancialLabel { Id = 1, Name = "Food" } }.ToAsyncEnumerable());
+        var chat = new Mock<Microsoft.Extensions.AI.IChatClient>();
+        chat.Setup(client => client.GetResponseAsync(It.IsAny<IEnumerable<Microsoft.Extensions.AI.ChatMessage>>(), It.IsAny<Microsoft.Extensions.AI.ChatOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Microsoft.Extensions.AI.ChatResponse(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant,
+                """{"assignments":[{"entryId":10,"labelName":"Food"},{"entryId":20,"labelName":"Food"}]}""")));
+        var service = new LabelSetterAiService(entries.Object, labels.Object, Mock.Of<ILabelSetterPromptProvider>(), new LabelAssignmentResponseParser(),
+            new LabelAssignmentValidator(NullLogger<LabelAssignmentValidator>.Instance), chat.Object, NullLogger<LabelSetterAiService>.Instance);
+
+        var result = await service.AssignLabels(7, [10, 20], TestContext.Current.CancellationToken);
+
+        Assert.Equal(new Dictionary<long, string> { [10] = "Food" }, result);
+    }
+
     private static ILabelSetterAiService CreateAiService(IAccountEntryRepository<CurrencyAccountEntry> entries, IFinancialLabelsRepository labels) =>
         new LabelSetterAiService(entries, labels, Mock.Of<ILabelSetterPromptProvider>(), new LabelAssignmentResponseParser(),
             new LabelAssignmentValidator(NullLogger<LabelAssignmentValidator>.Instance), Mock.Of<Microsoft.Extensions.AI.IChatClient>(),

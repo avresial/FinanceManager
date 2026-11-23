@@ -29,13 +29,13 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get()
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
         var accounts = await bondAccountRepository.GetAvailableAccounts(userId).ToListAsync();
 
-        return accounts.Count == 0 ? NotFound() : Ok(accounts);
+        // An empty list is a normal answer for users without accounts, not a 404 logged on every page.
+        return Ok(accounts);
     }
 
     [HttpGet("{accountId:int}")]

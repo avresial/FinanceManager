@@ -7,12 +7,13 @@ using FinanceManager.Domain.TransactionRules.Commands;
 using FinanceManager.Domain.TransactionRules.Dtos;
 using FinanceManager.Domain.TransactionRules.Models;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Utilities;
 
 namespace FinanceManager.Components.Features.TransactionRules.Components;
 
-public partial class TransactionRulesPage : ComponentBase
+public partial class TransactionRulesPage : ComponentBase, IAsyncDisposable
 {
     private List<TransactionRuleDto> _rules = [];
     private readonly TransactionRuleDraft _draft = new();
@@ -41,6 +42,10 @@ public partial class TransactionRulesPage : ComponentBase
     private List<TransactionRuleTestResultDto>? _testResults;
     private int _editorVersion;
     private MudForm? _ruleForm;
+    private IJSObjectReference? _focusModule;
+    private MudButton? _confirmEnableButton;
+    private bool _focusConfirmEnable;
+    private bool _focusEnableSwitch;
     private string _previewContractor = string.Empty;
     private string _previewDescription = string.Empty;
     private decimal _previewAmount = 100m;
@@ -48,8 +53,48 @@ public partial class TransactionRulesPage : ComponentBase
 
     [Inject] public required TransactionRuleHttpClient HttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required IJSRuntime JsRuntime { get; set; }
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    // The enable switch is re-keyed to snap back off, which destroys the focused element; put focus where the user can continue.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusConfirmEnable && _confirmEnableButton is not null)
+        {
+            _focusConfirmEnable = false;
+            await _confirmEnableButton.FocusAsync();
+        }
+        else if (_focusEnableSwitch && _confirmEnableId is null && _expandedId is Guid expandedId)
+        {
+            _focusEnableSwitch = false;
+            try
+            {
+                _focusModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/FinanceManager.Components/Features/TransactionRules/Components/TransactionRulesPage.razor.js");
+                await _focusModule.InvokeVoidAsync("focusInside", EnableSwitchId(expandedId));
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException)
+            {
+                // Focus is a convenience; never fail the page over it.
+            }
+        }
+    }
+
+    private static string EnableSwitchId(Guid ruleId) => $"rule-enabled-{ruleId:N}";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_focusModule is null) return;
+
+        try
+        {
+            await _focusModule.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
+        {
+            // The circuit or page is already gone.
+        }
+    }
 
     private async Task LoadAsync()
     {
@@ -110,6 +155,8 @@ public partial class TransactionRulesPage : ComponentBase
             return;
         }
 
+        if (!await IsEditorValidAsync()) return;
+
         _isSaving = true;
         try
         {
@@ -146,6 +193,18 @@ public partial class TransactionRulesPage : ComponentBase
         }
     }
 
+    // Required fields (e.g. a condition's text) are flagged inline; the page-level message only points at them.
+    private async Task<bool> IsEditorValidAsync()
+    {
+        if (_ruleForm is null) return true;
+
+        await _ruleForm.ValidateAsync();
+        if (_ruleForm.IsValid) return true;
+
+        _error = "Fill in the highlighted fields.";
+        return false;
+    }
+
     private Task TestSavedRuleAsync(TransactionRuleDto rule) => RunTestAsync(new CreateTransactionRule(
         rule.Name, rule.Conditions, rule.Actions, rule.IsEnabled, rule.StopProcessing));
 
@@ -159,6 +218,8 @@ public partial class TransactionRulesPage : ComponentBase
             _error = "Rule name is required.";
             return;
         }
+
+        if (!await IsEditorValidAsync()) return;
 
         await RunTestAsync(_draft.ToCreateCommand());
     }
@@ -201,6 +262,7 @@ public partial class TransactionRulesPage : ComponentBase
         {
             _confirmEnableId = rule.Id;
             _switchVersion++;
+            _focusConfirmEnable = true;
             return;
         }
 
@@ -213,6 +275,7 @@ public partial class TransactionRulesPage : ComponentBase
     {
         _confirmEnableId = null;
         _switchVersion++;
+        _focusEnableSwitch = true;
     }
 
     private async Task SetEnabledAsync(TransactionRuleDto rule, bool enabled)
@@ -220,6 +283,7 @@ public partial class TransactionRulesPage : ComponentBase
         if (IsBusy) return;
 
         _confirmEnableId = null;
+        _focusEnableSwitch = true;
         _isToggling = true;
         try
         {

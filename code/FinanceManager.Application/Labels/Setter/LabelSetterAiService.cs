@@ -1,6 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -76,7 +75,7 @@ internal sealed class LabelSetterAiService(
             var parsed = responseParser.Parse(content);
             logger.LogDebug("Parsed {Count} assignments from AI response.", parsed.Count);
 
-            var result = assignmentValidator.Validate(parsed, entryIds, labelNameSet);
+            var result = assignmentValidator.Validate(parsed, [.. entries.Select(e => e.EntryId)], labelNameSet);
 
             logger.LogDebug("Valid assignments after filtering: {Count} out of {ParsedCount}.", result.Count, parsed.Count);
 

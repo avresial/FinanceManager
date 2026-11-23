@@ -64,7 +64,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
             .ToListAsync(ct);
         if (rows.Count == 0) return rows;
 
-        var labels = await LabelsByEntry(userId, ids, ct);
+        var labels = await LabelsByEntry(userId, [.. rows.Select(x => x.EntryId)], ct);
         return [.. rows.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
     }
 
