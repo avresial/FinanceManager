@@ -286,6 +286,17 @@ code {
     font-weight: 600;
 }
 
+/* Full-width variant for dialogs: the items share the row equally (kind pickers). */
+.fm-view-toggle--block .mud-toggle-group {
+    display: flex;
+    width: 100%;
+}
+
+.fm-view-toggle--block .mud-toggle-group .mud-toggle-item {
+    flex: 1 1 0;
+    justify-content: center;
+}
+
 /* Compact variant for narrow side cards (Top movers), whose header gives the aside at most 55% of the width. */
 .fm-view-toggle--compact .mud-toggle-group .mud-toggle-item {
     padding: 2px 5px !important;

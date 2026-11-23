@@ -1,0 +1,63 @@
+@using FinanceManager.Domain.Dashboard.Dtos
+@using FinanceManager.Domain.FinancialAccounts.Bond.Entities
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <div class="fm-view-toggle fm-view-toggle--block">
+                <MudToggleGroup T="TransactionKind" Value="_kind" ValueChanged="OnKindChanged"
+                                SelectionMode="SelectionMode.SingleSelection" Dense="true" Size="Size.Small" Color="Color.Default"
+                                aria-label="Export kind" data-testid="export-kind">
+                    <MudToggleItem Value="TransactionKind.Cash" Text="Cash" />
+                    <MudToggleItem Value="TransactionKind.Bond" Text="Bond" />
+                </MudToggleGroup>
+            </div>
+            @if (_kind == TransactionKind.Cash)
+            {
+                <MudSelect T="Currency" Label="Currency" Variant="Variant.Outlined" @bind-Value="_currency"
+                           ToStringFunc="@(c => c?.ShortName)">
+                    @foreach (var currency in _currencies)
+                    {
+                        <MudSelectItem T="Currency" Value="@currency">@currency.ShortName</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else
+            {
+                <MudSelect T="BondDetails" Label="Bond" Variant="Variant.Outlined" @bind-Value="_bond"
+                           ToStringFunc="@(b => b?.Name)">
+                    @foreach (var bond in _bonds)
+                    {
+                        <MudSelectItem T="BondDetails" Value="@bond">@bond.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="From" Variant="Variant.Outlined" @bind-Date="_from"
+                                   DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="To" Variant="Variant.Outlined" @bind-Date="_to"
+                                   DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" />
+                </MudItem>
+            </MudGrid>
+            @if (_message is not null)
+            {
+                <MudAlert Severity="@_messageSeverity" Dense="true" data-testid="export-message">@_message</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportAsync" Disabled="@(!CanExport)"
+                   data-testid="export-submit">
+            @if (_isDownloading)
+            {
+                <MudProgressCircular Class="mr-2" Color="Color.Inherit" Size="Size.Small" Indeterminate="true" />
+            }
+            Export
+        </MudButton>
+    </DialogActions>
+</MudDialog>

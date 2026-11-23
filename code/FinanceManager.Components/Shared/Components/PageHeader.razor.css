@@ -19,4 +19,6 @@
     align-items: center;
     gap: 8px;
     max-width: 100%;
+    /* Stays right-aligned when there is no subtitle to share the row with. */
+    margin-left: auto;
 }

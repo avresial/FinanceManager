@@ -1,0 +1,28 @@
+@page "/Transactions/Import/{Kind}"
+@using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import
+@using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import
+@using FinanceManager.Components.Features.FinancialAccounts.Components.Shared
+
+<PageTitle>Import transactions</PageTitle>
+
+<AccountFormContainer>
+    @if (string.Equals(Kind, "cash", StringComparison.OrdinalIgnoreCase))
+    {
+        <ImportCurrencyEntriesComponent />
+    }
+    else if (string.Equals(Kind, "bond", StringComparison.OrdinalIgnoreCase))
+    {
+        <ImportBondEntriesComponent />
+    }
+    else
+    {
+        <PageHeader Title="Import" />
+        <MudAlert Severity="Severity.Info">
+            Only cash and bond entries can be imported. <MudLink Href="/Transactions">Back to Transactions</MudLink>
+        </MudAlert>
+    }
+</AccountFormContainer>
+
+@code {
+    [Parameter] public string Kind { get; set; } = string.Empty;
+}

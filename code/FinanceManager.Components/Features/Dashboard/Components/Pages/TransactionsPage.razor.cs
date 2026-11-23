@@ -3,6 +3,8 @@ using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Transactions.Components;
+using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
@@ -64,8 +66,16 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     private InvestmentTransactionDto? _editingInvestment;
     private bool _investmentFormVisible;
 
+    private bool _addVisible;
+    private TransactionKind _addKind = TransactionKind.Cash;
+
     /// <summary><c>?search=</c> pre-fills the text search, so a filtered view can be linked to directly.</summary>
     [SupplyParameterFromQuery(Name = "search")] public string? Search { get; set; }
+
+    /// <summary><c>?dialog=add-entry</c> opens the add dialog once on arrival; <c>?kind=</c> (cash, bond or investment) only picks the kind it opens on and is not a filter.</summary>
+    [SupplyParameterFromQuery(Name = "dialog")] public string? Dialog { get; set; }
+
+    [SupplyParameterFromQuery(Name = "kind")] public string? Kind { get; set; }
 
     /// <summary><c>?range=</c> picks one of the toolbar's preset ranges (e.g. 1M, YTD); anything else keeps the default.</summary>
     [SupplyParameterFromQuery(Name = "range")] public string? Range { get; set; }
@@ -76,7 +86,8 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient InvestmentValuationHttpClient { get; set; }
-    [Inject] public required InvestmentTransactionHttpClient InvestmentTransactionHttpClient { get; set; }
+    [Inject] public required InvestmentTradesHttpClient InvestmentTradesHttpClient { get; set; }
+    [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
@@ -87,6 +98,11 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         if (TransactionLogToolbar.Ranges.FirstOrDefault(range => range.Equals(Range, StringComparison.OrdinalIgnoreCase)) is string preset)
             _selectedRange = preset;
         ApplyRange();
+        if (string.Equals(Dialog, "add-entry", StringComparison.OrdinalIgnoreCase))
+        {
+            _addKind = Enum.TryParse<TransactionKind>(Kind, ignoreCase: true, out var kind) ? kind : TransactionKind.Cash;
+            _addVisible = true;
+        }
         // Rows publish this after a successful cash or bond edit/delete; the list then starts over so moved
         // or removed entries show up. Cancelled edits do not publish.
         AccountDataSynchronizationService.AccountsChanged += OnAccountsChanged;
@@ -367,9 +383,35 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Opens on the single kind the list is filtered to, else on cash.
+    private void OpenAdd()
+    {
+        _addKind = _filter.Kinds is [var only] ? only : TransactionKind.Cash;
+        _addVisible = true;
+    }
+
+    private Task ClearFilters()
+    {
+        _filter = TransactionLogFilter.None;
+        _search = null;
+        return LoadAsync(reset: true);
+    }
+
+    // The export starts on what the list shows: its range, and the single cash or bond kind and currency filtered to.
+    private async Task OpenExportAsync()
+    {
+        DialogParameters<TransactionsExportDialog> parameters = new()
+        {
+            { x => x.Kind, _filter.Kinds is [var only] ? only : TransactionKind.Cash },
+            { x => x.CurrencyCode, _filter.Currencies is [var code] ? code : null },
+            { x => x.RangeStart, _rangeStart },
+            { x => x.RangeEnd, _rangeEnd },
+        };
+        await DialogService.ShowAsync<TransactionsExportDialog>("Export CSV", parameters, new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+    }
+
     private void ShowInvestmentEdit(InvestmentTransactionDto transaction)
     {
-        if (transaction.AccountId is null) return;
         _editingInvestment = transaction;
         _investmentFormVisible = true;
     }
@@ -390,18 +432,11 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
     private async Task DeleteInvestmentAsync(InvestmentTransactionDto transaction)
     {
-        if (transaction.AccountId is not int accountId) return;
         try
         {
-            if (await InvestmentTransactionHttpClient.DeleteAsync(accountId, transaction.Id))
-            {
-                Snackbar.Add("Transaction removed.", Severity.Success);
-                await LoadAsync(reset: true);
-            }
-            else
-            {
-                Snackbar.Add("Could not remove the transaction.", Severity.Error);
-            }
+            await InvestmentTradesHttpClient.DeleteAsync(transaction.Id);
+            Snackbar.Add("Transaction removed.", Severity.Success);
+            await LoadAsync(reset: true);
         }
         catch (Exception ex)
         {

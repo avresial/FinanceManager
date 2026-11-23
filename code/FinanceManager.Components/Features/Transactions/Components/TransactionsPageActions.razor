@@ -1,0 +1,32 @@
+@* The Transactions page's write actions: one Add button and an Import / Export menu (cash and bond only). *@
+@if (IsMobile)
+{
+    <MudMenu Icon="@Icons.Material.Filled.ImportExport" Variant="Variant.Outlined" Color="Color.Default"
+             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true"
+             aria-label="Import or export" title="Import / Export" data-testid="transactions-import-export">
+        @Items
+    </MudMenu>
+}
+else
+{
+    <MudMenu Label="Import / Export" StartIcon="@Icons.Material.Filled.ImportExport" EndIcon="@Icons.Material.Filled.KeyboardArrowDown"
+             Variant="Variant.Outlined" Color="Color.Default"
+             AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" data-testid="transactions-import-export">
+        @Items
+    </MudMenu>
+}
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OnAdd"
+           data-testid="transactions-add">Add</MudButton>
+
+@code {
+    private RenderFragment Items => @<text>
+        <MudMenuItem Href="/Transactions/Import/cash" Icon="@Icons.Material.Filled.Upload">Import cash statement…</MudMenuItem>
+        <MudMenuItem Href="/Transactions/Import/bond" Icon="@Icons.Material.Filled.Upload">Import bond entries…</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem OnClick="OnExport" Icon="@Icons.Material.Filled.Download">Export CSV…</MudMenuItem>
+    </text>;
+
+    [Parameter] public bool IsMobile { get; set; }
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public EventCallback OnExport { get; set; }
+}
