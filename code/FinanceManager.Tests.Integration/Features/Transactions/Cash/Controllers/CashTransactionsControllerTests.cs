@@ -1,0 +1,438 @@
+using FinanceManager.Application.Identity.Users;
+using FinanceManager.Contracts.Dashboard;
+using FinanceManager.Contracts.Transactions.Cash;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Infrastructure.Persistence;
+using FinanceManager.Tests.Integration.Shared;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using Xunit;
+
+namespace FinanceManager.Tests.Integration.Features.Transactions.Cash.Controllers;
+
+[Trait("Category", "Integration")]
+public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
+{
+    private const string _route = "api/transactions/cash";
+    private const int _owner = 1;
+    private const int _other = 2;
+    private const int _guest = -7;
+    private const int _accountId = 40;
+    private const int _pln = 0;
+    private const int _usd = 1;
+    private static readonly DateTime _day = new(2024, 6, 3, 0, 0, 0, DateTimeKind.Utc);
+    private readonly Mock<IUserPlanVerifier> _planVerifier = new();
+    private TestDatabase? _database;
+
+    protected override bool ReuseApplicationHost => false;
+
+    protected override void ConfigureServices(IServiceCollection services)
+    {
+        _database = new TestDatabase();
+        var descriptor = services.SingleOrDefault(x => x.ServiceType == typeof(DbContextOptions<AppDbContext>));
+        if (descriptor is not null) services.Remove(descriptor);
+        services.AddSingleton(_database.Context);
+
+        _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
+        services.AddSingleton(_planVerifier.Object);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _database?.Dispose();
+        _database = null;
+        GC.SuppressFinalize(this);
+    }
+
+    private AppDbContext Db => _database!.Context;
+
+    private void Seed()
+    {
+        Db.Currencies.Add(new Currency(_usd, "USD", "$"));
+        Db.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = _owner, Name = "Wallet", AccountType = AccountType.Currency, CurrencyId = _pln });
+        Db.SaveChanges();
+    }
+
+    private async Task<long> SeedEntry(int userId, int? accountId, int currencyId, DateTime date, decimal valueChange, decimal value = 0m, string description = "seed")
+    {
+        var entry = new CurrencyAccountEntry(accountId, 0, date, value, valueChange)
+        {
+            UserId = userId,
+            CurrencyId = currencyId,
+            Description = description,
+        };
+        Db.CurrencyEntries.Add(entry);
+        await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return entry.EntryId;
+    }
+
+    private static CreateCashEntryRequest Create(int currency = _pln, decimal valueChange = -12.5m, IReadOnlyList<int>? labels = null, DateTime? date = null) =>
+        new(currency, date ?? _day.AddHours(9), valueChange, "Coffee", "Cafe", labels);
+
+    private static UpdateCashEntryRequest Update(decimal valueChange = 30m, IReadOnlyList<int>? labels = null, DateTime? date = null) =>
+        new(date ?? _day.AddHours(10), valueChange, "Salary", "Employer", labels);
+
+    private async Task<int> SeedLabel(string name)
+    {
+        var label = new FinancialLabel { Name = name };
+        Db.FinancialLabels.Add(label);
+        await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return label.Id;
+    }
+
+    [Fact]
+    public async Task Anonymous_IsUnauthorizedOnEveryRoute()
+    {
+        ClearAuthorization();
+        var ct = TestContext.Current.CancellationToken;
+        var responses = new[]
+        {
+            await Client.PostAsJsonAsync(_route, Create(), ct),
+            await Client.PutAsJsonAsync(_route + "/1", Update(), ct),
+            await Client.DeleteAsync(_route + "/1", ct),
+            await Client.PostAsJsonAsync(_route + "/import?currencyId=0", new[] { new CurrencyEntryImportRecordDto(_day, 1m) }, ct),
+            await Client.GetAsync(_route + "/export?currencyId=0&startDate=2024-01-01&endDate=2024-12-31", ct),
+        };
+        Assert.All(responses, x => Assert.Equal(HttpStatusCode.Unauthorized, x.StatusCode));
+    }
+
+    [Fact]
+    public async Task Create_StoresAnUnlinkedOwnerRowWithASignedDelta_AndReturnsThePersistedRow()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        var label = await SeedLabel("food");
+
+        using var response = await Client.PostAsJsonAsync(_route, Create(_pln, -12.5m, [label]), ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var dto = await response.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
+        Assert.NotNull(dto);
+        Assert.Null(dto.LegacyAccountId);
+        Assert.Equal(-12.5m, dto.ValueChange);
+        Assert.Equal(_pln, dto.CurrencyId);
+        Assert.Equal("PLN", dto.Currency);
+        Assert.Equal("Coffee", dto.Description);
+        Assert.Equal("Cafe", dto.ContractorDetails);
+        Assert.Equal("food", Assert.Single(dto.Labels).Name);
+        var stored = await Db.CurrencyEntries.SingleAsync(ct);
+        Assert.Equal(dto.EntryId, stored.EntryId);
+        Assert.Equal(_owner, stored.UserId);
+        Assert.Null(stored.AccountId);
+        Assert.Equal(_pln, stored.CurrencyId);
+        Assert.Equal(0m, stored.Value);
+        Assert.Equal(_day.AddHours(9), stored.PostingDate);
+    }
+
+    [Fact]
+    public async Task Create_InAnotherCurrency_KeepsTheCurrencyPartitionsApart()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var response = await Client.PostAsJsonAsync(_route, Create(_usd), ct);
+
+        var dto = await response.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
+        Assert.Equal("USD", dto!.Currency);
+        Assert.Equal(_usd, (await Db.CurrencyEntries.SingleAsync(ct)).CurrencyId);
+    }
+
+    [Fact]
+    public async Task Create_RejectsInvalidInput()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var omittedCurrency = await Client.PostAsync(_route,
+            new StringContent("""{"postingDate":"2024-06-03T09:00:00Z","valueChange":1,"description":"x"}""", Encoding.UTF8, "application/json"), ct);
+        using var unknownCurrency = await Client.PostAsJsonAsync(_route, Create(currency: 999), ct);
+        using var unknownLabel = await Client.PostAsJsonAsync(_route, Create(labels: [12345]), ct);
+        using var ancientDate = await Client.PostAsJsonAsync(_route, Create(date: new DateTime(1800, 1, 1, 0, 0, 0, DateTimeKind.Utc)), ct);
+        using var missingDescription = await Client.PostAsJsonAsync(_route, Create() with { Description = "" }, ct);
+        using var longContractor = await Client.PostAsJsonAsync(_route, Create() with { ContractorDetails = new string('x', 513) }, ct);
+
+        Assert.All(new[] { omittedCurrency, unknownCurrency, unknownLabel, ancientDate, missingDescription, longContractor },
+            x => Assert.Equal(HttpStatusCode.BadRequest, x.StatusCode));
+        Assert.Empty(Db.CurrencyEntries);
+    }
+
+    [Fact]
+    public async Task Create_IsRefusedWhenThePlanLimitIsReached()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(false);
+
+        using var response = await Client.PostAsJsonAsync(_route, Create(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(Db.CurrencyEntries);
+    }
+
+    [Fact]
+    public async Task GuestWithNegativeId_OwnsItsEntries()
+    {
+        Seed();
+        Authorize("guest", _guest, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var created = await Client.PostAsJsonAsync(_route, Create(), ct);
+        var dto = await created.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
+        using var updated = await Client.PutAsJsonAsync($"{_route}/{dto!.EntryId}", Update(), ct);
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        Assert.Equal(_guest, (await Db.CurrencyEntries.SingleAsync(ct)).UserId);
+
+        using var deleted = await Client.DeleteAsync($"{_route}/{dto.EntryId}", ct);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+        Assert.Empty(Db.CurrencyEntries);
+    }
+
+    [Fact]
+    public async Task AnotherOwnersOrMissingEntry_IsTheSameNotFound()
+    {
+        Seed();
+        var foreign = await SeedEntry(_other, null, _pln, _day, 5m);
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        var responses = new[]
+        {
+            await Client.PutAsJsonAsync($"{_route}/{foreign}", Update(), ct),
+            await Client.PutAsJsonAsync($"{_route}/987654", Update(), ct),
+            await Client.DeleteAsync($"{_route}/{foreign}", ct),
+            await Client.DeleteAsync($"{_route}/987654", ct),
+        };
+
+        Assert.All(responses, x => Assert.Equal(HttpStatusCode.NotFound, x.StatusCode));
+        var untouched = await Db.CurrencyEntries.SingleAsync(ct);
+        Assert.Equal(5m, untouched.ValueChange);
+        Assert.Equal(_other, untouched.UserId);
+    }
+
+    [Fact]
+    public async Task Update_KeepsTheCurrencyAndOwner_AndHandlesLabels()
+    {
+        Seed();
+        var first = await SeedLabel("first");
+        var second = await SeedLabel("second");
+        var id = await SeedEntry(_owner, null, _usd, _day, 5m);
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var replaced = await Client.PutAsJsonAsync($"{_route}/{id}", Update(30m, [first]), ct);
+        var dto = await replaced.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
+        Assert.Equal(HttpStatusCode.OK, replaced.StatusCode);
+        Assert.Equal(30m, dto!.ValueChange);
+        Assert.Equal("USD", dto.Currency);
+        Assert.Equal("Salary", dto.Description);
+        Assert.Equal(["first"], dto.Labels.Select(x => x.Name));
+
+        // Omitted label ids keep the labels, an explicit list replaces them, an empty list clears them.
+        using var kept = await Client.PutAsJsonAsync($"{_route}/{id}", Update(31m), ct);
+        Assert.Equal(["first"], (await kept.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct))!.Labels.Select(x => x.Name));
+        using var swapped = await Client.PutAsJsonAsync($"{_route}/{id}", Update(32m, [second]), ct);
+        Assert.Equal(["second"], (await swapped.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct))!.Labels.Select(x => x.Name));
+        using var cleared = await Client.PutAsJsonAsync($"{_route}/{id}", Update(33m, []), ct);
+        Assert.Empty((await cleared.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct))!.Labels);
+        using var unknown = await Client.PutAsJsonAsync($"{_route}/{id}", Update(labels: [4242]), ct);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+
+        Db.ChangeTracker.Clear();
+        var stored = await Db.CurrencyEntries.SingleAsync(ct);
+        Assert.Equal(33m, stored.ValueChange);
+        Assert.Equal(_usd, stored.CurrencyId);
+        Assert.Equal(_owner, stored.UserId);
+        Assert.Null(stored.AccountId);
+        Assert.Equal(0m, stored.Value);
+    }
+
+    [Fact]
+    public async Task LinkedEntry_EditAndDeleteRepairTheAccountRunningValues_ButNeverTouchAnUnlinkedRow()
+    {
+        Seed();
+        var first = await SeedEntry(_owner, _accountId, _pln, _day, 10m, value: 10m);
+        var second = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(1), 5m, value: 15m);
+        var third = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(2), 2m, value: 17m);
+        var unlinked = await SeedEntry(_owner, null, _pln, _day.AddDays(1), 100m);
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        // Moving the first entry past the second changes the values between its old and its new position.
+        using var edited = await Client.PutAsJsonAsync($"{_route}/{first}", Update(20m, date: _day.AddDays(1).AddHours(12)), ct);
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        Db.ChangeTracker.Clear();
+        var values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
+        Assert.Equal([second, first, third], values.Select(e => e.EntryId));
+        Assert.Equal([5m, 25m, 27m], values.Select(e => e.Value));
+        Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
+
+        using var deleted = await Client.DeleteAsync($"{_route}/{second}", ct);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+        Db.ChangeTracker.Clear();
+        values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
+        Assert.Equal([20m, 22m], values.Select(e => e.Value));
+        Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
+    }
+
+    [Fact]
+    public async Task Export_ListsOnlyTheOwnersRowsOfTheCurrencyInRange_LinkedOrNot_WithoutTheRunningValue()
+    {
+        Seed();
+        await SeedEntry(_owner, _accountId, _pln, _day.AddHours(1), 10m, value: 10m, description: "linked");
+        await SeedEntry(_owner, null, _pln, _day.AddHours(2), -3m, description: "free, \"quoted\"");
+        await SeedEntry(_owner, null, _usd, _day.AddHours(3), 99m, description: "other currency");
+        await SeedEntry(_other, null, _pln, _day.AddHours(4), 98m, description: "other owner");
+        await SeedEntry(_owner, null, _pln, _day.AddDays(40), 97m, description: "out of range");
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var response = await Client.GetAsync($"{_route}/export?currencyId={_pln}&startDate=2024-06-03T00:00:00Z&endDate=2024-06-03T23:59:59Z", ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("cash-pln-20240603-20240603.csv", response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
+        var lines = (await response.Content.ReadAsStringAsync(ct)).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        Assert.Equal("Id,PostingDate,ValueChange,ContractorDetails,Description", lines[0]);
+        Assert.Equal(3, lines.Length);
+        Assert.EndsWith(",2024-06-03T01:00:00Z,10,,linked", lines[1][lines[1].IndexOf(',')..]);
+        Assert.Contains("-3", lines[2]);
+        Assert.Contains("\"free, \"\"quoted\"\"\"", lines[2]);
+    }
+
+    [Fact]
+    public async Task Export_RejectsAMissingUnknownOrReversedRequest()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        var responses = new[]
+        {
+            await Client.GetAsync($"{_route}/export?startDate=2024-01-01&endDate=2024-12-31", ct),
+            await Client.GetAsync($"{_route}/export?currencyId=999&startDate=2024-01-01&endDate=2024-12-31", ct),
+            await Client.GetAsync($"{_route}/export?currencyId=0&startDate=2024-12-31&endDate=2024-01-01", ct),
+        };
+
+        Assert.All(responses, x => Assert.Equal(HttpStatusCode.BadRequest, x.StatusCode));
+    }
+
+    [Fact]
+    public async Task Import_RunsAsAnOwnerJob_SkipsExactMatches_AndSavesTheReviewedSurplusOnce()
+    {
+        Seed();
+        await SeedEntry(_owner, _accountId, _pln, _day.AddHours(8), 10m, value: 10m, description: "linked statement row");
+        await SeedEntry(_owner, null, _pln, _day.AddHours(20), 7m, description: "unrelated, never offered");
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        CurrencyEntryImportRecordDto[] rows =
+        [
+            new(_day.AddHours(8), 10m, "Shop", "already present"),
+            new(_day.AddHours(8), 5m, "Shop", "surplus on the same day"),
+            new(_day.AddDays(1).AddHours(8), 2m, null, "a clean day"),
+        ];
+
+        using var start = await Client.PostAsJsonAsync($"{_route}/import?currencyId={_pln}", rows, ct);
+        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        var jobId = (await start.Content.ReadFromJsonAsync<CurrencyImportJobStartResponseDto>(ct))!.JobId;
+        var status = await WaitForJob(jobId, ct);
+
+        Assert.Equal(1, status.Imported); // the clean day
+        var actionable = status.Conflicts.Where(c => !c.Conflict.IsExactMatch).ToList();
+        var conflict = Assert.Single(actionable);
+        Assert.Equal("surplus on the same day", conflict.Conflict.ImportEntry!.Description);
+        Assert.Null(conflict.Conflict.AccountId);
+        Assert.Null(conflict.Conflict.ExistingEntry);
+
+        // Another owner never sees the job; an unknown conflict id is rejected.
+        Authorize("other", _other, UserRole.User);
+        using var foreign = await Client.GetAsync($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+        Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
+        Authorize("owner", _owner, UserRole.User);
+        using var bogus = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+            new CurrencyImportResolveConflictsRequestDto { JobId = jobId, Decisions = [new("not-a-conflict", true, false)] }, ct);
+        Assert.Equal(HttpStatusCode.NotFound, bogus.StatusCode);
+
+        // Accepting the surplus adds it once; repeating the decision is a no-op.
+        var request = new CurrencyImportResolveConflictsRequestDto { JobId = jobId, Decisions = [new(conflict.ConflictId, PickImported: true, PickExisting: false)] };
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            using var resolved = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+            Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
+        }
+
+        Db.ChangeTracker.Clear();
+        var owned = await Db.CurrencyEntries.AsNoTracking().Where(e => e.UserId == _owner && e.AccountId == null).OrderBy(e => e.PostingDate).ToListAsync(ct);
+        Assert.Equal([5m, 7m, 2m], owned.Select(e => e.ValueChange)); // surplus once, the unrelated row, the clean day
+        Assert.All(owned, e => Assert.Equal(_pln, e.CurrencyId));
+        Assert.All(owned, e => Assert.Equal(0m, e.Value));
+        Assert.Equal(10m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.AccountId == _accountId, ct)).Value);
+    }
+
+    [Fact]
+    public async Task ImportDecision_ThatCannotBeSavedIsReopened_SoItCanBeRetried()
+    {
+        Seed();
+        await SeedEntry(_owner, null, _pln, _day.AddHours(8), 10m);
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        CurrencyEntryImportRecordDto[] rows = [new(_day.AddHours(8), 10m, null, "present"), new(_day.AddHours(8), 10m, null, "surplus")];
+        using var start = await Client.PostAsJsonAsync($"{_route}/import?currencyId={_pln}", rows, ct);
+        var jobId = (await start.Content.ReadFromJsonAsync<CurrencyImportJobStartResponseDto>(ct))!.JobId;
+        var conflict = Assert.Single((await WaitForJob(jobId, ct)).Conflicts, c => !c.Conflict.IsExactMatch);
+        var request = new CurrencyImportResolveConflictsRequestDto { JobId = jobId, Decisions = [new(conflict.ConflictId, PickImported: true, PickExisting: false)] };
+
+        // The plan limit is rechecked for the approved addition: refused, nothing saved, the decision stays open.
+        _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(false);
+        using var refused = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Equal(1, await Db.CurrencyEntries.CountAsync(ct));
+        var open = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+        Assert.Equal(0, open!.ResolvedConflictCount);
+
+        _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
+        using var retried = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+        Assert.Equal(HttpStatusCode.OK, retried.StatusCode);
+        Db.ChangeTracker.Clear();
+        Assert.Equal(2, await Db.CurrencyEntries.CountAsync(ct));
+        Assert.Equal("surplus", (await Db.CurrencyEntries.AsNoTracking().OrderByDescending(e => e.EntryId).FirstAsync(ct)).Description);
+    }
+
+    [Fact]
+    public async Task Import_RejectsAnUnknownCurrencyAndAnEmptyBody()
+    {
+        Seed();
+        Authorize("owner", _owner, UserRole.User);
+        var ct = TestContext.Current.CancellationToken;
+        CurrencyEntryImportRecordDto[] rows = [new(_day, 1m)];
+
+        using var unknown = await Client.PostAsJsonAsync($"{_route}/import?currencyId=999", rows, ct);
+        using var omitted = await Client.PostAsJsonAsync($"{_route}/import", rows, ct);
+        using var empty = await Client.PostAsJsonAsync($"{_route}/import?currencyId=0", Array.Empty<CurrencyEntryImportRecordDto>(), ct);
+
+        Assert.All(new[] { unknown, omitted, empty }, x => Assert.Equal(HttpStatusCode.BadRequest, x.StatusCode));
+    }
+
+    private async Task<CurrencyImportJobStatusDto> WaitForJob(Guid jobId, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            var status = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+            if (status is { IsCompleted: true }) return status;
+            await Task.Delay(50, ct);
+        }
+
+        throw new TimeoutException("The import job did not finish.");
+    }
+}
