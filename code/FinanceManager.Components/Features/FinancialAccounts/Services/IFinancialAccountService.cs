@@ -21,5 +21,4 @@ public interface IFinancialAccountService
     public Task AddEntry<T>(T accountEntry) where T : class, ILedgerEntry;
     public Task UpdateEntry<T>(T accountEntry) where T : class, ILedgerEntry;
     public Task RemoveEntry(long accountEntryId, int accountId);
-    public void InitializeMock();
 }

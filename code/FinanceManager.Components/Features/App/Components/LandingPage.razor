@@ -165,7 +165,7 @@
                         <MudCardHeader>
                             <CardHeaderContent>
                                 <div class="fm-card-info-centered">
-                                    <CardInfoTooltip Text="Free plan — basic tracking with limits on entries and accounts."
+                                    <CardInfoTooltip Text="Free plan — basic tracking with a limit on transactions."
                                                      AriaLabel="About beginner plan card">
                                         <MudText Typo="Typo.h5" Align="Align.Center">Beginner</MudText>
                                     </CardInfoTooltip>
@@ -182,9 +182,6 @@
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Free) transactions
-                                </MudListItem>
-                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Identity.Entities.PricingLevel.Free) accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>
@@ -216,9 +213,6 @@
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Basic) transactions
                                 </MudListItem>
-                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Up to @PricingProvider.GetMaxAccountCount(Domain.Identity.Entities.PricingLevel.Basic) accounts
-                                </MudListItem>
                             </MudList>
                         </MudCardContent>
                         <MudCardActions Class="d-flex justify-center mt-auto">
@@ -248,9 +242,6 @@
                                 </MudListItem>
                                 <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
                                     @PricingProvider.GetMaxAllowedEntries(Domain.Identity.Entities.PricingLevel.Premium) transactions
-                                </MudListItem>
-                                <MudListItem Icon="@Icons.Material.Filled.LiveHelp">
-                                    Unlimited accounts
                                 </MudListItem>
                             </MudList>
                         </MudCardContent>

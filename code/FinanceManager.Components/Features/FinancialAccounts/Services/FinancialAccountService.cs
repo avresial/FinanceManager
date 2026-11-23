@@ -247,7 +247,6 @@ public class FinancialAccountService(CurrencyAccountHttpClient currencyAccountHt
 
         throw new NotSupportedException($"Account {accountId} type not supported for getting start date.");
     }
-    public void InitializeMock() => logger.LogInformation("InitializeMock is called.");
     public async Task RemoveAccount(int id)
     {
         if (await AccountExists<CurrencyAccount>(id))

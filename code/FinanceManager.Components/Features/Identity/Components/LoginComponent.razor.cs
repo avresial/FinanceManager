@@ -32,7 +32,6 @@ public partial class LoginComponent
     [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IJSRuntime JSRuntime { get; set; }
 
@@ -161,15 +160,6 @@ public partial class LoginComponent
 
     private async Task LogGuest()
     {
-        try
-        {
-            FinancialAccountService.InitializeMock();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex.ToString());
-        }
-
         var guestPassword = Configuration["GuestAccount:Password"] ?? "GuestPassword";
         await LoginService.Login(_guestLogin, guestPassword);
         Navigation.NavigateTo("");

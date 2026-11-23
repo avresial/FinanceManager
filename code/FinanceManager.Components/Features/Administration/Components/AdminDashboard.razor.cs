@@ -15,11 +15,9 @@ namespace FinanceManager.Components.Features.Administration.Components;
 public partial class AdminDashboard : ComponentBase
 {
     private int? _userCount = default;
-    private int? _accountsCount = default;
     private decimal? _totalTrackedMoney = default;
     private int? _newVisitorsToday = default;
     private bool _userCountLoadFailed;
-    private bool _accountsCountLoadFailed;
     private bool _totalTrackedMoneyLoadFailed;
     private bool _newVisitorsTodayLoadFailed;
     private bool _dailyActiveUsersLoadFailed;
@@ -27,7 +25,6 @@ public partial class AdminDashboard : ComponentBase
 
     private readonly RefreshVersionGate _totalTrackedMoneyGate = new();
     private readonly RefreshVersionGate _userCountGate = new();
-    private readonly RefreshVersionGate _accountsCountGate = new();
     private readonly RefreshVersionGate _newVisitorsTodayGate = new();
     private readonly ApexChartOptions<ChartEntryModel> _chartOptions = CreateChartOptions();
     private readonly ApexChartOptions<ChartEntryModel> _newUsersChartOptions = CreateChartOptions();
@@ -113,7 +110,6 @@ public partial class AdminDashboard : ComponentBase
 
             await Task.WhenAll(
                 LoadUserCountAsync(adminUserId),
-                LoadAccountsCountAsync(adminUserId),
                 LoadNewVisitorsTodayAsync(adminUserId),
                 RefreshNewUsersAsync(userId!),
                 RefreshDailyActiveUsersAsync(userId!),
@@ -161,27 +157,6 @@ public partial class AdminDashboard : ComponentBase
     private Task ShowUserCount(AdminUsersCountCardModel model)
     {
         _userCount = model.Count;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    private async Task LoadAccountsCountAsync(int userId)
-    {
-        var result = await SnapshotStore.RefreshAccountsCountAsync(
-            userId,
-            _accountsCountGate,
-            _accountsCountGate.Claim(),
-            () => AdministrationUsersHttpClient.GetAccountsCount(),
-            onSnapshotPainted: ShowAccountsCount,
-            onRefreshed: ShowAccountsCount);
-        _accountsCountLoadFailed = result.IsBlockingFailure;
-        if (_accountsCountLoadFailed)
-            StateHasChanged();
-    }
-
-    private Task ShowAccountsCount(AdminAccountsCountCardModel model)
-    {
-        _accountsCount = model.Count;
         StateHasChanged();
         return Task.CompletedTask;
     }
