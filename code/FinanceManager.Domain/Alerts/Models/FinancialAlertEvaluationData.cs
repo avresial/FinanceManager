@@ -1,9 +1,9 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Domain.Alerts.Models;
 
 public sealed record FinancialAlertEvaluationData(
     decimal TotalSpend,
     int TransactionCount,
-    CurrencyAccountEntry? LargestTransaction,
-    IReadOnlyList<CurrencyAccountEntry>? MatchingTransactions = null);
+    CashLogEntry? LargestTransaction,
+    IReadOnlyList<CashLogEntry>? MatchingTransactions = null);

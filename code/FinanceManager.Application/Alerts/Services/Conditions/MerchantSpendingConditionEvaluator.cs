@@ -24,11 +24,13 @@ public sealed class MerchantSpendingConditionEvaluator : IAlertConditionEvaluato
 
         var conditionMet = AlertComparison.Matches(totals.TotalSpend, alert.ComparisonOperator, alert.Threshold);
 
-        var fingerprint = $"MerchantSpending:Merchant={merchantTarget.ToLowerInvariant()}:Period={totals.PeriodKey}:Spend={totals.TotalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+        var fingerprint = $"MerchantSpending:CurrencyId={totals.CurrencyId}:Merchant={merchantTarget.ToLowerInvariant()}:Period={totals.PeriodKey}:Spend={totals.TotalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
         var message = $"Spending for merchant '{merchantTarget}' in {AlertPeriod.FormatLabel(alert.EvaluationPeriod)} is {totals.TotalSpend.ToString("N2", inv)}";
 
         var context = new Dictionary<string, string>
         {
+            ["CurrencyId"] = totals.CurrencyId.ToString(inv),
+            ["CurrencyCode"] = AlertCurrency.CodeOf(snapshot, totals.CurrencyId),
             ["Merchant"] = merchantTarget,
             ["Period"] = totals.PeriodKey,
             ["TotalSpend"] = totals.TotalSpend.ToString("F2", inv),
@@ -41,7 +43,7 @@ public sealed class MerchantSpendingConditionEvaluator : IAlertConditionEvaluato
             fingerprint,
             message,
             context,
-            AlertTransactionReferences.From(totals.MatchingEntries, snapshot.IncludeAllMatchingTransactions),
+            AlertTransactionReferences.From(totals.MatchingEntries, snapshot.CurrencyCodes, snapshot.IncludeAllMatchingTransactions),
             totals.TransactionCount);
     }
 }

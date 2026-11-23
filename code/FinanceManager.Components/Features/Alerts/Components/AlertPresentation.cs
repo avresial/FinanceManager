@@ -35,8 +35,18 @@ public static class AlertPresentation
         _ => comparison.ToString()
     };
 
-    public static string TransactionHref(AlertTransactionReference transaction) =>
-        $"/AccountDetails/{transaction.AccountId}?entryId={transaction.EntryId}";
+    /// <summary>Opens the transaction log filtered to the transaction's text and currency; its description is preferred so counterparty names stay out of URLs.</summary>
+    public static string TransactionHref(AlertTransactionReference transaction)
+    {
+        var term = !string.IsNullOrWhiteSpace(transaction.Description) ? transaction.Description : transaction.ContractorDetails;
+        var parameters = new List<string>();
+        if (!string.IsNullOrWhiteSpace(term))
+            parameters.Add($"search={Uri.EscapeDataString(term.Trim())}");
+        if (!string.IsNullOrWhiteSpace(transaction.CurrencyCode))
+            parameters.Add($"currency={Uri.EscapeDataString(transaction.CurrencyCode)}");
+
+        return parameters.Count == 0 ? "/Transactions" : $"/Transactions?{string.Join('&', parameters)}";
+    }
 
     public static string TransactionTitle(AlertTransactionReference transaction) =>
         !string.IsNullOrWhiteSpace(transaction.ContractorDetails)
@@ -60,7 +70,7 @@ public static class AlertPresentation
 
     public static string TypeLabel(AlertType type) => type switch
     {
-        AlertType.AccountBalance => "Account balance",
+        AlertType.AccountBalance => "Cash balance",
         AlertType.CategorySpending => "Category spending",
         AlertType.MerchantSpending => "Merchant spending",
         AlertType.LargeTransaction => "Large transaction",
@@ -89,8 +99,17 @@ public static class AlertPresentation
         _ => period.ToString()
     };
 
-    public static string ConditionLabel(FinancialAlertDto alert) =>
-        $"{ComparisonLabel(alert.ComparisonOperator)} {MoneyFormatter.FormatNumber(alert.Threshold)}";
+    public static bool NeedsCurrency(FinancialAlertDto alert) =>
+        alert.AlertType.RequiresCurrency() && alert.CurrencyId is null;
+
+    public static string ConditionLabel(FinancialAlertDto alert, string? currencyCode = null)
+    {
+        var condition = $"{ComparisonLabel(alert.ComparisonOperator)} {MoneyFormatter.FormatNumber(alert.Threshold)}";
+        if (NeedsCurrency(alert))
+            return $"{condition} (currency required)";
+
+        return string.IsNullOrWhiteSpace(currencyCode) ? condition : $"{condition} {currencyCode}";
+    }
 
     /// <summary>Status from the latest evaluation when there is one, otherwise from the alert's stored last status.</summary>
     public static string StatusLabel(FinancialAlertDto alert, AlertEvaluationOutcome? outcome) =>

@@ -19,7 +19,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<FinancialAlertDto>))]
     public async Task<IActionResult> Get(CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         var alerts = await alertService.GetAlertsAsync(userId, cancellationToken);
         return Ok(alerts.Select(FinancialAlertDto.FromEntity).ToList());
     }
@@ -29,7 +29,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         var alert = await alertService.GetAlertByIdAsync(userId, id, cancellationToken);
         return alert is null ? NotFound() : Ok(FinancialAlertDto.FromEntity(alert));
     }
@@ -41,11 +41,13 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         [FromBody] CreateFinancialAlert command,
         CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(command);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        var validationError = Validate(command)
+            ?? await alertService.ValidateCurrencyAsync(command.AlertType, command.CurrencyId, cancellationToken);
         if (validationError is not null)
             return BadRequest(validationError);
 
-        var userId = ApiAuthenticationHelper.GetUserId(User);
         var alert = await alertService.CreateAlertAsync(userId, command, cancellationToken);
         var dto = FinancialAlertDto.FromEntity(alert);
         return CreatedAtAction(nameof(Get), new { id = alert.Id }, dto);
@@ -60,27 +62,33 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         [FromBody] UpdateFinancialAlert command,
         CancellationToken cancellationToken = default)
     {
-        var validationError = Validate(command);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        var validationError = Validate(command)
+            ?? await alertService.ValidateCurrencyAsync(command.AlertType, command.CurrencyId, cancellationToken);
         if (validationError is not null)
             return BadRequest(validationError);
 
-        var userId = ApiAuthenticationHelper.GetUserId(User);
         var alert = await alertService.UpdateAlertAsync(userId, id, command, cancellationToken);
         return alert is null ? NotFound() : Ok(FinancialAlertDto.FromEntity(alert));
     }
 
     [HttpPatch("{id:guid}/enabled")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetEnabled(
         Guid id,
         [FromBody] bool enabled,
         CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-        return await alertService.SetEnabledAsync(userId, id, enabled, cancellationToken)
-            ? NoContent()
-            : NotFound();
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+        return await alertService.SetEnabledAsync(userId, id, enabled, cancellationToken) switch
+        {
+            SetAlertEnabledStatus.Updated => NoContent(),
+            SetAlertEnabledStatus.CurrencyRequired => BadRequest("Select a currency before enabling this alert."),
+            _ => NotFound()
+        };
     }
 
     [HttpDelete("{id:guid}")]
@@ -88,7 +96,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         return await alertService.DeleteAlertAsync(userId, id, cancellationToken)
             ? NoContent()
             : NotFound();
@@ -98,7 +106,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<AlertEvaluationOutcome>))]
     public async Task<IActionResult> Evaluate(CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         return Ok(await alertService.EvaluateAlertsAsync(userId, cancellationToken));
     }
 
@@ -110,7 +118,7 @@ public sealed class FinancialAlertsController(IFinancialAlertService alertServic
         [FromQuery] bool includeAllMatchingTransactions = false,
         CancellationToken cancellationToken = default)
     {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         var outcome = await alertService.EvaluateAlertAsync(
             userId,
             id,

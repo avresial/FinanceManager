@@ -8,7 +8,6 @@ using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,23 +67,69 @@ public sealed class AlertsPageTests
     }
 
     [Fact]
-    public async Task Form_OffersAllAccountsAndUserAccounts_InsteadOfFreeTextId()
+    public async Task Form_OffersCurrenciesInsteadOfAccounts_DefaultingToThePreferredOne()
     {
         var handler = new AlertsHandler();
         await using var context = CreateContext(handler, new SnapshotStore());
         var popovers = context.Render<MudPopoverProvider>();
         var cut = context.Render<AlertsPage>();
 
-        cut.WaitForAssertion(() => Assert.DoesNotContain("Account id", cut.Markup));
-        cut.WaitForAssertion(() => Assert.Contains("All accounts", cut.Markup));
-        cut.FindAll(".mud-select").First(select => select.TextContent.Contains("All accounts")).QuerySelector(".mud-input-control")!.MouseDown();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='alert-currency-select']")));
+        Assert.DoesNotContain("All accounts", cut.Markup);
+        Assert.Empty(cut.FindAll("[data-testid='alert-account-select']"));
+        cut.WaitForAssertion(() => Assert.Equal("0", SelectedCurrency(cut)));
+
+        OpenCurrencySelect(cut);
 
         cut.WaitForAssertion(() =>
         {
             var items = popovers.FindAll(".mud-list-item").Select(item => item.TextContent.Trim()).ToList();
-            Assert.Contains("Everyday", items);
-            Assert.Contains("Savings", items);
+            Assert.Equal(["EUR", "PLN", "USD"], items);
         });
+    }
+
+    [Fact]
+    public async Task Form_ThresholdAdornmentFollowsTheSelectedCurrency()
+    {
+        var handler = new AlertsHandler();
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+        cut.WaitForAssertion(() => Assert.Equal("0", SelectedCurrency(cut)));
+
+        OpenCurrencySelect(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(popovers.FindAll(".mud-list-item")));
+        popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "EUR").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".mud-input-adornment-end"), adornment => adornment.TextContent.Trim() == "EUR"));
+    }
+
+    [Fact]
+    public async Task MigratedAlertWithoutCurrency_CannotBeEnabledUntilACurrencyIsChosenAndSaved()
+    {
+        var handler = new AlertsHandler { Migrated = true };
+        await using var context = CreateContext(handler, new SnapshotStore());
+        var popovers = context.Render<MudPopoverProvider>();
+        var cut = context.Render<AlertsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Migrated alert", cut.Markup));
+        Assert.Contains("(currency required)", cut.Markup);
+        Assert.True(cut.Find("input[aria-label='Enable Migrated alert']").HasAttribute("disabled"));
+
+        cut.Find("button[aria-label='Edit Migrated alert']").Click();
+        Assert.True(string.IsNullOrEmpty(SelectedCurrency(cut)));
+
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes")).Click();
+        cut.WaitForAssertion(() => Assert.Contains("Select a currency for this alert.", cut.Markup));
+        Assert.Null(handler.LastUpdate);
+
+        OpenCurrencySelect(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(popovers.FindAll(".mud-list-item")));
+        popovers.FindAll(".mud-list-item").Single(item => item.TextContent.Trim() == "USD").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Contains("Save changes")).Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(handler.LastUpdate));
+        Assert.Contains("\"currencyId\":2", handler.LastUpdate);
     }
 
     [Fact]
@@ -110,7 +155,7 @@ public sealed class AlertsPageTests
         cut.WaitForAssertion(() => Assert.Contains("Fresh alert", cut.Markup));
         Assert.DoesNotContain("mud-skeleton", cut.Markup);
         cut.WaitForAssertion(() => Assert.Equal("Fresh alert", snapshots.Snapshot!.Alerts[0].Title));
-        Assert.Equal("alerts-page:7", snapshots.LastKey);
+        Assert.Equal("alerts-page:v2:7", snapshots.LastKey);
     }
 
     [Fact]
@@ -193,6 +238,13 @@ public sealed class AlertsPageTests
         Assert.DoesNotContain("Cached alert", cut.Markup);
     }
 
+    // The test id lands on the select's hidden input, whose value is the selected currency id (missing when none is chosen).
+    private static string? SelectedCurrency(IRenderedComponent<AlertsPage> cut) =>
+        cut.Find("[data-testid='alert-currency-select']").GetAttribute("value");
+
+    private static void OpenCurrencySelect(IRenderedComponent<AlertsPage> cut) =>
+        cut.Find("[data-testid='alert-currency-select']").Closest(".mud-input-control")!.MouseDown();
+
     private static AlertsPageSnapshot Snapshot(string title) => new()
     {
         UserId = 7,
@@ -200,14 +252,15 @@ public sealed class AlertsPageTests
         Outcomes = [Outcome()],
     };
 
-    private static FinancialAlertDto Alert(string title) => new(
-        _alertId, 7, title, AlertType.AccountBalance, true,
+    private static FinancialAlertDto Alert(string title, bool migrated = false) => new(
+        _alertId, 7, title, AlertType.AccountBalance, !migrated,
         AlertComparisonOperator.GreaterThan, 100m, AlertEvaluationPeriod.CurrentMonth,
-        null, null, null, null, null, AlertTriggerStatus.Healthy,
+        migrated ? null : DefaultCurrency.PLN.Id, null, null, null, null, AlertTriggerStatus.Healthy,
         null, null, new DateTime(2026, 9, 1), null);
 
-    private static AlertEvaluationOutcome Outcome() => new(
-        _alertId, "Fresh alert", AlertType.AccountBalance, AlertTriggerStatus.Healthy,
+    private static AlertEvaluationOutcome Outcome(bool migrated = false) => new(
+        _alertId, migrated ? "Migrated alert" : "Fresh alert", AlertType.AccountBalance,
+        migrated ? AlertTriggerStatus.Disabled : AlertTriggerStatus.Healthy,
         false, null, false, DeDuplicationReason.None, 50m, 100m,
         AlertComparisonOperator.GreaterThan, "stable", "Healthy",
         DateTime.UtcNow, new Dictionary<string, string>());
@@ -234,7 +287,7 @@ public sealed class AlertsPageTests
         {
             BaseAddress = new Uri("http://localhost/")
         }));
-        context.Services.AddSingleton(new CurrencyAccountHttpClient(new HttpClient(new AccountsHandler())
+        context.Services.AddSingleton(new CurrencyHttpClient(new HttpClient(new CurrenciesHandler())
         {
             BaseAddress = new Uri("http://localhost/")
         }));
@@ -245,12 +298,12 @@ public sealed class AlertsPageTests
         return context;
     }
 
-    private sealed class AccountsHandler : HttpMessageHandler
+    private sealed class CurrenciesHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new List<AvailableAccount> { new(11, "Everyday"), new(12, "Savings") })
+                Content = JsonContent.Create(new List<Currency> { new(2, "USD", "$"), DefaultCurrency.PLN, new(1, "EUR", "€") })
             });
     }
 
@@ -288,6 +341,8 @@ public sealed class AlertsPageTests
         public bool DelayEvaluation { get; init; }
         public string AlertTitle { get; set; } = "Fresh alert";
         public bool DelayFirstEvaluation { get; init; }
+        public bool Migrated { get; init; }
+        public string? LastUpdate { get; private set; }
         public int GetCount { get; private set; }
         public int EvaluateCount { get; private set; }
         private bool _deleted;
@@ -302,12 +357,18 @@ public sealed class AlertsPageTests
                 return new(HttpStatusCode.NoContent);
             }
 
+            if (request.Method == HttpMethod.Put)
+            {
+                LastUpdate = await request.Content!.ReadAsStringAsync(cancellationToken);
+                return new(HttpStatusCode.OK) { Content = JsonContent.Create(Alert(AlertTitle)) };
+            }
+
             if (request.Method == HttpMethod.Get)
             {
                 GetCount++;
                 return new(HttpStatusCode.OK)
                 {
-                    Content = JsonContent.Create(_deleted ? new List<FinancialAlertDto>() : [Alert(AlertTitle)])
+                    Content = JsonContent.Create(_deleted ? new List<FinancialAlertDto>() : [Alert(Migrated ? "Migrated alert" : AlertTitle, Migrated)])
                 };
             }
 
@@ -318,7 +379,7 @@ public sealed class AlertsPageTests
             return new(status)
             {
                 Content = status == HttpStatusCode.OK
-                    ? JsonContent.Create(_deleted ? new List<AlertEvaluationOutcome>() : [Outcome()])
+                    ? JsonContent.Create(_deleted ? new List<AlertEvaluationOutcome>() : [Outcome(Migrated)])
                     : new StringContent("unavailable")
             };
         }

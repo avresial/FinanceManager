@@ -1,5 +1,5 @@
 using FinanceManager.Application.Alerts.Models;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Application.Alerts.Services.Conditions;
 
@@ -8,10 +8,11 @@ internal static class AlertTransactionReferences
     private const int _maxMatchingTransactions = 5;
 
     public static IReadOnlyList<AlertTransactionReference> From(
-        IEnumerable<CurrencyAccountEntry> entries,
+        IEnumerable<CashLogEntry> entries,
+        IReadOnlyDictionary<int, string> currencyCodes,
         bool includeAllMatchingTransactions)
     {
-        IEnumerable<CurrencyAccountEntry> orderedEntries = entries.Where(entry => entry.AccountId.HasValue)
+        IEnumerable<CashLogEntry> orderedEntries = entries
             .OrderByDescending(entry => Math.Abs(entry.ValueChange))
             .ThenByDescending(entry => entry.PostingDate)
             .ThenByDescending(entry => entry.EntryId);
@@ -20,12 +21,12 @@ internal static class AlertTransactionReferences
             orderedEntries = orderedEntries.Take(_maxMatchingTransactions);
 
         return orderedEntries.Select(entry => new AlertTransactionReference(
-                entry.AccountId!.Value,
                 entry.EntryId,
                 entry.PostingDate,
                 Math.Abs(entry.ValueChange),
                 entry.Description,
-                entry.ContractorDetails))
+                entry.ContractorDetails,
+                entry.Currency ?? currencyCodes.GetValueOrDefault(entry.CurrencyId)))
             .ToList();
     }
 }

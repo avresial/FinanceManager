@@ -1,7 +1,6 @@
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
 using FinanceManager.Infrastructure.Persistence;
@@ -35,24 +34,35 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
     {
         var dining = new FinancialLabel { Id = 5, Name = "Dining" };
         _context.FinancialLabels.Add(dining);
-        _context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = 1,
-            UserId = 1,
-            Name = "Cash",
-            AccountType = AccountType.Currency,
-            AccountLabel = AccountLabel.Cash
-        });
         _context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 1, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), 400m, -400m)
+            new CurrencyAccountEntry(null, 1, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), 400m, -400m)
             {
+                UserId = 1,
+                CurrencyId = 0,
                 Description = "Cafe",
                 Labels = [dining]
             },
-            new CurrencyAccountEntry(1, 2, new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc), 3300m, -2900m)
+            new CurrencyAccountEntry(null, 2, new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc), 3300m, -2900m)
             {
+                UserId = 1,
+                CurrencyId = 0,
                 Description = "Acme Store",
                 ContractorDetails = "Acme",
+                Labels = [dining]
+            },
+            // Another currency of the same owner and another owner never count.
+            new CurrencyAccountEntry(null, 3, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), 0m, -9000m)
+            {
+                UserId = 1,
+                CurrencyId = 1,
+                Description = "Acme Store",
+                Labels = [dining]
+            },
+            new CurrencyAccountEntry(null, 4, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), 0m, -9000m)
+            {
+                UserId = 2,
+                CurrencyId = 0,
+                Description = "Acme Store",
                 Labels = [dining]
             });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -67,6 +77,7 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
                 AlertComparisonOperator.GreaterThan,
                 1000m,
                 evaluationPeriod: AlertEvaluationPeriod.AllTime,
+                currencyId: 0,
                 labelName: "dining"),
             new FinancialAlert(
                 1,
@@ -75,6 +86,7 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
                 AlertComparisonOperator.GreaterThan,
                 1000m,
                 evaluationPeriod: AlertEvaluationPeriod.AllTime,
+                currencyId: 0,
                 merchantName: "acme"),
             new FinancialAlert(
                 1,
@@ -82,7 +94,8 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
                 AlertType.LargeTransaction,
                 AlertComparisonOperator.GreaterThan,
                 2000m,
-                evaluationPeriod: AlertEvaluationPeriod.AllTime)
+                evaluationPeriod: AlertEvaluationPeriod.AllTime,
+                currencyId: 0)
             {
                 CreatedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc)
             },
@@ -92,7 +105,8 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
                 AlertType.LargeTransaction,
                 AlertComparisonOperator.GreaterThan,
                 5000m,
-                evaluationPeriod: AlertEvaluationPeriod.AllTime)
+                evaluationPeriod: AlertEvaluationPeriod.AllTime,
+                currencyId: 0)
             {
                 CreatedAt = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc)
             }
@@ -117,46 +131,41 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
     {
         var label = new FinancialLabel { Id = 5, Name = "Dining" };
         _context.FinancialLabels.Add(label);
-        _context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = 1,
-            UserId = 1,
-            Name = "Cash",
-            AccountType = AccountType.Currency,
-            AccountLabel = AccountLabel.Cash
-        });
 
         for (var entryId = 1; entryId <= 6; entryId++)
         {
             _context.CurrencyEntries.Add(new CurrencyAccountEntry(
-                1,
+                null,
                 entryId,
                 new DateTime(2026, 9, entryId, 0, 0, 0, DateTimeKind.Utc),
                 1000m - entryId * 100m,
                 -entryId * 100m)
             {
+                UserId = -3,
+                CurrencyId = 1,
                 Labels = [label]
             });
         }
 
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var alert = new FinancialAlert(
-            1,
+            -3,
             "Dining total",
             AlertType.CategorySpending,
             AlertComparisonOperator.GreaterThan,
             100m,
             evaluationPeriod: AlertEvaluationPeriod.AllTime,
+            currencyId: 1,
             labelName: "dining");
         var repository = new FinancialAlertRepository(_context);
 
         var summary = await repository.GetAllTimeEvaluationData(
-            1,
+            -3,
             [alert],
             new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
             TestContext.Current.CancellationToken);
         var detailed = await repository.GetAllTimeEvaluationData(
-            1,
+            -3,
             [alert],
             new DateTime(2026, 9, 11, 0, 0, 0, DateTimeKind.Utc),
             TestContext.Current.CancellationToken,

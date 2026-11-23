@@ -14,7 +14,7 @@ public class FinancialAlert
     public decimal Threshold { get; set; }
     public AlertEvaluationPeriod EvaluationPeriod { get; set; } = AlertEvaluationPeriod.CurrentMonth;
 
-    public int? AccountId { get; set; }
+    public int? CurrencyId { get; set; }
     public int? LabelId { get; set; }
     public string? LabelName { get; set; }
     public string? MerchantName { get; set; }
@@ -28,6 +28,9 @@ public class FinancialAlert
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    // Legacy column of the removed per-account scope, kept (always null) only until the contract step drops it.
+    public int? AccountId { get; set; }
+
     // Parameterless constructor for persistence and serialization frameworks.
     public FinancialAlert()
     {
@@ -40,7 +43,7 @@ public class FinancialAlert
         AlertComparisonOperator comparisonOperator,
         decimal threshold,
         AlertEvaluationPeriod evaluationPeriod = AlertEvaluationPeriod.CurrentMonth,
-        int? accountId = null,
+        int? currencyId = null,
         int? labelId = null,
         string? labelName = null,
         string? merchantName = null,
@@ -52,7 +55,7 @@ public class FinancialAlert
         ComparisonOperator = comparisonOperator;
         Threshold = threshold;
         EvaluationPeriod = evaluationPeriod;
-        AccountId = accountId;
+        CurrencyId = currencyId;
         LabelId = labelId;
         LabelName = labelName;
         MerchantName = merchantName;
@@ -70,7 +73,7 @@ public class FinancialAlert
             command.ComparisonOperator,
             command.Threshold,
             command.EvaluationPeriod,
-            command.AccountId,
+            command.CurrencyId,
             command.LabelId,
             command.LabelName,
             command.MerchantName,
@@ -84,7 +87,8 @@ public class FinancialAlert
         ComparisonOperator = command.ComparisonOperator;
         Threshold = command.Threshold;
         EvaluationPeriod = command.EvaluationPeriod;
-        AccountId = command.AccountId;
+        CurrencyId = command.CurrencyId;
+        AccountId = null;
         LabelId = command.LabelId;
         LabelName = command.LabelName;
         MerchantName = command.MerchantName;

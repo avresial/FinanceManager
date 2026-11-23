@@ -25,11 +25,13 @@ public sealed class CategorySpendingConditionEvaluator : IAlertConditionEvaluato
         var labelKey = alert.LabelId?.ToString(inv) ?? alert.LabelName ?? "All";
         var conditionMet = AlertComparison.Matches(totals.TotalSpend, alert.ComparisonOperator, alert.Threshold);
 
-        var fingerprint = $"CategorySpending:Label={labelKey}:Period={totals.PeriodKey}:Spend={totals.TotalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+        var fingerprint = $"CategorySpending:CurrencyId={totals.CurrencyId}:Label={labelKey}:Period={totals.PeriodKey}:Spend={totals.TotalSpend.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
         var message = $"Spending for category '{labelKey}' in {AlertPeriod.FormatLabel(alert.EvaluationPeriod)} is {totals.TotalSpend.ToString("N2", inv)}";
 
         var context = new Dictionary<string, string>
         {
+            ["CurrencyId"] = totals.CurrencyId.ToString(inv),
+            ["CurrencyCode"] = AlertCurrency.CodeOf(snapshot, totals.CurrencyId),
             ["Label"] = labelKey,
             ["Period"] = totals.PeriodKey,
             ["TotalSpend"] = totals.TotalSpend.ToString("F2", inv),
@@ -42,7 +44,7 @@ public sealed class CategorySpendingConditionEvaluator : IAlertConditionEvaluato
             fingerprint,
             message,
             context,
-            AlertTransactionReferences.From(totals.MatchingEntries, snapshot.IncludeAllMatchingTransactions),
+            AlertTransactionReferences.From(totals.MatchingEntries, snapshot.CurrencyCodes, snapshot.IncludeAllMatchingTransactions),
             totals.TransactionCount);
     }
 }

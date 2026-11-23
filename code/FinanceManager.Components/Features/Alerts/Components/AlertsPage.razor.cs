@@ -7,7 +7,7 @@ using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -29,10 +29,10 @@ public partial class AlertsPage : ComponentBase
     private bool _isLoading = true;
     private bool _isRefreshing;
     private bool _isSaving;
-    private bool _isLoadingAccounts;
-    private bool _accountOptionsFailed;
+    private bool _isLoadingCurrencies;
+    private bool _currencyOptionsFailed;
     private int? _userId;
-    private List<AvailableAccount> _accounts = [];
+    private List<Currency> _currencies = [];
     private string _currencyCode = string.Empty;
     private readonly RefreshVersionGate _refreshGate = new();
 
@@ -42,7 +42,7 @@ public partial class AlertsPage : ComponentBase
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ISnapshotService SnapshotService { get; set; }
-    [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -59,31 +59,39 @@ public partial class AlertsPage : ComponentBase
 
     private async Task LoadFormOptionsAsync()
     {
-        if (_isLoadingAccounts) return;
-        _isLoadingAccounts = true;
-        _accountOptionsFailed = false;
+        if (_isLoadingCurrencies) return;
+        _isLoadingCurrencies = true;
+        _currencyOptionsFailed = false;
         try
         {
-            _accounts = [.. (await CurrencyAccountHttpClient.GetAvailableAccountsAsync()).OrderBy(account => account.AccountName)];
-            _currencyCode = (await SettingsService.GetCurrencyAsync()).ShortName;
+            _currencies = [.. (await CurrencyHttpClient.GetAll()).OrderBy(currency => currency.ShortName)];
+            var preferred = await SettingsService.GetCurrencyAsync();
+            _currencyCode = preferred.ShortName;
+            // A new alert starts on the preferred currency; an alert being edited keeps its own, possibly empty, choice.
+            if (_editingId is null && _form.CurrencyId is null)
+                _form.CurrencyId = preferred.Id;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Unable to load account options for the alert form");
-            _accountOptionsFailed = true;
+            Logger.LogError(ex, "Unable to load currency options for the alert form");
+            _currencyOptionsFailed = true;
         }
         finally
         {
-            _isLoadingAccounts = false;
+            _isLoadingCurrencies = false;
         }
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private string AccountLabel(AvailableAccount account) =>
-        _accounts.Count(candidate => candidate.AccountName.Equals(account.AccountName, StringComparison.OrdinalIgnoreCase)) > 1
-            ? $"{account.AccountName} (#{account.AccountId})"
-            : account.AccountName;
+    private string? CurrencyCodeOf(FinancialAlertDto alert) =>
+        alert.CurrencyId is int id ? _currencies.FirstOrDefault(currency => currency.Id == id)?.ShortName : null;
+
+    /// <summary>The threshold is in the chosen currency for cash alerts, otherwise in the preferred display currency.</summary>
+    private string ThresholdCurrencyCode =>
+        _form.RequiresCurrency && _currencies.FirstOrDefault(currency => currency.Id == _form.CurrencyId)?.ShortName is string code
+            ? code
+            : _currencyCode;
 
     private async Task RefreshAsync()
     {
@@ -173,7 +181,7 @@ public partial class AlertsPage : ComponentBase
         return InvokeAsync(StateHasChanged);
     }
 
-    private static string SnapshotKey(int userId) => $"alerts-page:{userId}";
+    private static string SnapshotKey(int userId) => $"alerts-page:v2:{userId}";
 
     private async Task<AlertsPageModel?> FetchAlertsAsync()
     {
@@ -203,9 +211,15 @@ public partial class AlertsPage : ComponentBase
             return;
         }
 
-        if (_form.TargetAccountId is not null && (_isLoadingAccounts || _accountOptionsFailed))
+        if (_form.RequiresCurrency && (_isLoadingCurrencies || _currencyOptionsFailed))
         {
-            _errors.Add("Load account options before saving this alert.");
+            _errors.Add("Load currency options before saving this alert.");
+            return;
+        }
+
+        if (!_form.HasValidScope)
+        {
+            _errors.Add("Select a currency for this alert.");
             return;
         }
 
@@ -313,7 +327,7 @@ public partial class AlertsPage : ComponentBase
     private void ResetForm()
     {
         _editingId = null;
-        _form = new AlertFormModel();
+        _form = new AlertFormModel { CurrencyId = SettingsService.GetCurrency().Id };
         _formVersion++;
         _errors.Clear();
     }

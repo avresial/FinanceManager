@@ -9,7 +9,7 @@ public record UpdateFinancialAlert(
     AlertComparisonOperator ComparisonOperator,
     decimal Threshold,
     AlertEvaluationPeriod EvaluationPeriod = AlertEvaluationPeriod.CurrentMonth,
-    int? AccountId = null,
+    int? CurrencyId = null,
     int? LabelId = null,
     string? LabelName = null,
     string? MerchantName = null,

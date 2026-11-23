@@ -1,7 +1,7 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 using System.Globalization;
 
 namespace FinanceManager.Application.Alerts.Services.Conditions;
@@ -12,6 +12,7 @@ public sealed class LargeTransactionConditionEvaluator : IAlertConditionEvaluato
 
     public AlertConditionResult Evaluate(FinancialAlert alert, AlertEvaluationSnapshot snapshot)
     {
+        var currencyId = AlertCurrency.Require(alert);
         var inv = CultureInfo.InvariantCulture;
         var (startDate, endDate) = AlertPeriod.GetRange(alert.EvaluationPeriod, snapshot.EvaluationDate);
 
@@ -25,31 +26,32 @@ public sealed class LargeTransactionConditionEvaluator : IAlertConditionEvaluato
         if (alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
             && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
         {
-            if (allTimeData.LargestTransaction is not CurrencyAccountEntry largestTransaction)
+            if (allTimeData.LargestTransaction is not CashLogEntry largestTransaction)
                 return NoMatch(alert);
 
             var largestAmount = Math.Abs(largestTransaction.ValueChange);
-            var fingerprint = $"LargeTransaction:Count={allTimeData.TransactionCount}:Top={largestTransaction.AccountId}:{largestTransaction.EntryId}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+            var fingerprint = $"LargeTransaction:CurrencyId={currencyId}:Count={allTimeData.TransactionCount}:Top={largestTransaction.EntryId}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
             var matchingEntries = allTimeData.MatchingTransactions ?? [largestTransaction];
 
             return Triggered(largestTransaction, largestAmount, fingerprint, allTimeData.TransactionCount, matchingEntries, snapshot);
         }
 
-        var qualifyingEntries = snapshot.GetAllEntries()
+        var qualifyingEntries = snapshot.RecentEntries
             .Where(e => e.PostingDate >= effectiveStart && e.PostingDate <= endDate)
-            .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
+            .Where(e => e.CurrencyId == currencyId)
             .Where(e => e.ValueChange < 0)
             .Where(e => AlertComparison.Matches(Math.Abs(e.ValueChange), alert.ComparisonOperator, alert.Threshold))
             .OrderByDescending(e => Math.Abs(e.ValueChange))
             .ThenByDescending(e => e.PostingDate)
+            .ThenByDescending(e => e.EntryId)
             .ToList();
 
         if (qualifyingEntries.Count > 0)
         {
             var largest = qualifyingEntries[0];
             var largestAmount = Math.Abs(largest.ValueChange);
-            var entryIds = string.Join(",", qualifyingEntries.Select(e => $"{e.AccountId}:{e.EntryId}").Order());
-            var fingerprint = $"LargeTransaction:Entries={entryIds}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
+            var entryIds = string.Join(",", qualifyingEntries.Select(e => e.EntryId).Order());
+            var fingerprint = $"LargeTransaction:CurrencyId={currencyId}:Entries={entryIds}:Max={largestAmount.ToString("F2", inv)}:Op={alert.ComparisonOperator}:Threshold={alert.Threshold.ToString("F2", inv)}";
 
             return Triggered(largest, largestAmount, fingerprint, qualifyingEntries.Count, qualifyingEntries, snapshot);
         }
@@ -58,17 +60,18 @@ public sealed class LargeTransactionConditionEvaluator : IAlertConditionEvaluato
     }
 
     private static AlertConditionResult Triggered(
-        CurrencyAccountEntry largest,
+        CashLogEntry largest,
         decimal largestAmount,
         string fingerprint,
         int transactionCount,
-        IEnumerable<CurrencyAccountEntry> matchingEntries,
+        IEnumerable<CashLogEntry> matchingEntries,
         AlertEvaluationSnapshot snapshot)
     {
         var inv = CultureInfo.InvariantCulture;
         var context = new Dictionary<string, string>
         {
-            ["TriggeringAccountId"] = largest.AccountId!.Value.ToString(inv),
+            ["CurrencyId"] = largest.CurrencyId.ToString(inv),
+            ["CurrencyCode"] = largest.Currency ?? AlertCurrency.CodeOf(snapshot, largest.CurrencyId),
             ["TriggeringEntryId"] = largest.EntryId.ToString(inv),
             ["Amount"] = largestAmount.ToString("F2", inv),
             ["PostingDate"] = largest.PostingDate.ToString("yyyy-MM-dd"),
@@ -83,7 +86,7 @@ public sealed class LargeTransactionConditionEvaluator : IAlertConditionEvaluato
             fingerprint,
             $"Large transaction detected on {largest.PostingDate:yyyy-MM-dd}",
             context,
-            AlertTransactionReferences.From(matchingEntries, snapshot.IncludeAllMatchingTransactions),
+            AlertTransactionReferences.From(matchingEntries, snapshot.CurrencyCodes, snapshot.IncludeAllMatchingTransactions),
             transactionCount);
     }
 

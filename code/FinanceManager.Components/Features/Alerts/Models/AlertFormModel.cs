@@ -6,7 +6,7 @@ namespace FinanceManager.Components.Features.Alerts.Models;
 
 /// <summary>
 /// Editable alert form. Only the target field that belongs to the selected <see cref="AlertType"/>
-/// (account, label or merchant) is sent; the others are kept in the form but dropped on save.
+/// (currency, label or merchant) is sent; the others are kept in the form but dropped on save.
 /// </summary>
 internal sealed class AlertFormModel
 {
@@ -16,14 +16,20 @@ internal sealed class AlertFormModel
     public AlertComparisonOperator ComparisonOperator { get; set; } = AlertComparisonOperator.GreaterThan;
     public decimal Threshold { get; set; }
     public AlertEvaluationPeriod EvaluationPeriod { get; set; } = AlertEvaluationPeriod.CurrentMonth;
-    public int? AccountId { get; set; }
+    public int? CurrencyId { get; set; }
     public string LabelName { get; set; } = string.Empty;
     public string MerchantName { get; set; } = string.Empty;
 
     public bool HasTitle => !string.IsNullOrWhiteSpace(Title);
 
-    /// <summary>The account to save, or null when the alert type has no account target.</summary>
-    public int? TargetAccountId => AlertType == AlertType.AccountBalance ? AccountId : null;
+    /// <summary>Cash alert types compare amounts in one currency, so the form must offer and require one.</summary>
+    public bool RequiresCurrency => AlertType.RequiresCurrency();
+
+    /// <summary>The currency to save, or null when the alert type has no currency.</summary>
+    public int? TargetCurrencyId => RequiresCurrency ? CurrencyId : null;
+
+    /// <summary>False while a currency is required and not chosen yet, e.g. a migrated alert that was disabled for review.</summary>
+    public bool HasValidScope => !RequiresCurrency || CurrencyId is not null;
 
     public static AlertFormModel FromDto(FinancialAlertDto alert) => new()
     {
@@ -33,7 +39,7 @@ internal sealed class AlertFormModel
         ComparisonOperator = alert.ComparisonOperator,
         Threshold = alert.Threshold,
         EvaluationPeriod = alert.EvaluationPeriod,
-        AccountId = alert.AccountId,
+        CurrencyId = alert.CurrencyId,
         LabelName = alert.LabelName ?? string.Empty,
         MerchantName = alert.MerchantName ?? string.Empty,
     };
@@ -44,7 +50,7 @@ internal sealed class AlertFormModel
         ComparisonOperator,
         Threshold,
         EvaluationPeriod,
-        TargetAccountId,
+        TargetCurrencyId,
         null,
         TargetLabelName,
         TargetMerchantName,
@@ -57,7 +63,7 @@ internal sealed class AlertFormModel
         ComparisonOperator,
         Threshold,
         EvaluationPeriod,
-        TargetAccountId,
+        TargetCurrencyId,
         null,
         TargetLabelName,
         TargetMerchantName,
