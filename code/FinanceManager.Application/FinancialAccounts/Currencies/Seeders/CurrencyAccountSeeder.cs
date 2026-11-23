@@ -1,4 +1,3 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;

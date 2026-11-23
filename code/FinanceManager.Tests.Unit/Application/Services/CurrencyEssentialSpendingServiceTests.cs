@@ -67,6 +67,30 @@ public class CurrencyEssentialSpendingServiceTests
         Assert.Empty(await _service.GetEssentialSpending(1, DefaultCurrency.PLN, _date, _date.AddDays(2)));
     }
 
+    [Fact]
+    public async Task GetEssentialSpending_LocalBoundsCrossingUtcMidnight_DoNotThrowAndKeepBoundaryEntry()
+    {
+        // 2026-03-10 00:30 at UTC+1 is 2026-03-09 23:30Z: the entry's UTC date is before the raw start date.
+        var startLocal = DateTime.SpecifyKind(new DateTime(2026, 3, 10, 0, 30, 0), DateTimeKind.Unspecified);
+        var start = new DateTimeOffset(startLocal, TimeSpan.FromHours(1)).LocalDateTime;
+        var startUtc = start.ToUniversalTime();
+        _ledger.Add(0, startUtc.AddMinutes(10), -25m, [_essential.Id]);
+
+        var result = await _service.GetEssentialSpending(1, DefaultCurrency.PLN, start, start.AddDays(2));
+
+        Assert.Equal(-25m, result.Sum(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetEssentialSpending_UnspecifiedBounds_AreTreatedAsUtc()
+    {
+        _ledger.Add(0, _date, -25m, [_essential.Id]);
+
+        var result = await _service.GetEssentialSpending(1, DefaultCurrency.PLN, DateTime.SpecifyKind(_date, DateTimeKind.Unspecified), DateTime.SpecifyKind(_date, DateTimeKind.Unspecified));
+
+        Assert.Equal(-25m, result.Sum(x => x.Value));
+    }
+
     private static FinancialLabel CreateLabel(int id, string name, string value) =>
         new()
         {

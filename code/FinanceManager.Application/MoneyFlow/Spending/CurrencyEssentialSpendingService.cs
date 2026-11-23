@@ -14,6 +14,9 @@ public class CurrencyEssentialSpendingService(ICashTransactionReader cashTransac
 {
     public async Task<List<TimeSeriesModel>> GetEssentialSpending(int userId, Currency currency, DateTime start, DateTime end)
     {
+        // Entries come back with UTC posting dates, so the window and its day buckets must be UTC too.
+        start = ToUtc(start);
+        end = ToUtc(end);
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
 
         var entries = await cashTransactionReader.GetLabeledEntries(userId, start, end, endInclusive: true);
@@ -37,6 +40,13 @@ public class CurrencyEssentialSpendingService(ICashTransactionReader cashTransac
 
         return BucketToSeries(result);
     }
+
+    private static DateTime ToUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 
     private static List<TimeSeriesModel> BucketToSeries(Dictionary<DateTime, decimal> data) =>
         TimeBucketService.Get(data.Select(x => (x.Key, x.Value)))

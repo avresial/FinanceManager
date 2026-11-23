@@ -28,16 +28,10 @@ public class InvestmentAccountSeeder(
 
     public async Task Seed(long userId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken = default)
     {
-        if (userId is > int.MaxValue or < int.MinValue)
-        {
-            logger.LogWarning("Skipping investment account seed: user id {UserId} is outside Int32 range.", userId);
-            return;
-        }
-
         if (userId == 0 || (await transactionRepository.GetByUser(userId, DateOnly.FromDateTime(start.AddYears(-1)), DateOnly.FromDateTime(end.AddYears(1)), cancellationToken)).Count != 0)
             return;
 
-        logger.LogTrace("Seeding investment account for user {UserId}.", userId);
+        logger.LogTrace("Seeding investment trades for user {UserId}.", userId);
 
         var listing = await SeedAssetAndListing(cancellationToken);
         var prices = await SeedPriceQuotes(listing.Id, start, end, random, cancellationToken);

@@ -72,7 +72,7 @@ public sealed class UserDeletionTests : IDisposable
         return _context;
     }
 
-    private async Task SeedUserData(AppDbContext context, int userId, FinancialLabel sharedLabel, FinancialLabel bondLabel, int accountId, int entryBase)
+    private async Task SeedUserData(AppDbContext context, int userId, FinancialLabel sharedLabel, FinancialLabel bondLabel, FinancialLabel legacyBondLabel, int accountId, int entryBase)
     {
         var ct = TestContext.Current.CancellationToken;
         context.Users.Add(new UserDto { Id = userId, Login = $"user{userId}", Password = "hash", CreationDate = _jan1 });
@@ -86,7 +86,7 @@ public sealed class UserDeletionTests : IDisposable
             new CurrencyAccountEntry(accountId, 0, _jan1, 0, 30m) { UserId = null, CurrencyId = null });
         context.BondEntries.AddRange(
             new BondAccountEntry(null, 0, _jan1, 0, 1m, 5) { UserId = userId, Labels = [bondLabel] },
-            new BondAccountEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = null });
+            new BondAccountEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = null, Labels = [legacyBondLabel] });
         context.Assets.Add(new Asset { Id = entryBase, Name = $"Equity {userId}", Type = AssetType.Stock });
         context.AssetListings.Add(new AssetListing { Id = entryBase, AssetId = entryBase, Ticker = $"T{userId}", ExchangeMic = "XNAS", ExchangeName = "N", TradingCurrency = "USD", PriceMultiplier = 1m, IsActive = true });
         await context.SaveChangesAsync(ct);
@@ -114,10 +114,13 @@ public sealed class UserDeletionTests : IDisposable
         var shared = new FinancialLabel { Name = "Shared" };
         var targetBondLabel = new FinancialLabel { Name = "Target bond label" };
         var otherBondLabel = new FinancialLabel { Name = "Other bond label" };
-        context.FinancialLabels.AddRange(shared, targetBondLabel, otherBondLabel);
+        // A bond label belongs to one entry, so the legacy (unowned, account-linked) bond entries carry their own labels.
+        var targetLegacyBondLabel = new FinancialLabel { Name = "Target legacy bond label" };
+        var otherLegacyBondLabel = new FinancialLabel { Name = "Other legacy bond label" };
+        context.FinancialLabels.AddRange(shared, targetBondLabel, otherBondLabel, targetLegacyBondLabel, otherLegacyBondLabel);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        await SeedUserData(context, _target, shared, targetBondLabel, accountId: 100, entryBase: 1);
-        await SeedUserData(context, _other, shared, otherBondLabel, accountId: 200, entryBase: 2);
+        await SeedUserData(context, _target, shared, targetBondLabel, targetLegacyBondLabel, accountId: 100, entryBase: 1);
+        await SeedUserData(context, _other, shared, otherBondLabel, otherLegacyBondLabel, accountId: 200, entryBase: 2);
         context.ChangeTracker.Clear();
         return context;
     }
@@ -155,7 +158,7 @@ public sealed class UserDeletionTests : IDisposable
         Assert.True(await context.RefreshTokens.AnyAsync(e => e.UserId == _other, ct));
 
         // Shared labels survive and audit rows stay.
-        Assert.Equal(3, await context.FinancialLabels.CountAsync(ct));
+        Assert.Equal(5, await context.FinancialLabels.CountAsync(ct));
         Assert.True(await context.ActiveUsers.AnyAsync(a => a.UserId == _target, ct));
         Assert.True(await context.GiftCodes.AnyAsync(g => g.CreatedByUserId == _target, ct));
     }
@@ -172,9 +175,11 @@ public sealed class UserDeletionTests : IDisposable
         context.ChangeTracker.Clear();
 
         var labels = await context.FinancialLabels.AsNoTracking().OrderBy(l => l.Id).ToListAsync(ct);
-        Assert.Equal(["Shared", "Target bond label", "Other bond label"], labels.Select(l => l.Name));
+        Assert.Equal(["Shared", "Target bond label", "Other bond label", "Target legacy bond label", "Other legacy bond label"], labels.Select(l => l.Name));
         var bondKeys = await context.FinancialLabels.Select(l => new { l.Name, Key = EF.Property<long?>(l, "BondAccountEntryEntryId") }).ToDictionaryAsync(l => l.Name, l => l.Key, ct);
         Assert.Null(bondKeys["Target bond label"]);
+        Assert.Null(bondKeys["Target legacy bond label"]);
+        Assert.NotNull(bondKeys["Other legacy bond label"]);
         Assert.Equal(otherBondEntryId, bondKeys["Other bond label"]);
 
         // Only the other user's entries still point at the shared label through the join tables.

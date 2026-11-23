@@ -94,9 +94,11 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     public async Task<IReadOnlyDictionary<int, decimal>> GetLabelTotals(int userId, DateTime start, DateTime end, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
-        if (end < start) return new Dictionary<int, decimal>();
+        var startUtc = OwnerLedgerTimestamps.ToUtc(start);
+        var endUtc = OwnerLedgerTimestamps.ToUtc(end);
+        if (endUtc < startUtc) return new Dictionary<int, decimal>();
 
-        var totals = await LabelLinks(EntriesBetween(userId, start, end, endInclusive: true))
+        var totals = await LabelLinks(EntriesBetween(userId, startUtc, endUtc, endInclusive: true))
             .GroupBy(x => x.LabelId).Select(g => new { LabelId = g.Key, Total = g.Sum(x => x.ValueChange) }).ToListAsync(ct);
         return totals.ToDictionary(x => x.LabelId, x => x.Total);
     }
@@ -105,9 +107,11 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         bool endInclusive = false, bool outflowsOnly = false, int? labelId = null, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
-        if (end < start) return [];
+        var startUtc = OwnerLedgerTimestamps.ToUtc(start);
+        var endUtc = OwnerLedgerTimestamps.ToUtc(end);
+        if (endInclusive ? endUtc < startUtc : endUtc <= startUtc) return [];
 
-        var entries = EntriesBetween(userId, start, end, endInclusive);
+        var entries = EntriesBetween(userId, startUtc, endUtc, endInclusive);
         if (outflowsOnly) entries = entries.Where(e => e.ValueChange < 0);
         if (labelId is int label) entries = entries.Where(e => e.Labels.Any(l => l.Id == label));
 
@@ -123,9 +127,11 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     public async Task<IReadOnlyList<RecurringCashCandidate>> GetRecurringCandidates(int userId, DateTime startInclusive, DateTime endExclusive, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
-        if (endExclusive <= startInclusive) return [];
+        var startUtc = OwnerLedgerTimestamps.ToUtc(startInclusive);
+        var endUtc = OwnerLedgerTimestamps.ToUtc(endExclusive);
+        if (endUtc <= startUtc) return [];
 
-        return await EntriesBetween(userId, startInclusive, endExclusive, endInclusive: false).Where(e => e.ValueChange != 0)
+        return await EntriesBetween(userId, startUtc, endUtc, endInclusive: false).Where(e => e.ValueChange != 0)
             .Select(e => new RecurringCashCandidate(e.EntryId, e.AccountId, e.PostingDate, e.ValueChange, e.Description, e.ContractorDetails)).ToListAsync(ct);
     }
 

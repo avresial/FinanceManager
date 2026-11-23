@@ -108,6 +108,32 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
     }
 
     [Fact]
+    public async Task Cash_Readers_NormalizeMixedLocalAndUtcBoundsBeforeTheEmptyRangeGuard()
+    {
+        var startUtc = _jan1.AddDays(1);
+        await AddCash(_owner, 0, startUtc.AddMinutes(10), -40, account: 9, labels: [_rent]);
+        var startLocal = startUtc.ToLocalTime(); // Local kind, same instant as startUtc
+        var endUtc = startUtc.AddHours(1); // Utc kind: lower than startLocal's clock value on hosts east of UTC
+
+        var totals = await _cash.GetLabelTotals(_owner, startLocal, endUtc, TestContext.Current.CancellationToken);
+        var entries = await _cash.GetLabeledEntries(_owner, startLocal, endUtc, endInclusive: true, ct: TestContext.Current.CancellationToken);
+        var candidates = await _cash.GetRecurringCandidates(_owner, startLocal, endUtc, TestContext.Current.CancellationToken);
+
+        Assert.Equal(-40m, totals[_rent.Id]);
+        Assert.Single(entries);
+        Assert.Single(candidates);
+    }
+
+    [Fact]
+    public async Task Cash_GetLabeledEntries_EqualInstantBoundsWithExclusiveEnd_ReturnEmpty()
+    {
+        await AddCash(_owner, 0, _jan1, -40, labels: [_rent]);
+
+        Assert.Empty(await _cash.GetLabeledEntries(_owner, _jan1, _jan1.ToLocalTime(), endInclusive: false, ct: TestContext.Current.CancellationToken));
+        Assert.Single(await _cash.GetLabeledEntries(_owner, _jan1, _jan1.ToLocalTime(), endInclusive: true, ct: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task Cash_GetLabelTotals_AcceptsGuestIds_AndRejectsZero()
     {
         await AddCash(_guest, 0, _jan1, 12, labels: [_rent]);
