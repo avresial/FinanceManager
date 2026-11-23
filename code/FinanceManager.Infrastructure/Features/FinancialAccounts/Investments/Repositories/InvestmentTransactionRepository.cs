@@ -39,19 +39,19 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
-        int accountId,
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
+        long userId,
         IReadOnlyCollection<long> transactionIds,
         CancellationToken cancellationToken = default)
     {
-        if (accountId <= 0 || transactionIds.Count == 0) return [];
+        if (userId == 0 || transactionIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.Asset)
             .Include(x => x.AssetListing)
             .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => x.AccountId == accountId && transactionIds.Contains(x.EntryId))
+            .Where(x => x.UserId == userId && transactionIds.Contains(x.EntryId))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
     }
@@ -401,6 +401,29 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
                 x.EntryId,
                 x.AccountId!.Value,
+                x.AssetListingId,
+                DateOnly.FromDateTime(x.PostingDate),
+                x.Type,
+                x.Quantity,
+                x.UnitPrice,
+                x.Fee,
+                x.Currency,
+                (decimal?)x.AssetListing.PriceMultiplier))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput>> GetCapitalFlowInputsByUser(
+        long userId,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == 0) return [];
+
+        return await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => x.UserId == userId && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
+            .Select(x => new IInvestmentTransactionRepository.UserCapitalFlowInput(
+                x.EntryId,
                 x.AssetListingId,
                 DateOnly.FromDateTime(x.PostingDate),
                 x.Type,

@@ -304,7 +304,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     }
 
     // Loads what the rows need beyond the feed, after the page has painted: bond definitions for the bond
-    // valuation details and, per investment account, the valuations of its purchases (the only trades the
+    // valuation details and the valuations of the page's purchases (the only trades the
     // row values). Failures leave the rows on their fallbacks, exactly as on the account pages.
     private async Task EnrichAsync(IReadOnlyList<TransactionHistoryItem> items)
     {
@@ -313,14 +313,15 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
         var bondDetailsIds = items.OfType<BondTransactionHistoryItem>().Select(item => item.Entry.BondDetailsId)
             .Distinct().Where(id => !_bondDetails.ContainsKey(id)).ToList();
-        var buysByAccount = items.OfType<InvestmentTransactionHistoryItem>()
-            .Where(item => item.LegacyAccountId.HasValue && item.Transaction.Type == InvestmentTransactionTypeDto.Buy)
-            .GroupBy(item => item.LegacyAccountId!.Value, item => item.Transaction.Id)
+        // Trades are valued as the owner's pooled holdings, so a purchase counts whether or not it is linked to an account.
+        var buyIds = items.OfType<InvestmentTransactionHistoryItem>()
+            .Where(item => item.Transaction.Type == InvestmentTransactionTypeDto.Buy)
+            .Select(item => item.Transaction.Id)
             .ToList();
-        if (bondDetailsIds.Count == 0 && buysByAccount.Count == 0) return;
+        if (bondDetailsIds.Count == 0 && buyIds.Count == 0) return;
 
         var bondTask = LoadBondDetailsAsync(bondDetailsIds);
-        var valuationTask = LoadValuationsAsync(buysByAccount, token);
+        var valuationTask = LoadValuationsAsync(buyIds, token);
         await Task.WhenAll(bondTask, valuationTask);
 
         if (_disposed) return;
@@ -353,27 +354,13 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     }
 
     private async Task<List<InvestmentTransactionValuationDto>> LoadValuationsAsync(
-        IReadOnlyList<IGrouping<int, long>> buysByAccount, CancellationToken cancellationToken)
+        IReadOnlyCollection<long> buyIds, CancellationToken cancellationToken)
     {
-        if (buysByAccount.Count == 0) return [];
+        if (buyIds.Count == 0) return [];
         try
         {
             var currency = await SettingsService.GetCurrencyAsync();
-            var batches = await Task.WhenAll(buysByAccount.Select(async account =>
-            {
-                try
-                {
-                    return await InvestmentValuationHttpClient.GetTransactionValuationsAsync(account.Key, currency.Id, [.. account], cancellationToken);
-                }
-                // Per account, so one failing or timed-out account keeps the others' valuations; only a
-                // cancellation of this enrichment (a reload or disposal) abandons the whole batch.
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    Logger.LogWarning(ex, "Failed to load transaction valuations for an investment account.");
-                    return [];
-                }
-            }));
-            return [.. batches.SelectMany(batch => batch)];
+            return [.. await InvestmentValuationHttpClient.GetTransactionValuationsAsync(currency.Id, buyIds, cancellationToken)];
         }
         catch (OperationCanceledException)
         {
@@ -381,7 +368,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to resolve the valuation currency for the transactions page.");
+            Logger.LogWarning(ex, "Failed to load transaction valuations for the transactions page.");
             return [];
         }
     }

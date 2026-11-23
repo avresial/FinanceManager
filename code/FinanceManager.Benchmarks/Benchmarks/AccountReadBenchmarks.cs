@@ -17,7 +17,7 @@ public class AccountReadBenchmarks : ApiBenchmark
         await InvestmentTransactions_ByAccount();
         await InvestmentValuation_Holdings();
         await InvestmentValuation_Value();
-        await InvestmentValuation_TransactionValuations();
+        await InvestmentValuation_ValueSeries();
         await BondAccounts_List();
     }
 
@@ -39,17 +39,17 @@ public class AccountReadBenchmarks : ApiBenchmark
     public Task<long> InvestmentTransactions_ByAccount() =>
         Get($"api/InvestmentTransaction/GetByAccount/{Scenario.PrimaryInvestmentAccountId}");
 
-    [Benchmark(Description = "GET api/InvestmentValuation/Holdings/{id}/{date}")]
+    [Benchmark(Description = "GET api/InvestmentValuation/Holdings/{date}")]
     public Task<long> InvestmentValuation_Holdings() =>
-        Get($"api/InvestmentValuation/Holdings/{Scenario.PrimaryInvestmentAccountId}/{Iso(Scenario.End)}");
+        Get($"api/InvestmentValuation/Holdings/{Iso(Scenario.End)}");
 
-    [Benchmark(Description = "GET api/InvestmentValuation/Value/{id}/{currency}/{date}")]
+    [Benchmark(Description = "GET api/InvestmentValuation/Value/{currency}/{date}")]
     public Task<long> InvestmentValuation_Value() =>
-        Get($"api/InvestmentValuation/Value/{Scenario.PrimaryInvestmentAccountId}/{Scenario.CurrencyId}/{Iso(Scenario.End)}");
+        Get($"api/InvestmentValuation/Value/{Scenario.CurrencyId}/{Iso(Scenario.End)}");
 
-    [Benchmark(Description = "GET api/InvestmentValuation/TransactionValuations/{id}/{currency}")]
-    public Task<long> InvestmentValuation_TransactionValuations() =>
-        Get($"api/InvestmentValuation/TransactionValuations/{Scenario.PrimaryInvestmentAccountId}/{Scenario.CurrencyId}");
+    [Benchmark(Description = "GET api/InvestmentValuation/ValueSeries/{currency}/{start}/{end}")]
+    public Task<long> InvestmentValuation_ValueSeries() =>
+        Get($"api/InvestmentValuation/ValueSeries/{Scenario.CurrencyId}/{Iso(Scenario.Start)}/{Iso(Scenario.End)}");
 
     [Benchmark(Description = "GET api/BondAccount (list)")]
     public Task<long> BondAccounts_List() => Get("api/BondAccount");

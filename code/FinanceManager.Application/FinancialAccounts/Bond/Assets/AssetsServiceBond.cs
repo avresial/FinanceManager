@@ -22,16 +22,15 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Assets;
 
 /// <summary>
 /// Bond assets are the pooled bond units per definition: all of a user's entries of one bond add up whatever account they belong to,
-/// and interest accrues from the latest pooled entry. Unrealized gain/loss still reads account entries until the portfolio step.
+/// and interest accrues from the latest pooled entry. Unrealized gain/loss follows the same pooled positions.
 /// </summary>
 public class AssetsServiceBond(
     IBondTransactionReader bondTransactionReader,
     BondDashboardContext bondDashboardContext,
-    IFinancialAccountRepository financialAccountRepository,
-    IBondDetailsRepository bondDetailsRepository,
     IBondUnrealizedGainLossCalculator bondUnrealizedGainLossCalculator) : IAssetsServiceTyped
 {
     private const string _bondTypeName = "Bond";
+    private const string _bondsGroupName = "Bonds";
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -87,49 +86,40 @@ public class AssetsServiceBond(
 
     public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        var instrumentResults = await GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate);
-        var byAccount = instrumentResults.GroupBy(x => new { x.AccountId, x.AccountName });
+        var instruments = await GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate);
+        if (instruments.Count == 0) return [];
 
-        List<UnrealizedGainLossAccountResult> results = [];
-        foreach (var accountGroup in byAccount)
-        {
-            var included = accountGroup.Where(x => !x.IsExcludedFromTotals).ToList();
-            var excludedCount = accountGroup.Count(x => x.IsExcludedFromTotals);
+        // Pooled bonds belong to the owner, not to an account: one aggregate row without an account id.
+        var included = instruments.Where(x => !x.IsExcludedFromTotals).ToList();
+        var costBasis = included.Sum(x => x.CostBasis);
+        var currentValue = included.Sum(x => x.CurrentValue);
+        var gainLoss = new GainLoss(costBasis, currentValue);
 
-            var costBasis = included.Sum(x => x.CostBasis);
-            var currentValue = included.Sum(x => x.CurrentValue);
-            var gainLoss = new GainLoss(costBasis, currentValue);
-
-            results.Add(new UnrealizedGainLossAccountResult(
-                accountGroup.Key.AccountId,
-                accountGroup.Key.AccountName,
-                costBasis,
-                currentValue,
-                gainLoss.Amount,
-                gainLoss.Percent,
-                asOfDate,
-                excludedCount
-            ));
-        }
-
-        return results;
+        return [new UnrealizedGainLossAccountResult(
+            null,
+            _bondsGroupName,
+            costBasis,
+            currentValue,
+            gainLoss.Amount,
+            gainLoss.Percent,
+            asOfDate,
+            instruments.Count - included.Count)];
     }
 
     public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
     {
-        var bondDetailsById = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
+        var held = (await bondTransactionReader.GetPositions(userId, asOfDate)).Where(p => p.Value > 0m).ToList();
+        if (held.Count == 0) return [];
+
+        var detailsById = await bondDashboardContext.LoadReferencedDetailsAsync(held.Select(p => p.PartitionId));
         List<UnrealizedGainLossInstrumentResult> results = [];
-
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate).Where(x => x.ContainsAssets))
+        foreach (var position in held)
         {
-            foreach (var bondDetailsId in account.GetStoredBondsIds())
-            {
-                bondDetailsById.TryGetValue(bondDetailsId, out var details);
+            detailsById.TryGetValue(position.PartitionId, out var details);
 
-                var instrumentResult = await bondUnrealizedGainLossCalculator.CalculateAsync(account, bondDetailsId, details, currency, asOfDate);
-                if (instrumentResult is not null)
-                    results.Add(instrumentResult);
-            }
+            var instrumentResult = await bondUnrealizedGainLossCalculator.CalculateAsync(position, details, currency, asOfDate);
+            if (instrumentResult is not null)
+                results.Add(instrumentResult);
         }
 
         return results;

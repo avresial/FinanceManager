@@ -43,11 +43,11 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets only the requested transactions belonging to an account, with the listing and asset
-    /// metadata required for valuation. The account predicate is applied before materialisation.
+    /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.
+    /// The owner predicate is applied before materialisation, so ids of other users are never returned.
     /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
-        int accountId,
+    Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
+        long userId,
         IReadOnlyCollection<long> transactionIds,
         CancellationToken cancellationToken = default);
 
@@ -70,6 +70,12 @@ public interface IInvestmentTransactionRepository
     /// the application can replay same-day history deterministically without loading entity graphs.
     /// </summary>
     Task<IReadOnlyList<CapitalFlowInput>> GetCapitalFlowInputs(IReadOnlyCollection<int> accountIds, DateOnly toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Owner-wide counterpart of <see cref="GetCapitalFlowInputs(IReadOnlyCollection{int}, DateOnly, CancellationToken)"/>: every trade of
+    /// <paramref name="userId"/> on or before <paramref name="toDate"/>, linked to an account or not, ordered by posting date then id.
+    /// </summary>
+    Task<IReadOnlyList<UserCapitalFlowInput>> GetCapitalFlowInputsByUser(long userId, DateOnly toDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
@@ -147,6 +153,17 @@ public interface IInvestmentTransactionRepository
     public sealed record AccountValuationInputs(
         IReadOnlyList<ValuationOpeningPosition> OpeningPositions,
         IReadOnlyList<ValuationTradeInput> InWindowTrades);
+
+    public sealed record UserCapitalFlowInput(
+        long TransactionId,
+        long AssetListingId,
+        DateOnly TradeDate,
+        InvestmentTransactionType Type,
+        decimal Quantity,
+        decimal UnitPrice,
+        decimal? Fee,
+        string Currency,
+        decimal? ListingPriceMultiplier);
 
     public sealed record CapitalFlowInput(
         long TransactionId,

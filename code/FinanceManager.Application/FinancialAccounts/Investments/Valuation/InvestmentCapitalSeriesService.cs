@@ -8,49 +8,37 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
 /// <summary>
-/// Replays an investment account's Buy/Sell rows into a daily weighted-average cost-basis series,
-/// converting each purchase to the target currency at its trade-date rate.
+/// Replays the owner's Buy/Sell rows (linked to an account or not) into one daily weighted-average cost-basis series, pooling
+/// each listing's cost across former accounts and converting each purchase to the target currency at its trade-date rate.
 /// </summary>
 internal class InvestmentCapitalSeriesService(
     IInvestmentTransactionRepository transactionRepository,
     ICurrencyExchangeService currencyExchangeService) : IInvestmentCapitalSeriesService
 {
-    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetCapitalSeriesAsync(
-        IReadOnlyCollection<int> accountIds,
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetCapitalSeriesAsync(
+        int userId,
         Currency targetCurrency,
         DateTime start,
         DateTime end,
         CancellationToken ct = default)
     {
-        var result = new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>();
-        if (accountIds.Count == 0 || start == default || end == default || end < start)
-            return result;
+        if (userId == 0 || start == default || end == default || end < start)
+            return new Dictionary<DateTime, decimal>();
 
         var endDate = end.Date;
         var endDateOnly = DateOnly.FromDateTime(endDate);
 
-        var capitalFlowInputs = await transactionRepository.GetCapitalFlowInputs(accountIds, endDateOnly, ct);
+        var capitalFlowInputs = await transactionRepository.GetCapitalFlowInputsByUser(userId, endDateOnly, ct);
         var capitalFlows = capitalFlowInputs
             .Select(ToCapitalFlow)
             .ToList();
-        if (capitalFlows.Count == 0) return result;
+        if (!capitalFlows.Any(flow => flow.Type == InvestmentTransactionType.Buy))
+            return new Dictionary<DateTime, decimal>();
 
-        var buyFlows = capitalFlows
-            .Where(flow => flow.Type == InvestmentTransactionType.Buy)
-            .ToList();
-        if (buyFlows.Count == 0) return result;
+        var ratesByCurrency = await LoadCapitalRatesAsync(
+            capitalFlows.Where(flow => flow.Type == InvestmentTransactionType.Buy).ToList(), targetCurrency, endDate, ct);
 
-        var ratesByCurrency = await LoadCapitalRatesAsync(buyFlows, targetCurrency, endDate, ct);
-        foreach (var accountGroup in capitalFlows.GroupBy(flow => flow.AccountId))
-        {
-            if (!accountGroup.Any(flow => flow.Type == InvestmentTransactionType.Buy)) continue;
-
-            var series = BuildCapitalSeries(accountGroup, targetCurrency, ratesByCurrency, start.Date, endDate);
-            if (series.Count > 0)
-                result[accountGroup.Key] = series;
-        }
-
-        return result;
+        return BuildCapitalSeries(capitalFlows, targetCurrency, ratesByCurrency, start.Date, endDate);
     }
 
     private async Task<Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>> LoadCapitalRatesAsync(
@@ -74,7 +62,7 @@ internal class InvestmentCapitalSeriesService(
     }
 
     private static Dictionary<DateTime, decimal> BuildCapitalSeries(
-        IEnumerable<InvestmentCapitalFlow> accountFlows,
+        IEnumerable<InvestmentCapitalFlow> flows,
         Currency targetCurrency,
         IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
         DateTime startDate,
@@ -84,7 +72,7 @@ internal class InvestmentCapitalSeriesService(
         decimal openingCapital = 0m;
         Dictionary<long, InvestmentPositionCost> positions = [];
 
-        foreach (var flow in accountFlows.OrderBy(flow => flow.Date).ThenBy(flow => flow.TransactionId))
+        foreach (var flow in flows.OrderBy(flow => flow.Date).ThenBy(flow => flow.TransactionId))
         {
             var before = GetTotalCostBasis(positions);
             switch (flow.Type)
@@ -169,7 +157,7 @@ internal class InvestmentCapitalSeriesService(
                 : null;
     }
 
-    private static InvestmentCapitalFlow ToCapitalFlow(IInvestmentTransactionRepository.CapitalFlowInput flow)
+    private static InvestmentCapitalFlow ToCapitalFlow(IInvestmentTransactionRepository.UserCapitalFlowInput flow)
     {
         var currency = flow.Currency.Trim();
         var isMinorQuote = DefaultCurrency.MinorQuoteUnits.TryGetValue(currency, out var majorCurrency);
@@ -177,7 +165,6 @@ internal class InvestmentCapitalSeriesService(
 
         return new InvestmentCapitalFlow(
             flow.TransactionId,
-            flow.AccountId,
             flow.AssetListingId,
             flow.TradeDate.ToDateTime(TimeOnly.MinValue).Date,
             flow.Type,
@@ -190,7 +177,6 @@ internal class InvestmentCapitalSeriesService(
 
     private sealed record InvestmentCapitalFlow(
         long TransactionId,
-        int AccountId,
         long AssetListingId,
         DateTime Date,
         InvestmentTransactionType Type,

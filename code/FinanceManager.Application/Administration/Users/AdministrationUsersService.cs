@@ -91,9 +91,7 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
                 }
             }
 
-            var investments = await financialAccountRepository.GetAccounts<InvestmentAccount>(userId, now, now, false).ToListAsync();
-            var investmentValues = await investmentValuationService.GetAccountValueAsync(investments.Select(x => x.AccountId).ToList(), pln, now);
-            total += investmentValues.Values.Sum();
+            total += (await investmentValuationService.GetUserValueByListingAsync(userId, pln, now)).Values.Sum();
         }
         return total;
 

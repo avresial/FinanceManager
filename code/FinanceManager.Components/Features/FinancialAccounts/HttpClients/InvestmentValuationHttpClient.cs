@@ -7,53 +7,50 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 public class InvestmentValuationHttpClient(HttpClient httpClient)
 {
     /// <summary>
-    /// Per-transaction valuations, in server order. An empty list means nothing on the account could
+    /// Per-transaction valuations of the caller's Buy trades among <paramref name="transactionIds"/> (linked to an account or not), in
+    /// server order; the server accepts up to 200 ids per request. An empty list means nothing could
     /// be priced: a failed request throws instead, so the snapshot-backed details page can tell the
     /// two apart and keep the valuations it already painted. See docs/architecture/concepts/ui-snapshots.md.
     /// </summary>
     public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetTransactionValuationsAsync(
-        int accountId,
         int currencyId,
-        IReadOnlyCollection<long>? transactionIds = null,
+        IReadOnlyCollection<long> transactionIds,
         CancellationToken cancellationToken = default)
     {
-        if (transactionIds is { Count: 0 }) return [];
+        if (transactionIds.Count == 0) return [];
 
-        var query = transactionIds is { Count: > 0 }
-            ? "?" + string.Join("&", transactionIds.Select(id => $"transactionIds={id}"))
-            : string.Empty;
+        var query = "?" + string.Join("&", transactionIds.Select(id => $"transactionIds={id}"));
         using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{accountId}/{currencyId}{query}",
+            $"{httpClient.BaseAddress}api/InvestmentValuation/TransactionValuations/{currencyId}{query}",
             cancellationToken);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>(cancellationToken) ?? [];
     }
 
-    public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(int accountId, DateTime date)
+    public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(DateTime date)
     {
         using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/Holdings/{accountId}/{Iso(date)}");
+            $"{httpClient.BaseAddress}api/InvestmentValuation/Holdings/{Iso(date)}");
         if (!response.IsSuccessStatusCode) return new Dictionary<long, decimal>();
         return await response.Content.ReadFromJsonAsync<Dictionary<long, decimal>>() ?? [];
     }
 
-    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int accountId, int currencyId, DateTime start, DateTime end)
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int currencyId, DateTime start, DateTime end)
     {
         using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/ValueSeries/{accountId}/{currencyId}/{Iso(start)}/{Iso(end)}");
+            $"{httpClient.BaseAddress}api/InvestmentValuation/ValueSeries/{currencyId}/{Iso(start)}/{Iso(end)}");
         if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();
         return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];
     }
 
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
-        int accountId,
         int currencyId,
         DateTime start,
         DateTime end,
         long? listingId)
     {
         var url = $"{httpClient.BaseAddress}api/InvestmentValuation/BenchmarkSeries/"
-            + $"{accountId}/{currencyId}/{Iso(start)}/{Iso(end)}";
+            + $"{currencyId}/{Iso(start)}/{Iso(end)}";
         if (listingId is long id)
             url += $"?listingId={id}";
 

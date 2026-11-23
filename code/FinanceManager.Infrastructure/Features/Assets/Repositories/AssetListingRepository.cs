@@ -19,6 +19,11 @@ public class AssetListingRepository(AppDbContext context) : IAssetListingReposit
                 x => x.Ticker == ticker && x.ExchangeMic == exchangeMic && x.TradingCurrency == tradingCurrency,
                 cancellationToken);
 
+    public async Task<IReadOnlyList<AssetListing>> GetByIds(IReadOnlyCollection<long> ids, CancellationToken cancellationToken = default) =>
+        ids.Count == 0
+            ? []
+            : await context.AssetListings.AsNoTracking().Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<AssetListing>> GetByAsset(long assetId, CancellationToken cancellationToken = default) =>
         await context.AssetListings.AsNoTracking().Where(x => x.AssetId == assetId).ToListAsync(cancellationToken);
 

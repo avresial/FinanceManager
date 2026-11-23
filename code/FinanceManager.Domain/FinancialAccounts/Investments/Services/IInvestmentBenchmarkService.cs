@@ -6,7 +6,7 @@ public interface IInvestmentBenchmarkService
 {
     /// <summary>
     /// Daily value of a shadow portfolio that receives the same contributions as
-    /// <paramref name="accountId"/> but invests them in the benchmark instead, in
+    /// <paramref name="userId"/>'s pooled trades but invests them in the benchmark instead, in
     /// <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>].
     /// A null <paramref name="assetListingId"/> selects the default Polish inflation index.
     /// </summary>
@@ -21,7 +21,7 @@ public interface IInvestmentBenchmarkService
     /// </remarks>
     Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
         long? assetListingId,
-        int accountId,
+        int userId,
         Currency targetCurrency,
         DateTime start,
         DateTime end,

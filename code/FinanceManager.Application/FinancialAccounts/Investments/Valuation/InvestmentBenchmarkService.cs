@@ -7,8 +7,8 @@ using FinanceManager.Domain.MoneyFlow.Services;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
 /// <summary>
-/// Builds a contribution-matched shadow portfolio that invests an account's cash flows in a benchmark
-/// (a listing or the default inflation index) instead of the account's own holdings.
+/// Builds a contribution-matched shadow portfolio that invests the owner's pooled cash flows in a benchmark
+/// (a listing or the default inflation index) instead of the owner's own holdings.
 /// </summary>
 internal class InvestmentBenchmarkService(
     IInvestmentTransactionRepository transactionRepository,
@@ -17,13 +17,13 @@ internal class InvestmentBenchmarkService(
 {
     public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
         long? assetListingId,
-        int accountId,
+        int userId,
         Currency targetCurrency,
         DateTime start,
         DateTime end,
         CancellationToken ct = default)
     {
-        if (start == default || end == default || end < start)
+        if (userId == 0 || start == default || end == default || end < start)
             return new Dictionary<DateTime, decimal>();
 
         var startDate = start.Date;
@@ -31,7 +31,7 @@ internal class InvestmentBenchmarkService(
         var startDateOnly = DateOnly.FromDateTime(startDate);
         var endDateOnly = DateOnly.FromDateTime(endDate);
 
-        var inputs = await transactionRepository.GetValuationInputs([accountId], startDateOnly, endDateOnly, ct);
+        var inputs = await transactionRepository.GetValuationInputsByUser(userId, startDateOnly, endDateOnly, ct);
         if (inputs.OpeningPositions.Count == 0 && inputs.InWindowTrades.Count == 0)
             return new Dictionary<DateTime, decimal>();
 
@@ -47,12 +47,12 @@ internal class InvestmentBenchmarkService(
             .Distinct()
             .ToList();
 
-        // Contributions are measured at the same market prices the account's own value series uses,
-        // so a day's contribution equals the value that trade added to the account that day.
+        // Contributions are measured at the same market prices the owner's own value series uses,
+        // so a day's contribution equals the value that trade added to the portfolio that day.
         var priceSeries = new Dictionary<long, Dictionary<DateTime, decimal>>();
         foreach (var id in relevantListingIds)
         {
-            // Benchmarking against an instrument the account also holds would otherwise fetch that
+            // Benchmarking against an instrument the owner also holds would otherwise fetch that
             // listing's prices twice over the same range — the benchmark's own series is identical.
             priceSeries[id] = assetListingId == id
                 ? index
@@ -94,10 +94,10 @@ internal class InvestmentBenchmarkService(
         return result;
     }
 
-    // Fold the account's cash flows into benchmark units: seed with whatever the account already held
+    // Fold the owner's cash flows into benchmark units: seed with whatever the owner already held
     // when the range opened, then buy or sell units as trades move money in and out.
     private static Dictionary<DateTime, decimal> BuildContributionMatchedSeries(
-        IInvestmentTransactionRepository.AccountValuationInputs inputs,
+        IInvestmentTransactionRepository.UserValuationInputs inputs,
         IReadOnlyDictionary<DateTime, decimal> index,
         IReadOnlyDictionary<long, Dictionary<DateTime, decimal>> priceSeries,
         DateTime startDate,

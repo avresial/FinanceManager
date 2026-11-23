@@ -18,16 +18,18 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
 /// account-scoped appreciation for account-detail views. Replaces the legacy <c>AssetsServiceStock</c>:
 /// holdings come from <see cref="InvestmentTransaction"/> rows pooled per listing across the owner's trades, whether or not a trade is
 /// linked to an account, and are priced through <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/>.
-/// Unrealized gain/loss still reads account trades until the portfolio step.
+/// Unrealized gain/loss pools every trade of a listing into one weighted-average cost pool (the account-scoped appreciation used by
+/// the account details page still reads that account's trades only until the account screens are removed).
 /// </summary>
 internal class AssetsServiceInvestment(
-    IFinancialAccountRepository financialAccountRepository,
     IAccountRepository<InvestmentAccount> investmentAccountRepository,
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider,
     ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped, IInvestmentAppreciationService
 {
+    private const string _investmentsGroupName = "Investments";
+
     // Legacy parity: any non-zero holding counts, including an oversold (negative) one.
     public async Task<bool> IsAnyAccountWithAssets(int userId) =>
         (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0;
@@ -100,12 +102,11 @@ internal class AssetsServiceInvestment(
 
     public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
     {
-        List<UnrealizedGainLossInstrumentResult> results = [];
+        if (userId == 0) return [];
 
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, DateTime.MinValue, asOfDate))
-            results.AddRange(await GetUnrealizedGainLossInstrumentsAsync(account, currency, asOfDate));
-
-        return results;
+        // A trade posted at any time on the as-of day counts, so read through the following midnight and keep the day filter below.
+        var transactions = await transactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.FromDateTime(asOfDate).AddDays(1));
+        return await GetUnrealizedGainLossInstrumentsAsync(transactions, null, _investmentsGroupName, currency, asOfDate);
     }
 
     public async Task<UnrealizedGainLossAccountResult?> GetForAccountAsync(
@@ -123,7 +124,9 @@ internal class AssetsServiceInvestment(
         if (selectedAccount is null || selectedAccount.UserId != userId) return null;
 
         var instruments = await GetUnrealizedGainLossInstrumentsAsync(
-            selectedAccount,
+            await transactionRepository.GetByAccount(selectedAccount.AccountId, cancellationToken),
+            selectedAccount.AccountId,
+            selectedAccount.Name,
             currency,
             asOfDate,
             cancellationToken);
@@ -137,20 +140,21 @@ internal class AssetsServiceInvestment(
     {
         var instrumentResults = await GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate);
 
-        List<UnrealizedGainLossAccountResult> results = [];
-        foreach (var accountGroup in instrumentResults.GroupBy(x => new { x.AccountId, x.AccountName }))
-            results.Add(AggregateAccountResult(accountGroup.Key.AccountId, accountGroup.Key.AccountName, accountGroup, asOfDate));
-
-        return results;
+        // Pooled holdings belong to the owner, not to an account: one aggregate row without an account id.
+        return instrumentResults.Count == 0
+            ? []
+            : [AggregateAccountResult(null, _investmentsGroupName, instrumentResults, asOfDate)];
     }
 
     private async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossInstrumentsAsync(
-        InvestmentAccount account,
+        IReadOnlyList<InvestmentTransaction> allTransactions,
+        int? accountId,
+        string accountName,
         Currency currency,
         DateTime asOfDate,
         CancellationToken cancellationToken = default)
     {
-        var transactions = (await transactionRepository.GetByAccount(account.AccountId, cancellationToken))
+        var transactions = allTransactions
             .Where(t => t.TradeDate <= DateOnly.FromDateTime(asOfDate))
             .ToList();
 
@@ -190,8 +194,8 @@ internal class AssetsServiceInvestment(
             var gainLoss = new GainLoss(costBasis, currentValue);
 
             results.Add(new UnrealizedGainLossInstrumentResult(
-                account.AccountId,
-                account.Name,
+                accountId,
+                accountName,
                 instrumentName,
                 instrumentName,
                 holding,
@@ -208,7 +212,7 @@ internal class AssetsServiceInvestment(
     }
 
     private static UnrealizedGainLossAccountResult AggregateAccountResult(
-        int accountId,
+        int? accountId,
         string accountName,
         IEnumerable<UnrealizedGainLossInstrumentResult> instrumentResults,
         DateTime asOfDate)

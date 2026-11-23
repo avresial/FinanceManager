@@ -36,15 +36,14 @@ public sealed class InvestmentAccountChartLoader(
         // other chart inputs or delay the first render unnecessarily.
         var holdingMetadataTask = transactionHttpClient.GetHoldingMetadataAsync(accountId, dateEnd);
         var chartRequests = await InvestmentChartRequestLoader.LoadAsync(
-            () => valuationHttpClient.GetValueSeriesAsync(accountId, currency.Id, dateStart, dateEnd),
-            () => valuationHttpClient.GetHoldingsAsync(accountId, dateEnd),
+            () => valuationHttpClient.GetValueSeriesAsync(currency.Id, dateStart, dateEnd),
+            () => valuationHttpClient.GetHoldingsAsync(dateEnd),
             async () =>
             {
                 var accountAppreciation = await assetsHttpClient.GetUnrealizedGainLossForAccount(userId, accountId, currency, dateEnd);
                 return accountAppreciation is not null ? [accountAppreciation] : [];
             },
             () => valuationHttpClient.GetBenchmarkSeriesAsync(
-                accountId,
                 currency.Id,
                 dateStart,
                 dateEnd,
