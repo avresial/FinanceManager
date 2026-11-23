@@ -61,17 +61,17 @@ public class AssetsDistributionOperationTests
     private static InvestmentHolding Holding(long listingId, string ticker, string exchange = "XLON") =>
         new(listingId, ticker, exchange, AssetType.ETF, 1m);
 
-    private void SetHoldings(params InvestmentHolding[] holdings) =>
-        _transactions.Setup(x => x.GetHoldingsByUserAsOf(1, DateOnly.FromDateTime(_asOf), It.IsAny<CancellationToken>())).ReturnsAsync(holdings);
+    private static InvestmentHoldingValue Valued(InvestmentHolding holding, decimal value) => new(holding, value);
+
+    private void SetValues(params InvestmentHoldingValue[] values) =>
+        _valuation.Setup(x => x.GetUserHoldingValuesAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>())).ReturnsAsync(values);
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task OverviewOrRefresh_LoadsAndValuesInvestmentsOnce_ForBothDistributions(bool overview)
     {
-        SetHoldings(Holding(11, "CSPX"), Holding(12, "VWRL"));
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [11] = 200m, [12] = -40m });
+        SetValues(Valued(Holding(11, "CSPX"), 200m), Valued(Holding(12, "VWRL"), -40m));
 
         var result = overview
             ? (await _dashboard.GetOverview(1, DefaultCurrency.PLN.Id, _asOf.AddDays(-7), _asOf, TestContext.Current.CancellationToken))!
@@ -80,9 +80,10 @@ public class AssetsDistributionOperationTests
         var type = Assert.Single(result.AssetsPerType);
         Assert.Equal(("Stock", 160m), (type.Name, type.Value));
         var row = Assert.Single(result.AssetsPerAccount);
-        Assert.Equal((null, "CSPX", 200m), (row.AccountId, row.Name, row.Value));
-        _valuation.Verify(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()), Times.Once);
-        _transactions.Verify(x => x.GetHoldingsByUserAsOf(1, DateOnly.FromDateTime(_asOf), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal((null, "CSPX", 200m, "Stock", null), (row.AccountId, row.Name, row.Value, row.Kind, row.CurrencyCode));
+        _valuation.Verify(x => x.GetUserHoldingValuesAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()), Times.Once);
+        // The holdings are read once, inside the valuation: naming the rows needs no second pass over the trades.
+        _transactions.Verify(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -91,9 +92,7 @@ public class AssetsDistributionOperationTests
     [InlineData(120, 100)]
     public async Task Refresh_PreservesNegativeTypeTotals_AndShowsOnlyPositiveRows(int positive, int negative)
     {
-        SetHoldings(Holding(11, "AAA"), Holding(12, "BBB"), Holding(13, "CCC"));
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [11] = positive - 10, [12] = -negative, [13] = 10 });
+        SetValues(Valued(Holding(11, "AAA"), positive - 10), Valued(Holding(12, "BBB"), -negative), Valued(Holding(13, "CCC"), 10));
 
         var result = await Refresh();
 
@@ -106,11 +105,9 @@ public class AssetsDistributionOperationTests
     }
 
     [Fact]
-    public async Task Refresh_ShowsTheExchangeOnlyWhenHeldListingsShareATicker()
+    public async Task Refresh_ShowsTheExchangeOnlyWhenShownListingsShareATicker()
     {
-        SetHoldings(Holding(11, "CSPX", "XLON"), Holding(12, "CSPX", "XAMS"), Holding(13, "VWRL", "XLON"));
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [11] = 10m, [12] = 20m, [13] = 30m });
+        SetValues(Valued(Holding(11, "CSPX", "XLON"), 10m), Valued(Holding(12, "CSPX", "XAMS"), 20m), Valued(Holding(13, "VWRL", "XLON"), 30m));
 
         var result = await Refresh();
 
@@ -118,35 +115,38 @@ public class AssetsDistributionOperationTests
     }
 
     [Fact]
-    public async Task Refresh_NamesAListingThatHasNoHoldingRowByItsId()
+    public async Task Refresh_DoesNotForceAnExchangeOntoTheOnlyShownRow_WhenTheSameTickerIsOversold()
     {
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [42] = 10m });
+        SetValues(Valued(Holding(11, "CSPX", "XLON"), 10m), Valued(Holding(12, "CSPX", "XAMS"), -20m));
 
-        Assert.Equal("Listing 42", Assert.Single((await Refresh()).AssetsPerAccount).Name);
+        Assert.Equal("CSPX", Assert.Single((await Refresh()).AssetsPerAccount).Name);
+    }
+
+    [Fact]
+    public async Task Refresh_OmitsAnEmptyExchangeFromASharedTicker()
+    {
+        SetValues(Valued(Holding(11, "CSPX", ""), 10m), Valued(Holding(12, "CSPX", "XAMS"), 20m));
+
+        Assert.Equal(["CSPX", "CSPX (XAMS)"], (await Refresh()).AssetsPerAccount.Select(x => x.Name));
     }
 
     [Fact]
     public async Task Refresh_ReturnsNothing_WhenThereAreNoHoldings()
     {
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal>());
+        SetValues();
 
         var result = await Refresh();
 
         Assert.Empty(result.AssetsPerType);
         Assert.Empty(result.AssetsPerAccount);
-        _transactions.Verify(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task Refresh_IsolatesUserCurrencyAndExactTimestamp_InEitherCallOrder()
     {
-        _transactions.Setup(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((long user, DateOnly _, CancellationToken _) => [Holding(user, $"USER{user}")]);
-        _valuation.Setup(x => x.GetUserValueByListingAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _valuation.Setup(x => x.GetUserHoldingValuesAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int user, Currency currency, DateTime end, CancellationToken ct) =>
-                new Dictionary<long, decimal> { [user] = user * 1000m + currency.Id + end.Ticks % 100 });
+                [Valued(Holding(user, $"USER{user}"), user * 1000m + currency.Id + end.Ticks % 100)]);
         var requests = new[]
         {
             (User: 1, Currency: DefaultCurrency.PLN, End: _asOf),
@@ -161,7 +161,7 @@ public class AssetsDistributionOperationTests
             Assert.Equal(expected, Assert.Single(result.AssetsPerType).Value);
             var row = Assert.Single(result.AssetsPerAccount);
             Assert.Equal(($"USER{request.User}", expected), (row.Name, row.Value));
-            _valuation.Verify(x => x.GetUserValueByListingAsync(request.User, request.Currency, request.End, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            _valuation.Verify(x => x.GetUserHoldingValuesAsync(request.User, request.Currency, request.End, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
         Assert.Equal(8, _valuation.Invocations.Count);
     }
@@ -169,20 +169,16 @@ public class AssetsDistributionOperationTests
     [Fact]
     public async Task Refresh_RetriesFailure_AndObservesLaterHoldingAndValuationChanges()
     {
-        var holdings = new List<InvestmentHolding> { Holding(11, "BEFORE") };
-        _transactions.Setup(x => x.GetHoldingsByUserAsOf(1, DateOnly.FromDateTime(_asOf), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => [.. holdings]);
-        var values = new Dictionary<long, decimal> { [11] = 100m };
-        _valuation.SetupSequence(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
+        var values = new List<InvestmentHoldingValue> { Valued(Holding(11, "BEFORE"), 100m) };
+        _valuation.SetupSequence(x => x.GetUserHoldingValuesAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("valuation failed"))
-            .ReturnsAsync(values)
-            .ReturnsAsync(values);
+            .ReturnsAsync(() => [.. values])
+            .ReturnsAsync(() => [.. values]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => Refresh());
         var initial = await Refresh();
-        holdings.Add(Holding(12, "NEW"));
-        values[11] = 250m;
-        values[12] = 50m;
+        values[0] = Valued(Holding(11, "BEFORE"), 250m);
+        values.Add(Valued(Holding(12, "NEW"), 50m));
         var next = await Refresh();
 
         var initialRow = Assert.Single(initial.AssetsPerAccount);
@@ -196,10 +192,9 @@ public class AssetsDistributionOperationTests
     [Fact]
     public async Task OverlappingRefreshes_KeepIndependentValues()
     {
-        SetHoldings(Holding(11, "CSPX"));
-        var firstValuation = new TaskCompletionSource<IReadOnlyDictionary<long, decimal>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var secondValuation = new TaskCompletionSource<IReadOnlyDictionary<long, decimal>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _valuation.SetupSequence(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
+        var firstValuation = new TaskCompletionSource<IReadOnlyList<InvestmentHoldingValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondValuation = new TaskCompletionSource<IReadOnlyList<InvestmentHoldingValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _valuation.SetupSequence(x => x.GetUserHoldingValuesAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
             .Returns(firstValuation.Task)
             .Returns(secondValuation.Task);
 
@@ -207,9 +202,9 @@ public class AssetsDistributionOperationTests
         Assert.Single(_valuation.Invocations);
         var second = Refresh();
         Assert.Equal(2, _valuation.Invocations.Count);
-        secondValuation.SetResult(new Dictionary<long, decimal> { [11] = 200m });
+        secondValuation.SetResult([Valued(Holding(11, "CSPX"), 200m)]);
         var secondResult = await second.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        firstValuation.SetResult(new Dictionary<long, decimal> { [11] = 100m });
+        firstValuation.SetResult([Valued(Holding(11, "CSPX"), 100m)]);
         var firstResult = await first.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(100m, Assert.Single(firstResult.AssetsPerType).Value);
@@ -222,9 +217,7 @@ public class AssetsDistributionOperationTests
     [Fact]
     public async Task StandaloneCalls_InEitherOrder_AgreeWithPairedRead()
     {
-        SetHoldings(Holding(11, "CSPX"));
-        _valuation.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [11] = 150m });
+        SetValues(Valued(Holding(11, "CSPX"), 150m));
 
         var accountFirst = await _investment.GetEndAssetsPerAccount(1, DefaultCurrency.PLN, _asOf).ToListAsync(TestContext.Current.CancellationToken);
         var typeSecond = await _investment.GetEndAssetsPerType(1, DefaultCurrency.PLN, _asOf).ToListAsync(TestContext.Current.CancellationToken);

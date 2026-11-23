@@ -1,0 +1,34 @@
+@using FinanceManager.Components.Features.Identity.Services
+@using FinanceManager.Components.Features.MoneyFlow.HttpClients
+@using FinanceManager.Domain.Identity.Services
+@using Microsoft.Extensions.Logging
+
+@* The unconverted-currencies chip for a figure that does not carry its own rows (net worth, closing balance, liabilities over time):
+   asks the API which currencies the signed-in user's totals add up unconverted. *@
+<UnconvertedCurrenciesChip Codes="_codes" />
+
+@code {
+    private IReadOnlyList<string> _codes = [];
+
+    [Inject] public required UnconvertedCurrenciesHttpClient Client { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required ILogger<UnconvertedCurrenciesNote> Logger { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var user = await LoginService.GetLoggedUser();
+            if (user is null) return;
+
+            var currency = await SettingsService.GetCurrencyAsync();
+            _codes = await Client.GetCodes(user.UserId, currency.Id);
+        }
+        catch (Exception ex)
+        {
+            // The note is a hint only; the card works without it.
+            Logger.LogWarning(ex, "Could not load the unconverted currencies.");
+        }
+    }
+}

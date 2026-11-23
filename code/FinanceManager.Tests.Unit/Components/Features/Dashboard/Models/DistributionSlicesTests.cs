@@ -18,6 +18,30 @@ public class DistributionSlicesTests
     }
 
     [Fact]
+    public void Build_LabelsHoldingsByKind_AndKeepsTheirCurrency()
+    {
+        var slices = DistributionSlices.Build(
+        [
+            new("PLN", 50m) { Kind = "Cash", CurrencyCode = "PLN" },
+            new("CSPX", 30m) { Kind = "Stock" },
+            new("Mortgage", 20m),
+        ]);
+
+        Assert.Equal(["Cash \u00B7 PLN", "Stock \u00B7 CSPX", "Mortgage"], slices.Select(x => x.Name));
+        Assert.Equal(["PLN", null, null], slices.Select(x => x.CurrencyCode));
+        Assert.Equal(["PLN", "CSPX", "Mortgage"], slices.Select(x => x.SourceName));
+    }
+
+    [Fact]
+    public void Build_WithoutGroupingOther_KeepsEveryRow()
+    {
+        var slices = DistributionSlices.Build(Items(8), groupOther: false);
+
+        Assert.Equal(8, slices.Count);
+        Assert.DoesNotContain(slices, x => x.IsOther);
+    }
+
+    [Fact]
     public void Build_SixItems_KeepsEveryNameWithDistinctColours()
     {
         var slices = DistributionSlices.Build(Items(6));

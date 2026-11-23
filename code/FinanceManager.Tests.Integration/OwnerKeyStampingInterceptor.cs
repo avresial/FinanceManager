@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -16,16 +17,19 @@ namespace FinanceManager.Tests.Integration;
 /// </summary>
 internal sealed class OwnerKeyStampingInterceptor : SaveChangesInterceptor
 {
+    /// <summary>Turned off once seeding is done, so rows written through the real repositories must carry their own owner keys.</summary>
+    public bool Enabled { get; set; } = true;
+
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
-        if (eventData.Context is AppDbContext context) Stamp(context);
+        if (Enabled && eventData.Context is AppDbContext context) Stamp(context);
         return result;
     }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is AppDbContext context) Stamp(context);
+        if (Enabled && eventData.Context is AppDbContext context) Stamp(context);
         return ValueTask.FromResult(result);
     }
 
@@ -35,21 +39,21 @@ internal sealed class OwnerKeyStampingInterceptor : SaveChangesInterceptor
         {
             switch (entry.Entity)
             {
-                case CurrencyAccountEntry { AccountId: int accountId, UserId: null } cash when FindAccount(context, accountId) is { } account:
+                case CurrencyAccountEntry { AccountId: int accountId, UserId: null } cash when FindAccount(context, accountId) is FinancialAccountBaseDto account:
                     cash.UserId = account.UserId;
                     cash.CurrencyId ??= account.CurrencyId;
                     break;
-                case BondAccountEntry { AccountId: int accountId, UserId: null } bond when FindAccount(context, accountId) is { } account:
+                case BondAccountEntry { AccountId: int accountId, UserId: null } bond when FindAccount(context, accountId) is FinancialAccountBaseDto account:
                     bond.UserId = account.UserId;
                     break;
-                case InvestmentTransaction { AccountId: int accountId, UserId: 0 } trade when FindAccount(context, accountId) is { } account:
+                case InvestmentTransaction { AccountId: int accountId, UserId: 0 } trade when FindAccount(context, accountId) is FinancialAccountBaseDto account:
                     trade.UserId = account.UserId;
                     break;
             }
         }
     }
 
-    private static FinanceManager.Domain.FinancialAccounts.Shared.Dtos.FinancialAccountBaseDto? FindAccount(AppDbContext context, int accountId) =>
+    private static FinancialAccountBaseDto? FindAccount(AppDbContext context, int accountId) =>
         context.Accounts.Local.FirstOrDefault(a => a.AccountId == accountId)
         ?? context.Accounts.AsNoTracking().FirstOrDefault(a => a.AccountId == accountId);
 }

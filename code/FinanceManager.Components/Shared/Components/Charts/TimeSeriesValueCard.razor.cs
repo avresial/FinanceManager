@@ -63,6 +63,9 @@ public partial class TimeSeriesValueCard
     /// </summary>
     [Parameter] public bool IsDebt { get; set; }
 
+    /// <summary>Adds the "Includes EUR, not converted" note when the series sums amounts in currencies other than the display one.</summary>
+    [Parameter] public bool ShowUnconvertedNote { get; set; }
+
     /// <summary>Currency suffix for the readout / tooltip (e.g. "PLN").</summary>
     [Parameter] public string CurrencyShortName { get; set; } = "PLN";
 

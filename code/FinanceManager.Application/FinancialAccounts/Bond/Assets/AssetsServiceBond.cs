@@ -2,13 +2,11 @@ using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Extensions;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Bond.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
@@ -62,7 +60,11 @@ public class AssetsServiceBond(
         var date = DateOnly.FromDateTime(asOfDate);
         var valuation = new PooledBondValuation(bondDashboardContext, date);
         var perBond = held
-            .Select(p => new NameValueResult(bondDashboardContext.GetDetails(p.PartitionId).Name, valuation.ValueOn(p, date)))
+            .Select(p => new NameValueResult(bondDashboardContext.GetDetails(p.PartitionId).Name, valuation.ValueOn(p, date))
+            {
+                Kind = _bondTypeName,
+                CurrencyCode = bondDashboardContext.GetDetails(p.PartitionId).Currency.ShortName,
+            })
             .Where(r => r.Value > 0m)
             .ToList();
 

@@ -128,6 +128,5 @@ public interface IInvestmentTransactionRepository
         decimal Quantity,
         decimal UnitPrice,
         decimal? Fee,
-        string Currency,
-        decimal? ListingPriceMultiplier);
+        string Currency);
 }
