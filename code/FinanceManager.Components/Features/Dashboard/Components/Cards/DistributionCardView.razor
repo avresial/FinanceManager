@@ -56,7 +56,7 @@
                         var slice = _slices[index];
                         var rowClass = $"fm-legend-row fm-distribution-row{(_activeIndex == index ? " is-active" : "")}";
                         var href = LinkHref(slice);
-                        <div role="listitem" @key="slice.Name"
+                        <div role="listitem" @key="(index, slice.Name)"
                              @onmouseenter="() => OnRowEnterAsync(index)"
                              @onmouseleave="() => OnRowLeaveAsync(index)">
                             @if (href is not null)
@@ -111,7 +111,7 @@
 @code {
     private RenderFragment LoadingFigure => @<StringSpinner CharactersCount="4" />;
 
-    private RenderFragment ViewToggle => @<DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" />;
+    private RenderFragment ViewToggle => @<DistributionViewToggle Value="@_view" ValueChanged="OnViewChangedAsync" DetailLabel="@DetailViewLabel" />;
 
     private RenderFragment RowContent(DistributionSlice slice) =>
         @<text>

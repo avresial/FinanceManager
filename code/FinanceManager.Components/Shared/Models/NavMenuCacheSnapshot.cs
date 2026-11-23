@@ -2,7 +2,7 @@ namespace FinanceManager.Components.Shared.Models;
 
 public sealed class NavMenuCacheSnapshot
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public int UserId { get; set; }

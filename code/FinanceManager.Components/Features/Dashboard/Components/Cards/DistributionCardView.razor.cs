@@ -38,6 +38,7 @@ public partial class DistributionCardView
 
     /// <summary>Shows the Type/Account toggle. Off for cards with a single grouping, such as expenses by label.</summary>
     [Parameter] public bool ShowViewToggle { get; set; } = true;
+    [Parameter] public string DetailViewLabel { get; set; } = "Breakdown";
 
     private bool IsAccountView => _view == DistributionViewToggle.AccountView;
 
