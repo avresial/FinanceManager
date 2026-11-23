@@ -259,7 +259,21 @@ public class DistributionOverviewCardViewTests
             Assert.Empty(cut.FindAll(".fm-legend-pct"));
             Assert.Empty(cut.FindAll("[data-testid=distribution-total]"));
             Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
+            // The list starts under the header instead of being centred in the fixed-height card.
+            Assert.Contains("fm-distribution-container--top", cut.Find(".fm-distribution-container").ClassList);
         }, TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public async Task TwoCategories_KeepTheListCentredWithTheDonut()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 600m), new("Bonds", 400m)]));
+
+        cut.WaitForAssertion(() =>
+            Assert.DoesNotContain("fm-distribution-container--top", cut.Find(".fm-distribution-container").ClassList),
+            TimeSpan.FromSeconds(3));
     }
 
     [Fact]

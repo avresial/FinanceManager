@@ -8,10 +8,11 @@
                 InfoText="@InfoText"
                 InfoAriaLabel="@($"About {Title} card")">
         <SubtitleContent>
-            <span title="@CaptionText">@CaptionText</span>
+            <span class="fm-tsvc-caption" title="@CaptionText">@CaptionText</span>
             @if (ShowUnconvertedNote && State == LoadState.Ready)
             {
-                <UnconvertedCurrenciesNote />
+                @* Own line: the subtitle does not wrap, so an inline chip would be cut off on a phone. *@
+                <div class="fm-tsvc-note"><UnconvertedCurrenciesNote /></div>
             }
         </SubtitleContent>
         <KeyFigure>
