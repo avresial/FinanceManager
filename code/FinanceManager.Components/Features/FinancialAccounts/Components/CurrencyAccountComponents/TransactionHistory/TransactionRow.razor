@@ -32,7 +32,7 @@
                         }
                         <MudText Typo="Typo.caption" Color="Color.Default">@Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
                     }
-                    </MudStack>
+                </MudStack>
             }
         </MudStack>
 
@@ -87,7 +87,8 @@
                         <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
                     </MudItem>
                 }
-                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                @* The row title already shows a short description in full; repeat it only when the title cut it off. *@
+                @if (!string.IsNullOrWhiteSpace(Entry.Description) && GetTitle() != Entry.Description)
                 {
                     <MudItem xs="12">
                         <MudText Typo="Typo.overline" Color="Color.Default">Description</MudText>

@@ -120,6 +120,40 @@ public sealed class SqliteInvestmentRunningValueTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_TrackedLinkedEntityWithAccountCleared_KeepsLinkAndRecalculatesOriginalPartition()
+    {
+        var moved = await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);
+        await Add(1, 10, InvestmentTransactionType.Buy, 3, 2);
+
+        var tracked = await _context.InvestmentTransactions.FirstAsync(x => x.EntryId == moved.EntryId, Ct);
+        tracked.AccountId = null;
+        tracked.AssetListingId = 20;
+        Assert.True(await _repository.Update(tracked, Ct));
+
+        // The link is never reassigned, and the old (account 1, listing 10) partition is recalculated.
+        Assert.Equal([3m], await Values(1, 10));
+        Assert.Equal([5m], await Values(1, 20));
+        Assert.Equal(1, (await Read()).Single(t => t.EntryId == moved.EntryId).AccountId);
+    }
+
+    [Fact]
+    public async Task Update_TrackedUnlinkedEntityWithAccountSet_StaysUnlinkedAndTouchesNoAccountPartition()
+    {
+        await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);
+        var unlinked = Trade(1, 10, InvestmentTransactionType.Buy, 3, 2);
+        unlinked.AccountId = null;
+        var added = await _repository.Add(unlinked, Ct);
+        var linkedBefore = await Snapshot();
+
+        var tracked = await _context.InvestmentTransactions.FirstAsync(x => x.EntryId == added.EntryId, Ct);
+        tracked.AccountId = 1;
+        Assert.True(await _repository.Update(tracked, Ct));
+
+        Assert.Null((await Read()).Single(t => t.EntryId == added.EntryId).AccountId);
+        Assert.Equal(linkedBefore, await Snapshot());
+    }
+
+    [Fact]
     public async Task Delete_RecalculatesRemainingTradesOfThatListingOnly()
     {
         await Add(1, 10, InvestmentTransactionType.Buy, 5, 1);

@@ -8,7 +8,6 @@ using FinanceManager.Components.Shared.Services;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -19,9 +18,9 @@ using MudBlazor;
 namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
 /// <summary>
-/// Every transaction of the user's accounts in one newest-first list, grouped by day. The list is read
+/// Every cash, bond and investment transaction of the user in one newest-first list, grouped by day. The list is read
 /// page by page through the transaction log cursor; changing the date range or the kind or currency filters starts
-/// again from the newest entry of the new selection. Each entry renders with its account page's own row
+/// again from the newest entry of the new selection. Each entry renders with the account pages' own row
 /// (details, labels, valuation, edit and delete); a successful edit or delete reloads from the first page.
 /// </summary>
 public partial class TransactionsPage : ComponentBase, IAsyncDisposable
@@ -74,7 +73,6 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     [Inject] public required ILogger<TransactionsPage> Logger { get; set; }
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient InvestmentValuationHttpClient { get; set; }
@@ -90,14 +88,14 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
             _selectedRange = preset;
         ApplyRange();
         // Rows publish this after a successful cash or bond edit/delete; the list then starts over so moved
-        // or removed entries and recomputed balances show up. Cancelled edits do not publish.
+        // or removed entries show up. Cancelled edits do not publish.
         AccountDataSynchronizationService.AccountsChanged += OnAccountsChanged;
         var user = await LoginService.GetLoggedUser();
         if (_disposed) return;
 
         _userId = user?.UserId;
         // The currency list only feeds the filter options, so it must not delay (or fail) the first page.
-        var currenciesTask = LoadCurrenciesAsync();
+        var currenciesTask = LoadCurrenciesAsync(user?.UserId);
         await LoadAsync(reset: true);
         await currenciesTask;
     }
@@ -134,7 +132,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         }
     }
 
-    private void OnAccountsChanged() => _ = InvokeAsync(() => _disposed ? Task.CompletedTask : LoadAsync(reset: true));
+    private void OnAccountsChanged() => _ = InvokeAsync(() => _disposed ? Task.CompletedTask : Task.WhenAll(LoadAsync(reset: true), LoadCurrenciesAsync(_userId)));
 
     private Task OnRangeChanged(string range)
     {
@@ -163,19 +161,20 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         return LoadAsync(reset: true);
     }
 
-    private async Task LoadCurrenciesAsync()
+    // The filter offers only the currencies the user's own transactions are in.
+    private async Task LoadCurrenciesAsync(int? userId)
     {
+        if (userId is not int id) return;
         try
         {
-            var catalog = await CurrencyHttpClient.GetAll();
+            var currencies = await TransactionLogHttpClient.GetCurrencies(id);
             if (_disposed) return;
-            _currencies = [.. catalog.Select(c => c.ShortName).Concat(DefaultCurrency.MinorQuoteUnits.Keys)
-                .Where(c => c.Length == 3 && c.All(char.IsAsciiLetter)).Select(c => c.ToUpperInvariant()).Distinct().Order()];
+            _currencies = currencies;
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            // Without the list the currency select stays disabled; the type chips and the log itself still work.
+            // Without the list the currency select stays hidden; the kind chips and the log itself still work.
             Logger.LogError(ex, "Failed to load the currencies for the transaction filters.");
         }
     }

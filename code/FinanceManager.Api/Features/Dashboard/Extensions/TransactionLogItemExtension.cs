@@ -2,7 +2,6 @@ using FinanceManager.Api.Features.FinancialAccounts.Bond.Extensions;
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Extensions;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;

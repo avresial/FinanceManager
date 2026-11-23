@@ -9,14 +9,10 @@ using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
-using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -348,15 +344,25 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
-    public async Task LoadsSortedCurrencyCodesAndValidMinorQuoteUnits()
+    public async Task OffersTheCurrenciesOfTheUsersOwnTransactions()
     {
-        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
-        using var catalog = new PageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-        { Content = JsonContent.Create(new[] { DefaultCurrency.USD, DefaultCurrency.PLN }) }));
-        await using var context = CreateContext(handler, out _, catalog: catalog);
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)), currencies: ["PLN", "USD"]);
+        await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(["GBX", "ILA", "PLN", "USD", "ZAC"], cut.FindComponent<TransactionLogToolbar>().Instance.Currencies));
-        Assert.Single(catalog.Requests);
+        cut.WaitForAssertion(() => Assert.Equal(["PLN", "USD"], cut.FindComponent<TransactionLogToolbar>().Instance.Currencies));
+        Assert.Equal("/api/TransactionLog/Currencies/7", Assert.Single(handler.CurrencyRequests).AbsolutePath);
+        Assert.DoesNotContain(handler.Requests, request => request.AbsolutePath.Contains("Currencies"));
+    }
+
+    [Fact]
+    public async Task HidesTheCurrencyFilter_WhenTheUserHasOneCurrencyOnly()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)), currencies: ["PLN"]);
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        cut.WaitForAssertion(() => Assert.Equal(["PLN"], cut.FindComponent<TransactionLogToolbar>().Instance.Currencies));
+        Assert.Empty(cut.FindAll("[data-testid='transactions-currency-filter']"));
     }
 
     [Fact]
@@ -448,7 +454,7 @@ public sealed class TransactionsPageTests
     public async Task FailingToLoadCurrencies_StillLoadsTheTransactions()
     {
         using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
-        await using var context = CreateContext(handler, out var accountService);
+        await using var context = CreateContext(handler);
 
         var cut = context.Render<TransactionsPage>();
 
@@ -509,7 +515,7 @@ public sealed class TransactionsPageTests
                         [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true)])
                 }
                 : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
 
         var cut = context.Render<TransactionsPage>();
 
@@ -529,7 +535,7 @@ public sealed class TransactionsPageTests
             : Page([], null)));
         using var services = new PageHandler((_, uri) => Task.FromResult(new HttpResponseMessage(
             uri.AbsolutePath.Contains("/Delete/") ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
 
@@ -549,7 +555,7 @@ public sealed class TransactionsPageTests
         using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/Delete/")
             ? deleted.Task
             : Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
         var row = cut.FindComponent<InvestmentTransactionRow>();
@@ -605,10 +611,7 @@ public sealed class TransactionsPageTests
 
     private static Task<HttpResponseMessage> Respond(TransactionLogItemsPageDto page) => Task.FromResult(JsonResponse(page));
 
-    private static BunitContext CreateContext(HttpMessageHandler handler) => CreateContext(handler, out _);
-
-    private static BunitContext CreateContext(HttpMessageHandler handler, out Mock<IFinancialAccountService> accountService,
-        HttpMessageHandler? services = null, HttpMessageHandler? catalog = null)
+    private static BunitContext CreateContext(HttpMessageHandler handler, HttpMessageHandler? services = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -623,9 +626,7 @@ public sealed class TransactionsPageTests
             UserRole = UserRole.User
         });
         context.Services.AddSingleton(login.Object);
-        accountService = new Mock<IFinancialAccountService>();
-        context.Services.AddSingleton(new CurrencyHttpClient(new HttpClient(catalog ?? new UnavailableHandler()) { BaseAddress = new Uri("http://localhost/") }));
-        context.Services.AddSingleton(accountService.Object);
+        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new TransactionLogHttpClient(
             new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
 
@@ -649,9 +650,21 @@ public sealed class TransactionsPageTests
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
     }
 
-    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    // Feed requests go to `respond`; the currency-options request is answered from `currencies` (unavailable when null)
+    // and recorded apart, so request counts and indexes only ever describe the feed.
+    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond, IReadOnlyList<string>? currencies = null) : HttpMessageHandler
     {
         private readonly List<Uri> _requests = [];
+        private readonly List<Uri> _currencyRequests = [];
+
+        public IReadOnlyList<Uri> CurrencyRequests
+        {
+            get
+            {
+                lock (_requests)
+                    return [.. _currencyRequests];
+            }
+        }
 
         public IReadOnlyList<Uri> Requests
         {
@@ -667,6 +680,13 @@ public sealed class TransactionsPageTests
             int count;
             lock (_requests)
             {
+                if (request.RequestUri!.AbsolutePath.Contains("/Currencies/", StringComparison.Ordinal))
+                {
+                    _currencyRequests.Add(request.RequestUri);
+                    return Task.FromResult(currencies is null
+                        ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                        : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(currencies) });
+                }
                 _requests.Add(request.RequestUri!);
                 count = _requests.Count;
             }

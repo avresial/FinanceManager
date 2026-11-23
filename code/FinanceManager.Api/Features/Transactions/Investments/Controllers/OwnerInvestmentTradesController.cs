@@ -31,7 +31,8 @@ public class OwnerInvestmentTradesController(
     IAssetListingRepository assetListingRepository,
     IFinancialLabelsRepository labelsRepository,
     ICacheInvalidator cacheInvalidator,
-    IFinancialAlertService financialAlertService) : ControllerBase
+    IFinancialAlertService financialAlertService,
+    ILogger<OwnerInvestmentTradesController> logger) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<InvestmentTransactionHistoryPageDto>(StatusCodes.Status200OK)]
@@ -127,7 +128,8 @@ public class OwnerInvestmentTradesController(
     {
         if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var ownerId)) return Forbid();
         if (request.AssetListingId <= 0 || request.Quantity <= 0 || request.UnitPrice < 0
-            || string.IsNullOrWhiteSpace(request.Currency) || request.TradeDate == default || !Enum.IsDefined(request.Type))
+            || string.IsNullOrWhiteSpace(request.Currency) || request.Currency.Trim().Length != 3
+            || request.Notes?.Length > 512 || request.TradeDate == default || !Enum.IsDefined(request.Type))
             return BadRequest("Invalid input parameters.");
 
         var existing = await transactionRepository.Get(id, cancellationToken);
@@ -142,7 +144,7 @@ public class OwnerInvestmentTradesController(
             trade.Labels = existing.Labels;
         if (!await transactionRepository.Update(trade, cancellationToken)) return NotFound();
 
-        await cacheInvalidator.InvalidateUser(ownerId);
+        await InvalidateCache(ownerId, cancellationToken);
         await financialAlertService.EvaluateAlertsAsync(ownerId, cancellationToken);
         return NoContent();
     }
@@ -158,9 +160,22 @@ public class OwnerInvestmentTradesController(
         if (existing is null || existing.UserId != ownerId) return NotFound();
         if (!await transactionRepository.Delete(id, cancellationToken)) return NotFound();
 
-        await cacheInvalidator.InvalidateUser(ownerId);
+        await InvalidateCache(ownerId, cancellationToken);
         await financialAlertService.EvaluateAlertsAsync(ownerId, cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>The trade is already committed, so a failing cache invalidation is logged instead of failing the request.</summary>
+    private async Task InvalidateCache(int ownerId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await cacheInvalidator.InvalidateUser(ownerId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Investment trade change was saved, but cache invalidation for user {UserId} failed", ownerId);
+        }
     }
 
     private async Task<bool> AreLabelsValid(IReadOnlyCollection<int>? ids, CancellationToken cancellationToken)

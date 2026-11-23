@@ -1,12 +1,10 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Globalization;
 using System.Net;

@@ -2,7 +2,6 @@ using FinanceManager.Api.Features.Dashboard.Extensions;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -20,8 +19,8 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
     private const int _maxCurrencies = 100;
 
     /// <summary>
-    /// Returns the user's most recent transactions across all of their accounts,
-    /// regardless of account type, ordered newest first.
+    /// Returns the user's most recent cash, bond and investment transactions
+    /// as compact summaries, ordered newest first.
     /// </summary>
     [HttpGet("Get/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TransactionLogEntryDto>))]
@@ -33,6 +32,18 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
             return Forbid();
 
         return Ok(await transactionLogService.GetLastTransactions(ownerId, count, cancellationToken));
+    }
+
+    [HttpGet("Currencies/{userId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<string>))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Currencies(int userId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId) || ownerId == 0 || ownerId != userId)
+            return Forbid();
+
+        return Ok(await transactionLogService.GetCurrencies(ownerId, cancellationToken));
     }
 
     [HttpGet("ItemsPage/{userId:int}")]

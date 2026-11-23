@@ -182,12 +182,12 @@ public sealed class InvestmentTransactionService(
         }
         catch (OperationCanceledException ex)
         {
-            logger.LogDebug(ex, "Adding investment transaction cancelled for account {AccountId}.", accountId);
+            logger.LogDebug(ex, "Adding investment transaction cancelled for user {UserId}.", userId);
             throw;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to add investment transaction for account {AccountId}", accountId);
+            logger.LogError(ex, "Failed to add investment transaction for user {UserId}", userId);
             throw new InvestmentTransactionCommandException(
                 external ? "instrument_import_failed" : "transaction_creation_failed",
                 external

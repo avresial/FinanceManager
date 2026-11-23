@@ -56,7 +56,9 @@ public sealed class DividendPaymentService(IDividendPaymentRepository payments,
         // Historical records remain editable after their original trades have been removed.
         if (request.AssetListingId <= 0 || (payment?.AssetListingId != request.AssetListingId
             && !await payments.HasHolding(userId, accountId, request.AssetListingId, ct)))
-            throw new ArgumentException("Choose a holding associated with this investment account.");
+            throw new ArgumentException(accountId is null
+                ? "Choose a holding associated with your investments."
+                : "Choose a holding associated with this investment account.");
         var now = DateTimeOffset.UtcNow;
         var isNew = payment is null;
         payment ??= new DividendPayment { UserId = userId, AccountId = accountId, CreatedAt = now };

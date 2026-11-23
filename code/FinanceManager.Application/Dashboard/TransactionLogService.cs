@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
@@ -43,6 +44,20 @@ public class TransactionLogService(ICashTransactionReader cash, IBondTransaction
         return new([.. page.Select(row => row.Item)], next);
     }
 
+    public async Task<List<string>> GetCurrencies(int userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        // The streams share a scoped DbContext, so they run one after another.
+        var codes = new List<string>();
+        codes.AddRange(await cash.GetCurrencies(userId, cancellationToken));
+        codes.AddRange(await bonds.GetCurrencies(userId, cancellationToken));
+        codes.AddRange(await investments.GetCurrenciesByUser(userId, cancellationToken));
+        // Quote units such as GBX are a price convention, not something a user holds, so they are not offered.
+        return [.. codes.Select(code => code.Trim().ToUpperInvariant())
+            .Where(code => code.Length == 3 && code.All(char.IsAsciiLetter) && !DefaultCurrency.MinorQuoteUnits.ContainsKey(code))
+            .Distinct().Order()];
+    }
+
     private async Task<List<LogRow>> Read(int userId, TransactionLogQuery? query, int take, CancellationToken token)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
@@ -51,26 +66,28 @@ public class TransactionLogService(ICashTransactionReader cash, IBondTransaction
         if (query?.Cursor is TransactionLogCursor cursor && cursor.Date < end) end = cursor.Date;
         if (end < query?.Start) return [];
         bool Includes(TransactionKind kind) => query?.Kinds is not { Count: > 0 } kinds || kinds.Contains(kind);
+        // The dashboard summary needs a cash entry's first label as its caption; only the full list loads the heavier investment details.
         OwnerHistoryQuery History(TransactionKind kind) => new(query?.Start, end, take,
             query?.Cursor is TransactionLogCursor c ? new(c.Date, c.EntryId, kind > c.Kind) : null,
-            query?.Currencies, query?.Search, IncludeDetails: query is not null);
+            query?.Currencies, query?.Search, IncludeDetails: query is not null || kind == TransactionKind.Cash);
 
         // The streams share a scoped DbContext and must finish buffering one at a time.
         List<LogRow> rows = [];
         if (Includes(TransactionKind.Cash))
             foreach (var e in await cash.GetHistory(userId, History(TransactionKind.Cash), token))
                 rows.Add(new(new(TransactionKind.Cash, e.EntryId, e.PostingDate, e.ValueChange,
-                    string.IsNullOrWhiteSpace(e.Description) ? e.ContractorDetails ?? string.Empty : e.Description, e.Currency),
+                    string.IsNullOrWhiteSpace(e.Description) ? e.ContractorDetails ?? string.Empty : e.Description, e.Currency,
+                    e.Labels.FirstOrDefault()?.Name),
                     new CurrencyTransactionLogItem(e)));
         if (Includes(TransactionKind.Bond))
             foreach (var e in await bonds.GetHistory(userId, History(TransactionKind.Bond), token))
                 rows.Add(new(new(TransactionKind.Bond, e.EntryId, e.PostingDate, e.ValueChange,
-                    string.IsNullOrWhiteSpace(e.Description) ? e.BondName ?? "Bond" : e.Description, "units"),
+                    string.IsNullOrWhiteSpace(e.Description) ? (string.IsNullOrWhiteSpace(e.BondName) ? "Bond" : e.BondName) : e.Description, "units", e.BondName),
                     new BondTransactionLogItem(e)));
         if (Includes(TransactionKind.Investment))
             foreach (var t in await investments.GetHistoryByUser(userId, History(TransactionKind.Investment), token))
                 rows.Add(new(new(TransactionKind.Investment, t.EntryId, t.PostingDate, t.SignedQuantity * t.UnitPrice,
-                    $"{t.Type} {t.Quantity:0.####} {t.AssetListing?.Ticker}".TrimEnd(), t.Currency), new InvestmentTransactionLogItem(t)));
+                    $"{t.Type} {t.Quantity:0.####} {t.AssetListing?.Ticker}".TrimEnd(), t.Currency, t.AssetListing?.Ticker), new InvestmentTransactionLogItem(t)));
 
         return [.. rows.OrderByDescending(r => r.Summary.Date).ThenByDescending(r => r.Summary.EntryId).ThenBy(r => r.Summary.Kind)];
     }
