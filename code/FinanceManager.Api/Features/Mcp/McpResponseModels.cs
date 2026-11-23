@@ -1,18 +1,16 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Api.Features.Mcp;
 
-public sealed record McpFinancialAccount(int AccountId, string Name, string Type, string Category);
-
+/// <summary>One transaction of the authenticated user. <c>Kind</c> is "cash", "bond" or "investment"; ids are unique per kind.</summary>
 public sealed record McpTransaction(
     long TransactionId,
-    int AccountId,
-    string AccountName,
-    string AccountType,
+    string Kind,
     DateOnly Date,
     decimal Amount,
     string Description,
@@ -48,47 +46,38 @@ public sealed record McpReferenceData(IReadOnlyList<McpCurrency> Currencies, IRe
 
 internal static class McpResponseMapper
 {
-    public static McpFinancialAccount Account(CurrencyAccount account) =>
-        new(account.AccountId, account.Name, "currency", account.AccountType.ToString());
-
-    public static McpFinancialAccount Account(BondAccount account) =>
-        new(account.AccountId, account.Name, "bond", AccountLabel.Bond.ToString());
-
-    public static McpFinancialAccount Account(InvestmentAccount account) =>
-        new(account.AccountId, account.Name, "investment", AccountLabel.Stock.ToString());
-
-    public static McpTransaction Transaction(CurrencyAccountEntry entry, string accountName) => new(
+    // The cash counterparty (ContractorDetails) and an investment trade's private note are never exposed or matched.
+    public static McpTransaction Transaction(CashLogEntry entry) => new(
         entry.EntryId,
-        entry.AccountId!.Value,
-        accountName,
-        "currency",
+        "cash",
         DateOnly.FromDateTime(entry.PostingDate),
         entry.ValueChange,
         entry.Description ?? string.Empty,
-        [.. entry.Labels.Select(label => label.Name).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)]);
+        LabelNames(entry.Labels),
+        entry.Currency);
 
-    public static McpTransaction Transaction(BondAccountEntry entry, string accountName, string bondName) => new(
+    public static McpTransaction Transaction(BondLogEntry entry) => new(
         entry.EntryId,
-        entry.AccountId!.Value,
-        accountName,
         "bond",
         DateOnly.FromDateTime(entry.PostingDate),
         entry.ValueChange,
-        bondName,
-        [.. entry.Labels.Select(label => label.Name).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)]);
+        entry.BondName ?? "Bond",
+        LabelNames(entry.Labels),
+        entry.Currency);
 
-    public static McpTransaction Transaction(InvestmentTransaction transaction, string accountName) => new(
+    public static McpTransaction Transaction(InvestmentTransaction transaction) => new(
         transaction.EntryId,
-        transaction.AccountId!.Value,
-        accountName,
         "investment",
         transaction.TradeDate,
         transaction.SignedQuantity * transaction.UnitPrice,
         $"{transaction.Type} {transaction.AssetListing?.Ticker}".TrimEnd(),
-        [],
+        LabelNames(transaction.Labels),
         transaction.Currency,
         transaction.Quantity,
         transaction.UnitPrice);
+
+    private static string[] LabelNames(IEnumerable<FinancialLabel> labels) =>
+        [.. labels.Select(label => label.Name).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)];
 
     public static McpInvestmentPosition InvestmentPosition(
         AssetListing listing,
