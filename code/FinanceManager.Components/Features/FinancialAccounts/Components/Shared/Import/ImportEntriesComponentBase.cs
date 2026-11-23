@@ -41,7 +41,8 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
 
     public string AccountName { get; set; } = string.Empty;
 
-    [Parameter] public required int AccountId { get; set; }
+    /// <summary>The account to import into. Null imports into the owner's pooled entries (Transactions page), so the wizard picks the target itself.</summary>
+    [Parameter] public int? AccountId { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
@@ -62,6 +63,12 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
         }
     }
 
+    protected string ReturnHref => AccountId is int id ? $"AccountDetails/{id}" : "/Transactions";
+    protected string ReturnText => AccountId is null ? "Back to Transactions" : $"Return to {AccountName}";
+
+    /// <summary>False while the wizard still needs a target (owner mode before a currency is picked), which keeps the first step from continuing.</summary>
+    protected virtual bool HasImportTarget => true;
+
     protected string PrimaryLabel => _stepIndex switch
     {
         0 => "Continue to mapping",
@@ -72,7 +79,7 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
 
     protected bool CanContinue => _stepIndex switch
     {
-        0 => _rawPreview.Any() && _headers.Count >= MinimumHeaderCount,
+        0 => HasImportTarget && _rawPreview.Any() && _headers.Count >= MinimumHeaderCount,
         1 => !_erorrs.Any() && HasMappedPreview,
         2 => CanSubmitConflicts,
         _ => false
@@ -101,6 +108,9 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
 
     protected async Task LoadAccountName()
     {
+        if (AccountId is not int accountId)
+            return;
+
         try
         {
             var user = await LoginService.GetLoggedUser();
@@ -109,7 +119,7 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
 
             var existingAccount = await FinancialAccountService.GetAccount<TAccount>(
                 user.UserId,
-                AccountId,
+                accountId,
                 DateTime.UtcNow,
                 DateTime.UtcNow);
 

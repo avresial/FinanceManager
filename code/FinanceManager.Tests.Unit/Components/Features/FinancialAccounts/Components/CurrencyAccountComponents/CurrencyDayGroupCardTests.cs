@@ -59,6 +59,7 @@ public class CurrencyDayGroupCardTests
         context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new AccountDataSynchronizationService());
         context.Services.AddSingleton(NullLogger<TransactionRow>.Instance);
+        context.Services.AddSingleton(new FinanceManager.Components.Features.Transactions.Cash.HttpClients.CashTransactionsHttpClient(new HttpClient { BaseAddress = new Uri("http://localhost/") }));
         return context;
     }
 }

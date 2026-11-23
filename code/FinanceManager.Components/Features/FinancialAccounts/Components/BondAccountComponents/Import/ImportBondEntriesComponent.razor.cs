@@ -1,5 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
@@ -22,9 +23,11 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
     private BondImportResult? _importResult;
     private bool _conflictsResolved;
     private List<BondDetails> _possibleBonds = [];
+    private IReadOnlyList<BondEntryImportRecordDto>? _ownerRows;
 
     [Inject] public required BondAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
 
     private BondEntryConflictResolver? _resolverRef;
 
@@ -47,6 +50,8 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
             Logger.LogError(ex, "Failed to load bond details for import.");
         }
 
+        if (AccountId is null)
+            AccountName = "bonds";
         await LoadAccountName();
     }
 
@@ -134,7 +139,11 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
                 .Select(x => new BondEntryImportRecordDto(x.PostingDate, x.ValueChange, x.BondDetailsId, x.Description))
                 .ToList();
 
-            _importResult = await AccountImportHttpClient.ImportBondEntriesAsync(new(AccountId, entries));
+            // Owner mode keeps the mapped rows: resolving conflicts re-submits the rows of every accepted key.
+            _ownerRows = AccountId is null ? entries : null;
+            _importResult = AccountId is int accountId
+                ? await AccountImportHttpClient.ImportBondEntriesAsync(new(accountId, entries))
+                : await BondTransactionsHttpClient.ImportAsync(entries);
             AddImportMessages(_importResult);
         }
         catch (Exception ex)
@@ -159,6 +168,7 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Bon
         _summaryInfos.Clear();
         _conflictsResolved = false;
         _importResult = null;
+        _ownerRows = null;
     }
 
     protected override void ResetMappingState()

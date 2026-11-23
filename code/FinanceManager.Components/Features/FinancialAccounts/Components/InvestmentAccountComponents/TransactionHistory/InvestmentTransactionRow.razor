@@ -189,7 +189,7 @@
                     <MudText Typo="Typo.body2">@Transaction.Notes</MudText>
                 </MudItem>
             }
-            @if (Transaction.AccountId.HasValue)
+            @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
             {
                 <MudItem xs="12">
                     <MudStack Row="true" Spacing="2">

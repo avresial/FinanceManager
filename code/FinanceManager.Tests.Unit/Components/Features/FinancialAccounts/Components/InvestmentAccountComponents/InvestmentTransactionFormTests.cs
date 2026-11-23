@@ -1,7 +1,9 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -39,7 +41,7 @@ public class InvestmentTransactionFormTests
             if (task is not null)
                 _ = await task;
         });
-        cut.Render();
+        cut.FindComponent<InvestmentTransactionFormBody>().Render();
 
         Assert.Contains("No recognized instrument matched \"ZZZZNOTREAL999\"", cut.Markup);
         var saveButton = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save");
@@ -198,8 +200,8 @@ public class InvestmentTransactionFormTests
             TradingCurrency = string.Empty
         };
 
-        Assert.Equal("Xetra (XETR) · EUR · Existing", InvestmentTransactionForm.FormatInstrumentSubtitle(complete));
-        Assert.Equal("Unknown venue · Unknown currency · External", InvestmentTransactionForm.FormatInstrumentSubtitle(incomplete));
+        Assert.Equal("Xetra (XETR) · EUR · Existing", InvestmentTransactionFormBody.FormatInstrumentSubtitle(complete));
+        Assert.Equal("Unknown venue · Unknown currency · External", InvestmentTransactionFormBody.FormatInstrumentSubtitle(incomplete));
     }
 
     [Fact]
@@ -273,6 +275,83 @@ public class InvestmentTransactionFormTests
         cut.WaitForAssertion(() => Assert.False(save().Instance.Disabled));
     }
 
+    [Fact]
+    public async Task WithoutAnAccount_NewTradeIsCreatedThroughTheOwnerRoute()
+    {
+        CreateInvestmentTradeRequest? captured = null;
+        string? path = null;
+        var option = new InvestmentInstrumentOptionDto
+        {
+            ResultId = "listing:1",
+            Source = InstrumentOptionSource.Existing,
+            AssetListingId = 1,
+            Ticker = "CSPX",
+            DisplayName = "iShares Core S&P 500",
+            ExchangeName = "London Stock Exchange",
+            TradingCurrency = "USD"
+        };
+        var handler = new StubHttpHandler(async request =>
+        {
+            if (request.Method == HttpMethod.Post)
+            {
+                path = request.RequestUri!.AbsolutePath;
+                captured = await JsonSerializer.DeserializeAsync<CreateInvestmentTradeRequest>(
+                    await request.Content!.ReadAsStreamAsync(), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                return new HttpResponseMessage(HttpStatusCode.Created)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(new InvestmentTransactionDto(
+                        9, 1, null, 1, InvestmentTransactionTypeDto.Buy, 1m, 5m, "USD", captured!.TradeDate, null, null, "CSPX")),
+                        System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+
+            return request.RequestUri!.AbsolutePath.Contains("/ListingPrice/") ? JsonResponse(new ListingPriceDto(5m, "USD")) : JsonResponse(Array.Empty<Currency>());
+        });
+        await using var context = CreateBunitContext(handler);
+        context.Render<MudPopoverProvider>();
+        var saved = 0;
+        var cut = context.Render<InvestmentTransactionForm>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.OnSaved, () => saved++));
+
+        await cut.InvokeAsync(() => cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>().Instance.SelectOptionAsync(option));
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").Click());
+
+        Assert.Equal("/api/transactions/investment", path);
+        Assert.Equal((1L, "USD", 5m), (captured!.AssetListingId, captured.Currency, captured.UnitPrice));
+        Assert.Equal(1, saved);
+    }
+
+    [Fact]
+    public async Task WithoutAnAccount_EditedTradeIsUpdatedThroughTheOwnerRoute()
+    {
+        UpdateInvestmentTradeRequest? captured = null;
+        string? path = null;
+        var handler = new StubHttpHandler(async request =>
+        {
+            if (request.Method == HttpMethod.Put)
+            {
+                path = request.RequestUri!.AbsolutePath;
+                captured = await JsonSerializer.DeserializeAsync<UpdateInvestmentTradeRequest>(
+                    await request.Content!.ReadAsStreamAsync(), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+
+            return JsonResponse(Array.Empty<Currency>());
+        });
+        await using var context = CreateBunitContext(handler);
+        var trade = new InvestmentTransactionDto(5, 1, null, 3, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+            DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").HasAttribute("disabled")));
+
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").Click());
+
+        Assert.Equal("/api/transactions/investment/5", path);
+        Assert.Equal((3L, 2m, 10m), (captured!.AssetListingId, captured.Quantity, captured.UnitPrice));
+    }
+
     private static BunitContext CreateBunitContext(HttpMessageHandler handler, FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel[]? labels = null,
         HttpMessageHandler? labelHandler = null)
     {
@@ -282,11 +361,12 @@ public class InvestmentTransactionFormTests
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
         context.Services.AddSingleton(new InvestmentTransactionHttpClient(httpClient));
         context.Services.AddSingleton(new CurrencyHttpClient(httpClient));
+        context.Services.AddSingleton(new InvestmentTradesHttpClient(httpClient));
         context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(new HttpClient(labelHandler ?? new StubHttpHandler(_ => Task.FromResult(JsonResponse(labels ?? [])))) { BaseAddress = new Uri("https://localhost/") }));
         var settingsService = new Mock<ISettingsService>();
         settingsService.Setup(x => x.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settingsService.Object);
-        context.Services.AddSingleton<ILogger<InvestmentTransactionForm>>(NullLogger<InvestmentTransactionForm>.Instance);
+        context.Services.AddSingleton<ILogger<InvestmentTransactionFormBody>>(NullLogger<InvestmentTransactionFormBody>.Instance);
         return context;
     }
 

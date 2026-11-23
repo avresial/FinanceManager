@@ -1,3 +1,4 @@
+@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
 @using CsvHelper
 @using CsvHelper.Configuration
 @using FinanceManager.Infrastructure.Readers
@@ -7,13 +8,26 @@
 
 <div>
 
-    <PageHeader Title="@($"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
+    <PageHeader Title="@(AccountId is null ? "Import cash transactions" : $"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
 
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
         <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
                 <MudStep Title="@StepTitles[0]" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
                     <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
+                    @if (AccountId is null)
+                    {
+                        <div class="px-4 pt-4">
+                            <MudSelect T="Currency" Label="Currency" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       HelperText="The currency of the statement" Value="_currency" ValueChanged="OnCurrencySelected"
+                                       ToStringFunc="@(c => c?.ShortName)" data-testid="import-currency">
+                                @foreach (var currency in _currencies)
+                                {
+                                    <MudSelectItem T="Currency" Value="@currency">@currency.ShortName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </div>
+                    }
                     <ImportCsvFileStep Errors="_erorrs"
                                        RawPreview="_rawPreview"
                                        Headers="_headers"
@@ -207,7 +221,7 @@
                         }
                         else if (ShowImportCompletedMessage)
                         {
-                            <ImportCompletePanel AccountId="AccountId" AccountName="@AccountName" Clear="Clear" />
+                            <ImportCompletePanel ReturnHref="@ReturnHref" ReturnText="@ReturnText" AccountName="@AccountName" Clear="Clear" />
                         }
 
                         @if (ShowImportFailedActions)
@@ -215,7 +229,7 @@
                             @* A failed job keeps the stepper locked (even with unresolved conflicts), so always offer the way out here. *@
                             <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Justify="Justify.Center">
                                 <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Clear">Import another file</MudButton>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@($"AccountDetails/{AccountId}")">Return to @AccountName</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="@ReturnHref">@ReturnText</MudButton>
                             </MudStack>
                         }
 

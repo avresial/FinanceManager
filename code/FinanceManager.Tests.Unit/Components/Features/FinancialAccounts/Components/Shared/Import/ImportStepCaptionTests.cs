@@ -30,6 +30,9 @@ public class ImportStepCaptionTests
         context.Services.AddSingleton(Moq.Mock.Of<FinanceManager.Components.Features.FinancialAccounts.Services.IFinancialAccountService>());
         context.Services.AddSingleton(new HttpClient { BaseAddress = new Uri("http://localhost/") });
         context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyAccountImportHttpClient>();
+        context.Services.AddTransient<FinanceManager.Components.Features.Transactions.Cash.HttpClients.CashTransactionsHttpClient>();
+        context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyHttpClient>();
+        context.Services.AddSingleton(Moq.Mock.Of<FinanceManager.Domain.Identity.Services.ISettingsService>());
         context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyAccountHttpClient>();
         context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<FinanceManager.Components.Features.FinancialAccounts.Services.CurrencyImportJobTracker>();

@@ -1,8 +1,10 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.TransactionHistory;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Tests.Unit.Components.Features.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -86,6 +88,28 @@ public class BondTransactionRowTests
         Assert.Contains(expectedClass, change.ClassName);
     }
 
+    [Fact]
+    public async Task RowWithoutAnAccount_OffersEditAndRemove_AndRemovesThroughTheOwnerRoute()
+    {
+        var handler = new RecordingHttpHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<BondTransactionRow>(p => p
+            .Add(x => x.Entry, new BondAccountEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, 2m, 1))
+            .Add(x => x.BondName, "Poland Bond")
+            .Add(x => x.ShowPosition, false));
+        cut.Find("[role='button']").Click();
+        var published = 0;
+        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;
+
+        Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Edit");
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Remove").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Confirm").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(1, published));
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal((HttpMethod.Delete, "/api/transactions/bonds/7"), (request.Method, request.PathAndQuery));
+    }
+
     private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile, DateTime? postingDate = null)
     {
         var account = new BondAccount(1, 1, "Bonds");
@@ -108,7 +132,7 @@ public class BondTransactionRowTests
             .Add(x => x.IsMobile, isMobile));
     }
 
-    private static BunitContext CreateContext()
+    private static BunitContext CreateContext(RecordingHttpHandler? handler = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -116,6 +140,10 @@ public class BondTransactionRowTests
         context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new AccountDataSynchronizationService());
         context.Services.AddSingleton(NullLogger<BondTransactionRow>.Instance);
+        var settings = new Mock<FinanceManager.Domain.Identity.Services.ISettingsService>();
+        settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
+        context.Services.AddSingleton(settings.Object);
+        context.Services.AddSingleton(new BondTransactionsHttpClient((handler ?? new RecordingHttpHandler()).CreateClient()));
         return context;
     }
 }

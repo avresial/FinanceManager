@@ -1,0 +1,78 @@
+using Bunit;
+using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import;
+using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Tests.Unit.Components.Features.Transactions;
+using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
+using System.Text.Json;
+
+namespace FinanceManager.Tests.Unit.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import;
+
+[Trait("Category", "Unit")]
+public class BondEntryConflictResolverTests
+{
+    private static readonly DateTime _dayA = new(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _dayB = new(2026, 11, 4, 0, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task OwnerMode_ResubmitsEveryRowOfTheAcceptedKeys_AndNothingOfTheSkippedOnes()
+    {
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 1, 0, [], []));
+        await using var context = CreateContext(handler);
+        // The file holds the 5-unit row twice on day A and once more on day B; both days conflict with a different existing entry.
+        BondEntryImportRecordDto[] rows =
+        [
+            new(_dayA, 5m, 1, "first"), new(_dayA, 5m, 1, "second"), new(_dayA, 7m, 2, "other bond"), new(_dayB, 5m, 1, "skipped day"),
+        ];
+        var cut = context.Render<BondEntryConflictResolver>(p => p
+            .Add(x => x.AccountName, "bonds")
+            .Add(x => x.OwnerRows, rows)
+            .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1), Conflict(_dayB, 5m, 1)]));
+
+        await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Imported));
+        await cut.InvokeAsync(() => cut.Instance.PickDay(_dayB, BondEntryConflictResolver.ResolveChoice.Existing));
+        await cut.InvokeAsync(cut.Instance.SubmitAsync);
+
+        var request = Assert.Single(handler.Requests, r => r.PathAndQuery == "/api/transactions/bonds/import/resolve");
+        var sent = JsonSerializer.Deserialize<BondEntryImportRecordDto[]>(request.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        Assert.Equal(["first", "second"], sent.Select(row => row.Description));
+    }
+
+    [Fact]
+    public async Task OwnerMode_WhenEveryDayIsSkipped_SendsNothing()
+    {
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 0, [], []));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<BondEntryConflictResolver>(p => p
+            .Add(x => x.AccountName, "bonds")
+            .Add(x => x.OwnerRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
+            .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1)]));
+
+        await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Existing));
+        await cut.InvokeAsync(cut.Instance.SubmitAsync);
+
+        Assert.DoesNotContain(handler.Requests, r => r.PathAndQuery.Contains("/import/resolve", StringComparison.Ordinal));
+    }
+
+    // An incoming row whose key (day, units, definition) differs from the existing entry of the day, so it is a real conflict.
+    private static BondImportConflict Conflict(DateTime day, decimal units, int bondDetailsId) => new(
+        null, new BondEntryImport(day, units, bondDetailsId, "incoming"),
+        new BondAccountEntry(null, 1, day, 0m, units + 100m, bondDetailsId), "Day already has entries.");
+
+    private static BunitContext CreateContext(RecordingHttpHandler handler)
+    {
+        var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        var http = handler.CreateClient();
+        context.Services.AddSingleton(new BondDetailsHttpClient(http));
+        context.Services.AddSingleton(new BondTransactionsHttpClient(http));
+        context.Services.AddSingleton(new BondAccountImportHttpClient(http));
+        return context;
+    }
+}

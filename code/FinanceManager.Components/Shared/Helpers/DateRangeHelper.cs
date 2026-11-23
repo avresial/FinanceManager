@@ -42,6 +42,14 @@ public static class DateRangeHelper
     public static DateTime? GetExpandedStart(DateTime selectedStart, DateTime? oldestEntry) =>
         oldestEntry is DateTime oldest && oldest < selectedStart ? oldest : null;
 
+    /// <summary>Reads two picker days as local calendar days and returns the UTC instants of the start of the first and the end of the last.</summary>
+    public static (DateTime StartUtc, DateTime EndUtc) LocalDaysToUtc(DateTime startDay, DateTime endDay)
+    {
+        var localStart = DateTime.SpecifyKind(startDay.Date, DateTimeKind.Local);
+        var localEnd = DateTime.SpecifyKind(endDay.Date.AddDays(1).AddTicks(-1), DateTimeKind.Local);
+        return (localStart.ToUniversalTime(), localEnd.ToUniversalTime());
+    }
+
     public static (DateTime Start, DateTime End) GetCurrentMonthRange()
     {
         var month = CalendarMonth.Of(DateTime.UtcNow);

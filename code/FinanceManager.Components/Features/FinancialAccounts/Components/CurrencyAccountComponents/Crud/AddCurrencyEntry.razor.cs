@@ -1,6 +1,8 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -14,6 +16,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Curren
 public partial class AddCurrencyEntry : ComponentBase
 {
     private Currency _currency = DefaultCurrency.PLN;
+    private List<Currency> _currencies = [];
     private bool _success;
     private bool _isAdding;
     private string[] _errors = [];
@@ -31,9 +34,12 @@ public partial class AddCurrencyEntry : ComponentBase
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
+
+    /// <summary>The account to add to. Null adds to the owner's pool of the currency picked in the form (Transactions page).</summary>
+    [Parameter] public CurrencyAccount? CurrencyAccount { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddCurrencyEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -49,6 +55,15 @@ public partial class AddCurrencyEntry : ComponentBase
     }
     protected override async Task OnParametersSetAsync()
     {
+        if (CurrencyAccount is null)
+        {
+            if (_currencies.Count > 0) return;
+            _currencies = [.. (await CurrencyHttpClient.GetAll()).OrderBy(x => x.ShortName)];
+            var preferred = SettingsService.GetCurrency();
+            _currency = _currencies.FirstOrDefault(x => x.Id == preferred.Id) ?? _currencies.FirstOrDefault() ?? preferred;
+            return;
+        }
+
         var currencies = await CurrencyHttpClient.GetAll();
         _currency = currencies.FirstOrDefault(x => x.Id == CurrencyAccount.CurrencyId) ?? SettingsService.GetCurrency();
     }
@@ -87,15 +102,23 @@ public partial class AddCurrencyEntry : ComponentBase
             DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
                 _time.Value.Seconds);
 
-            CurrencyAccountEntry accountEntry = new(CurrencyAccount.AccountId, -1, date, -1, BalanceChange.Value)
-            {
-                Description = Description,
-                ContractorDetails = ContractorDetails,
-                Labels = GetLabels().ToList()
-            };
             try
             {
-                await FinancialAccountService.AddEntry(accountEntry);
+                if (CurrencyAccount is null)
+                {
+                    await CashTransactionsHttpClient.CreateAsync(new CreateCashEntryRequest(
+                        _currency.Id, date, BalanceChange.Value, Description, ContractorDetails, [.. GetLabels().Select(x => x.Id)]));
+                }
+                else
+                {
+                    CurrencyAccountEntry accountEntry = new(CurrencyAccount.AccountId, -1, date, -1, BalanceChange.Value)
+                    {
+                        Description = Description,
+                        ContractorDetails = ContractorDetails,
+                        Labels = GetLabels().ToList()
+                    };
+                    await FinancialAccountService.AddEntry(accountEntry);
+                }
             }
             catch (Exception ex)
             {

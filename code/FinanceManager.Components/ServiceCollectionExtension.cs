@@ -14,6 +14,7 @@ using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.HttpClients;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
@@ -64,6 +65,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<TransactionLogHttpClient>()
                 .AddScoped<CashTransactionsHttpClient>()
                 .AddScoped<BondTransactionsHttpClient>()
+                .AddScoped<InvestmentTradesHttpClient>()
                 .AddScoped<TransactionRuleHttpClient>()
                 .AddScoped<DiversificationHttpClient>()
                 .AddScoped<AdministrationUsersHttpClient>()

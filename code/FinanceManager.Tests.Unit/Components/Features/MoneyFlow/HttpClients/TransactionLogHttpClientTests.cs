@@ -84,12 +84,12 @@ public class TransactionLogHttpClientTests
         Assert.Equal(new TransactionLogCursor(date, TransactionKind.Investment, long.MaxValue), result.NextCursor);
         Assert.Equal([TransactionKind.Cash, TransactionKind.Cash, TransactionKind.Bond, TransactionKind.Investment], result.Items.Select(i => i.Kind));
         var cash = Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[0]);
-        Assert.Equal((7, 10, "Cash EUR", 3), (cash.Account!.UserId, cash.Account.AccountId, cash.Account.Name, cash.Account.CurrencyId));
+        Assert.Equal((10, 3), (cash.LegacyAccountId, cash.Entry.CurrencyId));
         Assert.Equal(("EUR", "Lunch", -10m, "Food"), (cash.Currency, cash.Entry.Description, cash.Entry.ValueChange, cash.Entry.Labels.Single().Name));
-        // Owned entries without a legacy link have no command context.
-        Assert.Null(Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[1]).Account);
+        // Owned entries without a legacy link carry no account.
+        Assert.Null(Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[1]).LegacyAccountId);
         var bond = Assert.IsType<BondTransactionHistoryItem>(result.Items[2]);
-        Assert.Equal((20, "Treasury", 7, "Food"), (bond.Account!.AccountId, bond.Account.Name, bond.Entry.BondDetailsId, bond.Entry.Labels.Single().Name));
+        Assert.Equal((20, "Treasury", 7, "Food"), (bond.LegacyAccountId, bond.BondName, bond.Entry.BondDetailsId, bond.Entry.Labels.Single().Name));
         var trade = Assert.IsType<InvestmentTransactionHistoryItem>(result.Items[3]);
         Assert.Equal((long.MaxValue, "Food"), (trade.EntryId, trade.Transaction.Labels!.Single().Name));
         Assert.Equal(new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc), trade.Date);
