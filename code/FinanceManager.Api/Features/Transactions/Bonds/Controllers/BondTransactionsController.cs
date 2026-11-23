@@ -57,7 +57,7 @@ public class BondTransactionsController(
         if (!await userPlanVerifier.CanAddMoreEntries(ownerId))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        var entry = new BondAccountEntry(null, 0, TransactionLogQuery.AsUtc(request.PostingDate), 0, request.ValueChange, bond.Id)
+        var entry = new BondAccountEntry(null, 0, request.PostingDate, 0, request.ValueChange, bond.Id)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,
@@ -96,7 +96,7 @@ public class BondTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The owner and account link never come from the request.
-        var entry = new BondAccountEntry(existing.AccountId, entryId, TransactionLogQuery.AsUtc(request.PostingDate), existing.Value, request.ValueChange, request.BondDetailsId)
+        var entry = new BondAccountEntry(existing.AccountId, entryId, request.PostingDate, existing.Value, request.ValueChange, request.BondDetailsId)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,

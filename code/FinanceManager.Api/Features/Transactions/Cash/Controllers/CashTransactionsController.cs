@@ -60,7 +60,7 @@ public class CashTransactionsController(
         if (!await userPlanVerifier.CanAddMoreEntries(ownerId))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        var entry = new CurrencyAccountEntry(null, 0, TransactionLogQuery.AsUtc(request.PostingDate), 0, request.ValueChange)
+        var entry = new CurrencyAccountEntry(null, 0, request.PostingDate, 0, request.ValueChange)
         {
             UserId = ownerId,
             CurrencyId = currency.Id,
@@ -98,7 +98,7 @@ public class CashTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The entry keeps its persisted currency, and its owner and account link never come from the request.
-        var entry = new CurrencyAccountEntry(existing.AccountId, entryId, TransactionLogQuery.AsUtc(request.PostingDate), existing.Value, request.ValueChange)
+        var entry = new CurrencyAccountEntry(existing.AccountId, entryId, request.PostingDate, existing.Value, request.ValueChange)
         {
             UserId = ownerId,
             CurrencyId = existing.CurrencyId,
