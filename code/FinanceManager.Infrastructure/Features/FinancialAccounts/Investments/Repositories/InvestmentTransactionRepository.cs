@@ -344,6 +344,50 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return new IInvestmentTransactionRepository.AccountValuationInputs(openingPositions, trades);
     }
 
+    public async Task<IInvestmentTransactionRepository.UserValuationInputs> GetValuationInputsByUser(
+        long userId,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (startDate > endDate) return new IInvestmentTransactionRepository.UserValuationInputs([], []);
+
+        var start = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var end = endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        var openingRows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => x.UserId == userId && x.PostingDate < start)
+            .GroupBy(x => x.AssetListingId)
+            .Select(g => new
+            {
+                AssetListingId = g.Key,
+                Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
+            })
+            .Where(x => x.Quantity != 0m)
+            .ToListAsync(cancellationToken);
+
+        var tradeRows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => x.UserId == userId && x.PostingDate >= start && x.PostingDate <= end)
+            .GroupBy(x => new { x.AssetListingId, x.PostingDate })
+            .Select(g => new
+            {
+                g.Key.AssetListingId,
+                g.Key.PostingDate,
+                SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
+                    ? t.Quantity
+                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
+            })
+            .Where(x => x.SignedQuantity != 0m)
+            .ToListAsync(cancellationToken);
+
+        return new IInvestmentTransactionRepository.UserValuationInputs(
+            [.. openingRows.Select(x => new IInvestmentTransactionRepository.UserValuationOpeningPosition(x.AssetListingId, x.Quantity))],
+            [.. tradeRows.Select(x => new IInvestmentTransactionRepository.UserValuationTradeInput(x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))]);
+    }
+
     public async Task<IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput>> GetCapitalFlowInputs(
         IReadOnlyCollection<int> accountIds,
         DateOnly toDate,

@@ -100,14 +100,15 @@ internal class InvestmentBalanceService(
     {
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
         if (end.Date < start.Date) return [];
+        if (accountIds.Count == 0) return await GetOwnerClosingBalance(userId, currency, start, end);
 
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        var accountIdFilter = accountIds.ToHashSet();
         List<int> investmentAccountIds = [];
 
         await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
         {
             if (account is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
 
             investmentAccountIds.Add(account.AccountId);
         }
@@ -133,6 +134,23 @@ internal class InvestmentBalanceService(
                     values[date.Date] += value;
             }
         }
+
+        return TimeBucketService.Get(values.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
+                                .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
+                                .ToList();
+    }
+
+    // The owner's pooled holdings are valued as one portfolio, so the series does not depend on which account a trade was booked in.
+    private async Task<List<TimeSeriesModel>> GetOwnerClosingBalance(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        var series = await investmentValuationService.GetUserValueSeriesAsync(userId, currency, start.Date, end.Date);
+        if (series.Count == 0) return [];
+
+        // Carry every day in the window so the bucketing picks the right closing point even on days the
+        // valuation service omitted (a day that values to zero is left out of its series).
+        Dictionary<DateTime, decimal> values = [];
+        for (var date = start.Date; date <= end.Date; date = date.AddDays(1))
+            values[date] = series.GetValueOrDefault(date);
 
         return TimeBucketService.Get(values.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))

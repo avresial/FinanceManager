@@ -14,6 +14,7 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
     private readonly Dictionary<int, BondDetails> _details = [];
     private readonly HashSet<int> _requestedIds = [];
     private readonly Dictionary<(int AccountId, long EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value, DateOnly Date), decimal> _prices = [];
+    private readonly Dictionary<(int BondDetailsId, DateOnly AnchorDate, decimal Units, DateOnly Date), decimal> _pooledPrices = [];
 
     /// <summary>
     /// Loads the bond definitions referenced by the accounts (in-range entries plus next-older boundary
@@ -21,12 +22,17 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
     /// references across the dashboard's services costs a single repository round-trip. Missing
     /// definitions are omitted; <see cref="GetDetails"/> keeps the existing throw for them.
     /// </summary>
-    public async Task<IReadOnlyDictionary<int, BondDetails>> LoadReferencedDetailsAsync(
+    public Task<IReadOnlyDictionary<int, BondDetails>> LoadReferencedDetailsAsync(
         IEnumerable<BondAccount> accounts,
+        CancellationToken cancellationToken = default) =>
+        LoadReferencedDetailsAsync(accounts.SelectMany(x => x.GetStoredBondsIds()), cancellationToken);
+
+    /// <summary>Loads the definitions of the given bond ids, with the same once-per-request behaviour as the account overload.</summary>
+    public async Task<IReadOnlyDictionary<int, BondDetails>> LoadReferencedDetailsAsync(
+        IEnumerable<int> bondDetailsIds,
         CancellationToken cancellationToken = default)
     {
-        var missing = accounts
-            .SelectMany(x => x.GetStoredBondsIds())
+        var missing = bondDetailsIds
             .Where(id => !_requestedIds.Contains(id))
             .Distinct()
             .ToList();
@@ -71,6 +77,24 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
             ? entry.GetPriceAt(date, GetDetails(entry.BondDetailsId))
             : calculatePrice();
         _prices[key] = price;
+
+        return price;
+    }
+
+    /// <summary>
+    /// Returns the memoized value of <paramref name="units"/> of a bond accruing from <paramref name="anchorDate"/> on the date, for owner-pooled
+    /// positions. Like the entry overload this is a pure function, so services that value the same pooled position within one request share a computation.
+    /// </summary>
+    public decimal GetOrComputePrice(int bondDetailsId, DateOnly anchorDate, decimal units, DateOnly date, Func<decimal>? calculatePrice = null)
+    {
+        var key = (bondDetailsId, anchorDate, units, date);
+        if (_pooledPrices.TryGetValue(key, out var price))
+            return price;
+
+        price = calculatePrice is null
+            ? date < anchorDate ? 0 : BondAccountEntry.GetPrice(anchorDate, units, date, GetDetails(bondDetailsId)).GetValueOrDefault(date)
+            : calculatePrice();
+        _pooledPrices[key] = price;
 
         return price;
     }

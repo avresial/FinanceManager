@@ -7,10 +7,18 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared;
 
 namespace FinanceManager.Application.FinancialAccounts.Currencies.Balance;
 
-public class CurrencyBalanceService(IFinancialAccountRepository financialAccountRepository) : IBalanceServiceTyped
+/// <remarks>
+/// Without an account filter the balances come from the owner's pooled cash entries; an account filter keeps reading
+/// the account's own entries for the account detail charts.
+/// </remarks>
+public class CurrencyBalanceService(
+    ICashTransactionReader cashTransactionReader,
+    IFinancialAccountRepository financialAccountRepository) : IBalanceServiceTyped
 {
     private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
 
@@ -19,7 +27,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
 
     public async Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
-        var result = await AggregateByDay(userId, start, end, entry => entry.ValueChange > 0, accountIds);
+        var result = await AggregateByDay(userId, start, end, change => change > 0, accountIds);
         return BucketToSeries(result);
     }
 
@@ -28,7 +36,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
 
     public async Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
-        var result = await AggregateByDay(userId, start, end, entry => entry.ValueChange < 0, accountIds);
+        var result = await AggregateByDay(userId, start, end, change => change < 0, accountIds);
         return BucketToSeries(result);
     }
 
@@ -58,12 +66,25 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
         return BucketToClosingBalanceSeries(result);
     }
 
-    private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<CurrencyAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
+    private async Task<Dictionary<DateTime, decimal>> AggregateByDay(int userId, DateTime start, DateTime end, Func<decimal, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var result = InitializeDailyResult(start, end);
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        if (accountIds.Count == 0)
+        {
+            foreach (var point in (await cashTransactionReader.GetValueRange(userId, start, end)).Points)
+            {
+                var day = point.PostingDate.Date;
+                if (day < start.Date || day > end.Date || !predicate(point.ValueChange)) continue;
+
+                result[day] += point.ValueChange;
+            }
+
+            return result;
+        }
+
+        var accountIdFilter = accountIds.ToHashSet();
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
@@ -73,7 +94,7 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
             foreach (var entry in account.Entries)
             {
                 var day = entry.PostingDate.Date;
-                if (day < start.Date || day > end.Date || !predicate(entry)) continue;
+                if (day < start.Date || day > end.Date || !predicate(entry.ValueChange)) continue;
 
                 result[day] += entry.ValueChange;
             }
@@ -87,11 +108,20 @@ public class CurrencyBalanceService(IFinancialAccountRepository financialAccount
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
         var result = InitializeDailyResult(start, end);
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        if (accountIds.Count == 0)
+        {
+            var walk = new OwnerLedgerWalk(await cashTransactionReader.GetValueRange(userId, start, end));
+            foreach (var (day, positions) in walk.EachDayEnd(start, end))
+                result[day] = positions.Sum(p => p.Value);
+
+            return result;
+        }
+
+        var accountIdFilter = accountIds.ToHashSet();
 
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
 
             var orderedEntries = account.Entries.OrderBy(entry => entry.PostingDate).ThenBy(entry => entry.EntryId).ToList();
             var runningBalance = account.NextOlderEntry?.Value ?? 0;

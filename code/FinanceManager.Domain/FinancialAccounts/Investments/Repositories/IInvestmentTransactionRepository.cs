@@ -118,6 +118,21 @@ public interface IInvestmentTransactionRepository
     /// </summary>
     Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Owner-wide counterpart of <see cref="GetValuationInputs(IReadOnlyCollection{int}, DateOnly, DateOnly, CancellationToken)"/>:
+    /// opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas in the window, pooled per listing across
+    /// all of the owner's trades (linked to an account or not). Positions and days that net to zero are omitted.
+    /// </summary>
+    Task<UserValuationInputs> GetValuationInputsByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+
+    public sealed record UserValuationOpeningPosition(long AssetListingId, decimal Quantity);
+
+    public sealed record UserValuationTradeInput(long AssetListingId, DateOnly TradeDate, decimal SignedQuantity);
+
+    public sealed record UserValuationInputs(
+        IReadOnlyList<UserValuationOpeningPosition> OpeningPositions,
+        IReadOnlyList<UserValuationTradeInput> InWindowTrades);
+
     public sealed record ValuationTradeInput(
         int AccountId,
         long AssetListingId,

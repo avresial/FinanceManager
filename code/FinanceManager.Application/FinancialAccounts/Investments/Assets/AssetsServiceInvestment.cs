@@ -1,6 +1,7 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -13,11 +14,11 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 namespace FinanceManager.Application.FinancialAccounts.Investments.Assets;
 
 /// <summary>
-/// Surfaces investment accounts (the new asset model) to the dashboard asset aggregates, and provides
+/// Surfaces the user's pooled investment holdings (the new asset model) to the dashboard asset aggregates, and provides
 /// account-scoped appreciation for account-detail views. Replaces the legacy <c>AssetsServiceStock</c>:
-/// holdings come from <see cref="InvestmentTransaction"/> rows and are priced through
-/// <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/> rather than
-/// per-ticker <c>StockAccountEntry</c> values.
+/// holdings come from <see cref="InvestmentTransaction"/> rows pooled per listing across the owner's trades, whether or not a trade is
+/// linked to an account, and are priced through <see cref="IInvestmentValuationService"/> / <see cref="IInvestmentPriceProvider"/>.
+/// Unrealized gain/loss still reads account trades until the portfolio step.
 /// </summary>
 internal class AssetsServiceInvestment(
     IFinancialAccountRepository financialAccountRepository,
@@ -27,44 +28,20 @@ internal class AssetsServiceInvestment(
     IInvestmentPriceProvider priceProvider,
     ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped, IInvestmentAppreciationService
 {
-    public async Task<bool> IsAnyAccountWithAssets(int userId)
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var now = DateTime.UtcNow;
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, now.AddDays(-1), now))
-        {
-            var holdings = await valuationService.GetHoldingsAsOfAsync(account.AccountId, today);
-            if (holdings.Count > 0)
-                return true;
-        }
-
-        return false;
-    }
+    // Legacy parity: any non-zero holding counts, including an oversold (negative) one.
+    public async Task<bool> IsAnyAccountWithAssets(int userId) =>
+        (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0;
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == default) return [];
 
-        List<int> accountIds = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
-            accountIds.Add(account.AccountId);
-
-        Dictionary<DateTime, decimal> values = [];
-        var seriesByAccount = await valuationService.GetAccountValueSeriesAsync(accountIds, currency, start, end);
-        foreach (var series in seriesByAccount.Values)
-        {
-            foreach (var (date, value) in series)
-            {
-                if (!values.TryAdd(date, value))
-                    values[date] += value;
-            }
-        }
-
-        return values.Select(x => new TimeSeriesModel(x.Key, x.Value)).ToList();
+        var series = await valuationService.GetUserValueSeriesAsync(userId, currency, start, end);
+        return [.. series.Select(x => new TimeSeriesModel(x.Key, x.Value))];
     }
 
-    // Investment accounts hold equities/ETFs, classified under the Stock investment type. Other types
+    // Investments hold equities/ETFs, classified under the Stock investment type. Other types
     // contribute nothing here so the per-type breakdown does not double count against bonds/cash.
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end, InvestmentType investmentType)
     {
@@ -75,54 +52,50 @@ internal class AssetsServiceInvestment(
     public async Task<AssetsDistributionResult> GetEndAssetsDistribution(
         int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
-        var (accounts, values) = await GetEndValues(userId, currency, asOfDate, cancellationToken);
-        return new(GetPerType(values).ToList(), GetPerAccount(accounts, values).ToList());
+        var values = await valuationService.GetUserValueByListingAsync(userId, currency, asOfDate, cancellationToken);
+        if (values.Count == 0) return new([], []);
+
+        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOfDate), cancellationToken);
+        return new(GetPerType(values).ToList(), GetPerListing(values, holdings).ToList());
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        var (accounts, values) = await GetEndValues(userId, currency, asOfDate);
-        foreach (var row in GetPerAccount(accounts, values))
+        foreach (var row in (await GetEndAssetsDistribution(userId, currency, asOfDate)).PerAccount)
             yield return row;
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerType(int userId, Currency currency, DateTime asOfDate)
     {
-        var (_, values) = await GetEndValues(userId, currency, asOfDate);
-        foreach (var row in GetPerType(values))
+        foreach (var row in (await GetEndAssetsDistribution(userId, currency, asOfDate)).PerType)
             yield return row;
     }
 
-    private async Task<(List<(int AccountId, string Name)> Accounts, IReadOnlyDictionary<int, decimal> Values)> GetEndValues(
-        int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
-    {
-        // Copy identity/metadata before valuation; no mutable account entity survives this read.
-        List<(int AccountId, string Name)> accounts = [];
-        await foreach (var account in financialAccountRepository
-            .GetAccounts<InvestmentAccount>(userId, asOfDate.AddMinutes(-1), asOfDate)
-            .WithCancellation(cancellationToken))
-            accounts.Add((account.AccountId, account.Name));
-
-        var values = await valuationService.GetAccountValueAsync(
-            accounts.Select(a => a.AccountId).ToList(), currency, asOfDate, cancellationToken);
-        return (accounts, values);
-    }
-
-    private static IEnumerable<NameValueResult> GetPerAccount(
-        List<(int AccountId, string Name)> accounts, IReadOnlyDictionary<int, decimal> values)
-    {
-        foreach (var account in accounts)
-        {
-            if (values.TryGetValue(account.AccountId, out var value) && value > 0)
-                yield return new NameValueResult(account.Name, value) { AccountId = account.AccountId };
-        }
-    }
-
-    private static IEnumerable<NameValueResult> GetPerType(IReadOnlyDictionary<int, decimal> values)
+    private static IEnumerable<NameValueResult> GetPerType(IReadOnlyDictionary<long, decimal> values)
     {
         var total = values.Values.Sum();
         if (total > 0)
             yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
+    }
+
+    // One row per held listing, named by ticker. Two held listings that share a ticker also show their exchange so the rows stay distinguishable.
+    private static IEnumerable<NameValueResult> GetPerListing(IReadOnlyDictionary<long, decimal> values, IReadOnlyList<InvestmentHolding> holdings)
+    {
+        var listings = holdings.ToDictionary(h => h.AssetListingId);
+        var tickerCounts = values.Keys
+            .Select(id => listings.TryGetValue(id, out var holding) ? holding.Ticker : null)
+            .Where(ticker => ticker is not null)
+            .GroupBy(ticker => ticker!)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        foreach (var (listingId, value) in values.Where(x => x.Value > 0))
+        {
+            var name = $"Listing {listingId}";
+            if (listings.TryGetValue(listingId, out var holding))
+                name = tickerCounts[holding.Ticker] > 1 ? $"{holding.Ticker} ({holding.ExchangeName})" : holding.Ticker;
+
+            yield return new NameValueResult(name, value);
+        }
     }
 
     public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)

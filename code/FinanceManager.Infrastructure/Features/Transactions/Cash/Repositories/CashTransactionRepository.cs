@@ -1,7 +1,9 @@
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
+using FinanceManager.Infrastructure.Features.Transactions.Shared;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,4 +62,31 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         var currencyIds = context.CurrencyEntries.Where(e => e.UserId == userId && e.CurrencyId != null).Select(e => e.CurrencyId);
         return await context.Currencies.AsNoTracking().Where(c => currencyIds.Contains(c.Id)).Select(c => c.ShortName).Distinct().ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<OwnerLedgerPosition>> GetPositions(int userId, DateTime asOf, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var asOfUtc = OwnerLedgerTimestamps.ToUtc(asOf);
+        return await Positions(OwnerEntries(userId).Where(e => e.PostingDate <= asOfUtc)).ToListAsync(ct);
+    }
+
+    public async Task<OwnerLedgerRange> GetValueRange(int userId, DateTime start, DateTime end, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (end < start) return OwnerLedgerRange.Empty;
+        var startUtc = OwnerLedgerTimestamps.ToUtc(start);
+        var endUtc = OwnerLedgerTimestamps.ToUtc(end);
+
+        // Two plain sequential reads: the grouped balance before the range, then the range's deltas.
+        var opening = await Positions(OwnerEntries(userId).Where(e => e.PostingDate < startUtc)).ToListAsync(ct);
+        var points = await OwnerEntries(userId).Where(e => e.PostingDate >= startUtc && e.PostingDate <= endUtc)
+            .OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId)
+            .Select(e => new OwnerLedgerPoint(e.CurrencyId!.Value, e.EntryId, e.PostingDate, e.ValueChange)).ToListAsync(ct);
+        return new OwnerLedgerRange(opening, points);
+    }
+
+    private IQueryable<CurrencyAccountEntry> OwnerEntries(int userId) => context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && e.CurrencyId != null);
+
+    private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<CurrencyAccountEntry> entries) =>
+        entries.GroupBy(e => e.CurrencyId!.Value).Select(g => new OwnerLedgerPosition(g.Key, g.Sum(e => e.ValueChange), g.Max(e => e.PostingDate)));
 }

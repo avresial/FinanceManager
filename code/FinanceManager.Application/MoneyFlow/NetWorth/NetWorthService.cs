@@ -1,143 +1,70 @@
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared;
 
 namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
+/// <summary>
+/// Net worth of the owner's pooled transactions: cash per currency (native sum, as before), bonds per definition and
+/// investments per listing, whether or not an entry is linked to an account.
+/// </summary>
 public class NetWorthService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
+    IBondTransactionReader bondTransactionReader,
     BondDashboardContext bondDashboardContext,
     IInvestmentValuationService investmentValuationService) : INetWorthService
 {
     public async Task<decimal?> GetNetWorth(int userId, Currency currency, DateTime date)
     {
-        if (date > DateTime.UtcNow) date = DateTime.UtcNow;
-        decimal result = 0;
+        date = DashboardReadCutoff.Clamp(date, DateTime.UtcNow);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, date.Date, date))
-        {
-            var newestEntry = account.GetThisOrNextOlder(date);
-            if (newestEntry is null) continue;
+        var cash = (await cashTransactionReader.GetPositions(userId, date)).Sum(p => p.Value);
 
-            result += newestEntry.Value;
-        }
-
-        List<BondAccount> bondAccounts = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, date.Date, date))
-            bondAccounts.Add(account);
-
-        // Only the definitions the accounts actually reference are loaded (detached, no-tracking),
+        // Only the definitions the held bonds actually reference are loaded (detached, no-tracking),
         // and prices memoize in the request-scoped context so the dashboard's other bond paths reuse them.
-        await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
+        var bondPositions = await bondTransactionReader.GetPositions(userId, date);
+        await PooledBondValuation.LoadDetailsAsync(bondDashboardContext, bondPositions);
+        var priceDate = DateOnly.FromDateTime(date);
+        var bondValuation = new PooledBondValuation(bondDashboardContext, priceDate);
+        var bonds = bondPositions.Sum(p => bondValuation.ValueOn(p, priceDate));
 
-        foreach (var account in bondAccounts)
-        {
-            foreach (var detailsId in account.GetStoredBondsIds())
-            {
-                var newestEntry = account.GetThisOrNextOlder(date, detailsId);
-                if (newestEntry is null) continue;
+        var investments = (await investmentValuationService.GetUserValueByListingAsync(userId, currency, date)).Values.Sum();
 
-                result += bondDashboardContext.GetOrComputePrice(account.AccountId, newestEntry, DateOnly.FromDateTime(date));
-            }
-        }
-
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, date.Date, date))
-            result += await investmentValuationService.GetAccountValueAsync(account.AccountId, currency, date);
-
-        return Math.Round(result, 2);
+        return Math.Round(cash + bonds + investments, 2);
     }
+
     public async Task<Dictionary<DateTime, decimal>> GetNetWorth(int userId, Currency currency, DateTime start, DateTime end)
     {
         if (start == new DateTime()) return [];
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
+        var cashWalk = new OwnerLedgerWalk(await cashTransactionReader.GetValueRange(userId, start, end));
+        var bondWalk = new OwnerLedgerWalk(await bondTransactionReader.GetValueRange(userId, start, end));
+        await PooledBondValuation.LoadDetailsAsync(bondDashboardContext, bondWalk);
+
+        // One batched call prices each distinct listing once across all of the owner's trades,
+        // rather than a per-day round-trip on the shared AppDbContext (which EF Core cannot service concurrently anyway).
+        var investmentValues = await investmentValuationService.GetUserValueSeriesAsync(userId, currency, start.Date, end.Date);
+
+        // Each distinct bond (anchor, units) combination is accrued once through the range end and read per day.
+        var bondValuation = new PooledBondValuation(bondDashboardContext, DateOnly.FromDateTime(end));
+
         Dictionary<DateTime, decimal> result = [];
-
-        List<CurrencyAccount> currencyAccounts = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
-            currencyAccounts.Add(account);
-
-        List<BondAccount> bondAccounts = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
-            bondAccounts.Add(account);
-
-        await bondDashboardContext.LoadReferencedDetailsAsync(bondAccounts);
-
-        // The loaded accounts do not change during the daily loop, so each account's ids are built once.
-        var bondIdsByAccount = bondAccounts
-            .Select(account => (Account: account, BondIds: account.GetStoredBondsIds()))
-            .ToList();
-
-        List<InvestmentAccount> investmentAccounts = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, start, end))
-            investmentAccounts.Add(account);
-
-        // Investment accounts (new asset model) value per account/day through the valuation service.
-        // One batched call issues a single transactions query for all accounts and prices each
-        // distinct listing once across them, rather than a per-account round-trip on the shared
-        // AppDbContext (which EF Core cannot service concurrently anyway).
-        var investmentValuesByAccount = await investmentValuationService.GetAccountValueSeriesAsync(
-            investmentAccounts.Select(a => a.AccountId).ToList(), currency, start.Date, end.Date);
-
-        // Loaded entry/definition snapshots are stable throughout this synchronous loop. Histories
-        // belong only to this invocation. Descending dates prepare each selected entry through its
-        // latest selected day (at most the request end), without pricing superseded future days.
-        // No repository calls or mutable histories are shared across operations/requests.
-        var bondHistories = new Dictionary<BondAccountEntry, Dictionary<DateOnly, decimal>>(ReferenceEqualityComparer.Instance);
-
-        for (DateTime date = end; date >= start; date = date.AddDays(-1))
+        for (var instant = end; instant >= start; instant = instant.AddDays(-1))
         {
-            decimal dailyTotal = 0;
-
-            foreach (var account in currencyAccounts)
-            {
-                var entry = account.GetThisOrNextOlder(date);
-                if (entry is null) continue;
-                dailyTotal += entry.Value;
-            }
-
-            foreach (var (account, bondIds) in bondIdsByAccount)
-            {
-                foreach (var detailsId in bondIds)
-                {
-                    var entry = account.GetThisOrNextOlder(date, detailsId);
-                    if (entry is null) continue;
-                    var priceDate = DateOnly.FromDateTime(date);
-                    dailyTotal += bondDashboardContext.GetOrComputePrice(account.AccountId, entry, priceDate, () =>
-                    {
-                        if (!bondHistories.TryGetValue(entry, out var history))
-                        {
-                            var details = bondDashboardContext.GetDetails(entry.BondDetailsId);
-                            if (priceDate < DateOnly.FromDateTime(entry.PostingDate)) return 0;
-                            history = entry.GetPrice(priceDate, details);
-                            bondHistories.Add(entry, history);
-                        }
-                        return history.GetValueOrDefault(priceDate);
-                    });
-                }
-            }
-
-            foreach (var account in investmentAccounts)
-            {
-                if (investmentValuesByAccount.TryGetValue(account.AccountId, out var investmentSeries)
-                    && investmentSeries.TryGetValue(date.Date, out var investmentValue))
-                {
-                    dailyTotal += investmentValue;
-                }
-            }
+            var priceDate = DateOnly.FromDateTime(instant);
+            var dailyTotal = cashWalk.At(instant).Sum(p => p.Value)
+                + bondWalk.At(instant).Sum(p => bondValuation.ValueOn(p, priceDate))
+                + investmentValues.GetValueOrDefault(instant.Date);
 
             // Valued at the walk-back instant (so today includes today's entries) but keyed by
             // calendar day, so the series shares the day grid of the other dashboard series.
-            result.Add(date.Date, Math.Round(dailyTotal, 2));
+            result.Add(instant.Date, Math.Round(dailyTotal, 2));
         }
         return result;
     }

@@ -10,10 +10,17 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Shared;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Balance;
 
+/// <remarks>
+/// Without an account filter the balances come from the owner's pooled bond entries (units per bond definition, accruing
+/// from the latest pooled entry); an account filter keeps reading the account's own entries for the bond account page.
+/// </remarks>
 internal class BondBalanceService(
+    IBondTransactionReader bondTransactionReader,
     IFinancialAccountRepository financialAccountRepository,
     BondDashboardContext bondDashboardContext,
     ICurrencyExchangeService currencyExchangeService) : IBalanceServiceTyped
@@ -22,13 +29,13 @@ internal class BondBalanceService(
         GetInflow(userId, currency, start, end, []);
 
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        AggregateByDay(userId, start, end, entry => entry.ValueChange > 0, accountIds);
+        AggregateByDay(userId, start, end, change => change > 0, accountIds);
 
     public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end) =>
         GetOutflow(userId, currency, start, end, []);
 
     public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        AggregateByDay(userId, start, end, entry => entry.ValueChange < 0, accountIds);
+        AggregateByDay(userId, start, end, change => change < 0, accountIds);
 
     public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end) =>
         GetNetCashFlow(userId, currency, start, end, []);
@@ -43,8 +50,9 @@ internal class BondBalanceService(
     {
         if (end > DateTime.UtcNow) end = DateTime.UtcNow;
         if (start == default || end == default || end.Date < start.Date) return [];
+        if (accountIds.Count == 0) return await GetOwnerCapital(userId, currency, start, end);
 
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        var accountIdFilter = accountIds.ToHashSet();
         List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
@@ -94,6 +102,32 @@ internal class BondBalanceService(
             }
         }
 
+        return await BucketCapital(flows, currency, start, end);
+    }
+
+    // Capital is what the user put in: the units already held before the range count on its first day, then each entry's unit movement.
+    // Interest changes the pooled value through bond pricing and never changes contributed capital.
+    private async Task<List<TimeSeriesModel>> GetOwnerCapital(int userId, Currency currency, DateTime start, DateTime end)
+    {
+        var range = await bondTransactionReader.GetValueRange(userId, start, end);
+        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(
+            range.Opening.Select(p => p.PartitionId).Concat(range.Points.Select(p => p.PartitionId)));
+
+        BondDetails GetDetails(int bondDetailsId) => bondDetails.TryGetValue(bondDetailsId, out var details)
+            ? details
+            : throw new InvalidOperationException($"Bond capital requires details for bond id {bondDetailsId}.");
+
+        List<BondCapitalFlow> flows =
+        [
+            .. range.Opening.Select(p => new BondCapitalFlow(start.Date, p.Value * GetDetails(p.PartitionId).UnitValue, GetDetails(p.PartitionId).Currency)),
+            .. range.Points.Select(p => new BondCapitalFlow(p.PostingDate.Date, p.ValueChange * GetDetails(p.PartitionId).UnitValue, GetDetails(p.PartitionId).Currency)),
+        ];
+
+        return await BucketCapital(flows, currency, start, end);
+    }
+
+    private async Task<List<TimeSeriesModel>> BucketCapital(List<BondCapitalFlow> flows, Currency currency, DateTime start, DateTime end)
+    {
         if (flows.Count == 0) return [];
 
         var ratesByCurrency = new Dictionary<string, IReadOnlyDictionary<DateTime, decimal>>(StringComparer.OrdinalIgnoreCase);
@@ -136,13 +170,14 @@ internal class BondBalanceService(
     public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
     {
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
+        if (accountIds.Count == 0) return await GetOwnerClosingBalance(userId, start, end);
 
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        var accountIdFilter = accountIds.ToHashSet();
         List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
             bondAccounts.Add(account);
         }
 
@@ -172,16 +207,34 @@ internal class BondBalanceService(
                                  .ToList();
     }
 
-    private async Task<List<TimeSeriesModel>> AggregateByDay(int userId, DateTime start, DateTime end, Func<BondAccountEntry, bool> predicate, IReadOnlyCollection<int> accountIds)
+    private async Task<List<TimeSeriesModel>> GetOwnerClosingBalance(int userId, DateTime start, DateTime end)
+    {
+        var walk = new OwnerLedgerWalk(await bondTransactionReader.GetValueRange(userId, start, end));
+        if (walk.IsEmpty) return [];
+
+        await PooledBondValuation.LoadDetailsAsync(bondDashboardContext, walk);
+        var valuation = new PooledBondValuation(bondDashboardContext, DateOnly.FromDateTime(end));
+
+        // Every day carries an explicit value so a bond sold to zero does not keep yesterday's balance.
+        var prices = walk.EachDayEnd(start, end).Select(day =>
+            (day.Day, Value: day.Positions.Sum(p => valuation.ValueOn(p, DateOnly.FromDateTime(day.Day)))));
+
+        return TimeBucketService.Get(prices)
+                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Last()))
+                                 .ToList();
+    }
+
+    private async Task<List<TimeSeriesModel>> AggregateByDay(int userId, DateTime start, DateTime end, Func<decimal, bool> predicate, IReadOnlyCollection<int> accountIds)
     {
         end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
+        if (accountIds.Count == 0) return await AggregateOwnerByDay(userId, start, end, predicate);
 
-        var accountIdFilter = accountIds.Count > 0 ? accountIds.ToHashSet() : [];
+        var accountIdFilter = accountIds.ToHashSet();
         List<BondAccount> bondAccounts = [];
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account?.Entries is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
             bondAccounts.Add(account);
         }
 
@@ -193,7 +246,7 @@ internal class BondBalanceService(
             foreach (var entry in account.Entries)
             {
                 if (entry.PostingDate.Date < start.Date || entry.PostingDate.Date > end.Date) continue;
-                if (!predicate(entry)) continue;
+                if (!predicate(entry.ValueChange)) continue;
                 if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
                     throw new InvalidOperationException($"Bond valuation requires details for bond id {entry.BondDetailsId}.");
 
@@ -202,6 +255,28 @@ internal class BondBalanceService(
 
                 result[entry.PostingDate.Date] += entry.ValueChange >= 0 ? priceAtDate : -Math.Abs(priceAtDate);
             }
+        }
+
+        return TimeBucketService.Get(result.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))
+                                 .Select(bucket => new TimeSeriesModel(bucket.Date, bucket.Objects.Sum()))
+                                 .ToList();
+    }
+
+    private async Task<List<TimeSeriesModel>> AggregateOwnerByDay(int userId, DateTime start, DateTime end, Func<decimal, bool> predicate)
+    {
+        var points = (await bondTransactionReader.GetValueRange(userId, start, end)).Points
+            .Where(p => p.PostingDate.Date >= start.Date && p.PostingDate.Date <= end.Date && predicate(p.ValueChange))
+            .ToList();
+        var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(points.Select(p => p.PartitionId));
+
+        Dictionary<DateTime, decimal> result = [];
+        foreach (var point in points)
+        {
+            if (!bondDetails.TryGetValue(point.PartitionId, out var details))
+                throw new InvalidOperationException($"Bond valuation requires details for bond id {point.PartitionId}.");
+
+            var priceAtDate = point.ValueChange * details.UnitValue;
+            result[point.PostingDate.Date] = result.GetValueOrDefault(point.PostingDate.Date) + (point.ValueChange >= 0 ? priceAtDate : -Math.Abs(priceAtDate));
         }
 
         return TimeBucketService.Get(result.OrderBy(x => x.Key).Select(x => (x.Key, x.Value)))

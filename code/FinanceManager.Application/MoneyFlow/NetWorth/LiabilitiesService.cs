@@ -1,138 +1,64 @@
-﻿using FinanceManager.Application.Shared;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Application.Dashboard;
+using FinanceManager.Application.Shared;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared;
 
 namespace FinanceManager.Application.MoneyFlow.NetWorth;
 
-public class LiabilitiesService(IFinancialAccountRepository financialAccountService) : ILiabilitiesService
+/// <summary>
+/// Liabilities are the pooled cash balances that are negative: all of a user's cash entries in one currency net against each
+/// other, whatever account they belong to, and a currency whose net balance is below zero is a liability in that currency.
+/// </summary>
+public class LiabilitiesService(ICashTransactionReader cashTransactionReader, ICurrencyRepository currencyRepository) : ILiabilitiesService
 {
-    public async Task<bool> IsAnyAccountWithLiabilities(int userId)
-    {
-        var currencyAccounts = financialAccountService.GetAccounts<CurrencyAccount>(userId, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow);
-        await foreach (var currencyAccount in currencyAccounts)
-        {
-            if (currencyAccount.Entries is not null && currencyAccount.Entries.Count > 0)
-            {
-                var youngestEntry = currencyAccount.Entries.FirstOrDefault();
-                if (youngestEntry is not null && youngestEntry.Value < 0)
-                    return true;
-            }
-            else if (currencyAccount.NextOlderEntry is not null && currencyAccount.NextOlderEntry.Value < 0)
-            {
-                return true;
-            }
-        }
+    public async Task<bool> IsAnyAccountWithLiabilities(int userId) =>
+        (await cashTransactionReader.GetPositions(userId, DateTime.UtcNow)).Any(p => p.Value < 0m);
 
-        return await Task.FromResult(false);
-    }
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerAccount(int userId, DateTime start, DateTime end)
     {
-        await foreach (CurrencyAccount account in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end))
-        {
-            if (account is null || account.Entries is null) continue;
-            var entry = account.Entries.FirstOrDefault();
+        var liabilities = (await cashTransactionReader.GetPositions(userId, end)).Where(p => p.Value < 0m).ToList();
+        if (liabilities.Count == 0) yield break;
 
-            if (entry is null)
-            {
-                if (account.NextOlderEntry is null) continue;
-
-                entry = account.NextOlderEntry;
-            }
-
-            if (entry.Value > 0) continue;
-
+        var names = await GetCurrencyNames();
+        foreach (var liability in liabilities)
             yield return new NameValueResult()
             {
-                Name = account.Name,
-                Value = entry.Value,
-                AccountId = account.AccountId
+                Name = names.GetValueOrDefault(liability.PartitionId) ?? $"Currency {liability.PartitionId}",
+                Value = liability.Value,
+                AccountId = null
             };
-        }
     }
+
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        await foreach (var accounts in financialAccountService.GetAccounts<CurrencyAccount>(userId, end, end).GroupBy(x => x.AccountType))
-        {
-            NameValueResult? result = null;
-            foreach (var account in accounts)
-            {
-                if (account is null || account.Entries is null) continue;
-                var entry = account.Entries.FirstOrDefault();
-
-                if (entry is null)
-                {
-                    if (account.NextOlderEntry is null) continue;
-
-                    entry = account.NextOlderEntry;
-                }
-
-                if (entry.Value > 0) continue;
-
-
-                if (result is null)
-                {
-                    result = new()
-                    {
-                        Name = account.AccountType.ToString(),
-                        Value = entry.Value
-                    };
-                }
-                else
-                {
-                    result.Value += entry.Value;
-                }
-            }
-            if (result is not null)
-                yield return result;
-        }
+        var total = (await cashTransactionReader.GetPositions(userId, end)).Where(p => p.Value < 0m).Sum(p => p.Value);
+        if (total < 0m)
+            yield return new NameValueResult() { Name = "Cash", Value = total, AccountId = null };
     }
+
     public async IAsyncEnumerable<TimeSeriesModel> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)
     {
         if (start == new DateTime()) yield break;
+        end = DashboardReadCutoff.Clamp(end, DateTime.UtcNow);
 
+        var walk = new OwnerLedgerWalk(await cashTransactionReader.GetValueRange(userId, start, end));
         Dictionary<DateTime, decimal> prices = [];
-        TimeSpan step = new(1, 0, 0, 0);
+        foreach (var (day, positions) in walk.EachDayEnd(start, end))
+            prices[day] = positions.Where(p => p.Value < 0m).Sum(p => p.Value);
 
-        await foreach (var account in financialAccountService.GetAccounts<CurrencyAccount>(
-            userId, start, end, includeEntryMetadata: false))
-        {
-            if (account is null || account.Entries is null) continue;
-
-            decimal previousValue = 0;
-
-            if (account.Entries.Count != 0 && account.Entries.Last().PostingDate.Date == start.Date)
-                previousValue = account.Entries.Last().Value - account.Entries.Last().ValueChange;
-            else if (account.NextOlderEntry is not null)
-                previousValue = account.NextOlderEntry.Value;
-
-            if (previousValue > 0) continue;
-
-            for (var date = start; date <= end; date = date.Add(step))
-            {
-                if (!prices.ContainsKey(date)) prices.Add(date, 0);
-
-                var newestEntry = account.Get(date).OrderByDescending(x => x.PostingDate).FirstOrDefault();
-                if (newestEntry is null)
-                {
-                    prices[date] += previousValue;
-                    continue;
-                }
-
-                if (newestEntry.Value > 0) break;
-
-                prices[date] += newestEntry.Value;
-                previousValue = prices[date];
-            }
-        }
+        if (prices.Values.All(value => value == 0m)) yield break;
 
         var timeBucket = TimeBucketService.Get(prices.Select(x => (x.Key, x.Value))).OrderByDescending(x => x.Date);
 
         foreach (var price in timeBucket.Select(x => new TimeSeriesModel() { DateTime = x.Date, Value = x.Objects.Last() }))
             yield return price;
     }
+
+    private async Task<Dictionary<int, string>> GetCurrencyNames() =>
+        await currencyRepository.GetCurrencies().ToDictionaryAsync(currency => currency.Id, currency => currency.ShortName);
 }
