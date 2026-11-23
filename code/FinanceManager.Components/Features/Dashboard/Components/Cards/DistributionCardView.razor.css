@@ -227,3 +227,12 @@
         gap: 6px;
     }
 }
+
+/* One line under the header: the "Includes EUR, not converted" chip, or the caption of a mixed-currency view. */
+.fm-distribution-note {
+    padding: 0 16px 4px;
+}
+
+.fm-distribution-note .fm-unconverted-chip {
+    margin-left: 0;
+}

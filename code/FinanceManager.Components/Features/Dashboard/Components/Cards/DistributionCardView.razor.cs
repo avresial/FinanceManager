@@ -20,6 +20,10 @@ public partial class DistributionCardView
     private int? _activeIndex;
     private int? _selectedIndex;
     private bool _otherExpanded;
+    // The detail view lists amounts in more than one currency, so no total, share or donut is meaningful.
+    private bool _mixedCurrencies;
+    // Currencies other than the card's whose cash or bond amounts the type view adds up unconverted.
+    private IReadOnlyList<string> _foreignCodes = [];
     private ApexChart<DistributionSlice>? _chart;
     private ApexChartOptions<DistributionSlice> _chartOptions = new();
 
@@ -45,27 +49,44 @@ public partial class DistributionCardView
     // A single category would render as a one-slice donut that carries no information, so the card shows only its summary row.
     private bool IsSingleCategory => _slices.Count == 1;
 
+    // Without a chart the card is just its legend: a single category or amounts that cannot share one donut.
+    private bool LegendOnly => IsSingleCategory || _mixedCurrencies;
+
+    private string Money(decimal value, string? currencyCode) => MoneyFormatter.Format(value, currencyCode ?? CurrencyShortName);
+
     private decimal Total => Math.Round(_slices.Sum(x => x.Value), 2);
 
     protected override void OnParametersSet() => BuildSlices();
 
-    private Task OnViewChangedAsync(string view)
+    private async Task OnViewChangedAsync(string view)
     {
         _view = view;
+        // Paint the toggle's new selection before the (heavier) chart rebuild, so the highlight never waits on the chart.
+        StateHasChanged();
+        await Task.Yield();
         BuildSlices();
         StateHasChanged();
-        return Task.CompletedTask;
     }
+
+    private bool IsOwnCurrency(string? code) => code is null || string.Equals(code, CurrencyShortName, StringComparison.OrdinalIgnoreCase);
 
     private void BuildSlices()
     {
-        var slices = DistributionSlices.Build(IsAccountView ? AccountData : TypeData);
+        var data = IsAccountView ? AccountData : TypeData;
+        _mixedCurrencies = IsAccountView
+            && data.Where(x => x.Value > 0).Select(x => (x.CurrencyCode ?? CurrencyShortName).ToUpperInvariant()).Distinct().Skip(1).Any();
+        _foreignCodes = [.. AccountData
+            .Where(x => x.Value > 0 && !IsOwnCurrency(x.CurrencyCode))
+            .Select(x => x.CurrencyCode!.ToUpperInvariant())
+            .Distinct()
+            .Order()];
+        var slices = DistributionSlices.Build(data, groupOther: !_mixedCurrencies);
 
         // Recreate the chart whenever the slices, their colours or the currency change, instead of patching
         // a live chart: ApexCharts reads colours from the options only when it is created. Unchanged input keeps
         // the same list so a parent re-render does not push a series update into the chart.
-        var key = string.Join('|', slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}:{x.AccountId}:{x.Members.Count}"))
-            + $"|{CurrencyShortName}";
+        var key = string.Join('|', slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}:{x.AccountId}:{x.Members.Count}:{x.CurrencyCode}"))
+            + $"|{CurrencyShortName}|{string.Join(',', _foreignCodes)}|{_mixedCurrencies}";
         if (key == _chartKey) return;
 
         _slices = slices;
@@ -102,8 +123,15 @@ public partial class DistributionCardView
         };
     }
 
-    private string? LinkHref(DistributionSlice slice) =>
-        IsAccountView && slice.AccountId is int accountId ? $"/AccountDetails/{accountId}" : null;
+    // Each holding links to its transactions: stocks and bonds by name, cash by currency.
+    private string? LinkHref(DistributionSlice slice)
+    {
+        if (!IsAccountView || slice.IsOther) return null;
+        if (slice.AccountId is int accountId) return $"/AccountDetails/{accountId}";
+        if (slice.CurrencyCode is string code && slice.Kind is null or "Cash") return $"/Transactions?currency={Uri.EscapeDataString(code)}";
+        if (slice.Kind is "Stock" or "Bond" && slice.SourceName is string name) return $"/Transactions?search={Uri.EscapeDataString(name)}";
+        return null;
+    }
 
     private static string BarStyle(DistributionSlice slice) =>
         $"width:{slice.Percent.ToString("0.#", CultureInfo.InvariantCulture)}%;background:{slice.Color}";
@@ -136,7 +164,7 @@ public partial class DistributionCardView
 
     private async Task ToggleSliceAsync(int index)
     {
-        if (_chart is not null && !IsSingleCategory)
+        if (_chart is not null && !LegendOnly)
             // Pie and donut charts address each slice as its own series.
             await _chart.ToggleDataPointSelectionAsync(index, null);
     }

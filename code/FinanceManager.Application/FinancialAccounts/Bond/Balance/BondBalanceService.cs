@@ -57,7 +57,7 @@ internal class BondBalanceService(
         await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, start, end))
         {
             if (account is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
             bondAccounts.Add(account);
         }
 
@@ -110,8 +110,10 @@ internal class BondBalanceService(
     private async Task<List<TimeSeriesModel>> GetOwnerCapital(int userId, Currency currency, DateTime start, DateTime end)
     {
         var range = await bondTransactionReader.GetValueRange(userId, start, end);
+        // A bond bought and fully sold before the range has a zero-unit opening: it neither needs its definition nor contributes capital.
+        var opening = range.Opening.Where(p => p.Value != 0m).ToList();
         var bondDetails = await bondDashboardContext.LoadReferencedDetailsAsync(
-            range.Opening.Select(p => p.PartitionId).Concat(range.Points.Select(p => p.PartitionId)));
+            opening.Select(p => p.PartitionId).Concat(range.Points.Select(p => p.PartitionId)));
 
         BondDetails GetDetails(int bondDetailsId) => bondDetails.TryGetValue(bondDetailsId, out var details)
             ? details
@@ -119,7 +121,7 @@ internal class BondBalanceService(
 
         List<BondCapitalFlow> flows =
         [
-            .. range.Opening.Select(p => new BondCapitalFlow(start.Date, p.Value * GetDetails(p.PartitionId).UnitValue, GetDetails(p.PartitionId).Currency)),
+            .. opening.Select(p => new BondCapitalFlow(start.Date, p.Value * GetDetails(p.PartitionId).UnitValue, GetDetails(p.PartitionId).Currency)),
             .. range.Points.Select(p => new BondCapitalFlow(p.PostingDate.Date, p.ValueChange * GetDetails(p.PartitionId).UnitValue, GetDetails(p.PartitionId).Currency)),
         ];
 

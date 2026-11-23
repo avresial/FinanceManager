@@ -11,22 +11,24 @@ public static class DistributionSlices
     /// <summary>
     /// Sorts items by value and keeps the largest <see cref="MaxNamedSlices"/> as named slices. The rest are
     /// combined into one "Other" slice, unless only a single item would be left over: an "Other" that hides
-    /// one name carries no benefit, so that item keeps its own slice.
+    /// one name carries no benefit, so that item keeps its own slice. <paramref name="groupOther"/> is off when the items are in different
+    /// currencies, because an "Other" total would add unlike units.
     /// </summary>
-    public static List<DistributionSlice> Build(IEnumerable<NameValueResult> items)
+    public static List<DistributionSlice> Build(IEnumerable<NameValueResult> items, bool groupOther = true)
     {
         var sorted = items.Where(x => x.Value > 0).OrderByDescending(x => x.Value).ToList();
         var total = sorted.Sum(x => x.Value);
         if (total <= 0) return [];
 
-        var groupOther = sorted.Count > MaxNamedSlices + 1;
+        groupOther &= sorted.Count > MaxNamedSlices + 1;
         var named = groupOther ? sorted.Take(MaxNamedSlices).ToList() : sorted;
         var colors = ColorsProvider.GetDistributionColors();
 
         List<DistributionSlice> slices =
         [
             .. named.Select((item, index) => new DistributionSlice(
-                item.Name, item.Value, Percent(item.Value, total), colors[index % colors.Count], item.AccountId, []))
+                DisplayName(item), item.Value, Percent(item.Value, total), colors[index % colors.Count], item.AccountId, [],
+                item.CurrencyCode, item.Kind, item.Name))
         ];
 
         if (groupOther)
@@ -38,6 +40,10 @@ public static class DistributionSlices
 
         return slices;
     }
+
+    /// <summary>The row label: a holding of a known class reads "Stock · CSPX", "Cash · PLN" or "Bond · EDO1235" so tickers, currencies and series are told apart.</summary>
+    public static string DisplayName(NameValueResult item) =>
+        string.IsNullOrWhiteSpace(item.Kind) ? item.Name : $"{item.Kind} \u00B7 {item.Name}";
 
     private static decimal Percent(decimal value, decimal total) => Math.Round(value / total * 100m, 1);
 }

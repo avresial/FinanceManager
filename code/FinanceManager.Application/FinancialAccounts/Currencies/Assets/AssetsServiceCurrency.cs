@@ -73,5 +73,9 @@ internal class AssetsServiceCurrency(ICashTransactionReader cashTransactionReade
     }
 
     private static IEnumerable<NameValueResult> GetPerCurrency(IReadOnlyList<OwnerLedgerPosition> assets, Dictionary<int, string> names) =>
-        assets.Select(p => new NameValueResult(names.GetValueOrDefault(p.PartitionId) ?? $"Currency {p.PartitionId}", p.Value));
+        assets.Select(p => new NameValueResult(names.GetValueOrDefault(p.PartitionId) ?? $"Currency {p.PartitionId}", p.Value)
+        {
+            Kind = _cashTypeName,
+            CurrencyCode = names.GetValueOrDefault(p.PartitionId),
+        });
 }

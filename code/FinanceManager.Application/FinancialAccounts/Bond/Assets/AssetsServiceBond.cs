@@ -63,7 +63,11 @@ public class AssetsServiceBond(
         var date = DateOnly.FromDateTime(asOfDate);
         var valuation = new PooledBondValuation(bondDashboardContext, date);
         var perBond = held
-            .Select(p => new NameValueResult(bondDashboardContext.GetDetails(p.PartitionId).Name, valuation.ValueOn(p, date)))
+            .Select(p => new NameValueResult(bondDashboardContext.GetDetails(p.PartitionId).Name, valuation.ValueOn(p, date))
+            {
+                Kind = _bondTypeName,
+                CurrencyCode = bondDashboardContext.GetDetails(p.PartitionId).Currency.ShortName,
+            })
             .Where(r => r.Value > 0m)
             .ToList();
 

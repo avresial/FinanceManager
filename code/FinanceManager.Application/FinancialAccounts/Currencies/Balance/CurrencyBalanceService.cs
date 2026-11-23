@@ -89,7 +89,7 @@ public class CurrencyBalanceService(
         await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, end))
         {
             if (account?.Entries is null) continue;
-            if (accountIdFilter.Count > 0 && !accountIdFilter.Contains(account.AccountId)) continue;
+            if (!accountIdFilter.Contains(account.AccountId)) continue;
 
             foreach (var entry in account.Entries)
             {

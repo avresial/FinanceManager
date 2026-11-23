@@ -17,7 +17,20 @@
             <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
         </MudAlert>
     }
-    <MudPaper Style="background:transparent;border-radius:inherit;" Class="@($"flex-grow-1 d-flex {(HasError || IsSingleCategory ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
+    @if (!IsLoading && _slices.Count > 0 && (_mixedCurrencies || (!IsAccountView && _foreignCodes.Count > 0)))
+    {
+        <div class="fm-distribution-note" data-testid="distribution-note">
+            @if (_mixedCurrencies)
+            {
+                <span class="fm-unconverted-chip">Not converted &mdash; each amount is in its own currency</span>
+            }
+            else
+            {
+                <UnconvertedCurrenciesChip Codes="_foreignCodes" />
+            }
+        </div>
+    }
+    <MudPaper Style="background:transparent;border-radius:inherit;" Class="@($"flex-grow-1 d-flex {(HasError || LegendOnly ? "overflow-y-auto align-start" : "overflow-hidden align-center")}")" Elevation="0">
         @if (IsLoading)
         {
             <div style="width:100%;height:100%">
@@ -27,9 +40,9 @@
         else if (_slices.Count > 0)
         {
             @* The container query switches to a stacked layout on narrow cards (a third of the desktop grid). *@
-            <div class="fm-distribution-container" style="@(HasError || IsSingleCategory ? "height:auto;" : null)">
+            <div class="fm-distribution-container" style="@(HasError || LegendOnly ? "height:auto;" : null)">
             <div class="fm-distribution-body@(IsSingleCategory ? " fm-distribution-body--single" : "")" style="@(HasError ? "height:auto;min-height:100%;" : null)">
-                @if (!IsSingleCategory)
+                @if (!LegendOnly)
                 {
                     <div class="fm-distribution-chart" data-testid="distribution-chart">
                         <ApexChart @key="_chartKey" @ref="_chart" TItem="DistributionSlice" Options="_chartOptions"
@@ -49,7 +62,7 @@
                     </div>
                 }
                 <div class="fm-legend@(IsSingleCategory ? " fm-legend--single" : "")" data-testid="distribution-legend"
-                     aria-label="@($"{Title}, total {MoneyFormatter.Format(Total, CurrencyShortName)}")" role="list">
+                     aria-label="@(_mixedCurrencies ? Title : $"{Title}, total {MoneyFormatter.Format(Total, CurrencyShortName)}")" role="list">
                     @for (var i = 0; i < _slices.Count; i++)
                     {
                         var index = i;
@@ -62,7 +75,7 @@
                             @if (href is not null)
                             {
                                 <a class="@($"{rowClass} fm-distribution-row--link")" href="@href" data-testid="distribution-row"
-                                   aria-label="@($"Open {slice.Name}, {MoneyFormatter.Format(slice.Value, CurrencyShortName)}, {slice.Percent:0.0}%")"
+                                   aria-label="@($"Open {slice.Name}, {Money(slice.Value, slice.CurrencyCode)}{(_mixedCurrencies ? string.Empty : $", {slice.Percent:0.0}%")}")"
                                    @onfocus="() => OnRowEnterAsync(index)" @onblur="() => OnRowLeaveAsync(index)">
                                     @RowContent(slice)
                                 </a>
@@ -70,7 +83,7 @@
                             else if (slice.IsOther)
                             {
                                 <button type="button" class="@($"{rowClass} fm-distribution-row--other")" data-testid="distribution-row"
-                                        aria-expanded="@(_otherExpanded ? "true" : "false")" title="@string.Join(", ", slice.Members.Select(x => x.Name))"
+                                        aria-expanded="@(_otherExpanded ? "true" : "false")" title="@string.Join(", ", slice.Members.Select(DistributionSlices.DisplayName))"
                                         @onclick="ToggleOther">
                                     @RowContent(slice)
                                 </button>
@@ -80,8 +93,8 @@
                                         @foreach (var member in slice.Members)
                                         {
                                             <div class="fm-distribution-other-member">
-                                                <span class="fm-legend-name" title="@member.Name">@member.Name</span>
-                                                <span class="fm-legend-amt">@MoneyFormatter.Format(member.Value, CurrencyShortName)</span>
+                                                <span class="fm-legend-name" title="@DistributionSlices.DisplayName(member)">@DistributionSlices.DisplayName(member)</span>
+                                                <span class="fm-legend-amt">@Money(member.Value, member.CurrencyCode)</span>
                                             </div>
                                         }
                                     </div>
@@ -118,10 +131,13 @@
             <span class="fm-legend-dot" style="@($"background:{slice.Color}")"></span>
             <span class="fm-legend-name" title="@slice.Name">@slice.Name</span>
             <span class="fm-legend-vals">
-                <span class="fm-legend-amt">@MoneyFormatter.Format(slice.Value, CurrencyShortName)</span>
-                <span class="fm-legend-pct">@slice.Percent.ToString("0.0")%</span>
+                <span class="fm-legend-amt">@Money(slice.Value, slice.CurrencyCode)</span>
+                @if (!_mixedCurrencies)
+                {
+                    <span class="fm-legend-pct">@slice.Percent.ToString("0.0")%</span>
+                }
             </span>
-            @if (!IsSingleCategory)
+            @if (!LegendOnly)
             {
                 <span class="fm-distribution-bar" aria-hidden="true">
                     <span class="fm-distribution-bar-fill" style="@BarStyle(slice)"></span>

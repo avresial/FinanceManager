@@ -77,6 +77,9 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
     [SupplyParameterFromQuery(Name = "kind")] public string? Kind { get; set; }
 
+    /// <summary><c>?currency=EUR</c> opens the list filtered to the cash transactions in that currency, the way distribution rows link to them.</summary>
+    [SupplyParameterFromQuery(Name = "currency")] public string? Currency { get; set; }
+
     /// <summary><c>?range=</c> picks one of the toolbar's preset ranges (e.g. 1M, YTD); anything else keeps the default.</summary>
     [SupplyParameterFromQuery(Name = "range")] public string? Range { get; set; }
 
@@ -97,6 +100,8 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         if (!string.IsNullOrWhiteSpace(Search)) _search = Search.Trim();
         if (TransactionLogToolbar.Ranges.FirstOrDefault(range => range.Equals(Range, StringComparison.OrdinalIgnoreCase)) is string preset)
             _selectedRange = preset;
+        if (!string.IsNullOrWhiteSpace(Currency))
+            _filter = new TransactionLogFilter([TransactionKind.Cash], [Currency.Trim().ToUpperInvariant()]);
         ApplyRange();
         if (string.Equals(Dialog, "add-entry", StringComparison.OrdinalIgnoreCase))
         {

@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
@@ -164,10 +165,18 @@ internal class InvestmentValuationService(
         int userId,
         Currency targetCurrency,
         DateTime asOf,
+        CancellationToken ct = default) =>
+        (await GetUserHoldingValuesAsync(userId, targetCurrency, asOf, ct))
+        .ToDictionary(x => x.Holding.AssetListingId, x => x.Value);
+
+    public async Task<IReadOnlyList<InvestmentHoldingValue>> GetUserHoldingValuesAsync(
+        int userId,
+        Currency targetCurrency,
+        DateTime asOf,
         CancellationToken ct = default)
     {
         var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOf), ct);
-        var result = new Dictionary<long, decimal>();
+        var result = new List<InvestmentHoldingValue>();
 
         foreach (var holding in holdings)
         {
@@ -176,7 +185,7 @@ internal class InvestmentValuationService(
 
             var price = await priceProvider.GetPricePerUnitAsync(holding.AssetListingId, targetCurrency, asOf, ct);
             if (price > 0m)
-                result[holding.AssetListingId] = holding.Units * price;
+                result.Add(new InvestmentHoldingValue(holding, holding.Units * price));
         }
 
         return result;

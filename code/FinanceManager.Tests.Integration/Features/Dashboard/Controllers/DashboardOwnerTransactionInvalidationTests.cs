@@ -1,12 +1,15 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
+using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Shared;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +32,7 @@ public class DashboardOwnerTransactionInvalidationTests(OptionsProvider optionsP
     private const int _owner = 1126;
     private const long _listing = 1126;
     private const int _pln = 0;
+    private const int _bond = 1126;
     private static readonly DateTime _day = DateTime.UtcNow.Date.AddDays(-2);
     private readonly Mock<IUserPlanVerifier> _planVerifier = new();
     private TestDatabase? _database;
@@ -57,7 +61,11 @@ public class DashboardOwnerTransactionInvalidationTests(OptionsProvider optionsP
     {
         var ct = TestContext.Current.CancellationToken;
         var db = _database!.Context;
-        db.Currencies.Add(new Currency(_pln, "PLN", "zł"));
+        var pln = new Currency(_pln, "PLN", "zł");
+        db.Currencies.Add(pln);
+        db.Bonds.Add(new BondDetails("Owner bond", "Synthetic", DateOnly.FromDateTime(_day), new(2099, 1, 1),
+            [new() { DateOperator = DateOperator.UntilDate, DateValue = "2099-01-01", Rate = 0m }], pln)
+        { Id = _bond, UnitValue = 100m });
         db.Assets.Add(new Asset
         {
             Id = 1126,
@@ -94,6 +102,13 @@ public class DashboardOwnerTransactionInvalidationTests(OptionsProvider optionsP
         Assert.Equal([("Cash", 500m), ("Stock", 30m)], afterTrade.AssetsPerType.Select(x => (x.Name, x.Value)));
         Assert.Equal([("PLN", 500m), ("OWNR", 30m)], afterTrade.AssetsPerAccount.Select(x => (x.Name, x.Value)));
         Assert.All(afterTrade.AssetsPerAccount, x => Assert.Null(x.AccountId));
+
+        using var bond = await Client.PostAsJsonAsync("api/transactions/bonds", new SaveBondEntryRequest(_bond, _day, 2m, "unlinked bond"), ct);
+        Assert.Equal(HttpStatusCode.OK, bond.StatusCode);
+        var afterBond = await dashboard.GetOverview(_owner, _pln, start, end);
+        Assert.NotNull(afterBond);
+        Assert.Equal(730m, afterBond.NetWorthSeries[^1].Value);
+        Assert.Equal([("Bond", 200m), ("Cash", 500m), ("Stock", 30m)], afterBond.AssetsPerType.OrderBy(x => x.Name).Select(x => (x.Name, x.Value)));
     }
 
     public override void Dispose()

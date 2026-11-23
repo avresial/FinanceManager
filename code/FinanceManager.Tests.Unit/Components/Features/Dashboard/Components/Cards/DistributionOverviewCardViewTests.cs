@@ -86,19 +86,25 @@ public class DistributionOverviewCardViewTests
             .Add(x => x.TypeData, typeData)
             .Add(x => x.WalletData, [new("Main wallet", 100m)]));
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Breakdown")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Holdings")).Click();
 
-        AssertSingleCategoryFigure(cut);
-        Assert.Single(cut.FindAll(".fm-legend-row"));
-        Assert.Contains("Main wallet", cut.Find(".fm-legend-name").TextContent);
-        Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
-        Assert.DoesNotContain("No data", cut.Markup);
+        cut.WaitForAssertion(() =>
+        {
+            AssertSingleCategoryFigure(cut);
+            Assert.Single(cut.FindAll(".fm-legend-row"));
+            Assert.Contains("Main wallet", cut.Find(".fm-legend-name").TextContent);
+            Assert.StartsWith("100", cut.Find(".fm-legend-pct").TextContent);
+            Assert.DoesNotContain("No data", cut.Markup);
+        }, TimeSpan.FromSeconds(3));
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
-        if (typeTotal == 0)
-            Assert.Contains("No data", cut.Markup);
-        else
-            Assert.Matches("75[.,]00", cut.Find("[data-testid=distribution-legend]").TextContent);
+        cut.WaitForAssertion(() =>
+        {
+            if (typeTotal == 0)
+                Assert.Contains("No data", cut.Markup);
+            else
+                Assert.Matches("75[.,]00", cut.Find("[data-testid=distribution-legend]").TextContent);
+        }, TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -187,11 +193,13 @@ public class DistributionOverviewCardViewTests
         cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
 
         // Switching views replaces the chart, so the new rows arrive after the click's render completes.
-        var link = cut.WaitForElement("a[data-testid=distribution-row]", TimeSpan.FromSeconds(3));
-        Assert.Single(cut.FindAll("a[data-testid=distribution-row]"));
-        Assert.Equal("/AccountDetails/7", link.GetAttribute("href"));
-        Assert.Contains("Car loan", link.TextContent);
-        Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+        cut.WaitForAssertion(() =>
+        {
+            var link = Assert.Single(cut.FindAll("a[data-testid=distribution-row]"));
+            Assert.Equal("/AccountDetails/7", link.GetAttribute("href"));
+            Assert.Contains("Car loan", link.TextContent);
+            Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+        }, TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -205,17 +213,105 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task OwnerBreakdownRows_AreNotLinks()
+    public async Task HoldingsRows_AreLabelledByKind_AndLinkToTheirTransactions()
     {
         await using var context = CreateContext();
         var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
-            .Add(x => x.TypeData, [new("Cash", 100m), new("Bond", 50m)])
-            .Add(x => x.WalletData, [new("PLN", 100m) { AccountId = null }, new("Bond 1", 50m) { AccountId = null }]));
+            .Add(x => x.TypeData, [new("Cash", 100m), new("Stock", 50m)])
+            .Add(x => x.WalletData,
+            [
+                new("PLN", 100m) { Kind = "Cash", CurrencyCode = "PLN" },
+                new("CSPX", 40m) { Kind = "Stock" },
+                new("EDO 1235", 10m) { Kind = "Bond", CurrencyCode = "PLN" },
+            ]));
 
-        cut.FindAll("button").Single(x => x.TextContent.Contains("Breakdown")).Click();
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Holdings")).Click();
 
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count));
-        Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
+        cut.WaitForAssertion(() =>
+        {
+            var links = cut.FindAll("a[data-testid=distribution-row]");
+            Assert.Equal(3, links.Count);
+            Assert.Equal(["Cash \u00B7 PLN", "Stock \u00B7 CSPX", "Bond \u00B7 EDO 1235"], cut.FindAll(".fm-legend-name").Select(x => x.TextContent));
+            Assert.Equal(["/Transactions?currency=PLN", "/Transactions?search=CSPX", "/Transactions?search=EDO%201235"], links.Select(x => x.GetAttribute("href")));
+        }, TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public async Task HoldingsInDifferentCurrencies_ShowOwnCurrencies_WithoutTotalSharesOrChart()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 600m)])
+            .Add(x => x.WalletData,
+            [
+                new("PLN", 500m) { Kind = "Cash", CurrencyCode = "PLN" },
+                new("EUR", 100m) { Kind = "Cash", CurrencyCode = "EUR" },
+            ]));
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Holdings")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Not converted", cut.Find("[data-testid=distribution-note]").TextContent);
+            var amounts = cut.FindAll(".fm-legend-amt").Select(x => x.TextContent.Replace("\u00A0", " ")).ToList();
+            Assert.Matches("500[.,]00 PLN", amounts[0]);
+            Assert.Matches("100[.,]00 EUR", amounts[1]);
+            Assert.Empty(cut.FindAll(".fm-legend-pct"));
+            Assert.Empty(cut.FindAll("[data-testid=distribution-total]"));
+            Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
+        }, TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public async Task TypeView_NamesTheCurrenciesItAddsUnconverted()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 600m), new("Stock", 400m)])
+            .Add(x => x.WalletData,
+            [
+                new("PLN", 500m) { Kind = "Cash", CurrencyCode = "PLN" },
+                new("EUR", 100m) { Kind = "Cash", CurrencyCode = "EUR" },
+                new("CSPX", 400m) { Kind = "Stock" },
+            ]));
+
+        Assert.Equal("Includes EUR, not converted", cut.Find("[data-testid=unconverted-chip]").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task OwnCurrencyOnly_ShowsNoNote()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<AssetsDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 500m), new("Stock", 400m)])
+            .Add(x => x.WalletData,
+            [
+                new("PLN", 500m) { Kind = "Cash", CurrencyCode = "PLN" },
+                new("CSPX", 400m) { Kind = "Stock" },
+            ]));
+
+        Assert.Empty(cut.FindAll("[data-testid=distribution-note]"));
+        Assert.Empty(cut.FindAll("[data-testid=unconverted-chip]"));
+    }
+
+    [Fact]
+    public async Task LiabilitiesCurrencyView_ShowsASingleForeignCurrencyInItsOwnCode()
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
+            .Add(x => x.TypeData, [new("Cash", 500m)])
+            .Add(x => x.AccountData, [new("EUR", 500m) { CurrencyCode = "EUR" }]));
+
+        Assert.Equal("Includes EUR, not converted", cut.Find("[data-testid=unconverted-chip]").TextContent.Trim());
+
+        cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Matches("500[.,]00 EUR", cut.Find(".fm-legend-amt").TextContent.Replace("\u00A0", " "));
+            Assert.Empty(cut.FindAll("[data-testid=unconverted-chip]"));
+            Assert.Equal("/Transactions?currency=EUR", cut.Find("a[data-testid=distribution-row]").GetAttribute("href"));
+        }, TimeSpan.FromSeconds(3));
     }
 
     [Fact]
@@ -284,12 +380,18 @@ public class DistributionOverviewCardViewTests
         AssertSingleCategoryFigure(cut);
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
-        Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
-        Assert.Empty(cut.FindAll("[class*=legend--single]"));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindComponents<ApexChart<DistributionSlice>>());
+            Assert.Empty(cut.FindAll("[class*=legend--single]"));
+        }, TimeSpan.FromSeconds(3));
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Type")).Click();
-        AssertSingleCategoryFigure(cut);
-        Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
+        cut.WaitForAssertion(() =>
+        {
+            AssertSingleCategoryFigure(cut);
+            Assert.Empty(cut.FindComponents<ApexChart<DistributionSlice>>());
+        }, TimeSpan.FromSeconds(3));
     }
 
     private static void AssertSingleCategoryFigure(IRenderedComponent<IComponent> cut)

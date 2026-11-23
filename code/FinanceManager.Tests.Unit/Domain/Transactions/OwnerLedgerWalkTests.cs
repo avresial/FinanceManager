@@ -25,6 +25,17 @@ public class OwnerLedgerWalkTests
     }
 
     [Fact]
+    public void At_ReadsALocalInstantAsTheUtcMomentItIs()
+    {
+        var walk = new OwnerLedgerWalk(new([], [Point(1, 1, _day.AddHours(8), 20m)]));
+        var localBeforePosting = _day.AddHours(7).ToLocalTime();
+        var localAfterPosting = _day.AddHours(9).ToLocalTime();
+
+        Assert.Empty(walk.At(localBeforePosting));
+        Assert.Equal([new OwnerLedgerPosition(1, 20m, _day.AddHours(8))], walk.At(localAfterPosting));
+    }
+
+    [Fact]
     public void At_OmitsPartitionsThatHaveNoEntryYet_AndOrdersByPartition()
     {
         var walk = new OwnerLedgerWalk(new(
