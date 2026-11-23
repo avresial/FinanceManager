@@ -67,7 +67,6 @@ sequenceDiagram
     participant UI as Investment UI
     participant Client as InvestmentValuationHttpClient
     participant API as InvestmentValuationController
-    participant Accounts as Account repository
     participant Value as InvestmentValuationService
     participant Trades as InvestmentTransactionRepository
     participant Price as InvestmentPriceProvider
@@ -76,13 +75,12 @@ sequenceDiagram
     participant Quotes as PriceQuoteRepository
     participant Source as Provider-specific price source
     participant FX as CurrencyExchangeService
-    UI->>Client: Get account value in currency as of date
+    UI->>Client: Get portfolio value in currency as of date
     Client->>API: GET api/InvestmentValuation/Value/...
-    API->>Accounts: Get account
-    API->>API: Check authenticated ownership and currency
-    API->>Value: GetAccountValueAsync
-    Value->>Trades: GetHoldingsAsOf(account ids, date)
-    Trades-->>Value: Net quantities by listing
+    API->>API: Resolve the caller from the principal and check the currency
+    API->>Value: GetUserValueByListingAsync(user id)
+    Value->>Trades: GetHoldingsByUserAsOf(user id, date)
+    Trades-->>Value: Net quantities by listing, pooled across accounts and unlinked trades
     loop Nonzero holding
         Value->>Price: GetPricePerUnitAsync(listing, target currency, date)
         Price->>Cache: TryGetValue(guest scope, listing, currency, day)
