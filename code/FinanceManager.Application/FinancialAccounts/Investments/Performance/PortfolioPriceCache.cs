@@ -30,23 +30,20 @@ internal sealed class PortfolioPriceCache(IInvestmentPriceProvider investmentPri
 
     /// <summary>Total value of the holdings on <paramref name="date"/>; incomplete when any held listing has no positive price.</summary>
     public async Task<(decimal Value, bool Complete)> GetHoldingsValueAsync(
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> holdingsByAccount,
+        IReadOnlyDictionary<long, decimal> holdings,
         DateTime date,
         CancellationToken cancellationToken)
     {
         decimal total = 0m;
-        foreach (var holdings in holdingsByAccount.Values)
+        foreach (var (listingId, quantity) in holdings)
         {
-            foreach (var (listingId, quantity) in holdings)
-            {
-                if (quantity == 0m) continue;
+            if (quantity == 0m) continue;
 
-                var price = await GetAsync(listingId, date, cancellationToken);
-                if (price <= 0m)
-                    return (0m, false);
+            var price = await GetAsync(listingId, date, cancellationToken);
+            if (price <= 0m)
+                return (0m, false);
 
-                total += quantity * price;
-            }
+            total += quantity * price;
         }
 
         return (total, true);

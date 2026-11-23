@@ -44,6 +44,13 @@ public sealed class OwnerLedgerWalk
     }
 
     /// <summary>
+    /// The pooled position of one partition on or before <paramref name="instant"/>, or <c>null</c> when the partition has no opening
+    /// balance and no entry by then.
+    /// </summary>
+    public OwnerLedgerPosition? PositionAt(int partitionId, DateTime instant) =>
+        _partitions.TryGetValue(partitionId, out var ledger) ? ledger.At(partitionId, instant) : null;
+
+    /// <summary>
     /// One entry per calendar day in [start.Date, end.Date], ascending, valued at the end of that day
     /// (entries posted on or before the day count).
     /// </summary>

@@ -268,82 +268,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return [.. units.Select(x => new InvestmentHolding(x.ListingId, listings[x.ListingId].Ticker, listings[x.ListingId].ExchangeName, listings[x.ListingId].Type, x.Units))];
     }
 
-    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0) return new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
-
-        var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
-            .Select(g => new
-            {
-                g.Key.AccountId,
-                g.Key.AssetListingId,
-                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Buy
-                    ? t.Quantity
-                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
-            })
-            .ToListAsync(cancellationToken);
-
-        return rows
-            .GroupBy(x => x.AccountId)
-            .ToDictionary(
-                g => g.Key,
-                g => (IReadOnlyDictionary<long, decimal>)g.ToDictionary(x => x.AssetListingId, x => x.Holding));
-    }
-
-    public async Task<IInvestmentTransactionRepository.AccountValuationInputs> GetValuationInputs(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly startDate,
-        DateOnly endDate,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0 || startDate > endDate)
-            return new IInvestmentTransactionRepository.AccountValuationInputs([], []);
-
-        var openingRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate < startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
-            .Select(g => new
-            {
-                g.Key.AccountId,
-                g.Key.AssetListingId,
-                Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
-                    ? t.Quantity
-                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
-            })
-            .Where(x => x.Quantity != 0m)
-            .ToListAsync(cancellationToken);
-
-        var tradeRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId, x.PostingDate })
-            .Select(g => new
-            {
-                g.Key.AccountId,
-                g.Key.AssetListingId,
-                g.Key.PostingDate,
-                SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
-                    ? t.Quantity
-                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
-            })
-            .Where(x => x.SignedQuantity != 0m)
-            .ToListAsync(cancellationToken);
-
-        var openingPositions = openingRows
-            .Select(x => new IInvestmentTransactionRepository.ValuationOpeningPosition(x.AccountId, x.AssetListingId, x.Quantity))
-            .ToList();
-
-        var trades = tradeRows
-            .Select(x => new IInvestmentTransactionRepository.ValuationTradeInput(x.AccountId, x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))
-            .ToList();
-
-        return new IInvestmentTransactionRepository.AccountValuationInputs(openingPositions, trades);
-    }
-
     public async Task<IInvestmentTransactionRepository.UserValuationInputs> GetValuationInputsByUser(
         long userId,
         DateOnly startDate,
@@ -386,30 +310,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return new IInvestmentTransactionRepository.UserValuationInputs(
             [.. openingRows.Select(x => new IInvestmentTransactionRepository.UserValuationOpeningPosition(x.AssetListingId, x.Quantity))],
             [.. tradeRows.Select(x => new IInvestmentTransactionRepository.UserValuationTradeInput(x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))]);
-    }
-
-    public async Task<IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput>> GetCapitalFlowInputs(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly toDate,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0) return [];
-
-        return await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
-            .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
-                x.EntryId,
-                x.AccountId!.Value,
-                x.AssetListingId,
-                DateOnly.FromDateTime(x.PostingDate),
-                x.Type,
-                x.Quantity,
-                x.UnitPrice,
-                x.Fee,
-                x.Currency,
-                (decimal?)x.AssetListing.PriceMultiplier))
-            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput>> GetCapitalFlowInputsByUser(

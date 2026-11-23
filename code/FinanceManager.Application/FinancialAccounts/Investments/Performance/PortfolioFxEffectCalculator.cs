@@ -1,5 +1,6 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Performance;
 
@@ -12,7 +13,7 @@ internal static class PortfolioFxEffectCalculator
 {
     public static async Task<(decimal Effect, bool Complete)> GetInvestmentEffectAsync(
         IReadOnlyList<PortfolioQuantityChange> quantityChanges,
-        IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>> openingHoldings,
+        IReadOnlyDictionary<long, decimal> openingQuantities,
         IReadOnlyDictionary<long, string> listingCurrencies,
         DateTime startDate,
         DateTime endDate,
@@ -21,15 +22,6 @@ internal static class PortfolioFxEffectCalculator
         CancellationToken cancellationToken)
     {
         var targetCurrency = prices.TargetCurrency;
-        var openingQuantities = new Dictionary<long, decimal>();
-        foreach (var holdings in openingHoldings.Values)
-        {
-            foreach (var (listingId, quantity) in holdings)
-            {
-                openingQuantities[listingId] = openingQuantities.GetValueOrDefault(listingId) + quantity;
-            }
-        }
-
         var flowsByListing = quantityChanges
             .GroupBy(flow => flow.InstrumentId)
             .ToDictionary(group => group.Key, group => group.OrderBy(flow => flow.Date).ThenBy(flow => flow.SourceId).ToList());
@@ -78,9 +70,12 @@ internal static class PortfolioFxEffectCalculator
         return (fxEffect, true);
     }
 
+    /// <summary>
+    /// Each bond is split into intervals between the days its pooled position changes. An interval contributes the position's
+    /// native value at its end times the change in the FX rate across it.
+    /// </summary>
     public static bool TryGetBondEffect(
-        IEnumerable<BondAccount> accounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
+        PortfolioBondInputs bonds,
         Currency targetCurrency,
         DateTime startDate,
         DateTime endDate,
@@ -88,63 +83,38 @@ internal static class PortfolioFxEffectCalculator
         out decimal fxEffect)
     {
         fxEffect = 0m;
-        foreach (var account in accounts)
+        var openingPositions = bonds.Range.Opening.ToDictionary(position => position.PartitionId);
+        var changeDatesByBond = bonds.Range.Points
+            .Where(point => point.PostingDate.Date >= startDate.Date && point.PostingDate.Date <= endDate.Date)
+            .GroupBy(point => point.PartitionId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(point => DateTime.SpecifyKind(point.PostingDate.Date, DateTimeKind.Utc)).Distinct().Order().ToList());
+
+        foreach (var bondId in bonds.Walk.PartitionIds)
         {
-            var entriesByBond = account.Entries
-                .Concat(account.NextOlderEntries.Values)
-                .GroupBy(entry => entry.BondDetailsId);
+            if (!bonds.Details.TryGetValue(bondId, out var details))
+                return false;
 
-            foreach (var bondEntries in entriesByBond)
+            var position = openingPositions.GetValueOrDefault(bondId);
+            var currentDate = startDate;
+
+            foreach (var changeDate in changeDatesByBond.GetValueOrDefault(bondId) ?? [])
             {
-                if (!bondDetails.TryGetValue(bondEntries.Key, out var details))
+                if (changeDate > currentDate && position is not null
+                    && !TryAddBondInterval(bonds, position, details, targetCurrency, currentDate, changeDate, ratesByCurrency, ref fxEffect))
                     return false;
 
-                var entries = bondEntries
-                    .GroupBy(entry => entry.EntryId)
-                    .Select(group => group.First())
-                    .OrderBy(entry => entry.PostingDate)
-                    .ThenBy(entry => entry.EntryId)
-                    .ToList();
-                var previousEntry = entries.LastOrDefault(entry => entry.PostingDate.Date < startDate.Date);
-                var currentDate = startDate;
-
-                foreach (var entry in entries.Where(entry => entry.PostingDate.Date >= startDate.Date && entry.PostingDate.Date <= endDate.Date))
-                {
-                    var entryDate = DateTime.SpecifyKind(entry.PostingDate.Date, DateTimeKind.Utc);
-                    if (entryDate > currentDate && previousEntry is not null
-                        && !TryAddBondInterval(previousEntry, details, targetCurrency, currentDate, entryDate, ratesByCurrency, ref fxEffect))
-                        return false;
-
-                    previousEntry = entry;
-                    currentDate = entryDate;
-                }
-
-                if (previousEntry is not null && endDate > currentDate
-                    && !TryAddBondInterval(previousEntry, details, targetCurrency, currentDate, endDate, ratesByCurrency, ref fxEffect))
-                    return false;
+                position = bonds.Walk.PositionAt(bondId, changeDate.AddDays(1).AddTicks(-1));
+                currentDate = changeDate;
             }
+
+            if (position is not null && endDate > currentDate
+                && !TryAddBondInterval(bonds, position, details, targetCurrency, currentDate, endDate, ratesByCurrency, ref fxEffect))
+                return false;
         }
 
         return true;
-    }
-
-    /// <summary>Bond entry value on <paramref name="date"/>; false when the bond cannot be priced on that date.</summary>
-    public static bool TryGetBondPrice(
-        BondAccountEntry entry,
-        BondDetails details,
-        DateOnly date,
-        out decimal value)
-    {
-        try
-        {
-            value = entry.GetPriceAt(date, details);
-            return true;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
-        {
-            value = 0m;
-            return false;
-        }
     }
 
     private static async Task<(decimal Effect, bool Complete)> GetInvestmentIntervalAsync(
@@ -169,7 +139,8 @@ internal static class PortfolioFxEffectCalculator
     }
 
     private static bool TryAddBondInterval(
-        BondAccountEntry entry,
+        PortfolioBondInputs bonds,
+        OwnerLedgerPosition position,
         BondDetails details,
         Currency targetCurrency,
         DateTime startDate,
@@ -181,9 +152,9 @@ internal static class PortfolioFxEffectCalculator
         if (!PortfolioRates.TryGetRatePair(sourceCurrency, targetCurrency, startDate, endDate, ratesByCurrency, out var startRate, out var endRate))
             return false;
 
-        if (!TryGetBondPrice(entry, details, DateOnly.FromDateTime(endDate), out var endingNativeValue))
+        if (!bonds.Valuation.TryValueOn(position, DateOnly.FromDateTime(endDate), out var endingNativeValue))
             return false;
-        if (endingNativeValue == 0m && entry.Value != 0m)
+        if (endingNativeValue == 0m && position.Value != 0m)
             return false;
 
         fxEffect += endingNativeValue * (endRate - startRate);

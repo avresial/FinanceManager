@@ -1,22 +1,21 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Domain.Identity.Repositories;
-using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 
 namespace FinanceManager.Application.Insights.Diversification;
 
+/// <summary>
+/// Scores diversification from what the owner currently holds, pooled per listing, bond definition and currency across all
+/// accounts and unlinked entries.
+/// </summary>
 public class DiversificationService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
+    IBondTransactionReader bondTransactionReader,
     IBondDetailsRepository bondDetailsRepository,
     IInvestmentTransactionRepository investmentTransactionRepository,
     ICurrencyRepository currencyRepository) : IDiversificationService
@@ -26,10 +25,11 @@ public class DiversificationService(
 
     public async Task<DiversificationScore> GetDiversificationScore(int userId, DateTime asOfDate)
     {
-        var (heldAssetClasses, uniqueHoldings) = await GetCurrentHoldings(userId, asOfDate);
+        var held = await GetCurrentHoldings(userId, asOfDate, CancellationToken.None);
 
-        var assetClassScore = CalculateAssetClassScore(heldAssetClasses.Count);
-        var holdingsScore = CalculateHoldingsScore(uniqueHoldings.Count);
+        var heldClassCount = new[] { held.Tickers.Count, held.BondIds.Count, held.CashCurrencyIds.Count }.Count(count => count > 0);
+        var assetClassScore = CalculateAssetClassScore(heldClassCount);
+        var holdingsScore = CalculateHoldingsScore(held.Tickers.Count + held.BondIds.Count + held.CashCurrencyIds.Count);
         var totalScore = assetClassScore + holdingsScore;
 
         return new DiversificationScore(totalScore, assetClassScore, holdingsScore, GetBand(totalScore));
@@ -37,78 +37,60 @@ public class DiversificationService(
 
     public async Task<DiversificationBreakdown> GetDiversificationBreakdown(int userId, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
+        var held = await GetCurrentHoldings(userId, asOfDate, cancellationToken);
         var groups = new List<AssetClassHoldings>();
 
-        var stockHoldings = await GetStockHoldingNames(userId, asOfDate, cancellationToken);
-        if (stockHoldings.Count > 0)
-            groups.Add(new AssetClassHoldings("Stocks", stockHoldings));
+        if (held.Tickers.Count > 0)
+            groups.Add(new AssetClassHoldings("Stocks", held.Tickers));
 
-        var bondHoldings = await GetBondHoldingNames(userId, asOfDate, cancellationToken);
-        if (bondHoldings.Count > 0)
-            groups.Add(new AssetClassHoldings("Bonds", bondHoldings));
+        if (held.BondIds.Count > 0)
+            groups.Add(new AssetClassHoldings("Bonds", await GetBondHoldingNames(held.BondIds, cancellationToken)));
 
-        var cashCurrencies = await GetHeldCashCurrencyCodes(userId, asOfDate, cancellationToken);
-        if (cashCurrencies.Count > 0)
-            groups.Add(new AssetClassHoldings("Cash", cashCurrencies));
+        if (held.CashCurrencyIds.Count > 0)
+            groups.Add(new AssetClassHoldings("Cash", await GetCashCurrencyCodes(held.CashCurrencyIds, cancellationToken)));
 
         return new DiversificationBreakdown(groups);
     }
 
-    private async Task<List<string>> GetStockHoldingNames(int userId, DateTime asOfDate, CancellationToken cancellationToken)
+    private async Task<HeldPositions> GetCurrentHoldings(int userId, DateTime asOfDate, CancellationToken cancellationToken)
     {
-        var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Guest sandbox users have negative ids, so only the unset id 0 is invalid.
+        if (userId == 0) return new([], [], []);
 
-        // Investment-account holdings (the asset model) are reported under the "Stocks" group.
-        foreach (var ticker in await GetHeldInvestmentTickers(userId, asOfDate, cancellationToken))
-            names.Add(ticker);
+        var holdings = await investmentTransactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOfDate), cancellationToken);
+        var tickers = holdings
+            .Where(holding => holding.Units > 0m && !string.IsNullOrWhiteSpace(holding.Ticker))
+            .Select(holding => holding.Ticker)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        return [.. names];
+        var bondIds = (await bondTransactionReader.GetPositions(userId, asOfDate, cancellationToken))
+            .Where(position => position.Value > 0m)
+            .Select(position => position.PartitionId)
+            .ToList();
+
+        var cashCurrencyIds = (await cashTransactionReader.GetPositions(userId, asOfDate, cancellationToken))
+            .Where(position => position.Value > 0m)
+            .Select(position => position.PartitionId)
+            .ToList();
+
+        return new(tickers, bondIds, cashCurrencyIds);
     }
 
-    // Tickers of investment-account listings (new asset model) with a positive net holding as of the date.
-    private async Task<List<string>> GetHeldInvestmentTickers(int userId, DateTime asOfDate, CancellationToken cancellationToken)
+    private async Task<List<string>> GetBondHoldingNames(IReadOnlyCollection<int> bondIds, CancellationToken cancellationToken)
     {
-        var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.FromDateTime(asOfDate), cancellationToken);
-
-        return [.. transactions
-            .GroupBy(t => t.AssetListingId)
-            .Where(g => g.Sum(t => t.SignedQuantity) > 0)
-            .Select(g => g.OrderByDescending(t => t.TradeDate).ThenByDescending(t => t.EntryId).First().AssetListing?.Ticker)
-            .Where(ticker => !string.IsNullOrWhiteSpace(ticker))
-            .Select(ticker => ticker!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
-    }
-
-    private async Task<List<string>> GetBondHoldingNames(int userId, DateTime asOfDate, CancellationToken cancellationToken)
-    {
-        var bondIds = new List<int>();
-        var seen = new HashSet<int>();
-
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
-            foreach (var bondId in GetCurrentlyHeldBondIds(account, asOfDate))
-                if (seen.Add(bondId))
-                    bondIds.Add(bondId);
-
-        if (bondIds.Count == 0) return [];
-
-        var names = new List<string>();
-        foreach (var bondId in bondIds)
-        {
-            var details = await bondDetailsRepository.GetByIdAsync(bondId, cancellationToken);
-            names.Add(details is not null && !string.IsNullOrWhiteSpace(details.Name) ? details.Name : $"Bond #{bondId}");
-        }
+        var namesById = await bondDetailsRepository.GetNamesByIdsAsync(bondIds, cancellationToken);
+        var names = bondIds
+            .Select(bondId => namesById.TryGetValue(bondId, out var name) && !string.IsNullOrWhiteSpace(name) ? name : $"Bond #{bondId}")
+            .ToList();
 
         names.Sort(StringComparer.OrdinalIgnoreCase);
         return names;
     }
 
-    private async Task<List<string>> GetHeldCashCurrencyCodes(int userId, DateTime asOfDate, CancellationToken cancellationToken)
+    private async Task<List<string>> GetCashCurrencyCodes(IReadOnlyCollection<int> currencyIds, CancellationToken cancellationToken)
     {
-        var currencyIds = new SortedSet<int>();
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate))
-            if (HasCurrentCash(account, asOfDate))
-                currencyIds.Add(account.CurrencyId);
-
         var codes = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         await foreach (var currency in currencyRepository.GetCurrencies(cancellationToken))
         {
@@ -119,56 +101,7 @@ public class DiversificationService(
         return [.. codes];
     }
 
-    private async Task<(HashSet<InvestmentType> AssetClasses, HashSet<string> Holdings)> GetCurrentHoldings(int userId, DateTime asOfDate)
-    {
-        var heldClasses = new HashSet<InvestmentType>();
-        var uniqueHoldings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // Legacy stock holdings (resolved to display tickers) and new investment-account holdings are
-        // merged and deduplicated by GetStockHoldingNames, so an instrument held under both models is
-        // counted once toward the Stocks class.
-        foreach (var ticker in await GetStockHoldingNames(userId, asOfDate, CancellationToken.None))
-        {
-            uniqueHoldings.Add($"stock_{ticker}");
-            heldClasses.Add(InvestmentType.Stock);
-        }
-
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            foreach (var bondId in GetCurrentlyHeldBondIds(account, asOfDate))
-            {
-                uniqueHoldings.Add($"bond_{bondId}");
-                heldClasses.Add(InvestmentType.Bond);
-            }
-        }
-
-        await foreach (var account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, DateTime.MinValue, asOfDate))
-        {
-            if (HasCurrentCash(account, asOfDate))
-            {
-                uniqueHoldings.Add($"cash_{account.CurrencyId}");
-                heldClasses.Add(InvestmentType.Cash);
-            }
-        }
-
-        return (heldClasses, uniqueHoldings);
-    }
-
-    private static IEnumerable<int> GetCurrentlyHeldBondIds(BondAccount account, DateTime asOfDate)
-    {
-        foreach (var bondId in account.GetStoredBondsIds())
-        {
-            var entry = account.GetThisOrNextOlder(asOfDate, bondId);
-            if (entry is not null && entry.Value > 0)
-                yield return bondId;
-        }
-    }
-
-    private static bool HasCurrentCash(CurrencyAccount account, DateTime asOfDate)
-    {
-        var entry = account.GetThisOrNextOlder(asOfDate);
-        return entry is not null && entry.Value > 0;
-    }
+    private sealed record HeldPositions(IReadOnlyList<string> Tickers, IReadOnlyList<int> BondIds, IReadOnlyList<int> CashCurrencyIds);
 
     internal static string GetBand(int totalScore) => totalScore switch
     {

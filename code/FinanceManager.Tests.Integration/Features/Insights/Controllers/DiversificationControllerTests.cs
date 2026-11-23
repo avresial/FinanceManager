@@ -75,6 +75,7 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
         // Investment holding: an AAPL listing held via a Buy transaction on the stock-type account.
         const long listingId = 100;
+        _testDatabase.Context.Assets.Add(new Asset { Id = 1, Name = "Test asset", Type = AssetType.Stock });
         _testDatabase.Context.AssetListings.Add(new AssetListing
         {
             Id = listingId,
@@ -87,10 +88,26 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             IsActive = true
         });
 
-        var bond = new BondDetails("Treasury 2030", "Test Issuer",
-            DateOnly.FromDateTime(_nowUtc.AddYears(-1)), DateOnly.FromDateTime(_nowUtc.AddYears(5)), [])
-        { Id = 5 };
-        _testDatabase.Context.Bonds.Add(bond);
+        _testDatabase.Context.AssetListings.Add(new AssetListing
+        {
+            Id = listingId + 1,
+            AssetId = 1,
+            Ticker = "MSFT",
+            ExchangeMic = "XNAS",
+            ExchangeName = "United States",
+            TradingCurrency = "USD",
+            PriceMultiplier = 1m,
+            IsActive = true
+        });
+
+        var pln = DefaultCurrency.PLN;
+        _testDatabase.Context.Bonds.AddRange(
+            new BondDetails("Treasury 2030", "Test Issuer",
+                DateOnly.FromDateTime(_nowUtc.AddYears(-1)), DateOnly.FromDateTime(_nowUtc.AddYears(5)), [], pln)
+            { Id = 5 },
+            new BondDetails("Corporate 2031", "Test Issuer",
+                DateOnly.FromDateTime(_nowUtc.AddYears(-1)), DateOnly.FromDateTime(_nowUtc.AddYears(6)), [], pln)
+            { Id = 6 });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
@@ -104,12 +121,25 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             Currency = "USD",
             TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-3))
         });
-        _testDatabase.Context.BondEntries.Add(
-            new BondAccountEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5));
-        _testDatabase.Context.CurrencyEntries.Add(
-            new CurrencyAccountEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { Labels = [] });
-        _testDatabase.Context.CurrencyEntries.Add(
-            new CurrencyAccountEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { Labels = [] });
+
+        // Holdings are read per owner (not per account), so the entries carry the owner and, for cash, the currency (PLN is 0).
+        _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            UserId = 1,
+            AccountId = null,
+            AssetListingId = listingId + 1,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 2m,
+            UnitPrice = 300m,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-2))
+        });
+        _testDatabase.Context.BondEntries.AddRange(
+            new BondAccountEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5) { UserId = 1 },
+            new BondAccountEntry(null, 2, _nowUtc.AddDays(-2), 10m, 10m, 6) { UserId = 1 });
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { UserId = 1, CurrencyId = 0, Labels = [] },
+            new CurrencyAccountEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { UserId = 1, CurrencyId = usd.Id, Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -123,8 +153,8 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
         Assert.NotNull(result);
         Assert.Equal(["Stocks", "Bonds", "Cash"], result.AssetClasses.Select(g => g.AssetClass));
-        Assert.Equal(["AAPL"], result.AssetClasses[0].Holdings);
-        Assert.Equal(["Treasury 2030"], result.AssetClasses[1].Holdings);
+        Assert.Equal(["AAPL", "MSFT"], result.AssetClasses[0].Holdings);
+        Assert.Equal(["Corporate 2031", "Treasury 2030"], result.AssetClasses[1].Holdings);
         Assert.Equal(["PLN", "USD"], result.AssetClasses[2].Holdings);
     }
 

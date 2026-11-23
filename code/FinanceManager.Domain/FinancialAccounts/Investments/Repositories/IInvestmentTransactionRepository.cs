@@ -52,28 +52,9 @@ public interface IInvestmentTransactionRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Signed-quantity holdings per account and <see cref="AssetListing"/> as of a date for the given accounts,
-    /// projected and aggregated at the database level.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Aggregated opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within
-    /// [<paramref name="startDate"/>, <paramref name="endDate"/>] for the given accounts, projected and aggregated
-    /// at the database boundary without loading out-of-range rows or full entity graphs.
-    /// </summary>
-    Task<AccountValuationInputs> GetValuationInputs(IReadOnlyCollection<int> accountIds, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Bounded historical capital reconstruction inputs for transactions on or before <paramref name="toDate"/>
-    /// across the given accounts. The projection includes the stable transaction/listing identity so
+    /// Bounded historical capital reconstruction inputs: every trade of <paramref name="userId"/> on or before <paramref name="toDate"/>,
+    /// linked to an account or not, ordered by posting date then id. The projection includes the stable transaction/listing identity so
     /// the application can replay same-day history deterministically without loading entity graphs.
-    /// </summary>
-    Task<IReadOnlyList<CapitalFlowInput>> GetCapitalFlowInputs(IReadOnlyCollection<int> accountIds, DateOnly toDate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Owner-wide counterpart of <see cref="GetCapitalFlowInputs(IReadOnlyCollection{int}, DateOnly, CancellationToken)"/>: every trade of
-    /// <paramref name="userId"/> on or before <paramref name="toDate"/>, linked to an account or not, ordered by posting date then id.
     /// </summary>
     Task<IReadOnlyList<UserCapitalFlowInput>> GetCapitalFlowInputsByUser(long userId, DateOnly toDate, CancellationToken cancellationToken = default);
 
@@ -125,9 +106,9 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Owner-wide counterpart of <see cref="GetValuationInputs(IReadOnlyCollection{int}, DateOnly, DateOnly, CancellationToken)"/>:
-    /// opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas in the window, pooled per listing across
-    /// all of the owner's trades (linked to an account or not). Positions and days that net to zero are omitted.
+    /// Opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within [<paramref name="startDate"/>,
+    /// <paramref name="endDate"/>], pooled per listing across all of the owner's trades (linked to an account or not). Positions and days
+    /// that net to zero are omitted.
     /// </summary>
     Task<UserValuationInputs> GetValuationInputsByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
@@ -139,35 +120,8 @@ public interface IInvestmentTransactionRepository
         IReadOnlyList<UserValuationOpeningPosition> OpeningPositions,
         IReadOnlyList<UserValuationTradeInput> InWindowTrades);
 
-    public sealed record ValuationTradeInput(
-        int AccountId,
-        long AssetListingId,
-        DateOnly TradeDate,
-        decimal SignedQuantity);
-
-    public sealed record ValuationOpeningPosition(
-        int AccountId,
-        long AssetListingId,
-        decimal Quantity);
-
-    public sealed record AccountValuationInputs(
-        IReadOnlyList<ValuationOpeningPosition> OpeningPositions,
-        IReadOnlyList<ValuationTradeInput> InWindowTrades);
-
     public sealed record UserCapitalFlowInput(
         long TransactionId,
-        long AssetListingId,
-        DateOnly TradeDate,
-        InvestmentTransactionType Type,
-        decimal Quantity,
-        decimal UnitPrice,
-        decimal? Fee,
-        string Currency,
-        decimal? ListingPriceMultiplier);
-
-    public sealed record CapitalFlowInput(
-        long TransactionId,
-        int AccountId,
         long AssetListingId,
         DateOnly TradeDate,
         InvestmentTransactionType Type,

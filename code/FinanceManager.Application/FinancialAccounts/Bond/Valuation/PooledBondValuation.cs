@@ -24,6 +24,24 @@ internal sealed class PooledBondValuation(BondDashboardContext context, DateOnly
         context.LoadReferencedDetailsAsync(walk.PartitionIds, ct);
 
     /// <summary>
+    /// Non-throwing counterpart of <see cref="ValueOn"/> for performance calculations that report "unavailable" instead of failing:
+    /// false when an active position has no definition or its calculation methods cannot price the date.
+    /// </summary>
+    public bool TryValueOn(OwnerLedgerPosition position, DateOnly date, out decimal value)
+    {
+        try
+        {
+            value = ValueOn(position, date);
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            value = 0m;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// The value of the position on <paramref name="date"/>. Throws the existing <see cref="InvalidOperationException"/> when an active
     /// (non-zero) position has no definition or no calculation methods.
     /// </summary>

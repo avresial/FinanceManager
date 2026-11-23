@@ -6,9 +6,10 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Performance;
 
@@ -18,7 +19,7 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Performance;
 /// established by #729); bond ValueChange rows provide the equivalent unit movement.
 /// </summary>
 public class PortfolioTimeWeightedReturnService(
-    IFinancialAccountRepository financialAccountRepository,
+    IBondTransactionReader bondTransactionReader,
     IInvestmentTransactionRepository investmentTransactionRepository,
     IInvestmentPriceProvider investmentPriceProvider,
     BondDashboardContext bondDashboardContext,
@@ -33,38 +34,32 @@ public class PortfolioTimeWeightedReturnService(
     {
         var startDate = start.Date;
         var endDate = (end > DateTime.UtcNow ? DateTime.UtcNow : end).Date;
-        if (start == default || end == default || endDate < startDate)
+        // Guest users have negative ids; only the unset id 0 is invalid.
+        if (userId == 0 || start == default || end == default || endDate < startDate)
             return Result(null, TimeWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        var accounts = await PortfolioAccounts.LoadAsync(
-            financialAccountRepository, userId, startDate, endDate, cancellationToken);
-        if (accounts.IsEmpty)
+        var transactionFlows = await investmentTransactionRepository.GetCapitalFlowInputsByUser(
+            userId,
+            DateOnly.FromDateTime(endDate),
+            cancellationToken);
+        var bonds = await PortfolioBondInputs.LoadAsync(
+            bondTransactionReader, bondDashboardContext, userId, startDate, endDate, cancellationToken);
+        if (transactionFlows.Count == 0 && bonds.IsEmpty)
             return Result(null, TimeWeightedReturnStatus.InsufficientData, startDate, endDate);
 
-        var bondAccounts = accounts.BondAccounts;
-        var investmentAccountIds = accounts.InvestmentAccountIds;
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows = investmentAccountIds.Length == 0
-            ? []
-            : await investmentTransactionRepository.GetCapitalFlowInputs(
-                investmentAccountIds,
-                DateOnly.FromDateTime(endDate),
-                cancellationToken);
-        var valuationInputs = investmentAccountIds.Length == 0
-            ? new IInvestmentTransactionRepository.AccountValuationInputs([], [])
-            : await investmentTransactionRepository.GetValuationInputs(
-                investmentAccountIds,
-                DateOnly.FromDateTime(startDate),
-                DateOnly.FromDateTime(endDate),
-                cancellationToken);
+        var valuationInputs = await investmentTransactionRepository.GetValuationInputsByUser(
+            userId,
+            DateOnly.FromDateTime(startDate),
+            DateOnly.FromDateTime(endDate),
+            cancellationToken);
 
-        var bondDetails = await accounts.LoadBondDetailsAsync(bondDashboardContext, cancellationToken);
-        if (!accounts.HasAllBondDetails(bondDetails))
+        if (!bonds.HasAllDetails)
             return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
 
-        var pendingFlows = BuildPendingFlows(transactionFlows, bondAccounts, bondDetails, startDate, endDate);
+        var pendingFlows = BuildPendingFlows(transactionFlows, bonds.Range.Points, bonds.Details, startDate, endDate);
         var ratesByCurrency = await PortfolioRates.LoadAsync(
             currencyExchangeService,
-            pendingFlows.Select(flow => flow.Currency).Concat(bondDetails.Values.Select(details => details.Currency.ShortName)),
+            pendingFlows.Select(flow => flow.Currency).Concat(bonds.Details.Values.Select(details => details.Currency.ShortName)),
             currency,
             startDate,
             endDate,
@@ -85,8 +80,7 @@ public class PortfolioTimeWeightedReturnService(
                 return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
 
             var bondValues = PortfolioDailyValuation.BuildBondValues(
-                bondAccounts,
-                bondDetails,
+                bonds,
                 ratesByCurrency,
                 currency,
                 startDate,
@@ -137,8 +131,8 @@ public class PortfolioTimeWeightedReturnService(
     }
 
     private static List<PendingFlow> BuildPendingFlows(
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactionFlows,
-        IReadOnlyList<BondAccount> bondAccounts,
+        IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput> transactionFlows,
+        IReadOnlyList<OwnerLedgerPoint> bondPoints,
         IReadOnlyDictionary<int, BondDetails> bondDetails,
         DateTime startDate,
         DateTime endDate)
@@ -170,22 +164,19 @@ public class PortfolioTimeWeightedReturnService(
                 flow.TransactionId));
         }
 
-        foreach (var account in bondAccounts)
+        foreach (var point in bondPoints)
         {
-            foreach (var entry in account.Entries)
-            {
-                var date = entry.PostingDate.Date;
-                if (date < startDate || date > endDate || entry.ValueChange == 0m)
-                    continue;
-                if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
-                    throw new InvalidOperationException($"Bond valuation requires details for bond id {entry.BondDetailsId}.");
+            var date = point.PostingDate.Date;
+            if (date < startDate || date > endDate || point.ValueChange == 0m)
+                continue;
+            if (!bondDetails.TryGetValue(point.PartitionId, out var details))
+                throw new InvalidOperationException($"Bond valuation requires details for bond id {point.PartitionId}.");
 
-                result.Add(new PendingFlow(
-                    DateTime.SpecifyKind(date, DateTimeKind.Utc),
-                    entry.ValueChange * details.UnitValue,
-                    details.Currency.ShortName,
-                    entry.EntryId));
-            }
+            result.Add(new PendingFlow(
+                DateTime.SpecifyKind(date, DateTimeKind.Utc),
+                point.ValueChange * details.UnitValue,
+                details.Currency.ShortName,
+                point.EntryId));
         }
 
         return result;

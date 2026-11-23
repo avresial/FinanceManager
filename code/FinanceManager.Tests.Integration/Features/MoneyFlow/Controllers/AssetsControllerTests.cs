@@ -251,22 +251,27 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         string ticker = "CSPX",
         decimal buyQuantity = 5m,
         decimal buyUnitPrice = 90m,
-        decimal currentPrice = 100m)
+        decimal currentPrice = 100m,
+        bool unlinked = false)
     {
         var context = _testDatabase!.Context;
 
         if (await context.Accounts.AnyAsync(x => x.AccountId == accountId, TestContext.Current.CancellationToken))
             return;
 
-        var account = new FinancialAccountBaseDto
+        // An unlinked trade belongs to the owner without any account.
+        if (!unlinked)
         {
-            UserId = userId,
-            AccountId = accountId,
-            Name = $"Investment Account {accountId}",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        };
-        context.Accounts.Add(account);
+            var account = new FinancialAccountBaseDto
+            {
+                UserId = userId,
+                AccountId = accountId,
+                Name = $"Investment Account {accountId}",
+                AccountLabel = AccountLabel.Stock,
+                AccountType = AccountType.Stock
+            };
+            context.Accounts.Add(account);
+        }
 
         if (!await context.AssetListings.AnyAsync(x => x.Id == listingId, TestContext.Current.CancellationToken))
         {
@@ -306,7 +311,8 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         context.InvestmentTransactions.Add(new InvestmentTransaction
         {
-            AccountId = accountId,
+            UserId = userId,
+            AccountId = unlinked ? null : accountId,
             AssetListingId = listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = buyQuantity,
@@ -338,6 +344,50 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             $"api/Assets/GetUnrealizedGainLossForAccount/1/20/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, directResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task PortfolioReturns_IncludeUnlinkedTrades()
+    {
+        // The only trade has no account: performance is calculated from the owner's trades, not from accounts.
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 24, listingId: 204, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m, unlinked: true);
+        Authorize("TestUser", 1, UserRole.User);
+        var start = _nowUtc.AddDays(-10).Date;
+
+        var attribution = await Client.GetFromJsonAsync<PortfolioReturnAttributionResult>(
+            $"api/Assets/GetReturnAttribution/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        var moneyWeighted = await Client.GetFromJsonAsync<MoneyWeightedReturnResult>(
+            $"api/Assets/GetMoneyWeightedReturn/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        var timeWeighted = await Client.GetFromJsonAsync<TimeWeightedReturnResult>(
+            $"api/Assets/GetTimeWeightedReturn/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(attribution);
+        Assert.Equal(PortfolioReturnAttributionStatus.Available, attribution.Status);
+        Assert.Equal(500m, attribution.TotalChange);
+        Assert.Equal(450m, attribution.ExternalCashMovement);
+        Assert.Equal(50m, attribution.MarketEffect);
+        Assert.NotNull(moneyWeighted);
+        Assert.Equal(MoneyWeightedReturnStatus.Available, moneyWeighted.Status);
+        Assert.NotNull(timeWeighted);
+        Assert.NotEqual(TimeWeightedReturnStatus.InsufficientData, timeWeighted.Status);
+    }
+
+    [Fact]
+    public async Task PortfolioReturns_DoNotIncludeOtherUsersTrades()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 2, accountId: 25, listingId: 205, unlinked: true);
+        Authorize("TestUser", 1, UserRole.User);
+        var start = _nowUtc.AddDays(-10).Date;
+
+        var attribution = await Client.GetFromJsonAsync<PortfolioReturnAttributionResult>(
+            $"api/Assets/GetReturnAttribution/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(attribution);
+        Assert.Equal(PortfolioReturnAttributionStatus.InsufficientData, attribution.Status);
     }
 
     [Fact]
@@ -381,6 +431,24 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.Equal(500m, result.TotalHoldingsValue);
         Assert.Equal(2.50m, result.AnnualFeeCost);
         Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_IncludesUnlinkedEtfTrades()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 26, listingId: 206, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m, unlinked: true);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetFeeDragAnalysis(
+            1,
+            DefaultCurrency.USD,
+            _nowUtc,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(500m, result.TotalHoldingsValue);
+        Assert.Equal(1, result.TotalHoldingsCount);
     }
 
     [Fact]

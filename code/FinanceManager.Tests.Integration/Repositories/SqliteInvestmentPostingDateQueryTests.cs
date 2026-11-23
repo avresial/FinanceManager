@@ -52,10 +52,10 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         var ct = TestContext.Current.CancellationToken;
 
         var holdings = await _repository.GetHoldingsAsOf([_accountId], _start, ct);
-        var byAccount = await _repository.GetHoldingsByAccountAsOf([_accountId], _start, ct);
+        var byUser = await _repository.GetHoldingsByUserAsOf(_userId, _start, ct);
 
         Assert.Equal(3m, holdings[_listingId]);
-        Assert.Equal(3m, byAccount[_accountId][_listingId]);
+        Assert.Equal(3m, byUser.Single(h => h.AssetListingId == _listingId).Units);
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputs_ReturnsCalendarDatesUpToDate()
+    public async Task GetCapitalFlowInputsByUser_ReturnsCalendarDatesUpToDate()
     {
         await Seed();
 
-        var flows = await _repository.GetCapitalFlowInputs([_accountId], _start, TestContext.Current.CancellationToken);
+        var flows = await _repository.GetCapitalFlowInputsByUser(_userId, _start, TestContext.Current.CancellationToken);
 
         Assert.Equal([_start.AddDays(-1), _start, _start], flows.Select(f => f.TradeDate).Order());
     }

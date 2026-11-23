@@ -82,12 +82,12 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputs_ProjectsEveryPersistedProductionTradeExactlyOnce()
+    public async Task GetCapitalFlowInputsByUser_ProjectsEveryPersistedProductionTradeExactlyOnce()
     {
         await SeedProductionFixture();
         var repository = new InvestmentTransactionRepository(_testDatabase!.Context);
 
-        var flows = await repository.GetCapitalFlowInputs([_accountId], _fixtureEnd, TestContext.Current.CancellationToken);
+        var flows = await repository.GetCapitalFlowInputsByUser(_userId, _fixtureEnd, TestContext.Current.CancellationToken);
         var persisted = await _testDatabase.Context.InvestmentTransactions
             .AsNoTracking()
             .OrderBy(x => x.PostingDate)
@@ -104,7 +104,6 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             var actual = flows[index];
 
             Assert.True(actual.TransactionId > 0);
-            Assert.Equal(_accountId, actual.AccountId);
             Assert.Equal(_listingId, actual.AssetListingId);
             Assert.Equal(expected.TradeDate, actual.TradeDate);
             Assert.Equal(InvestmentTransactionType.Buy, actual.Type);
@@ -195,7 +194,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var previousCapital = 0m;
         var previousPlnCapital = 0m;
         var projectedFlows = await new InvestmentTransactionRepository(_testDatabase!.Context)
-            .GetCapitalFlowInputs([_accountId], _fixtureEnd, TestContext.Current.CancellationToken);
+            .GetCapitalFlowInputsByUser(_userId, _fixtureEnd, TestContext.Current.CancellationToken);
         for (var date = start; date <= end; date = date.AddDays(1))
         {
             var flowsForDay = projectedFlows.Where(flow => flow.TradeDate.ToDateTime(TimeOnly.MinValue) == date).ToList();

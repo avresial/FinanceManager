@@ -54,6 +54,28 @@ public class PooledBondValuationTests
     }
 
     [Fact]
+    public async Task TryValueOn_ReturnsTheValueOfAnActivePosition_AndZeroForAnEmptyOne()
+    {
+        var position = Position(2m, _anchor);
+        await PooledBondValuation.LoadDetailsAsync(_context, [position], TestContext.Current.CancellationToken);
+        var valuation = new PooledBondValuation(_context, _anchor);
+
+        Assert.True(valuation.TryValueOn(position, _anchor, out var value));
+        Assert.Equal(200m, value);
+        Assert.True(valuation.TryValueOn(Position(0m, _anchor), _anchor, out var empty));
+        Assert.Equal(0m, empty);
+    }
+
+    [Fact]
+    public void TryValueOn_IsFalseInsteadOfThrowingWhenTheBondDefinitionIsMissing()
+    {
+        var valuation = new PooledBondValuation(_context, _anchor);
+
+        Assert.False(valuation.TryValueOn(Position(1m, _anchor, bondId: 99), _anchor, out var value));
+        Assert.Equal(0m, value);
+    }
+
+    [Fact]
     public async Task ValueOn_RestartsAccrualWhenAnotherEntryMovesTheAnchor()
     {
         var late = _anchor.AddDays(200);

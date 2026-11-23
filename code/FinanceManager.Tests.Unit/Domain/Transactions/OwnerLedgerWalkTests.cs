@@ -36,6 +36,20 @@ public class OwnerLedgerWalkTests
     }
 
     [Fact]
+    public void PositionAt_ReadsOnePartitionAndIsNullBeforeItsFirstEntry()
+    {
+        var walk = new OwnerLedgerWalk(new(
+            [Opening(1, 100m, _day.AddDays(-3))],
+            [Point(1, 1, _day.AddHours(8), 20m), Point(2, 2, _day.AddHours(9), 5m)]));
+
+        Assert.Equal(new OwnerLedgerPosition(1, 100m, _day.AddDays(-3)), walk.PositionAt(1, _day));
+        Assert.Equal(new OwnerLedgerPosition(1, 120m, _day.AddHours(8)), walk.PositionAt(1, _day.AddHours(23)));
+        Assert.Null(walk.PositionAt(2, _day.AddHours(8)));
+        Assert.Equal(new OwnerLedgerPosition(2, 5m, _day.AddHours(9)), walk.PositionAt(2, _day.AddHours(9)));
+        Assert.Null(walk.PositionAt(3, _day.AddDays(1)));
+    }
+
+    [Fact]
     public void At_KeepsNettedToZeroPartitionsWithTheirLastPostingDate()
     {
         var walk = new OwnerLedgerWalk(new([], [Point(1, 1, _day, 10m), Point(1, 2, _day.AddHours(1), -10m)]));

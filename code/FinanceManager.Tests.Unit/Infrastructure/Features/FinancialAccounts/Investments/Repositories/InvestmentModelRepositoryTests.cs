@@ -811,7 +811,7 @@ public class InvestmentModelRepositoryTests
         Assert.Empty(afterDelete);
     }
     [Fact]
-    public async Task GetHoldingsByAccountAsOf_GroupsByAccountAndListing_AndNetsSignedQuantities()
+    public async Task GetHoldingsByUserAsOf_PoolsAccountsPerListing_AndNetsSignedQuantities()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -896,10 +896,10 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 25)
         }, ct);
 
-        // Account 30 (not requested): Buy 100 CSPX
+        // Another owner's account 30: Buy 100 CSPX
         await txRepo.Add(new InvestmentTransaction
         {
-            UserId = 1,
+            UserId = 2,
             AccountId = 30,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
@@ -924,20 +924,15 @@ public class InvestmentModelRepositoryTests
         }, ct);
 
         var asOf = new DateOnly(2026, 1, 20);
-        var holdings = await txRepo.GetHoldingsByAccountAsOf([10, 20], asOf, ct);
+        var holdings = (await txRepo.GetHoldingsByUserAsOf(1, asOf, ct)).ToDictionary(h => h.AssetListingId, h => h.Units);
 
         Assert.Equal(2, holdings.Count);
-        Assert.True(holdings.ContainsKey(10));
-        Assert.True(holdings.ContainsKey(20));
-        Assert.False(holdings.ContainsKey(30));
-
-        Assert.Equal(3.25m, holdings[10][listing1.Id]); // 5.5 - 2.25
-        Assert.Equal(10m, holdings[10][listing2.Id]);
-        Assert.Equal(1m, holdings[20][listing1.Id]); // Jan 25 trade excluded
+        Assert.Equal(4.25m, holdings[listing1.Id]); // (5.5 - 2.25) in account 10 + 1 in account 20; the Jan 25 trade and the other owner's trade are excluded
+        Assert.Equal(10m, holdings[listing2.Id]);
     }
 
     [Fact]
-    public async Task GetValuationInputs_SplitsOpeningAndInWindow_AndExcludesOutOfRange()
+    public async Task GetValuationInputsByUser_SplitsOpeningAndInWindow_AndExcludesOutOfRange()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -1017,14 +1012,13 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 25)
         }, ct);
 
-        var inputs = await txRepo.GetValuationInputs(
-            [accountId],
+        var inputs = await txRepo.GetValuationInputsByUser(
+            1,
             new DateOnly(2026, 1, 10),
             new DateOnly(2026, 1, 20),
             ct);
 
         Assert.Single(inputs.OpeningPositions);
-        Assert.Equal(accountId, inputs.OpeningPositions[0].AccountId);
         Assert.Equal(listing.Id, inputs.OpeningPositions[0].AssetListingId);
         Assert.Equal(4m, inputs.OpeningPositions[0].Quantity); // 5 - 1
 
@@ -1036,7 +1030,7 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputs_PreservesTransactionAmountsAfterListingCurrencyEnrichment()
+    public async Task GetCapitalFlowInputsByUser_PreservesTransactionAmountsAfterListingCurrencyEnrichment()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var context = CreateContext();
@@ -1064,12 +1058,12 @@ public class InvestmentModelRepositoryTests
             }, ct);
         }
 
-        var before = await repository.GetCapitalFlowInputs([10], new DateOnly(2026, 1, 20), ct);
+        var before = await repository.GetCapitalFlowInputsByUser(1, new DateOnly(2026, 1, 20), ct);
         listing.ExchangeMic = "XETR";
         listing.TradingCurrency = "EUR";
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        var after = await repository.GetCapitalFlowInputs([10], new DateOnly(2026, 1, 20), ct);
+        var after = await repository.GetCapitalFlowInputsByUser(1, new DateOnly(2026, 1, 20), ct);
 
         Assert.Equal(2, before.Count);
         Assert.All(before, flow => Assert.Equal("CHF", flow.Currency));
@@ -1077,7 +1071,7 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputs_ProjectsBoundedFields_AndIncludesPriceMultiplier()
+    public async Task GetCapitalFlowInputsByUser_ProjectsBoundedFields_AndIncludesPriceMultiplier()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -1134,12 +1128,11 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 25)
         }, ct);
 
-        var flows = await txRepo.GetCapitalFlowInputs([accountId], new DateOnly(2026, 1, 20), ct);
+        var flows = await txRepo.GetCapitalFlowInputsByUser(1, new DateOnly(2026, 1, 20), ct);
 
         Assert.Equal(2, flows.Count);
 
         var buyFlow = flows[0];
-        Assert.Equal(accountId, buyFlow.AccountId);
         Assert.Equal(gbxListing.Id, buyFlow.AssetListingId);
         Assert.Equal(new DateOnly(2026, 1, 10), buyFlow.TradeDate);
         Assert.Equal(InvestmentTransactionType.Buy, buyFlow.Type);
@@ -1150,7 +1143,6 @@ public class InvestmentModelRepositoryTests
         Assert.Equal(0.01m, buyFlow.ListingPriceMultiplier);
 
         var sellFlow = flows[1];
-        Assert.Equal(accountId, sellFlow.AccountId);
         Assert.Equal(gbxListing.Id, sellFlow.AssetListingId);
         Assert.Equal(new DateOnly(2026, 1, 15), sellFlow.TradeDate);
         Assert.Equal(InvestmentTransactionType.Sell, sellFlow.Type);
