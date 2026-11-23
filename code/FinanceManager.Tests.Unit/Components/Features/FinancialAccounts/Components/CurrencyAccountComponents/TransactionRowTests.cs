@@ -78,7 +78,8 @@ public class TransactionRowTests
 
         Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Edit");
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Confirm").Click();
+        // The confirm button is labelled like the row action that opened it; it renders after the row.
+        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
 
         cut.WaitForAssertion(() => Assert.Equal(1, published));
         var request = Assert.Single(handler.Requests);
@@ -93,7 +94,8 @@ public class TransactionRowTests
         var cut = RenderRow(context, initiallyExpanded: true);
 
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Confirm").Click();
+        // The confirm button is labelled like the row action that opened it; it renders after the row.
+        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
 
         Mock.Get(context.Services.GetRequiredService<IFinancialAccountService>()).Verify(service => service.RemoveEntry(7, 1), Times.Once);
         Assert.Empty(handler.Requests);

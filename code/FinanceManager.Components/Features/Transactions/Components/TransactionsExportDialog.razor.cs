@@ -1,7 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
-using FinanceManager.Components.Features.Transactions.Shared.Models;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
@@ -15,8 +14,9 @@ using MudBlazor;
 namespace FinanceManager.Components.Features.Transactions.Components;
 
 /// <summary>Exports one currency's cash entries or one bond's entries as CSV. Opened from the Transactions page with its current range and filters as defaults.</summary>
-public partial class TransactionsExportDialog : ComponentBase
+public partial class TransactionsExportDialog : ComponentBase, IAsyncDisposable
 {
+    private readonly CancellationTokenSource _exportCts = new();
     private TransactionKind _kind = TransactionKind.Cash;
     private List<Currency> _currencies = [];
     private List<BondDetails> _bonds = [];
@@ -78,7 +78,19 @@ public partial class TransactionsExportDialog : ComponentBase
         _message = null;
     }
 
-    private void Cancel() => MudDialog?.Cancel();
+    private void Cancel()
+    {
+        // Closing the dialog also abandons a download that is still running.
+        _exportCts.Cancel();
+        MudDialog?.Cancel();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _exportCts.Cancel();
+        _exportCts.Dispose();
+        return ValueTask.CompletedTask;
+    }
 
     private async Task ExportAsync()
     {
@@ -88,27 +100,45 @@ public partial class TransactionsExportDialog : ComponentBase
         try
         {
             var (start, end) = DateRangeHelper.LocalDaysToUtc(_from!.Value, _to!.Value);
+            var token = _exportCts.Token;
             var csv = _kind == TransactionKind.Cash
-                ? await CashTransactionsHttpClient.ExportCsvAsync(_currency!.Id, start, end)
-                : await BondTransactionsHttpClient.ExportCsvAsync(_bond!.Id, start, end);
+                ? await CashTransactionsHttpClient.ExportCsvAsync(_currency!.Id, start, end, token)
+                : await BondTransactionsHttpClient.ExportCsvAsync(_bond!.Id, start, end, token);
+            token.ThrowIfCancellationRequested();
             if (csv.Content.Length == 0)
             {
                 Show("Nothing to export in this range.", Severity.Info);
                 return;
             }
 
-            await JSRuntime.InvokeVoidAsync("financeManager.downloadFileFromBase64", csv.FileName, "text/csv", Convert.ToBase64String(csv.Content));
+            await JSRuntime.InvokeVoidAsync("financeManager.downloadFileFromBase64", FileName(), "text/csv", Convert.ToBase64String(csv.Content));
             MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (OperationCanceledException) when (_exportCts.IsCancellationRequested)
+        {
+            // The dialog was closed while the export ran.
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Failed to export transactions.");
+            Show(string.IsNullOrWhiteSpace(ex.Message) ? "Could not export the transactions." : ex.Message, Severity.Error);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to export transactions.");
-            Show(string.IsNullOrWhiteSpace(ex.Message) ? "Could not export the transactions." : ex.Message, Severity.Error);
+            Show("Could not export the transactions.", Severity.Error);
         }
         finally
         {
             _isDownloading = false;
         }
+    }
+
+    // Named from the days the user picked: the server names the file from the UTC bounds, which can fall on the previous day.
+    private string FileName()
+    {
+        var days = $"{_from!.Value:yyyyMMdd}-{_to!.Value:yyyyMMdd}";
+        return _kind == TransactionKind.Cash ? $"cash-{_currency!.ShortName.ToLowerInvariant()}-{days}.csv" : $"bond-{_bond!.Id}-{days}.csv";
     }
 
     private void Show(string message, Severity severity)

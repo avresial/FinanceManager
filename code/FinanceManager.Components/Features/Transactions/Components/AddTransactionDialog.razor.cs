@@ -1,5 +1,7 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 
 namespace FinanceManager.Components.Features.Transactions.Components;
 
@@ -7,6 +9,8 @@ public partial class AddTransactionDialog : ComponentBase
 {
     private TransactionKind _kind = TransactionKind.Cash;
     private bool _wasVisible;
+    private bool _focusPending;
+    private ElementReference _dialogBody;
 
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
@@ -22,9 +26,30 @@ public partial class AddTransactionDialog : ComponentBase
 
     protected override void OnParametersSet()
     {
-        if (Visible && !_wasVisible) _kind = InitialKind;
+        if (Visible && !_wasVisible)
+        {
+            _kind = InitialKind;
+            _focusPending = true;
+        }
         _wasVisible = Visible;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPending || !Visible) return;
+        _focusPending = false;
+        // The key handler only hears Escape while focus is inside the dialog, so move it there on open.
+        try
+        {
+            await _dialogBody.FocusAsync();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or TaskCanceledException)
+        {
+            // Focus is a convenience; the dialog works without it.
+        }
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs args) => args.Key == "Escape" ? CloseAsync() : Task.CompletedTask;
 
     private void OnKindChanged(TransactionKind kind) => _kind = kind;
 

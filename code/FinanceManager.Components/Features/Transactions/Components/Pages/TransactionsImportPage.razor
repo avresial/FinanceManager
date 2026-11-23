@@ -6,6 +6,9 @@
 <PageTitle>Import transactions</PageTitle>
 
 <AccountFormContainer>
+    @* A way out at every step; the completion panel has its own link back once the import has run. *@
+    <MudButton Href="/Transactions" Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" data-testid="import-back">Back to Transactions</MudButton>
     @if (string.Equals(Kind, "cash", StringComparison.OrdinalIgnoreCase))
     {
         <ImportCurrencyEntriesComponent />

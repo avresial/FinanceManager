@@ -100,7 +100,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         ApplyRange();
         if (string.Equals(Dialog, "add-entry", StringComparison.OrdinalIgnoreCase))
         {
-            _addKind = Enum.TryParse<TransactionKind>(Kind, ignoreCase: true, out var kind) ? kind : TransactionKind.Cash;
+            _addKind = Enum.TryParse<TransactionKind>(Kind, ignoreCase: true, out var kind) && Enum.IsDefined(kind) ? kind : TransactionKind.Cash;
             _addVisible = true;
         }
         // Rows publish this after a successful cash or bond edit/delete; the list then starts over so moved
@@ -148,7 +148,10 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         }
     }
 
-    private void OnAccountsChanged() => _ = InvokeAsync(() => _disposed ? Task.CompletedTask : Task.WhenAll(LoadAsync(reset: true), LoadCurrenciesAsync(_userId)));
+    private void OnAccountsChanged() => _ = InvokeAsync(ReloadAsync);
+
+    // A save or delete can add the first or remove the last transaction of a currency, so the filter options reload with the list.
+    private Task ReloadAsync() => _disposed ? Task.CompletedTask : Task.WhenAll(LoadAsync(reset: true), LoadCurrenciesAsync(_userId));
 
     private Task OnRangeChanged(string range)
     {
@@ -427,7 +430,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     {
         _investmentFormVisible = false;
         _editingInvestment = null;
-        return LoadAsync(reset: true);
+        return ReloadAsync();
     }
 
     private async Task DeleteInvestmentAsync(InvestmentTransactionDto transaction)
@@ -436,7 +439,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         {
             await InvestmentTradesHttpClient.DeleteAsync(transaction.Id);
             Snackbar.Add("Transaction removed.", Severity.Success);
-            await LoadAsync(reset: true);
+            await ReloadAsync();
         }
         catch (Exception ex)
         {

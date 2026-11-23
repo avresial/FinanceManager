@@ -119,7 +119,18 @@ public partial class BondEntryConflictResolver
                     .ToHashSet();
                 var acceptedRows = OwnerRows.Where(r => acceptedKeys.Contains((Truncate(r.PostingDate), r.ValueChange, r.BondDetailsId))).ToList();
                 if (acceptedRows.Count > 0)
-                    await BondTransactionsHttpClient.ResolveImportAsync(acceptedRows);
+                {
+                    var result = await BondTransactionsHttpClient.ResolveImportAsync(acceptedRows);
+                    if (result.Failed > 0 || result.Errors.Count > 0)
+                    {
+                        _errorMessage = result.Errors.Count > 0
+                            ? $"{result.Failed} entries could not be imported: {result.Errors[0]}"
+                            : $"{result.Failed} entries could not be imported.";
+                        _isLoading = false;
+                        StateHasChanged();
+                        return;
+                    }
+                }
             }
             else
             {

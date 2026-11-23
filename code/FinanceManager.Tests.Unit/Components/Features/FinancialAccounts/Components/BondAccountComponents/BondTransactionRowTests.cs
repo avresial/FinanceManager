@@ -35,7 +35,7 @@ public class BondTransactionRowTests
         Assert.Contains("Unit value", cut.Markup);
         Assert.Contains("12 units", cut.Markup);
         Assert.Contains("Edit", cut.Markup);
-        Assert.Contains("Remove", cut.Markup);
+        Assert.Contains("Delete", cut.Markup);
 
         cut.Find("[role='button']").Click();
         Assert.Equal("false", cut.Find("[role='button']").GetAttribute("aria-expanded"));
@@ -102,8 +102,9 @@ public class BondTransactionRowTests
         context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;
 
         Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Edit");
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Remove").Click();
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Confirm").Click();
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
+        // The confirm button is labelled like the row action that opened it; it renders after the row.
+        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
 
         cut.WaitForAssertion(() => Assert.Equal(1, published));
         var request = Assert.Single(handler.Requests);

@@ -67,17 +67,23 @@
             <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
                 @EmptyMessage
             </MudText>
-            <MudStack Row Wrap="Wrap.Wrap" Justify="Justify.Center" Spacing="2" Class="mt-3">
-                @if (_filter.IsActive || !string.IsNullOrWhiteSpace(_search))
-                {
+            @* The header already offers Import and Add; a filtered view only needs the way back out of the filters. *@
+            @if (_filter.IsActive || !string.IsNullOrWhiteSpace(_search))
+            {
+                <MudStack Row Justify="Justify.Center" Class="mt-3">
                     <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearFilters"
                                data-testid="transactions-clear-filters">Clear filters</MudButton>
-                }
-                <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
-                           Href="/Transactions/Import/cash">Import statement</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="OpenAdd">Add transaction</MudButton>
-            </MudStack>
+                </MudStack>
+            }
+            else
+            {
+                <MudStack Row Wrap="Wrap.Wrap" Justify="Justify.Center" Spacing="2" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+                               Href="/Transactions/Import/cash">Import statement</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenAdd">Add transaction</MudButton>
+                </MudStack>
+            }
         </div>
     }
     else

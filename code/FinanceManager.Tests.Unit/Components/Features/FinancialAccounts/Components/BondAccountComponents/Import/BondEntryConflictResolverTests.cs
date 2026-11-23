@@ -58,6 +58,25 @@ public class BondEntryConflictResolverTests
         Assert.DoesNotContain(handler.Requests, r => r.PathAndQuery.Contains("/import/resolve", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task OwnerMode_WhenTheServerReportsFailedRows_ShowsThemAndDoesNotCompleteTheImport()
+    {
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 1, ["Posting date must be UTC."], []));
+        await using var context = CreateContext(handler);
+        var submitted = 0;
+        var cut = context.Render<BondEntryConflictResolver>(p => p
+            .Add(x => x.AccountName, "bonds")
+            .Add(x => x.OwnerRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
+            .Add(x => x.OnSubmitted, () => submitted++)
+            .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1)]));
+        await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Imported));
+
+        await cut.InvokeAsync(cut.Instance.SubmitAsync);
+
+        Assert.Equal(0, submitted);
+        Assert.Contains("1 entries could not be imported: Posting date must be UTC.", cut.Find(".mud-alert").TextContent);
+    }
+
     // An incoming row whose key (day, units, definition) differs from the existing entry of the day, so it is a real conflict.
     private static BondImportConflict Conflict(DateTime day, decimal units, int bondDetailsId) => new(
         null, new BondEntryImport(day, units, bondDetailsId, "incoming"),

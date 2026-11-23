@@ -167,9 +167,11 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
         if (_headers.Count == 0)
             _erorrs.Add("No headers found in CSV.");
 
-        _step1Complete = _rawPreview.Count != 0;
+        _step1Complete = HasImportTarget && _rawPreview.Count != 0;
 
-        if (!_step1Complete && _erorrs.Count == 0)
+        if (!HasImportTarget)
+            _erorrs.Add("Select a currency before continuing.");
+        else if (!_step1Complete && _erorrs.Count == 0)
             _erorrs.Add("Step 1 can not be completed - loading files failed.");
 
         if (_headers.Count > 0)

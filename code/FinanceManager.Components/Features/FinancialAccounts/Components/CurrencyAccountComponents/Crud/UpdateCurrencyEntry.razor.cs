@@ -60,8 +60,10 @@ public partial class UpdateCurrencyEntry
         _loadedEntryId = CurrencyAccountEntry.EntryId;
 
         // Fill the form before awaiting the currency lookup so the editor never shows (or submits) defaults.
-        _postingDate = CurrencyAccountEntry.PostingDate;
-        _time = new TimeSpan(CurrencyAccountEntry.PostingDate.Hour, CurrencyAccountEntry.PostingDate.Minute, CurrencyAccountEntry.PostingDate.Second);
+        // Entries are stored as UTC and the rows show them in local time, so the form edits the same local wall-clock time.
+        var posted = CurrencyAccountEntry.PostingDate.ToLocalTime();
+        _postingDate = posted;
+        _time = new TimeSpan(posted.Hour, posted.Minute, posted.Second);
         _description = CurrencyAccountEntry.Description;
         _contractorDetails = CurrencyAccountEntry.ContractorDetails;
         _balanceChange = CurrencyAccountEntry.ValueChange;
@@ -120,6 +122,12 @@ public partial class UpdateCurrencyEntry
                     };
                     await FinancialAccountService.UpdateEntry(accountEntry);
                 }
+            }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (CurrencyAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry update");
+                _errors = [ex.Message];
             }
             catch (Exception ex)
             {
