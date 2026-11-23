@@ -20,12 +20,3 @@ public interface ITransactionRuleService
     Task<bool> ApplyToEntryAsync(int userId, CurrencyAccountEntry entry, CancellationToken cancellationToken = default);
     Task<TransactionRuleApplyResultDto> ApplyRetroactivelyAsync(int userId, ApplyTransactionRules command, CancellationToken cancellationToken = default);
 }
-
-/// <summary>Preview facts are kept separate from command records so the endpoint has a stable JSON shape.</summary>
-public sealed record TransactionRulePreviewFacts(
-    string Contractor,
-    string Description,
-    int AccountId,
-    decimal Amount,
-    FinanceManager.Domain.TransactionRules.Models.TransactionDirection Direction,
-    IReadOnlyList<string> Labels);

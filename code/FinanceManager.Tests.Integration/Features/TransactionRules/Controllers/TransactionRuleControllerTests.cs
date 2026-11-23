@@ -128,13 +128,12 @@ public sealed class TransactionRuleControllerTests(OptionsProvider optionsProvid
             [new() { Type = "Contractor", Pattern = "ACME" }],
             [new() { Type = "NormalizeContractor", Value = "Acme" }]);
         var result = new TransactionRuleTestResultDto(
-            12,
-            "Cash",
             34,
             DateTime.UtcNow,
             -10m,
-            new("ACME LTD", "Invoice", 12, 10m, TransactionDirection.Expense, []),
-            new("Acme", "Invoice", 12, 10m, TransactionDirection.Expense, []),
+            "PLN",
+            new("ACME LTD", "Invoice", 10m, TransactionDirection.Expense, []),
+            new("Acme", "Invoice", 10m, TransactionDirection.Expense, []),
             true);
         _serviceMock
             .Setup(x => x.TestAsync(_testUserId, It.IsAny<CreateTransactionRule>(), It.IsAny<CancellationToken>()))
@@ -173,8 +172,8 @@ public sealed class TransactionRuleControllerTests(OptionsProvider optionsProvid
             .Setup(x => x.ReorderAsync(_testUserId, It.IsAny<ReorderTransactionRules>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([second, first]);
         var preview = new TransactionRuleEngineResult(
-            new("ACME", "Invoice", 1, 10m, TransactionDirection.Expense, []),
-            new("Acme", "Invoice", 1, 10m, TransactionDirection.Expense, ["Bills"]),
+            new("ACME", "Invoice", 10m, TransactionDirection.Expense, []),
+            new("Acme", "Invoice", 10m, TransactionDirection.Expense, ["Bills"]),
             [],
             null)
         {
@@ -190,7 +189,7 @@ public sealed class TransactionRuleControllerTests(OptionsProvider optionsProvid
             TestContext.Current.CancellationToken);
         var previewResponse = await Client.PostAsJsonAsync(
             "api/TransactionRules/preview",
-            new TransactionRulePreviewFacts("ACME", "Invoice", 1, 10m, TransactionDirection.Expense, []),
+            new TransactionRulePreviewFacts("ACME", "Invoice", 10m, TransactionDirection.Expense, []),
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, reordered.StatusCode);
@@ -222,6 +221,59 @@ public sealed class TransactionRuleControllerTests(OptionsProvider optionsProvid
             _testUserId,
             It.Is<ApplyTransactionRules>(value => value.Confirmed),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("""{"confirmed":true,"accountId":17}""")]
+    [InlineData("""{"confirmed":true,"AccountId":17,"entryId":5}""")]
+    [InlineData("""{"confirmed":true,"somethingElse":1}""")]
+    public async Task Apply_RejectsLegacyOrUnknownMembers_AndNeverReachesTheService(string rawJson)
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        using var response = await Client.PostAsync(
+            "api/TransactionRules/apply",
+            new StringContent(rawJson, System.Text.Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.Verify(x => x.ApplyRetroactivelyAsync(It.IsAny<int>(), It.IsAny<ApplyTransactionRules>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Apply_AcceptsTheEntryScopedRequest()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        _serviceMock
+            .Setup(x => x.ApplyRetroactivelyAsync(_testUserId, It.IsAny<ApplyTransactionRules>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TransactionRuleApplyResultDto(1, 1));
+
+        using var response = await Client.PostAsync(
+            "api/TransactionRules/apply",
+            new StringContent("""{"confirmed":true,"entryId":5}""", System.Text.Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _serviceMock.Verify(x => x.ApplyRetroactivelyAsync(_testUserId,
+            It.Is<ApplyTransactionRules>(value => value.Confirmed && value.EntryId == 5), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task NegativeGuestIds_AreAccepted_AndZeroIsForbidden()
+    {
+        _serviceMock
+            .Setup(x => x.GetRulesAsync(-8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        Authorize("guest", -8, UserRole.User);
+        using var guest = await Client.GetAsync("api/TransactionRules", TestContext.Current.CancellationToken);
+        Authorize("zero", 0, UserRole.User);
+        using var zero = await Client.GetAsync("api/TransactionRules", TestContext.Current.CancellationToken);
+        using var zeroApply = await Client.PostAsJsonAsync("api/TransactionRules/apply", new ApplyTransactionRules(true), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, guest.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, zero.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, zeroApply.StatusCode);
+        _serviceMock.Verify(x => x.GetRulesAsync(0, It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static TransactionRuleDto Rule(string name, Guid? id = null) => new(

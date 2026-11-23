@@ -10,14 +10,13 @@ namespace FinanceManager.Components.Features.TransactionRules.Services;
 /// <summary>Human-readable summaries of rules, conditions, actions and preview outcomes.</summary>
 internal static class TransactionRuleText
 {
-    public static string DescribeConditions(TransactionRuleDto rule, TransactionRuleAccountLabels accounts) => rule.Conditions.Count == 0
+    public static string DescribeConditions(TransactionRuleDto rule) => rule.Conditions.Count == 0
         ? "Every transaction"
-        : string.Join(" and ", rule.Conditions.Select(condition => DescribeCondition(condition, false, accounts)));
+        : string.Join(" and ", rule.Conditions.Select(condition => DescribeCondition(condition, false)));
 
-    public static string DescribeCondition(TransactionRuleConditionDto condition, bool includeOptions, TransactionRuleAccountLabels accounts) => condition.Type.ToLowerInvariant() switch
+    public static string DescribeCondition(TransactionRuleConditionDto condition, bool includeOptions) => condition.Type.ToLowerInvariant() switch
     {
         "contractor" or "description" => $"{condition.Type} {DescribeMatch(condition.MatchOperator)} “{condition.Pattern}”{(includeOptions ? condition.IgnoreCase ? " · ignore case" : " · case sensitive" : string.Empty)}",
-        "account" => $"Account is {string.Join(" or ", condition.AccountIds.Select(accounts.Get))}",
         "direction" => $"Direction is {condition.Direction}",
         "amount" => DescribeAmount(condition),
         _ => condition.Type

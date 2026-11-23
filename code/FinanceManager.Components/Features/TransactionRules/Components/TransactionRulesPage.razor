@@ -61,7 +61,7 @@
                         <span class="rule-number">@number</span>
                         <span class="rule-row-copy">
                             <span class="rule-name">@rule.Name</span>
-                            <span class="rule-summary">@DescribeConditions(rule, _accountLabels) → @DescribeActions(rule)</span>
+                            <span class="rule-summary">@DescribeConditions(rule) → @DescribeActions(rule)</span>
                         </span>
                         <span class="rule-state @(rule.IsEnabled ? "enabled" : null)">@(rule.IsEnabled ? "Enabled" : "Disabled")</span>
                         <span class="rule-chevron" aria-hidden="true">@(isExpanded ? "−" : "+")</span>
@@ -92,9 +92,13 @@
                                             <div>
                                                 <MudText Typo="Typo.subtitle2">All conditions must match</MudText>
                                                 <ul class="condition-list">
+                                                    @if (rule.Conditions.Count == 0)
+                                                    {
+                                                        <li>Every transaction (no conditions configured)</li>
+                                                    }
                                                     @foreach (var condition in rule.Conditions)
                                                     {
-                                                        <li>@DescribeCondition(condition, true, _accountLabels)</li>
+                                                        <li>@DescribeCondition(condition, true)</li>
                                                     }
                                                 </ul>
                                             </div>
@@ -112,7 +116,15 @@
                                             </div>
                                         </div>
                                         <div class="rule-options">
-                                            <MudSwitch T="bool" Value="@rule.IsEnabled" ValueChanged="@(value => ToggleAsync(rule, value))" Disabled="@IsBusy" Color="Color.Primary" Label="Enabled" aria-label="@($"Enable {rule.Name}")" />
+                                            <MudSwitch @key="@($"{rule.Id}-{_switchVersion}")" T="bool" Value="@rule.IsEnabled" ValueChanged="@(value => ToggleAsync(rule, value))" Disabled="@IsBusy" Color="Color.Primary" Label="Enabled" aria-label="@($"Enable {rule.Name}")" />
+                                            @if (_confirmEnableId == rule.Id)
+                                            {
+                                                <MudAlert Severity="Severity.Warning" Dense="true" Class="enable-confirmation" role="alert">
+                                                    <MudText Typo="Typo.body2">This rule will apply to all cash transactions.</MudText>
+                                                    <MudButton Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Disabled="@IsBusy" OnClick="@(() => ConfirmEnableAsync(rule))">Enable rule</MudButton>
+                                                    <MudButton Size="Size.Small" Disabled="@IsBusy" OnClick="CancelEnable">Cancel</MudButton>
+                                                </MudAlert>
+                                            }
                                             <MudText Typo="Typo.body2"><strong>Stop after match:</strong> @(rule.StopProcessing ? "On" : "Off")</MudText>
                                             <MudText Typo="Typo.caption">When all conditions match, run this rule's actions first, then @(rule.StopProcessing ? "skip the remaining rules." : "continue to the next rule.")</MudText>
                                         </div>
@@ -167,20 +179,10 @@
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" @bind-Value="_previewDescription" @bind-Value:after="InvalidatePreview" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudSelect T="int?" @bind-Value="_previewAccountId" @bind-Value:after="InvalidatePreview" Label="Account" Required="true"
-                               ToStringFunc="@(accountId => accountId is int id ? _accountLabels.Get(id) : string.Empty)"
-                               Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var account in _accounts)
-                        {
-                            <MudSelectItem T="int?" Value="@((int?)account.AccountId)">@_accountLabels.Get(account)</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="3">
+                <MudItem xs="6" sm="4">
                     <MudNumericField T="decimal" @bind-Value="_previewAmount" @bind-Value:after="InvalidatePreview" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
-                <MudItem xs="12" sm="3">
+                <MudItem xs="6" sm="4">
                     <MudSelect T="TransactionDirection" @bind-Value="_previewDirection" @bind-Value:after="InvalidatePreview" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
                         @foreach (var direction in Enum.GetValues<TransactionDirection>())
                         {
@@ -188,7 +190,7 @@
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="3" Class="d-flex align-center">
+                <MudItem xs="12" sm="4" Class="d-flex align-center">
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" Disabled="@IsBusy" OnClick="PreviewAsync">Preview sequence</MudButton>
                 </MudItem>
             </MudGrid>
@@ -211,13 +213,13 @@
             }
         </MudPaper>
         <MudPaper Outlined Class="pa-4 mt-5">
-            <MudText Typo="Typo.h6">Apply to existing currency transactions</MudText>
+            <MudText Typo="Typo.h6">Apply to existing cash transactions</MudText>
             <MudText Typo="Typo.body2" Class="mb-3 mud-text-secondary">
-                Retroactive application changes matching transactions in your accounts. Confirm before running it.
+                Retroactive application changes matching cash transactions. Confirm before running it.
             </MudText>
             <MudCheckBox T="bool" @bind-Value="_confirmApply" Label="I understand that matching transactions will be updated" Color="Color.Warning" />
             <MudButton Variant="Variant.Outlined" Color="Color.Warning" Disabled="@(!_confirmApply || IsBusy)" OnClick="ApplyAsync">
-                Apply to all currency transactions
+                Apply to all cash transactions
             </MudButton>
             @if (_applyResult is not null)
             {
@@ -276,7 +278,6 @@
                         <MudSelect T="string" @bind-Value="condition.Type" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem Value="@("Contractor")">Contractor</MudSelectItem>
                             <MudSelectItem Value="@("Description")">Description</MudSelectItem>
-                            <MudSelectItem Value="@("Account")">Account</MudSelectItem>
                             <MudSelectItem Value="@("Amount")">Amount</MudSelectItem>
                             <MudSelectItem Value="@("Direction")">Direction</MudSelectItem>
                         </MudSelect>
@@ -297,23 +298,6 @@
                         </MudItem>
                         <MudItem xs="6" sm="2">
                             <MudCheckBox T="bool" @bind-Value="condition.IgnoreCase" Label="Ignore case" Color="Color.Primary" />
-                        </MudItem>
-                    }
-                    else if (condition.Type == "Account")
-                    {
-                        <MudItem xs="12" sm="8">
-                            <MudSelect T="int" @bind-SelectedValues="condition.AccountIds" Label="Accounts" MultiSelection="true"
-                                       ToStringFunc="_accountLabels.Get"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense">
-                                @foreach (var account in _accounts)
-                                {
-                                    <MudSelectItem T="int" Value="@account.AccountId">@_accountLabels.Get(account)</MudSelectItem>
-                                }
-                                @foreach (var accountId in condition.AccountIds.Where(_accountLabels.IsMissing))
-                                {
-                                    <MudSelectItem T="int" Value="@accountId">@TransactionRuleAccountLabels.Missing(accountId)</MudSelectItem>
-                                }
-                            </MudSelect>
                         </MudItem>
                     }
                     else if (condition.Type == "Direction")
@@ -450,8 +434,8 @@
                     {
                         <div class="transaction-result">
                             <div class="d-flex flex-wrap justify-space-between gap-2 mb-2">
-                                <MudText Typo="Typo.subtitle2">@result.AccountName · @DateFormatter.Format(result.Date)</MudText>
-                                <MudText Typo="Typo.subtitle2">@MoneyFormatter.FormatNumber(result.Amount) · @result.Before.Direction</MudText>
+                                <MudText Typo="Typo.subtitle2">@DateFormatter.Format(result.Date)</MudText>
+                                <MudText Typo="Typo.subtitle2">@MoneyFormatter.Format(result.Amount, result.CurrencyCode) · @result.Before.Direction</MudText>
                             </div>
                             @BeforeAfter(result.Before, result.After)
                             <MudText Typo="Typo.caption">@(result.HasChanges ? "Matched · changes shown above." : "Rule matches but produces no effective change.")</MudText>

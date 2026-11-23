@@ -2,6 +2,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Models;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Application.TransactionRules;
 
@@ -54,11 +55,27 @@ public sealed class TransactionRuleApplication(
     }
 
     internal static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
-        new(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
-            Math.Abs(entry.ValueChange), entry.ValueChange switch
-            {
-                > 0 => TransactionDirection.Income,
-                < 0 => TransactionDirection.Expense,
-                _ => TransactionDirection.Transfer
-            }, entry.Labels.Select(label => label.Name).ToList());
+        new(entry.ContractorDetails ?? string.Empty, entry.Description, Math.Abs(entry.ValueChange), DirectionOf(entry.ValueChange),
+            entry.Labels.Select(label => label.Name).ToList());
+
+    internal static TransactionFacts ToFacts(CashLogEntry entry) =>
+        new(entry.ContractorDetails ?? string.Empty, entry.Description, Math.Abs(entry.ValueChange), DirectionOf(entry.ValueChange),
+            entry.Labels.Select(label => label.Name).ToList());
+
+    /// <summary>A detached copy of a history row the rules can be applied to, so previews resolve labels exactly like a real write without touching storage.</summary>
+    internal static CurrencyAccountEntry ToSandboxEntry(CashLogEntry entry) =>
+        new(null, entry.EntryId, entry.PostingDate, 0m, entry.ValueChange)
+        {
+            CurrencyId = entry.CurrencyId,
+            Description = entry.Description,
+            ContractorDetails = entry.ContractorDetails,
+            Labels = [.. entry.Labels]
+        };
+
+    private static TransactionDirection DirectionOf(decimal valueChange) => valueChange switch
+    {
+        > 0 => TransactionDirection.Income,
+        < 0 => TransactionDirection.Expense,
+        _ => TransactionDirection.Transfer
+    };
 }

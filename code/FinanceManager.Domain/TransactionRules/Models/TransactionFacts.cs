@@ -16,9 +16,6 @@ public sealed record TransactionFacts
     /// <summary>The user-visible description as currently stored (never null; may be empty).</summary>
     public string Description { get; set; }
 
-    /// <summary>The legacy account link, or null for an owner-scoped entry. Referenced for matching only; rules cannot move money between accounts.</summary>
-    public int? AccountId { get; set; }
-
     /// <summary>The transaction amount as a non-negative magnitude; <see cref="Direction"/> carries the sign.</summary>
     public decimal Amount { get; set; }
 
@@ -33,7 +30,6 @@ public sealed record TransactionFacts
     public TransactionFacts(
         string contractor,
         string description,
-        int? accountId,
         decimal amount,
         TransactionDirection direction,
         IReadOnlyList<string> labels)
@@ -43,14 +39,13 @@ public sealed record TransactionFacts
 
         Contractor = contractor.Trim();
         Description = description.Trim();
-        AccountId = accountId;
         Amount = amount;
         Direction = direction;
         Labels = labels.Where(label => !string.IsNullOrWhiteSpace(label)).ToArray();
     }
 
     /// <summary>An empty set of facts, used as the JSON deserialization placeholder.</summary>
-    public static TransactionFacts Empty => new(string.Empty, string.Empty, 0, 0m, TransactionDirection.Expense, []);
+    public static TransactionFacts Empty => new(string.Empty, string.Empty, 0m, TransactionDirection.Expense, []);
 
     /// <summary>
     /// Compares facts value-by-value, including label content and order, so two facts
@@ -65,7 +60,6 @@ public sealed record TransactionFacts
 
         return Contractor == other.Contractor
             && Description == other.Description
-            && AccountId == other.AccountId
             && Amount == other.Amount
             && Direction == other.Direction
             && Labels.SequenceEqual(other.Labels);
@@ -76,7 +70,6 @@ public sealed record TransactionFacts
         var hashBuilder = new HashCode();
         hashBuilder.Add(Contractor);
         hashBuilder.Add(Description);
-        hashBuilder.Add(AccountId);
         hashBuilder.Add(Amount);
         hashBuilder.Add(Direction);
         foreach (string label in Labels)

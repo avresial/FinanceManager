@@ -1,9 +1,7 @@
 using FinanceManager.Application.TransactionRules.Services;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.Models;
 using FinanceManager.Components.Features.TransactionRules.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
 using FinanceManager.Domain.TransactionRules.Dtos;
@@ -17,11 +15,11 @@ namespace FinanceManager.Components.Features.TransactionRules.Components;
 public partial class TransactionRulesPage : ComponentBase
 {
     private List<TransactionRuleDto> _rules = [];
-    private List<AvailableAccount> _accounts = [];
-    private TransactionRuleAccountLabels _accountLabels = TransactionRuleAccountLabels.NotLoaded;
     private readonly TransactionRuleDraft _draft = new();
     private Guid? _expandedId;
     private Guid? _confirmDeleteId;
+    private Guid? _confirmEnableId;
+    private int _switchVersion;
     private bool _isCreating;
     private bool _isReordering;
     private bool _isDeleting;
@@ -45,12 +43,10 @@ public partial class TransactionRulesPage : ComponentBase
     private MudForm? _ruleForm;
     private string _previewContractor = string.Empty;
     private string _previewDescription = string.Empty;
-    private int? _previewAccountId;
     private decimal _previewAmount = 100m;
     private TransactionDirection _previewDirection = TransactionDirection.Expense;
 
     [Inject] public required TransactionRuleHttpClient HttpClient { get; set; }
-    [Inject] public required CurrencyAccountHttpClient CurrencyAccountHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -67,19 +63,6 @@ public partial class TransactionRulesPage : ComponentBase
         {
             _error = "Unable to load transaction automation rules.";
         }
-        try
-        {
-            _accounts = [.. await CurrencyAccountHttpClient.GetAvailableAccountsAsync()];
-            _accountLabels = new TransactionRuleAccountLabels(_accounts, Loaded: true);
-            if (_previewAccountId is not int accountId || _accountLabels.IsMissing(accountId))
-                _previewAccountId = _accounts.FirstOrDefault()?.AccountId;
-        }
-        catch (Exception)
-        {
-            _accounts = [];
-            _accountLabels = TransactionRuleAccountLabels.NotLoaded;
-            _error ??= "Unable to load accounts for transaction automation rules.";
-        }
         _isLoading = false;
     }
 
@@ -90,6 +73,7 @@ public partial class TransactionRulesPage : ComponentBase
         await ResetForm();
         _expandedId = null;
         _confirmDeleteId = null;
+        _confirmEnableId = null;
         InvalidatePreview();
         await LoadAsync();
     }
@@ -109,6 +93,7 @@ public partial class TransactionRulesPage : ComponentBase
         var wasExpanded = _expandedId == rule.Id;
         await ResetForm();
         _confirmDeleteId = null;
+        _confirmEnableId = null;
         _expandedId = wasExpanded ? null : rule.Id;
     }
 
@@ -210,6 +195,31 @@ public partial class TransactionRulesPage : ComponentBase
     {
         if (IsBusy) return;
 
+        // A rule without conditions matches every cash transaction (a migrated rule loses its retired Account condition),
+        // so enabling it needs an explicit confirmation first.
+        if (enabled && rule.Conditions.Count == 0 && _confirmEnableId != rule.Id)
+        {
+            _confirmEnableId = rule.Id;
+            _switchVersion++;
+            return;
+        }
+
+        await SetEnabledAsync(rule, enabled);
+    }
+
+    private Task ConfirmEnableAsync(TransactionRuleDto rule) => SetEnabledAsync(rule, true);
+
+    private void CancelEnable()
+    {
+        _confirmEnableId = null;
+        _switchVersion++;
+    }
+
+    private async Task SetEnabledAsync(TransactionRuleDto rule, bool enabled)
+    {
+        if (IsBusy) return;
+
+        _confirmEnableId = null;
         _isToggling = true;
         try
         {
@@ -365,12 +375,6 @@ public partial class TransactionRulesPage : ComponentBase
     {
         if (IsBusy) return;
 
-        if (_previewAccountId is not int accountId)
-        {
-            _error = "Select an account to preview the current rules.";
-            return;
-        }
-
         _isPreviewing = true;
         _error = null;
         _preview = null;
@@ -378,7 +382,7 @@ public partial class TransactionRulesPage : ComponentBase
         try
         {
             var preview = await HttpClient.PreviewAsync(new TransactionRulePreviewFacts(
-                _previewContractor, _previewDescription, accountId, _previewAmount, _previewDirection, []));
+                _previewContractor, _previewDescription, _previewAmount, _previewDirection, []));
             if (preview is null) throw new InvalidOperationException();
             if (previewVersion == _previewVersion)
                 _preview = preview;

@@ -29,7 +29,6 @@ public static class TransactionRuleEngine
         var working = new TransactionFacts(
             facts.Contractor,
             facts.Description,
-            facts.AccountId,
             facts.Amount,
             facts.Direction,
             facts.Labels);
@@ -86,7 +85,6 @@ public static class TransactionRuleEngine
         var finalFacts = new TransactionFacts(
             working.Contractor,
             working.Description,
-            working.AccountId,
             working.Amount,
             working.Direction,
             workingLabels);

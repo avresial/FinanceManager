@@ -13,7 +13,6 @@ public sealed class TransactionRuleConditionDto
     public string? Pattern { get; set; }
     public TextMatchOperator MatchOperator { get; set; } = TextMatchOperator.Contains;
     public bool IgnoreCase { get; set; } = true;
-    public List<int> AccountIds { get; set; } = [];
     public TransactionDirection Direction { get; set; } = TransactionDirection.Expense;
     public decimal? Threshold { get; set; }
     public AmountComparison Comparison { get; set; } = AmountComparison.GreaterThan;

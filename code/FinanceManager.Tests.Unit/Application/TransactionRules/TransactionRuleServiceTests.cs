@@ -1,7 +1,6 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
@@ -13,6 +12,10 @@ using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Domain.TransactionRules.Services;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.TransactionRules;
@@ -22,7 +25,8 @@ public sealed class TransactionRuleServiceTests
 {
     private readonly Mock<ITransactionRuleRepository> _repository = new();
     private readonly Mock<IFinancialLabelsRepository> _labels = new();
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _accounts = new();
+    private readonly Mock<ICashTransactionReader> _cash = new();
+    private readonly Mock<ILogger<TransactionRuleService>> _logger = new();
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _entries = new();
     private readonly Mock<IFinancialAlertService> _alerts = new();
     private readonly TransactionRuleService _service;
@@ -31,7 +35,7 @@ public sealed class TransactionRuleServiceTests
     {
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
             .Returns(new[] { new FinancialLabel { Id = 1, Name = "Bills" } }.ToAsyncEnumerable());
-        _service = new(_repository.Object, new TransactionRuleEngineService(), _labels.Object, _accounts.Object, _entries.Object, _alerts.Object);
+        _service = new(_repository.Object, new TransactionRuleEngineService(), _labels.Object, _cash.Object, _entries.Object, _alerts.Object, _logger.Object);
     }
 
     [Fact]
@@ -86,51 +90,72 @@ public sealed class TransactionRuleServiceTests
                 }
             });
 
-        var result = await _service.PreviewAsync(7, new("ACME LTD", "Invoice", 12, 15m, TransactionDirection.Expense, []), TestContext.Current.CancellationToken);
+        var result = await _service.PreviewAsync(7, new("ACME LTD", "Invoice", 15m, TransactionDirection.Expense, []), TestContext.Current.CancellationToken);
 
         Assert.Equal("Acme", result.FinalFacts.Contractor);
         Assert.Equal(TransactionRuleOutcomeStatus.Applied, Assert.Single(result.RuleOutcomes).Status);
     }
 
+    private static CashLogEntry Cash(long id, int? legacyAccountId = null, decimal change = -10m, string contractor = "ACME", string description = "Invoice") =>
+        new(legacyAccountId, id, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(-id), change, description, 1, "PLN", contractor, []);
+
+    private void SetupHistory(int userId, params CashLogEntry[] rows) =>
+        _cash.Setup(x => x.GetHistory(userId, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, OwnerHistoryQuery query, CancellationToken _) =>
+                [.. rows.Where(row => query.Boundary is not OwnerHistoryBoundary boundary || row.PostingDate < boundary.Date
+                    || row.PostingDate == boundary.Date && row.EntryId < boundary.EntryId).Take(query.Take)]);
+
+    private static CreateTransactionRule UnsavedAcmeRule() => new(
+        "Unsaved rule",
+        [new() { Type = "Contractor", Pattern = "ACME" }],
+        [new() { Type = "SetLabels", Labels = ["Bills"] }]);
+
     [Fact]
     public async Task Test_UsesUnsavedRule_ReturnsAtMostFiveMatches_AndPerformsNoWrites()
     {
-        _accounts.Setup(x => x.GetAll(7))
-            .ReturnsAsync([new CurrencyAccount(7, 2, "Cash")]);
-        var entries = Enumerable.Range(1, 7)
-            .Select(index => new CurrencyAccountEntry(2, index, DateTime.UtcNow.AddDays(-index), -index, -index)
-            {
-                Description = $"Invoice {index}",
-                ContractorDetails = "ACME"
-            })
-            .ToArray();
-        _entries.Setup(x => x.GetPostingDates(2))
-            .ReturnsAsync(entries.Select(entry => entry.PostingDate).ToList());
-        _entries.Setup(x => x.Get(
-                2,
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(entries.ToAsyncEnumerable());
-        var command = new CreateTransactionRule(
-            "Unsaved rule",
-            [new() { Type = "Contractor", Pattern = "ACME" }],
-            [new() { Type = "SetLabels", Labels = ["Bills"] }]);
+        SetupHistory(7, [.. Enumerable.Range(1, 7).Select(index => Cash(index, legacyAccountId: index % 2 == 0 ? 2 : null))]);
 
-        var results = await _service.TestAsync(7, command, TestContext.Current.CancellationToken);
+        var results = await _service.TestAsync(7, UnsavedAcmeRule(), TestContext.Current.CancellationToken);
 
         Assert.Equal(5, results.Count);
         Assert.All(results, result =>
         {
-            Assert.Equal("Cash", result.AccountName);
+            Assert.Equal("PLN", result.CurrencyCode);
             Assert.Empty(result.Before.Labels);
             Assert.Equal(["Bills"], result.After.Labels);
             Assert.True(result.HasChanges);
         });
+        Assert.Equal([1L, 2, 3, 4, 5], results.Select(result => result.TransactionId));
         _repository.Verify(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
         _repository.Verify(x => x.Update(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
-        _entries.Verify(x => x.Update(It.IsAny<CurrencyAccountEntry>()), Times.Never);
+        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Never);
         _alerts.Verify(x => x.EvaluateAlertsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Test_NegativeGuestUser_ReadsTheGuestsOwnHistory()
+    {
+        SetupHistory(-4, Cash(1));
+
+        var results = await _service.TestAsync(-4, UnsavedAcmeRule(), TestContext.Current.CancellationToken);
+
+        Assert.Single(results);
+        _cash.Verify(x => x.GetHistory(-4, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Test_PagesNewestFirstUntilEnoughMatchesAreFound()
+    {
+        // 200 non-matching rows fill the first page, so the matches only appear on the second page.
+        var rows = Enumerable.Range(1, 200).Select(index => Cash(index, contractor: "Other"))
+            .Concat(Enumerable.Range(201, 3).Select(index => Cash(index))).ToArray();
+        SetupHistory(7, rows);
+
+        var results = await _service.TestAsync(7, UnsavedAcmeRule(), TestContext.Current.CancellationToken);
+
+        Assert.Equal([201L, 202, 203], results.Select(result => result.TransactionId));
+        _cash.Verify(x => x.GetHistory(7, It.Is<OwnerHistoryQuery>(query => query.Take == 200 && query.Boundary == null), It.IsAny<CancellationToken>()), Times.Once);
+        _cash.Verify(x => x.GetHistory(7, It.Is<OwnerHistoryQuery>(query => query.Boundary != null && query.Boundary.EntryId == 200 && !query.Boundary.IncludeEqualId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -144,12 +169,23 @@ public sealed class TransactionRuleServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() =>
             _service.TestAsync(7, command, TestContext.Current.CancellationToken));
 
-        _accounts.Verify(x => x.GetAll(It.IsAny<int>()), Times.Never);
-        _entries.Verify(x => x.Get(
-            It.IsAny<int>(),
-            It.IsAny<DateTime>(),
-            It.IsAny<DateTime>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+        _cash.Verify(x => x.GetHistory(It.IsAny<int>(), It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Account")]
+    [InlineData(" account ")]
+    [InlineData("ACCOUNT")]
+    public async Task CreateAndTest_RejectTheRetiredAccountCondition(string type)
+    {
+        var command = new CreateTransactionRule("Retired", [new() { Type = type }], [new() { Type = "NormalizeDescription", Value = "Receipt" }]);
+
+        var created = await Assert.ThrowsAsync<ArgumentException>(() => _service.CreateRuleAsync(7, command, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.TestAsync(7, command, TestContext.Current.CancellationToken));
+
+        Assert.Contains("retired", created.Message, StringComparison.OrdinalIgnoreCase);
+        _repository.Verify(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cash.Verify(x => x.GetHistory(It.IsAny<int>(), It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -164,8 +200,7 @@ public sealed class TransactionRuleServiceTests
         var results = await _service.TestAsync(7, command, TestContext.Current.CancellationToken);
 
         Assert.Empty(results);
-        _accounts.Verify(x => x.GetAll(It.IsAny<int>()), Times.Never);
-        _entries.Verify(x => x.GetPostingDates(It.IsAny<int>()), Times.Never);
+        _cash.Verify(x => x.GetHistory(It.IsAny<int>(), It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -286,11 +321,7 @@ public sealed class TransactionRuleServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() => _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(false), TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task ApplyRetroactively_ReevaluatesAlertsOnceAfterUpdatedEntries()
-    {
-        _accounts.Setup(x => x.GetAll(7))
-            .ReturnsAsync([new CurrencyAccount(7, 2, "Cash")]);
+    private void SetupInvoiceRule() =>
         _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
                 new TransactionRuleDefinition
@@ -302,14 +333,20 @@ public sealed class TransactionRuleServiceTests
                     ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Receipt\"}]"
                 }
             ]);
+
+    [Fact]
+    public async Task ApplyRetroactively_UpdatesLinkedAndUnlinkedEntries_AndReevaluatesAlertsOnce()
+    {
+        SetupInvoiceRule();
+        SetupHistory(7, Cash(1, legacyAccountId: 2), Cash(2));
         var entries = new[]
         {
-            new CurrencyAccountEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one" },
-            new CurrencyAccountEntry(2, 2, DateTime.UtcNow.AddDays(-1), -20m, -20m) { Description = "Invoice two" }
+            new CurrencyAccountEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one", UserId = 7 },
+            new CurrencyAccountEntry(null, 2, DateTime.UtcNow.AddDays(-1), 0, -20m) { Description = "Invoice two", UserId = 7, CurrencyId = 1 }
         };
-        _entries.Setup(x => x.Get(2, DateTime.UnixEpoch, DateTime.MaxValue, It.IsAny<CancellationToken>()))
-            .Returns(entries.ToAsyncEnumerable());
-        _entries.Setup(x => x.Update(It.IsAny<CurrencyAccountEntry>())).ReturnsAsync(true);
+        _entries.Setup(x => x.GetByIds(7, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 1, 2 })), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entries);
+        _entries.Setup(x => x.UpdateByOwner(7, It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _alerts.Setup(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -318,7 +355,54 @@ public sealed class TransactionRuleServiceTests
         Assert.Equal(2, result.Examined);
         Assert.Equal(2, result.Updated);
         Assert.All(entries, entry => Assert.Equal("Receipt", entry.Description));
+        _entries.Verify(x => x.UpdateByOwner(7, It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _alerts.Verify(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyRetroactively_PagesThroughAllOwnedEntries()
+    {
+        SetupInvoiceRule();
+        var rows = Enumerable.Range(1, 201).Select(index => Cash(index)).ToArray();
+        SetupHistory(7, rows);
+        _entries.Setup(x => x.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
+                [.. ids.Select(id => new CurrencyAccountEntry(null, id, DateTime.UtcNow, 0, -1m) { Description = "Other" })]);
+
+        var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true), TestContext.Current.CancellationToken);
+
+        Assert.Equal(201, result.Examined);
+        Assert.Equal(0, result.Updated);
+        _entries.Verify(x => x.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _alerts.Verify(x => x.EvaluateAlertsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplyRetroactively_ForOneEntry_UsesTheOwnerReadAndWrite()
+    {
+        SetupInvoiceRule();
+        var entry = new CurrencyAccountEntry(null, 9, DateTime.UtcNow, 0, -10m) { Description = "Invoice", UserId = 7, CurrencyId = 1 };
+        _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync(entry);
+        _entries.Setup(x => x.UpdateByOwner(7, entry, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true, 9), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Examined);
+        Assert.Equal(1, result.Updated);
+        Assert.Equal("Receipt", entry.Description);
+        _cash.Verify(x => x.GetHistory(It.IsAny<int>(), It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ApplyRetroactively_ForAForeignOrMissingEntry_ChangesNothing()
+    {
+        SetupInvoiceRule();
+        _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync((CurrencyAccountEntry?)null);
+
+        var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true, 9), TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, result.Examined);
+        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -334,26 +418,36 @@ public sealed class TransactionRuleServiceTests
     }
 
     [Fact]
-    public async Task ApplyToEntry_UnlinkedEntry_NeverMatchesAnAccountCondition()
+    public async Task PersistedRuleWithAResidualAccountCondition_NeverMatches_NeverThrows_AndIsReportedOnce()
     {
+        var ruleId = Guid.NewGuid();
+        // Exotic padding the data migration does not rewrite: the runtime must still never broaden or throw.
         _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
                 new TransactionRuleDefinition
                 {
+                    Id = ruleId,
                     UserId = 7,
                     Name = "Account rule",
                     Order = 1,
-                    ConditionsJson = "[{\"type\":\"Account\",\"accountIds\":[0,2]}]",
+                    IsEnabled = true,
+                    ConditionsJson = "[{\"tYpE\":\"\\u00a0Account\\n\",\"accountIds\":[2]}]",
                     ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Matched\"}]"
                 }
             ]);
-        var linked = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
-        var unlinked = new CurrencyAccountEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
+        var first = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
+        var second = new CurrencyAccountEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
 
-        Assert.True(await _service.ApplyToEntryAsync(7, linked, TestContext.Current.CancellationToken));
-        Assert.False(await _service.ApplyToEntryAsync(7, unlinked, TestContext.Current.CancellationToken));
+        Assert.False(await _service.ApplyToEntryAsync(7, first, TestContext.Current.CancellationToken));
+        Assert.False(await _service.ApplyToEntryAsync(7, second, TestContext.Current.CancellationToken));
+        var preview = await _service.PreviewAsync(7, new("ACME", "Shop", 20m, TransactionDirection.Expense, []), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Matched", linked.Description);
-        Assert.Equal("Shop", unlinked.Description);
+        Assert.Equal("Shop", first.Description);
+        Assert.Equal("Shop", second.Description);
+        Assert.Equal(TransactionRuleOutcomeStatus.SkippedDisabled, Assert.Single(preview.RuleOutcomes).Status);
+        _logger.Verify(x => x.Log(
+            LogLevel.Warning, It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((state, _) => (Convert.ToString(state) ?? string.Empty).Contains(ruleId.ToString())),
+            It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
 }
