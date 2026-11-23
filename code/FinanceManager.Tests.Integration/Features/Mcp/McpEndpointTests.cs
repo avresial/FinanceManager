@@ -6,6 +6,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -84,15 +85,17 @@ public sealed class McpEndpointTests : IDisposable
             ]);
         var bondDetails = new Mock<IBondDetailsRepository>();
         var valuation = new Mock<IInvestmentValuationService>();
-        valuation.Setup(service => service.GetAccountValueAsync(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, decimal> { [21] = 1234m, [22] = 9999m });
-        valuation.Setup(service => service.GetHoldingsAsOfAsync(
-                21, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [401] = 2 });
+        // Only the caller's pooled holdings are read: the user id comes from the MCP identity, never from tool input.
+        valuation.Setup(service => service.GetUserValueByListingAsync(
+                _userId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [401] = 1234m });
+        investmentTransactions.Setup(repository => repository.GetHoldingsByUserAsOf(
+                _userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new InvestmentHolding(401, "MCP", "XLON", AssetType.ETF, 2)]);
         var assetListings = new Mock<IAssetListingRepository>();
-        assetListings.Setup(repository => repository.Get(401, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(InvestmentTransaction(_userId, 21, 401, "MCP", 2).AssetListing);
+        assetListings.Setup(repository => repository.GetByIds(
+                It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 401 })), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([InvestmentTransaction(_userId, 21, 401, "MCP", 2).AssetListing]);
         var currencies = new Mock<ICurrencyRepository>();
         currencies.Setup(repository => repository.GetByCode("PLN", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);
@@ -423,10 +426,10 @@ public sealed class McpEndpointTests : IDisposable
         {
             asOfDate = DateOnly.FromDateTime(DateTime.UtcNow)
         }, cancellationToken);
-        Assert.Contains("MCP broker", portfolio, StringComparison.Ordinal);
+        Assert.Contains("\"ticker\":\"MCP\"", portfolio, StringComparison.Ordinal);
         Assert.Contains("1234", portfolio, StringComparison.Ordinal);
         Assert.DoesNotContain("FOREIGN", portfolio, StringComparison.Ordinal);
-        Assert.DoesNotContain("9999", portfolio, StringComparison.Ordinal);
+        Assert.DoesNotContain("accountName", portfolio, StringComparison.OrdinalIgnoreCase);
 
         var referenceData = await CallTool(client, accessToken, 8, "list_reference_data", new { }, cancellationToken);
         Assert.Contains("PLN", referenceData, StringComparison.Ordinal);

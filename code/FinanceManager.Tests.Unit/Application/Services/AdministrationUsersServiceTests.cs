@@ -39,8 +39,7 @@ public class AdministrationUsersServiceTests
         _bonds.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(Array.Empty<BondDetails>().ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<CurrencyAccount>().ToAsyncEnumerable());
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<BondAccount>().ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<InvestmentAccount>().ToAsyncEnumerable());
-        _investments.Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<int, decimal>());
+        _investments.Setup(x => x.GetUserValueByListingAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<long, decimal>());
         _service = new(
             _financialAccountRepositoryMock.Object, _userRepositoryMock.Object,
             _activeUsersRepositoryMock.Object, _userPlanVerifierMock.Object,
@@ -70,8 +69,8 @@ public class AdministrationUsersServiceTests
         _bonds.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
         var bond = new BondAccount(2, 3, "Bonds", [], nextOlderEntries: new() { [5] = new BondAccountEntry(3, 1, now.AddDays(-10), 3m, 3m, 5) });
         _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(2, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { bond }.ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { new InvestmentAccount(1, 4, "Investments") }.ToAsyncEnumerable());
-        _investments.Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 4 })), DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<int, decimal> { [4] = 3000000000.25m });
+        // Pooled holdings: valued per user, whether or not the trades are linked to an account.
+        _investments.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<long, decimal> { [7] = 3000000000.25m });
 
         Assert.Equal(3000000051.25m, await _service.GetTotalTrackedMoney());
         _exchange.Verify(x => x.GetExchangeRateAsync(DefaultCurrency.USD, DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Exactly(2));

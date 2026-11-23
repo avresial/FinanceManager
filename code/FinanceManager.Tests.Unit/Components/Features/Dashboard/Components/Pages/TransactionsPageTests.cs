@@ -506,30 +506,42 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
-    public async Task InvestmentRows_GetTheirValuation_RequestedPerAccountForPurchases()
+    public async Task InvestmentRows_GetTheirValuation_InOneRequestCoveringLinkedAndUnlinkedPurchases()
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
-            [Entry(3, _oct15, TransactionKind.Investment, accountId: 30), Entry(4, _oct15, TransactionKind.Investment, accountId: 31)], null)));
-        // Account 31's valuation request times out; account 30's valuation must still reach its row.
-        using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/31/")
-            ? Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout"))
-            : Task.FromResult(uri.AbsolutePath.Contains("TransactionValuations")
-                ? new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = JsonContent.Create<IReadOnlyList<InvestmentTransactionValuationDto>>(
-                        [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true)])
-                }
-                : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
+            [Entry(3, _oct15, TransactionKind.Investment, accountId: 30), Entry(4, _oct15, TransactionKind.Investment, accountId: null)], null)));
+        using var services = new PageHandler((_, uri) => Task.FromResult(uri.AbsolutePath.Contains("TransactionValuations")
+            ? new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create<IReadOnlyList<InvestmentTransactionValuationDto>>(
+                    [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true), new(4, 10m, 20m, 13m, 26m, 6m, 30m, "PLN", false, true)])
+            }
+            : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
         await using var context = CreateContext(handler, services);
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Equal(24m,
-            cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 3).Instance.Valuation?.CurrentValuation));
-        Assert.Null(cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 4).Instance.Valuation);
-        Assert.Equal(["/api/InvestmentValuation/TransactionValuations/30/0", "/api/InvestmentValuation/TransactionValuations/31/0"],
-            services.Requests.Select(uri => uri.AbsolutePath).Order());
-        Assert.Equal("?transactionIds=3", services.Requests.Single(uri => uri.AbsolutePath.EndsWith("/30/0")).Query);
+        cut.WaitForAssertion(() => Assert.Equal(26m,
+            cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 4).Instance.Valuation?.CurrentValuation));
+        Assert.Equal(24m, cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 3).Instance.Valuation?.CurrentValuation);
+        // One user-scoped request values every visible purchase, whether or not it is linked to an account.
+        var request = Assert.Single(services.Requests);
+        Assert.Equal("/api/InvestmentValuation/TransactionValuations/0", request.AbsolutePath);
+        Assert.Equal(["3", "4"], QueryHelpers.ParseQuery(request.Query)["transactionIds"].Order().Select(id => id!));
+    }
+
+    [Fact]
+    public async Task InvestmentRows_StayOnTheirFallbacks_WhenTheValuationRequestTimesOut()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page(
+            [Entry(3, _oct15, TransactionKind.Investment, accountId: null)], null)));
+        using var services = new PageHandler((_, _) => Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout")));
+        await using var context = CreateContext(handler, services);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(services.Requests));
+        Assert.Null(cut.FindComponent<InvestmentTransactionRow>().Instance.Valuation);
     }
 
     [Fact]

@@ -30,8 +30,6 @@ public class AssetsServiceBondTests
         _service = new AssetsServiceBond(
             _ledger,
             new BondDashboardContext(_bondDetailsRepositoryMock.Object),
-            Mock.Of<IFinancialAccountRepository>(),
-            _bondDetailsRepositoryMock.Object,
             new BondUnrealizedGainLossCalculator(Mock.Of<ICurrencyExchangeService>()));
     }
 
@@ -131,6 +129,45 @@ public class AssetsServiceBondTests
         _ledger.Add(1, _day, 1m);
         Assert.NotEmpty(await _service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, _day, _day.AddDays(2), InvestmentType.Bond));
         Assert.Empty(await _service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, _day, _day.AddDays(2), InvestmentType.Stock));
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLoss_PoolsEntriesPerBond_AndAggregatesIntoOneOwnerRow()
+    {
+        // Two entries of bond 1 (any account) pool into 12 units; bond 2 holds 5; bond 3 was sold to zero.
+        _ledger.Add(1, _day.AddDays(-5), 10m).Add(1, _day.AddHours(9), 2m).Add(2, _day.AddHours(8), 5m)
+            .Add(3, _day.AddDays(-5), 4m).Add(3, _day.AddHours(7), -4m);
+
+        var instruments = await _service.GetUnrealizedGainLossPerInstrument(-8, DefaultCurrency.PLN, _day.AddHours(12));
+        var owner = Assert.Single(await _service.GetUnrealizedGainLossPerAccount(-8, DefaultCurrency.PLN, _day.AddHours(12)));
+
+        Assert.Equal([("Bond 1", 12m), ("Bond 2", 5m)], instruments.Select(x => (x.InstrumentName, x.Quantity)));
+        Assert.All(instruments, x => Assert.Null(x.AccountId));
+        Assert.Null(owner.AccountId);
+        Assert.Equal("Bonds", owner.AccountName);
+        Assert.Equal(17m, owner.CostBasis);
+        Assert.Equal(17m, owner.CurrentValue);
+        Assert.Equal(0, owner.ExcludedInstrumentsCount);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLoss_ExcludesABondWithoutDefinition_FromTheOwnerTotals()
+    {
+        _ledger.Add(1, _day.AddDays(-5), 10m).Add(99, _day.AddDays(-5), 7m);
+
+        var instruments = await _service.GetUnrealizedGainLossPerInstrument(1, DefaultCurrency.PLN, _day.AddHours(12));
+        var owner = Assert.Single(await _service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, _day.AddHours(12)));
+
+        Assert.True(instruments.Single(x => x.InstrumentId == "99").IsExcludedFromTotals);
+        Assert.Equal(10m, owner.CostBasis);
+        Assert.Equal(1, owner.ExcludedInstrumentsCount);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLoss_IsEmpty_WhenNoBondIsHeld()
+    {
+        Assert.Empty(await _service.GetUnrealizedGainLossPerInstrument(1, DefaultCurrency.PLN, _day));
+        Assert.Empty(await _service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, _day));
     }
 
     private static BondDetails CreateDetails(int id) => new(

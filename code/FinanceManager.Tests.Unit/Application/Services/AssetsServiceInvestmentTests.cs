@@ -17,7 +17,7 @@ public class AssetsServiceInvestmentTests
 {
     private static AssetsServiceInvestment CreateService(
         Mock<IInvestmentValuationService> valuation, Mock<IInvestmentTransactionRepository>? transactions = null) =>
-        new(Mock.Of<IFinancialAccountRepository>(), Mock.Of<IAccountRepository<InvestmentAccount>>(), valuation.Object,
+        new(Mock.Of<IAccountRepository<InvestmentAccount>>(), valuation.Object,
             (transactions ?? new Mock<IInvestmentTransactionRepository>()).Object, Mock.Of<IInvestmentPriceProvider>(),
             Mock.Of<ICurrencyExchangeService>());
 
@@ -54,7 +54,6 @@ public class AssetsServiceInvestmentTests
     [Fact]
     public async Task GetUnrealizedGainLossPerAccount_PreservesRemainingBuyCostAfterListingCurrencyEnrichment()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var exchangeService = new Mock<ICurrencyExchangeService>();
@@ -89,10 +88,7 @@ public class AssetsServiceInvestmentTests
             },
         };
 
-        accountRepository
-            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, It.IsAny<DateTime>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
-        transactionRepository.Setup(x => x.GetByAccount(account.AccountId, It.IsAny<CancellationToken>()))
+        transactionRepository.Setup(x => x.GetByUser(1, DateOnly.MinValue, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
         priceProvider.Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(500m);
@@ -102,7 +98,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(4m);
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             Mock.Of<IAccountRepository<InvestmentAccount>>(),
             valuationService.Object,
             transactionRepository.Object,
@@ -111,6 +106,8 @@ public class AssetsServiceInvestmentTests
 
         var result = Assert.Single(await service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, DateTime.UtcNow));
 
+        Assert.Null(result.AccountId);
+        Assert.Equal("Investments", result.AccountName);
         Assert.Equal(2040m, result.CostBasis);
         Assert.Equal(2500m, result.CurrentValue);
         Assert.Equal(460m, result.UnrealizedGainLoss);
@@ -126,9 +123,75 @@ public class AssetsServiceInvestmentTests
     }
 
     [Fact]
+    public async Task GetUnrealizedGainLossPerInstrument_PoolsTheSameListingAcrossTwoAccountsAndAnUnlinkedTrade_IntoOneAverageCost()
+    {
+        var transactionRepository = new Mock<IInvestmentTransactionRepository>();
+        var priceProvider = new Mock<IInvestmentPriceProvider>();
+        var listing = new AssetListing { Id = 11, Ticker = "CSPX" };
+        InvestmentTransaction Buy(int? accountId, decimal quantity, decimal unitPrice, int day) => new()
+        {
+            AccountId = accountId,
+            AssetListingId = listing.Id,
+            AssetListing = listing,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = quantity,
+            UnitPrice = unitPrice,
+            Currency = "PLN",
+            TradeDate = new DateOnly(2026, 1, day),
+        };
+        // 10 @ 100 in account 7, 10 @ 200 in account 8 and 20 @ 300 unlinked: one pool of 40 units costing 9000 (225 each).
+        List<InvestmentTransaction> transactions = [Buy(7, 10m, 100m, 1), Buy(8, 10m, 200m, 2), Buy(null, 20m, 300m, 3)];
+        transactions.Add(new()
+        {
+            AccountId = 7,
+            AssetListingId = listing.Id,
+            AssetListing = listing,
+            Type = InvestmentTransactionType.Sell,
+            Quantity = 10m,
+            UnitPrice = 400m,
+            Currency = "PLN",
+            TradeDate = new DateOnly(2026, 1, 4),
+        });
+        transactionRepository.Setup(x => x.GetByUser(-5, DateOnly.MinValue, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(transactions);
+        priceProvider.Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(250m);
+        var service = new AssetsServiceInvestment(
+            Mock.Of<IAccountRepository<InvestmentAccount>>(),
+            Mock.Of<IInvestmentValuationService>(),
+            transactionRepository.Object,
+            priceProvider.Object,
+            Mock.Of<ICurrencyExchangeService>());
+
+        var instrument = Assert.Single(await service.GetUnrealizedGainLossPerInstrument(-5, DefaultCurrency.PLN, new DateTime(2026, 2, 1)));
+
+        // The 10 units sold leave 30 held at the pooled average of (1000 + 2000 + 6000) / 40 = 225 per unit.
+        Assert.Null(instrument.AccountId);
+        Assert.Equal(30m, instrument.Quantity);
+        Assert.Equal(6750m, instrument.CostBasis);
+        Assert.Equal(7500m, instrument.CurrentValue);
+        Assert.Equal(750m, instrument.UnrealizedGainLoss);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLoss_ForAUserWithoutAnId_ReadsNothing()
+    {
+        var transactionRepository = new Mock<IInvestmentTransactionRepository>();
+        var service = new AssetsServiceInvestment(
+            Mock.Of<IAccountRepository<InvestmentAccount>>(),
+            Mock.Of<IInvestmentValuationService>(),
+            transactionRepository.Object,
+            Mock.Of<IInvestmentPriceProvider>(),
+            Mock.Of<ICurrencyExchangeService>());
+
+        Assert.Empty(await service.GetUnrealizedGainLossPerInstrument(0, DefaultCurrency.PLN, DateTime.UtcNow));
+        Assert.Empty(await service.GetUnrealizedGainLossPerAccount(0, DefaultCurrency.PLN, DateTime.UtcNow));
+        transactionRepository.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task GetUnrealizedGainLossPerAccount_FallsBackToAsOfRate_WhenTradeDateRateMissing()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var exchangeService = new Mock<ICurrencyExchangeService>();
@@ -152,10 +215,7 @@ public class AssetsServiceInvestmentTests
             },
         };
 
-        accountRepository
-            .Setup(x => x.GetAccounts<InvestmentAccount>(1, DateTime.MinValue, It.IsAny<DateTime>()))
-            .Returns(new[] { account }.ToAsyncEnumerable());
-        transactionRepository.Setup(x => x.GetByAccount(account.AccountId, It.IsAny<CancellationToken>()))
+        transactionRepository.Setup(x => x.GetByUser(1, DateOnly.MinValue, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
         priceProvider.Setup(x => x.GetPricePerUnitAsync(listing.Id, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(500m);
@@ -170,7 +230,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(4m);
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             Mock.Of<IAccountRepository<InvestmentAccount>>(),
             valuationService.Object,
             transactionRepository.Object,
@@ -189,7 +248,6 @@ public class AssetsServiceInvestmentTests
     [Fact]
     public async Task GetForAccountAsync_OnlyReadsTheSelectedAccount()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
@@ -223,7 +281,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(125m);
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
@@ -248,7 +305,6 @@ public class AssetsServiceInvestmentTests
     [Fact]
     public async Task GetForAccountAsync_PropagatesCancellationToAccountAndExchangeLookups()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
@@ -291,7 +347,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(4m);
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
@@ -319,7 +374,6 @@ public class AssetsServiceInvestmentTests
     [Fact]
     public async Task GetForAccountAsync_ReturnsNullWhenAccountIsNotOwnedByUser()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
@@ -333,7 +387,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(account);
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,
@@ -355,7 +408,6 @@ public class AssetsServiceInvestmentTests
     [Fact]
     public async Task GetForAccountAsync_ReturnsNullWhenAccountHasNoHoldings()
     {
-        var accountRepository = new Mock<IFinancialAccountRepository>();
         var investmentAccountRepository = new Mock<IAccountRepository<InvestmentAccount>>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
@@ -372,7 +424,6 @@ public class AssetsServiceInvestmentTests
             .ReturnsAsync(Array.Empty<InvestmentTransaction>());
 
         var service = new AssetsServiceInvestment(
-            accountRepository.Object,
             investmentAccountRepository.Object,
             valuationService.Object,
             transactionRepository.Object,

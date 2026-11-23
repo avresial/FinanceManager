@@ -36,7 +36,7 @@ public class AssetsDistributionOperationTests
     {
         _transactions.Setup(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        _investment = new AssetsServiceInvestment(Mock.Of<IFinancialAccountRepository>(),
+        _investment = new AssetsServiceInvestment(
             Mock.Of<IAccountRepository<InvestmentAccount>>(), _valuation.Object,
             _transactions.Object, Mock.Of<IInvestmentPriceProvider>(),
             Mock.Of<ICurrencyExchangeService>());

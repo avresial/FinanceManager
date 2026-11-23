@@ -84,7 +84,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         _price = price;
         types = await assets.GetEndAssetsPerType(_userId, currency, _end);
         accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
-        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_accountId}/{_currencyId}/{_end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_currencyId}/{_end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
         var refreshed = await dashboard.GetOverview(_userId, _currencyId, _start, _end);
 
         Assert.Equal(3m * price, value);

@@ -14,6 +14,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 public class InvestmentTransactionValuationServiceTests
 {
     private const int _accountId = 5;
+    private const int _userId = -9;
     private const long _listingId = 11;
     private static readonly AssetListing _listing = new() { Id = _listingId, Ticker = "CSPX" };
 
@@ -21,6 +22,7 @@ public class InvestmentTransactionValuationServiceTests
     {
         EntryId = id,
         AccountId = _accountId,
+        UserId = _userId,
         AssetListingId = (listing ?? _listing).Id,
         AssetListing = listing ?? _listing,
         Type = InvestmentTransactionType.Buy,
@@ -34,12 +36,11 @@ public class InvestmentTransactionValuationServiceTests
         params InvestmentTransaction[] transactions)
     {
         var repo = new Mock<IInvestmentTransactionRepository>();
-        repo.Setup(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(transactions);
-        repo.Setup(x => x.GetByAccountAndIds(
-                _accountId,
+        repo.Setup(x => x.GetByUserAndIds(
+                _userId,
                 It.IsAny<IReadOnlyCollection<long>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
+            .ReturnsAsync((long _, IReadOnlyCollection<long> ids, CancellationToken _) =>
                 transactions.Where(transaction => ids.Contains(transaction.EntryId)).ToList());
         return (repo, new Mock<IInvestmentPriceProvider>(), new Mock<ICurrencyExchangeService>());
     }
@@ -61,7 +62,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(500m);
 
-        var result = Assert.Single(await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.PLN, [1, 2], TestContext.Current.CancellationToken));
 
         Assert.True(result.IsConverted);
         Assert.Equal("PLN", result.Currency);
@@ -89,10 +90,10 @@ public class InvestmentTransactionValuationServiceTests
             .ReturnsAsync(() => listing.TradingCurrency is null ? 0m : 460m);
         var service = Build(repo, price, fx);
 
-        var before = Assert.Single(await service.GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+        var before = Assert.Single(await service.GetForUserAsync(_userId, DefaultCurrency.PLN, [1, 2], TestContext.Current.CancellationToken));
         listing.ExchangeMic = "XETR";
         listing.TradingCurrency = "EUR";
-        var after = Assert.Single(await service.GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+        var after = Assert.Single(await service.GetForUserAsync(_userId, DefaultCurrency.PLN, [1, 2], TestContext.Current.CancellationToken));
 
         Assert.Equal(900m, before.PurchaseValue);
         Assert.False(before.HasCurrentPrice);
@@ -117,7 +118,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(60m);
 
-        var result = Assert.Single(await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken));
+        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.PLN, [1, 2], TestContext.Current.CancellationToken));
 
         Assert.False(result.IsConverted);
         Assert.Equal("EUR", result.Currency);
@@ -135,7 +136,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0m);
 
-        var result = Assert.Single(await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.USD, TestContext.Current.CancellationToken));
+        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.USD, [1, 2], TestContext.Current.CancellationToken));
 
         Assert.False(result.HasCurrentPrice);
         Assert.Equal(300m, result.PurchaseValue);
@@ -151,7 +152,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(30m);
 
-        var result = Assert.Single(await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.USD, TestContext.Current.CancellationToken));
+        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.USD, [1, 2], TestContext.Current.CancellationToken));
 
         Assert.True(result.IsConverted);
         Assert.Equal("USD", result.Currency);
@@ -170,7 +171,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(110m);
 
-        var results = await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.USD, TestContext.Current.CancellationToken);
+        var results = await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.USD, [1, 2], TestContext.Current.CancellationToken);
 
         Assert.Equal(1L, Assert.Single(results).TransactionId);
     }
@@ -187,7 +188,7 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(500m);
 
-        var results = await Build(repo, price, fx).GetForAccountAsync(_accountId, DefaultCurrency.PLN, TestContext.Current.CancellationToken);
+        var results = await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.PLN, [1, 2], TestContext.Current.CancellationToken);
 
         Assert.Equal(2, results.Count);
         price.Verify(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -204,18 +205,42 @@ public class InvestmentTransactionValuationServiceTests
         price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(110m);
 
-        var results = await Build(repo, price, fx).GetForAccountAsync(
-            _accountId,
+        var results = await Build(repo, price, fx).GetForUserAsync(
+            _userId,
             DefaultCurrency.USD,
-            TestContext.Current.CancellationToken,
-            transactionIds: [2]);
+            [2],
+            TestContext.Current.CancellationToken);
 
         var result = Assert.Single(results);
         Assert.Equal(2L, result.TransactionId);
-        repo.Verify(x => x.GetByAccountAndIds(
-            _accountId,
+        repo.Verify(x => x.GetByUserAndIds(
+            _userId,
             It.Is<IReadOnlyCollection<long>>(ids => ids.Count == 1 && ids.Contains(2)),
             It.IsAny<CancellationToken>()), Times.Once);
-        repo.Verify(x => x.GetByAccount(_accountId, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ValuesAnUnlinkedPurchase()
+    {
+        var unlinked = Buy(1m, 100m, "USD", new DateOnly(2026, 1, 10), id: 1);
+        unlinked.AccountId = null;
+        var (repo, price, fx) = Mocks(unlinked);
+        price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(110m);
+
+        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.USD, [1], TestContext.Current.CancellationToken));
+
+        Assert.Equal(10m, result.GainLoss);
+    }
+
+    [Fact]
+    public async Task ReadsNothing_ForAnEmptyIdListOrNoUser()
+    {
+        var (repo, price, fx) = Mocks(Buy(1m, 100m, "USD", new DateOnly(2026, 1, 10)));
+        var service = Build(repo, price, fx);
+
+        Assert.Empty(await service.GetForUserAsync(_userId, DefaultCurrency.USD, [], TestContext.Current.CancellationToken));
+        Assert.Empty(await service.GetForUserAsync(0, DefaultCurrency.USD, [1], TestContext.Current.CancellationToken));
+        repo.Verify(x => x.GetByUserAndIds(It.IsAny<long>(), It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -127,15 +127,15 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         await context.SaveChangesAsync(ct);
         var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
         var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
-        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync(_userId, DefaultCurrency.PLN, start, end, ct);
 
         listing.TradingCurrency = "EUR";
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, start, end, ct);
+        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync(_userId, DefaultCurrency.PLN, start, end, ct);
 
-        Assert.Equal(24216.418720m, before[_accountId][end]);
-        Assert.Equal(before[_accountId].OrderBy(x => x.Key), after[_accountId].OrderBy(x => x.Key));
+        Assert.Equal(24216.418720m, before[end]);
+        Assert.Equal(before.OrderBy(x => x.Key), after.OrderBy(x => x.Key));
     }
 
     [Fact]
@@ -160,16 +160,16 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             TradeDate = DateOnly.FromDateTime(date)
         });
         await context.SaveChangesAsync(ct);
-        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
+        var before = await CreateCapitalSeriesService().GetCapitalSeriesAsync(_userId, DefaultCurrency.PLN, date, date, ct);
 
         listing.TradingCurrency = "GBX";
         listing.PriceMultiplier = 0.01m;
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync([_accountId], DefaultCurrency.PLN, date, date, ct);
+        var after = await CreateCapitalSeriesService().GetCapitalSeriesAsync(_userId, DefaultCurrency.PLN, date, date, ct);
 
-        Assert.Equal(10m, before[_accountId][date]); // 2 * 100 GBX / 100 * 5 PLN/GBP.
-        Assert.Equal(before[_accountId][date], after[_accountId][date]);
+        Assert.Equal(10m, before[date]); // 2 * 100 GBX / 100 * 5 PLN/GBP.
+        Assert.Equal(before[date], after[date]);
     }
 
     [Fact]
@@ -181,11 +181,11 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var valuationService = CreateCapitalSeriesService();
 
         var usd = await valuationService.GetCapitalSeriesAsync(
-            [_accountId], DefaultCurrency.USD, start, end, TestContext.Current.CancellationToken);
+            _userId, DefaultCurrency.USD, start, end, TestContext.Current.CancellationToken);
         var pln = await valuationService.GetCapitalSeriesAsync(
-            [_accountId], DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
-        var usdDaily = usd[_accountId];
-        var plnDaily = pln[_accountId];
+            _userId, DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
+        var usdDaily = usd;
+        var plnDaily = pln;
 
         Assert.Equal((end - start).Days + 1, usdDaily.Count);
         Assert.Equal(237, usdDaily.Count);
@@ -301,12 +301,12 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
 
         _january12UsdToPlnRate = 4m;
         var baseline = await valuationService.GetCapitalSeriesAsync(
-            [_accountId], DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
+            _userId, DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
         _january12UsdToPlnRate = 5m;
         var changed = await valuationService.GetCapitalSeriesAsync(
-            [_accountId], DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
-        var baselineDaily = baseline[_accountId];
-        var changedDaily = changed[_accountId];
+            _userId, DefaultCurrency.PLN, start, end, TestContext.Current.CancellationToken);
+        var baselineDaily = baseline;
+        var changedDaily = changed;
 
         foreach (var date in baselineDaily.Keys)
         {
