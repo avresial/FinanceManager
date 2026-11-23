@@ -47,19 +47,19 @@ public class PortfolioTimeWeightedReturnService(
         if (transactionFlows.Count == 0 && bonds.IsEmpty)
             return Result(null, TimeWeightedReturnStatus.InsufficientData, startDate, endDate);
 
+        if (!bonds.HasAllDetails)
+            return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
+
         var valuationInputs = await investmentTransactionRepository.GetValuationInputsByUser(
             userId,
             DateOnly.FromDateTime(startDate),
             DateOnly.FromDateTime(endDate),
             cancellationToken);
 
-        if (!bonds.HasAllDetails)
-            return Result(null, TimeWeightedReturnStatus.Unavailable, startDate, endDate);
-
         var pendingFlows = BuildPendingFlows(transactionFlows, bonds.Range.Points, bonds.Details, startDate, endDate);
         var ratesByCurrency = await PortfolioRates.LoadAsync(
             currencyExchangeService,
-            pendingFlows.Select(flow => flow.Currency).Concat(bonds.Details.Values.Select(details => details.Currency.ShortName)),
+            pendingFlows.Select(flow => flow.Currency).Concat(bonds.Details.Values.Select(details => PortfolioRates.NormalizeCurrency(details.Currency.ShortName))),
             currency,
             startDate,
             endDate,

@@ -468,6 +468,18 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     {
         // The only trade has no account: performance is calculated from the owner's trades, not from accounts.
         await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 24, listingId: 204, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m, unlinked: true);
+        // A quote on the trade day prices every day of the holding period, so the time-weighted return is computable end to end.
+        _testDatabase!.Context.PriceQuotes.Add(new PriceQuote
+        {
+            AssetListingId = 204,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 90m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(_nowUtc.AddDays(-5).Date, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay,
+            FetchedAt = DateTimeOffset.UtcNow
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
         var start = _nowUtc.AddDays(-10).Date;
 
@@ -489,7 +501,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.NotNull(moneyWeighted);
         Assert.Equal(MoneyWeightedReturnStatus.Available, moneyWeighted.Status);
         Assert.NotNull(timeWeighted);
-        Assert.NotEqual(TimeWeightedReturnStatus.InsufficientData, timeWeighted.Status);
+        Assert.Equal(TimeWeightedReturnStatus.Available, timeWeighted.Status);
     }
 
     [Fact]
