@@ -189,14 +189,17 @@
                     <MudText Typo="Typo.body2">@Transaction.Notes</MudText>
                 </MudItem>
             }
-            <MudItem xs="12">
-                <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Edit" OnClick="OnEditClicked">Edit</MudButton>
-                    <MudButton Variant="Variant.Text" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Delete" OnClick="OnDeleteClicked">Delete</MudButton>
-                </MudStack>
-            </MudItem>
+            @if (Transaction.AccountId.HasValue)
+            {
+                <MudItem xs="12">
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Edit" OnClick="OnEditClicked">Edit</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Delete" OnClick="OnDeleteClicked">Delete</MudButton>
+                    </MudStack>
+                </MudItem>
+            }
         </MudGrid>
     </div>
 </MudCollapse>

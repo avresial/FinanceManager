@@ -1,23 +1,18 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 
 public interface IInvestmentTransactionRepository
 {
+    Task<IReadOnlyList<InvestmentTransaction>> GetHistoryByUser(long userId, OwnerHistoryQuery query, CancellationToken ct = default);
+
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
 
     /// <summary>Get all transactions belonging to the given account.</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Get the <paramref name="count"/> most recent transactions across the given accounts in a single
-    /// bounded query, ordered by <see cref="InvestmentTransaction.TradeDate"/> descending then id descending.
-    /// Enforces the limit at the database level so callers composing recent-activity views (e.g. the
-    /// dashboard transaction log) never materialise a whole transaction history.
-    /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
 
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
@@ -96,25 +91,6 @@ public interface IInvestmentTransactionRepository
         InvestmentTransactionType? type = null,
         string? search = null,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Returns at most <paramref name="take"/> transactions across the supplied accounts within the
-    /// inclusive date range, ordered by trade date descending then id descending. The optional cursor
-    /// is an exclusive (trade date, id) boundary; both parts must be supplied together. Callers request
-    /// page size plus one for lookahead. Empty accounts or nonpositive take return an empty list without
-    /// querying; a reversed range is rejected. Nonblank search matches ticker, instrument name, or the
-    /// caller's authorized name-matching searchAccountIds within accountIds before paging.
-    /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetHistoryPage(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly startDate,
-        DateOnly endDate,
-        int take,
-        DateOnly? cursorTradeDate = null,
-        long? cursorId = null,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        IReadOnlyCollection<int>? searchAccountIds = null);
 
     public sealed record ValuationTradeInput(
         int AccountId,

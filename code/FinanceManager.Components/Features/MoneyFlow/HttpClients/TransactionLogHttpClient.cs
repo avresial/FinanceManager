@@ -19,62 +19,51 @@ public class TransactionLogHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public async Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default) =>
-        await httpClient.GetFromJsonAsync<TransactionLogPage>(BuildEndpoint("Page", userId, query), cancellationToken)
-            ?? new TransactionLogPage([], null);
-
-    /// <summary>The Transactions page feed: same selection and cursor as <see cref="GetPage"/>, typed by account kind.</summary>
     public async Task<TransactionHistoryPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
     {
-        var page = await httpClient.GetFromJsonAsync<TransactionLogItemsPageDto>(BuildEndpoint("ItemsPage", userId, query), cancellationToken);
+        var page = await httpClient.GetFromJsonAsync<TransactionLogItemsPageDto>(BuildEndpoint(userId, query), cancellationToken);
         return page is null ? new TransactionHistoryPage([], null) : ToHistoryPage(userId, page);
     }
 
     internal static TransactionHistoryPage ToHistoryPage(int userId, TransactionLogItemsPageDto page)
     {
-        // The rows and their editors only read the account's ID, name and (cash) currency, so one lightweight
-        // account per ID is enough; it is shared by that account's rows on the page.
-        Dictionary<int, CurrencyAccount> currencyAccounts = [];
-        Dictionary<int, BondAccount> bondAccounts = [];
-        List<TransactionHistoryItem> items = [];
-        foreach (var item in page.Items)
+        var items = page.Items.Select<TransactionLogItemDto, TransactionHistoryItem>(item => item switch
         {
-            items.Add(item switch
-            {
-                CurrencyTransactionLogItemDto currency => new CurrencyTransactionHistoryItem(
-                    GetOrAdd(currencyAccounts, currency.AccountId, () => new CurrencyAccount(userId, currency.AccountId, currency.AccountName, AccountLabel.Other, currency.CurrencyId)),
-                    currency.Currency, AccountEntryMapping.ToDomain(currency.Entry)),
-                BondTransactionLogItemDto bond => new BondTransactionHistoryItem(
-                    GetOrAdd(bondAccounts, bond.AccountId, () => new BondAccount(userId, bond.AccountId, bond.AccountName, AccountLabel.Other)),
-                    AccountEntryMapping.ToDomain(bond.Entry)),
-                InvestmentTransactionLogItemDto investment => new InvestmentTransactionHistoryItem(
-                    investment.AccountId, investment.AccountName, investment.Transaction),
-                _ => throw new NotSupportedException($"Transaction log item {item.GetType().Name} is not supported."),
-            });
-        }
+            CurrencyTransactionLogItemDto e => new CurrencyTransactionHistoryItem(
+                e.LegacyAccountId is int id ? new CurrencyAccount(userId, id, $"Cash {e.Currency}".TrimEnd(), AccountLabel.Other, e.CurrencyId) : null,
+                e.Currency ?? string.Empty, new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange)
+                {
+                    Description = e.Description,
+                    ContractorDetails = e.ContractorDetails,
+                    CurrencyId = e.CurrencyId,
+                    Labels = [.. e.Labels.Select(FinancialLabelMapping.ToDomain)]
+                }),
+            BondTransactionLogItemDto e => new BondTransactionHistoryItem(
+                e.LegacyAccountId is int id ? new BondAccount(userId, id, e.BondName ?? "Bond", AccountLabel.Other) : null,
+                new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId)
+                {
+                    Description = e.Description,
+                    Labels = [.. e.Labels.Select(FinancialLabelMapping.ToDomain)]
+                }, e.BondName),
+            InvestmentTransactionLogItemDto investment => new InvestmentTransactionHistoryItem(investment.Transaction),
+            _ => throw new NotSupportedException($"Transaction log item {item.GetType().Name} is not supported.")
+        }).ToList();
 
         TransactionLogCursor? next = page.NextCursor is TransactionLogCursorDto cursor
-            ? new(cursor.Date, (AccountType)cursor.AccountType, cursor.EntryId)
+            ? new(cursor.Date, (TransactionKind)cursor.Kind, cursor.EntryId)
             : null;
         return new TransactionHistoryPage(items, next);
     }
 
-    private static T GetOrAdd<T>(Dictionary<int, T> accounts, int accountId, Func<T> create)
+    private static string BuildEndpoint(int userId, TransactionLogQuery query)
     {
-        if (!accounts.TryGetValue(accountId, out var account))
-            accounts[accountId] = account = create();
-        return account;
-    }
-
-    private static string BuildEndpoint(string route, int userId, TransactionLogQuery query)
-    {
-        var endpoint = $"api/TransactionLog/{route}/{userId}?start={FormatDate(query.Start)}&end={FormatDate(query.End)}&pageSize={query.PageSize.ToString(CultureInfo.InvariantCulture)}";
+        var endpoint = $"api/TransactionLog/ItemsPage/{userId}?start={FormatDate(query.Start)}&end={FormatDate(query.End)}&pageSize={query.PageSize.ToString(CultureInfo.InvariantCulture)}";
         if (query.Cursor is TransactionLogCursor cursor)
-            endpoint += $"&cursorDate={FormatDate(cursor.Date)}&cursorAccountType={cursor.AccountType}&cursorEntryId={cursor.EntryId.ToString(CultureInfo.InvariantCulture)}";
-        foreach (var type in query.AccountTypes ?? [])
-            endpoint += $"&accountTypes={Uri.EscapeDataString(type.ToString())}";
-        foreach (var accountId in query.AccountIds ?? [])
-            endpoint += $"&accountIds={accountId.ToString(CultureInfo.InvariantCulture)}";
+            endpoint += $"&cursorDate={FormatDate(cursor.Date)}&cursorKind={cursor.Kind}&cursorEntryId={cursor.EntryId.ToString(CultureInfo.InvariantCulture)}";
+        foreach (var type in query.Kinds ?? [])
+            endpoint += $"&kinds={Uri.EscapeDataString(type.ToString())}";
+        foreach (var currency in query.Currencies ?? [])
+            endpoint += $"&currencies={Uri.EscapeDataString(currency)}";
         if (!string.IsNullOrWhiteSpace(query.Search))
             endpoint += $"&search={Uri.EscapeDataString(query.Search)}";
         return endpoint;

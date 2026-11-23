@@ -12,7 +12,7 @@ public static class InvestmentTransactionMappingExtensions
     public static InvestmentTransactionDto ToDto(this InvestmentTransaction transaction) => new(
         transaction.EntryId,
         transaction.UserId,
-        transaction.AccountId ?? throw new InvalidOperationException("An account-linked trade is required."),
+        transaction.AccountId,
         transaction.AssetListingId,
         (InvestmentTransactionTypeDto)transaction.Type,
         transaction.Quantity,
@@ -25,18 +25,20 @@ public static class InvestmentTransactionMappingExtensions
         transaction.AssetListing?.ExchangeName ?? string.Empty,
         (AssetTypeDto)(transaction.AssetListing?.Asset?.Type ?? AssetType.Other),
         transaction.AssetListing?.HasEnabledSymbol ?? true,
-        transaction.Labels.Select(label => new FinancialLabelDto
+        [.. transaction.Labels.Select(ToLabelDto)]);
+
+    public static FinancialLabelDto ToLabelDto(this FinancialLabel label) => new()
+    {
+        Id = label.Id,
+        Name = label.Name,
+        Classifications = label.Classifications?.Select(item => new FinancialLabelClassificationDto
         {
-            Id = label.Id,
-            Name = label.Name,
-            Classifications = label.Classifications?.Select(item => new FinancialLabelClassificationDto
-            {
-                Id = item.Id,
-                LabelId = item.LabelId,
-                Kind = item.Kind,
-                Value = item.Value
-            }).ToList()!
-        }).ToList());
+            Id = item.Id,
+            LabelId = item.LabelId,
+            Kind = item.Kind,
+            Value = item.Value
+        }).ToList()!
+    };
 
     /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
     public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, long assetListingId) => new()

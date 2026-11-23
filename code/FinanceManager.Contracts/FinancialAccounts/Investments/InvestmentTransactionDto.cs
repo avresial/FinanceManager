@@ -7,7 +7,7 @@ namespace FinanceManager.Contracts.FinancialAccounts.Investments;
 public record InvestmentTransactionDto(
     long Id,
     long UserId,
-    int AccountId,
+    int? AccountId,
     long AssetListingId,
     InvestmentTransactionTypeDto Type,
     decimal Quantity,

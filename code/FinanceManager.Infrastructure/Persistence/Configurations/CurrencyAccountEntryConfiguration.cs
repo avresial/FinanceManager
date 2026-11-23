@@ -28,6 +28,8 @@ public class CurrencyAccountEntryConfiguration : IEntityTypeConfiguration<Curren
 
         builder.HasIndex(x => new { x.UserId, x.CurrencyId, x.PostingDate, x.EntryId })
             .HasDatabaseName("IX_CurrencyEntries_OwnerCurrencyDateId");
+        builder.HasIndex(x => new { x.UserId, x.PostingDate, x.EntryId })
+            .HasDatabaseName("IX_CurrencyEntries_OwnerDateId");
         builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
 
         // Ensure PostingDate is always returned as UTC

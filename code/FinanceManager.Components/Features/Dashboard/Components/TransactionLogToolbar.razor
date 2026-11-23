@@ -1,10 +1,6 @@
 @using FinanceManager.Components.Shared.Helpers
-@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
+@using FinanceManager.Domain.Dashboard.Dtos
 
-@* Toolbar of the Transactions page. Mirrors the date-range control of the account details toolbar
-   (same presets, same custom range picker) without its account-specific actions, followed by the
-   account-type chips and the account multi-select. The row wraps on a phone (the account
-   select takes its own line), so every filter stays visible on narrow screens. *@
 <div class="fm-tx-toolbar mb-4">
     <div class="d-flex align-center fm-txlog-toolbar-row" style="gap: 8px;">
         <MudIconButton @ref="_searchButton" Icon="@(_isSearchExpanded ? Icons.Material.Filled.SearchOff : Icons.Material.Filled.Search)"
@@ -46,27 +42,26 @@
             </ChildContent>
         </MudMenu>
 
-        <MudChipSet T="AccountType" SelectionMode="SelectionMode.MultiSelection" CheckMark="true"
-                    SelectedValues="Filter.AccountTypes" SelectedValuesChanged="OnAccountTypesChanged"
-                    Class="fm-txlog-type-chips" data-testid="transactions-type-filter" aria-label="Account types">
+        <MudChipSet T="TransactionKind" SelectionMode="SelectionMode.MultiSelection" CheckMark="true"
+                    SelectedValues="Filter.Kinds" SelectedValuesChanged="OnKindsChanged"
+                    Class="fm-txlog-type-chips" data-testid="transactions-type-filter" aria-label="Transaction kinds">
             @foreach (var (type, label) in _typeOptions)
             {
-                <MudChip T="AccountType" Value="type" Size="Size.Small" Variant="Variant.Outlined"
+                <MudChip T="TransactionKind" Value="type" Size="Size.Small" Variant="Variant.Outlined"
                          Color="Color.Default" SelectedColor="Color.Primary" Class="fm-txlog-type-chip">
                     @label
                 </MudChip>
             }
         </MudChipSet>
 
-        <MudSelect T="int" Placeholder="All accounts" aria-label="Accounts" MultiSelection="true" Dense="true" Margin="Margin.Dense"
-                   Variant="Variant.Outlined" Clearable="true" Disabled="@(VisibleAccounts.Count == 0)"
-                   SelectedValues="Filter.AccountIds" SelectedValuesChanged="OnAccountIdsChanged"
-                   ToStringFunc="GetAccountName" MultiSelectionTextFunc="GetAccountsSummary"
-                   Class="fm-txlog-account-select" AnchorOrigin="Origin.BottomLeft"
-                   data-testid="transactions-account-filter">
-            @foreach (var account in VisibleAccounts)
+        <MudSelect T="string" Placeholder="All currencies" aria-label="Currencies" MultiSelection="true" Dense="true" Margin="Margin.Dense"
+                   Variant="Variant.Outlined" Clearable="true" Disabled="@(Currencies.Count == 0)"
+                   SelectedValues="Filter.Currencies" SelectedValuesChanged="OnCurrenciesChanged"
+                   Class="fm-txlog-currency-select" AnchorOrigin="Origin.BottomLeft"
+                   data-testid="transactions-currency-filter">
+            @foreach (var currency in Currencies)
             {
-                <MudSelectItem T="int" Value="@account.AccountId">@account.AccountName</MudSelectItem>
+                <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
             }
         </MudSelect>
     </div>
@@ -74,7 +69,7 @@
     <MudCollapse Expanded="_isSearchExpanded">
         <div id="@_searchPanelId" class="pt-2">
             <MudTextField @ref="_searchField" T="string" Value="SearchText" ValueChanged="OnSearchChanged"
-                          Placeholder="Search accounts, descriptions, bonds, investments…" Adornment="Adornment.Start"
+                          Placeholder="Search descriptions, bonds, investments…" Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate
                           DebounceInterval="150" Clearable OnKeyDown="OnSearchKeyDown" FullWidth="true"
                           aria-label="Search transactions" />

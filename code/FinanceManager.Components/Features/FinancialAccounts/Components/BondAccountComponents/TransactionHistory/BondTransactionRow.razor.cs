@@ -15,9 +15,11 @@ public partial class BondTransactionRow
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
 
-    [Parameter] public required BondAccount Account { get; set; }
+    [Parameter] public BondAccount? Account { get; set; }
     [Parameter] public required BondAccountEntry Entry { get; set; }
+    [Parameter] public string? BondName { get; set; }
     [Parameter] public BondDetails? BondDetails { get; set; }
+    [Parameter] public bool ShowPosition { get; set; } = true;
     [Parameter] public bool IsMobile { get; set; }
 
     [Inject] public required ISnackbar Snackbar { get; set; }
@@ -49,7 +51,7 @@ public partial class BondTransactionRow
     {
         _showValuation = false;
 
-        if (BondDetails is null || Entry.Value <= 0m || BondDetails.CalculationMethods.Count == 0)
+        if (!ShowPosition || BondDetails is null || Entry.Value <= 0m || BondDetails.CalculationMethods.Count == 0)
             return;
 
         try
@@ -88,11 +90,12 @@ public partial class BondTransactionRow
     }
 
     private string GetTitle() =>
-        BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Name) ? BondDetails.Name : "Bond";
+        BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Name) ? BondDetails.Name : BondName ?? "Bond";
 
     private string GetAccessibleName() =>
         $"{GetTitle()}, {DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())}, " +
-        $"change {(Entry.ValueChange >= 0 ? "+" : "")}{FormatUnits(Entry.ValueChange)} units, position {FormatUnits(Entry.Value)} units; transaction details";
+        $"change {(Entry.ValueChange >= 0 ? "+" : "")}{FormatUnits(Entry.ValueChange)} units" +
+        (ShowPosition ? $", position {FormatUnits(Entry.Value)} units" : "") + "; transaction details";
 
     private static string FormatUnits(decimal value) => value.ToString("0.####");
 
@@ -118,6 +121,7 @@ public partial class BondTransactionRow
 
     private async Task ConfirmRemove()
     {
+        if (Account is null) return;
         _removeEntryVisibility = false;
         _expanded = false;
 

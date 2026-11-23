@@ -1,318 +1,79 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Application.Dashboard;
 
-/// <summary>
-/// Composes the dashboard transaction log by pulling the newest entries from every
-/// account of every type (currency, bond, investment) and interleaving them into a
-/// single newest-first list. The underlying repositories share a scoped EF Core
-/// DbContext, which allows only one active query at a time — so each account stream
-/// is fully buffered before the bounded entry queries run, and everything is awaited
-/// sequentially.
-/// </summary>
-public class TransactionLogService(
-    ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountRepository<BondAccount> bondAccountRepository,
-    IAccountRepository<InvestmentAccount> investmentAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> currencyEntryRepository,
-    IAccountEntryRepository<BondAccountEntry> bondEntryRepository,
-    IInvestmentTransactionRepository investmentTransactionRepository,
-    IBondDetailsRepository bondDetailsRepository) : ITransactionLogService
+public class TransactionLogService(ICashTransactionReader cash, IBondTransactionReader bonds,
+    IInvestmentTransactionRepository investments) : ITransactionLogService
 {
-    private readonly Dictionary<int, string?> _bondNamesCache = [];
-
     public async Task<List<TransactionLogEntryDto>> GetLastTransactions(int userId, int count, CancellationToken cancellationToken = default)
     {
-        if (count <= 0) return [];
-
-        List<TransactionLogEntryDto> result = [];
-
-        var currencyAccounts = await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken);
-        if (currencyAccounts.Count != 0)
-        {
-            var currencyAccountNames = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-            var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
-            var entries = await currencyEntryRepository.GetMostRecentByAccounts(
-                [.. currencyAccountNames.Keys], count, cancellationToken);
-
-            foreach (var e in entries)
-            {
-                if (e.AccountId is not int accountId) continue;
-                result.Add(new TransactionLogEntryDto(
-                    accountId,
-                    currencyAccountNames[accountId],
-                    AccountType.Currency,
-                    e.EntryId,
-                    e.PostingDate,
-                    e.ValueChange,
-                    GetCurrencyDescription(e), currencies[accountId]));
-            }
-        }
-
-        var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
-        if (bondAccounts.Count != 0)
-        {
-            var bondAccountNames = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-            var entries = await bondEntryRepository.GetMostRecentByAccounts(
-                [.. bondAccountNames.Keys], count, cancellationToken);
-            var bondNames = await GetBondNames(entries, cancellationToken);
-
-            foreach (var e in entries)
-            {
-                if (e.AccountId is not int accountId) continue;
-                result.Add(new TransactionLogEntryDto(
-                    accountId,
-                    bondAccountNames[accountId],
-                    AccountType.Bond,
-                    e.EntryId,
-                    e.PostingDate,
-                    e.ValueChange,
-                    GetBondDescription(e, bondNames), "units"));
-            }
-        }
-
-        Dictionary<int, string> investmentAccounts = [];
-        await foreach (var account in investmentAccountRepository.GetAvailableAccounts(userId).WithCancellation(cancellationToken))
-            investmentAccounts[account.AccountId] = account.AccountName;
-
-        if (investmentAccounts.Count != 0)
-        {
-            var transactions = await investmentTransactionRepository.GetMostRecentByAccounts([.. investmentAccounts.Keys], count, cancellationToken);
-            foreach (var t in transactions)
-            {
-                if (t.AccountId is not int accountId) continue;
-                result.Add(new TransactionLogEntryDto(
-                        accountId,
-                        investmentAccounts[accountId],
-                        AccountType.Stock,
-                        t.EntryId,
-                        t.TradeDate.ToDateTime(TimeOnly.MinValue),
-                        t.SignedQuantity * t.UnitPrice,
-                        GetInvestmentDescription(t), t.Currency));
-            }
-        }
-
-        return [.. result
-            .OrderByDescending(e => e.Date)
-            .ThenByDescending(e => e.EntryId)
-            .Take(count)];
-    }
-
-    public async Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
-    {
-        var (rows, next) = await SelectPage(userId, query, cancellationToken);
-        return new TransactionLogPage([.. rows.Select(row => row.Entry)], next);
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
+        var rows = await Read(userId, null, count, cancellationToken);
+        return [.. rows.Take(count).Select(row => row.Summary)];
     }
 
     public async Task<TransactionLogItemsPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
     {
-        var (rows, next) = await SelectPage(userId, query, cancellationToken);
-        return new TransactionLogItemsPage([.. rows.Select(row => row.Item)], next);
-    }
-
-    // Both feeds page the same rows; each row keeps its compact summary (which also drives ordering and the
-    // cursor) next to the source entity the Transactions page renders.
-    private async Task<(List<LogRow> Rows, TransactionLogCursor? NextCursor)> SelectPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken)
-    {
-        // Repositories persist posting dates in UTC; date-only trades share UTC midnight.
-        query = query with
-        {
-            Start = AsUtc(query.Start),
-            End = AsUtc(query.End),
-            Search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim(),
-            Cursor = query.Cursor is TransactionLogCursor original ? original with { Date = AsUtc(original.Date) } : null
-        };
         ArgumentOutOfRangeException.ThrowIfLessThan(query.PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(query.PageSize, 100);
-        if (query.Start > query.End)
-            throw new ArgumentException("Start must be on or before end.", nameof(query));
-        if (query.Cursor is TransactionLogCursor invalidCursor &&
-            (!Enum.IsDefined(invalidCursor.AccountType) || invalidCursor.EntryId <= 0))
-            throw new ArgumentException("Cursor must contain a supported account type and positive entry ID.", nameof(query));
-
-        var end = query.Cursor is TransactionLogCursor cursor && cursor.Date < query.End ? cursor.Date : query.End;
-        if (end < query.Start)
-            return ([], null);
-
-        var take = query.PageSize + 1;
-        List<LogRow> result = [];
-        var currencyAccounts = IncludesStream(query, AccountType.Currency)
-            ? FilterAccounts(await BufferAccounts(currencyAccountRepository.GetAvailableAccounts(userId), cancellationToken), query)
-            : [];
-        if (currencyAccounts.Count != 0)
+        query = query with
         {
-            var names = currencyAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-            var currencies = currencyAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
-            var currencyIds = currencyAccounts.ToDictionary(a => a.AccountId, a => a.CurrencyId ?? 0);
-            var boundary = GetPageBoundary(query.Cursor, AccountType.Currency);
-            var entries = await currencyEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-            foreach (var e in entries)
-            {
-                if (e.AccountId is not int accountId) continue;
-                result.Add(new LogRow(
-                    new TransactionLogEntryDto(accountId, names[accountId], AccountType.Currency, e.EntryId, e.PostingDate,
-                        e.ValueChange, GetCurrencyDescription(e), currencies[accountId]),
-                    new CurrencyTransactionLogItem(accountId, names[accountId], currencyIds[accountId], currencies[accountId] ?? string.Empty, e)));
-            }
-        }
+            Start = TransactionLogQuery.AsUtc(query.Start),
+            End = TransactionLogQuery.AsUtc(query.End),
+            Cursor = query.Cursor is TransactionLogCursor cursor ? cursor with { Date = TransactionLogQuery.AsUtc(cursor.Date) } : null
+        };
+        if (query.End < query.Start) throw new ArgumentException("End precedes start.", nameof(query));
+        if (query.Cursor is TransactionLogCursor boundary && (!Enum.IsDefined(boundary.Kind) || boundary.EntryId <= 0))
+            throw new ArgumentException("Invalid cursor.", nameof(query));
 
-        var bondAccounts = IncludesStream(query, AccountType.Bond)
-            ? FilterAccounts(await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken), query)
-            : [];
-        if (bondAccounts.Count != 0)
-        {
-            var names = bondAccounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-            var boundary = GetPageBoundary(query.Cursor, AccountType.Bond);
-            var entries = await bondEntryRepository.GetHistoryPage(
-                [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-            var bondNames = await GetBondNames(entries, cancellationToken);
-            foreach (var e in entries)
-            {
-                if (e.AccountId is not int accountId) continue;
-                result.Add(new LogRow(
-                    new TransactionLogEntryDto(accountId, names[accountId], AccountType.Bond, e.EntryId, e.PostingDate,
-                        e.ValueChange, GetBondDescription(e, bondNames), "units"),
-                    new BondTransactionLogItem(accountId, names[accountId], e)));
-            }
-        }
-
-        // Investment dates represent midnight. A non-midnight start excludes that day's trades.
-        var startDate = DateOnly.FromDateTime(query.Start);
-        var endDate = DateOnly.FromDateTime(end);
-        if (query.Start.TimeOfDay != TimeSpan.Zero)
-        {
-            if (startDate == DateOnly.MaxValue)
-                return CreatePage(result, query.PageSize);
-            startDate = startDate.AddDays(1);
-        }
-        if (startDate <= endDate && IncludesStream(query, AccountType.Stock))
-        {
-            var accounts = FilterAccounts(await BufferAccounts(investmentAccountRepository.GetAvailableAccounts(userId), cancellationToken), query);
-            if (accounts.Count != 0)
-            {
-                var names = accounts.ToDictionary(a => a.AccountId, a => a.AccountName);
-                // An intraday cursor is later than every trade on that date, regardless of ID.
-                var boundary = query.Cursor is TransactionLogCursor stockCursor && stockCursor.Date.TimeOfDay == TimeSpan.Zero
-                    ? GetPageBoundary(stockCursor, AccountType.Stock)
-                    : default;
-                var transactions = await investmentTransactionRepository.GetHistoryPage(
-                    [.. names.Keys], startDate, endDate, take,
-                    boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-                foreach (var t in transactions)
-                {
-                    if (t.AccountId is not int accountId) continue;
-                    result.Add(new LogRow(
-                        new TransactionLogEntryDto(accountId, names[accountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                            t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency),
-                        new InvestmentTransactionLogItem(accountId, names[accountId], t)));
-                }
-            }
-        }
-
-        return CreatePage(result, query.PageSize);
-    }
-
-    private static IReadOnlyCollection<int> SearchAccountIds(Dictionary<int, string> accounts, string? search) =>
-        search is null ? [] : [.. accounts.Where(a => a.Value.Contains(search, StringComparison.OrdinalIgnoreCase)).Select(a => a.Key)];
-
-    private static bool IncludesStream(TransactionLogQuery query, AccountType type) =>
-        query.AccountTypes is not { Count: > 0 } types || types.Contains(type);
-
-    // Intersecting with the user's own accounts (rather than querying the requested IDs directly)
-    // is what keeps foreign account IDs from ever reaching an entry query.
-    private static List<AvailableAccount> FilterAccounts(List<AvailableAccount> accounts, TransactionLogQuery query) =>
-        query.AccountIds is { Count: > 0 } ids ? [.. accounts.Where(a => ids.Contains(a.AccountId))] : accounts;
-
-    private static DateTime AsUtc(DateTime date) => date.Kind == DateTimeKind.Unspecified
-        ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
-        : date.ToUniversalTime();
-
-    private static (DateTime? Date, long? Id) GetPageBoundary(TransactionLogCursor? cursor, AccountType type)
-    {
-        if (cursor is null)
-            return default;
-
-        // Later streams retain the equal date/ID row. Translate that inclusive ID to the
-        // repositories' exclusive boundary; the maximum ID has no exclusive successor, so it needs only the capped end date.
-        var includeEqualId = AccountTypeOrder(type) > AccountTypeOrder(cursor.AccountType);
-        if (includeEqualId && cursor.EntryId == long.MaxValue)
-            return default;
-        return (cursor.Date, cursor.EntryId + (includeEqualId ? 1 : 0));
-    }
-
-    private static int AccountTypeOrder(AccountType type) => type switch
-    {
-        AccountType.Currency => 0,
-        AccountType.Bond => 1,
-        AccountType.Stock => 2,
-        _ => throw new ArgumentOutOfRangeException(nameof(type))
-    };
-
-    private static (List<LogRow> Rows, TransactionLogCursor? NextCursor) CreatePage(List<LogRow> rows, int pageSize)
-    {
-        var ordered = rows.OrderByDescending(r => r.Entry.Date).ThenByDescending(r => r.Entry.EntryId)
-            .ThenBy(r => AccountTypeOrder(r.Entry.AccountType)).Take(pageSize + 1).ToList();
+        var rows = await Read(userId, query, query.PageSize + 1, cancellationToken);
+        var page = rows.Take(query.PageSize).ToList();
         TransactionLogCursor? next = null;
-        if (ordered.Count > pageSize)
+        if (rows.Count > page.Count)
         {
-            var last = ordered[pageSize - 1].Entry;
-            next = new(last.Date, last.AccountType, last.EntryId);
+            var last = page[^1].Summary;
+            next = new(last.Date, last.Kind, last.EntryId);
         }
-        return ([.. ordered.Take(pageSize)], next);
+        return new([.. page.Select(row => row.Item)], next);
     }
 
-    private sealed record LogRow(TransactionLogEntryDto Entry, TransactionLogItem Item);
-
-    // The account query must finish streaming before any entry query starts: relational
-    // providers reject a second command while the previous reader is still open.
-    private static async Task<List<AvailableAccount>> BufferAccounts(IAsyncEnumerable<AvailableAccount> accounts, CancellationToken cancellationToken)
+    private async Task<List<LogRow>> Read(int userId, TransactionLogQuery? query, int take, CancellationToken token)
     {
-        List<AvailableAccount> result = [];
-        await foreach (var account in accounts.WithCancellation(cancellationToken))
-            result.Add(account);
-        return result;
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        token.ThrowIfCancellationRequested();
+        var end = query?.End;
+        if (query?.Cursor is TransactionLogCursor cursor && cursor.Date < end) end = cursor.Date;
+        if (end < query?.Start) return [];
+        bool Includes(TransactionKind kind) => query?.Kinds is not { Count: > 0 } kinds || kinds.Contains(kind);
+        OwnerHistoryQuery History(TransactionKind kind) => new(query?.Start, end, take,
+            query?.Cursor is TransactionLogCursor c ? new(c.Date, c.EntryId, kind > c.Kind) : null,
+            query?.Currencies, query?.Search, IncludeDetails: query is not null);
+
+        // The streams share a scoped DbContext and must finish buffering one at a time.
+        List<LogRow> rows = [];
+        if (Includes(TransactionKind.Cash))
+            foreach (var e in await cash.GetHistory(userId, History(TransactionKind.Cash), token))
+                rows.Add(new(new(TransactionKind.Cash, e.EntryId, e.PostingDate, e.ValueChange,
+                    string.IsNullOrWhiteSpace(e.Description) ? e.ContractorDetails ?? string.Empty : e.Description, e.Currency),
+                    new CurrencyTransactionLogItem(e)));
+        if (Includes(TransactionKind.Bond))
+            foreach (var e in await bonds.GetHistory(userId, History(TransactionKind.Bond), token))
+                rows.Add(new(new(TransactionKind.Bond, e.EntryId, e.PostingDate, e.ValueChange,
+                    string.IsNullOrWhiteSpace(e.Description) ? e.BondName ?? "Bond" : e.Description, "units"),
+                    new BondTransactionLogItem(e)));
+        if (Includes(TransactionKind.Investment))
+            foreach (var t in await investments.GetHistoryByUser(userId, History(TransactionKind.Investment), token))
+                rows.Add(new(new(TransactionKind.Investment, t.EntryId, t.PostingDate, t.SignedQuantity * t.UnitPrice,
+                    $"{t.Type} {t.Quantity:0.####} {t.AssetListing?.Ticker}".TrimEnd(), t.Currency), new InvestmentTransactionLogItem(t)));
+
+        return [.. rows.OrderByDescending(r => r.Summary.Date).ThenByDescending(r => r.Summary.EntryId).ThenBy(r => r.Summary.Kind)];
     }
 
-    private static string GetCurrencyDescription(CurrencyAccountEntry entry) =>
-        !string.IsNullOrWhiteSpace(entry.Description) ? entry.Description : entry.ContractorDetails ?? string.Empty;
-
-    // A bond entry's own description wins over the bond name, which stays the fallback.
-    private static string GetBondDescription(BondAccountEntry entry, IReadOnlyDictionary<int, string?> bondNames) =>
-        !string.IsNullOrWhiteSpace(entry.Description)
-            ? entry.Description
-            : bondNames.TryGetValue(entry.BondDetailsId, out var name) && name is not null ? name : "Bond";
-
-    private static string GetInvestmentDescription(InvestmentTransaction transaction) =>
-        $"{transaction.Type} {transaction.Quantity:0.####} {transaction.AssetListing?.Ticker}".TrimEnd();
-
-    private async Task<IReadOnlyDictionary<int, string?>> GetBondNames(
-        IReadOnlyList<BondAccountEntry> entries,
-        CancellationToken cancellationToken)
-    {
-        var missingIds = entries
-            .Select(entry => entry.BondDetailsId)
-            .Distinct()
-            .Where(id => !_bondNamesCache.ContainsKey(id))
-            .ToList();
-
-        if (missingIds.Count != 0)
-        {
-            var names = await bondDetailsRepository.GetNamesByIdsAsync(missingIds, cancellationToken);
-            foreach (var id in missingIds)
-                _bondNamesCache[id] = names.TryGetValue(id, out var name) ? name : null;
-        }
-
-        return _bondNamesCache;
-    }
+    private sealed record LogRow(TransactionLogEntryDto Summary, TransactionLogItem Item);
 }

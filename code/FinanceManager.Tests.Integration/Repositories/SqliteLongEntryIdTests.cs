@@ -1,7 +1,10 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -33,14 +36,14 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     {
         var ct = TestContext.Current.CancellationToken;
         _context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, _beyondIntId, _postingDate, 100, 1),
-            new CurrencyAccountEntry(1, _beyondIntId + 1, _postingDate, 101, 1));
+            new CurrencyAccountEntry(1, _beyondIntId, _postingDate, 100, 1) { UserId = 1, CurrencyId = 0 },
+            new CurrencyAccountEntry(1, _beyondIntId + 1, _postingDate, 101, 1) { UserId = 1, CurrencyId = 0 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
         var repository = new CurrencyEntryRepository(_context);
 
         var entry = await repository.Get(1, _beyondIntId);
-        var page = await repository.GetHistoryPage([1], _postingDate, _postingDate, 10, _postingDate, _beyondIntId + 1, ct);
+        var page = await new CashTransactionRepository(_context).GetHistory(1, new(_postingDate, _postingDate, 10, new(_postingDate, _beyondIntId + 1, false)), ct);
         var deleted = await repository.Delete(1, _beyondIntId, ct);
 
         Assert.Equal(_beyondIntId, entry?.EntryId);

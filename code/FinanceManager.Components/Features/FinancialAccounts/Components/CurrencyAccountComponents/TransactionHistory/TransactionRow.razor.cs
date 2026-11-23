@@ -17,9 +17,10 @@ public partial class TransactionRow
     private long? _loadedEntryId;
     private bool? _loadedInitiallyExpanded;
 
-    [Parameter] public required CurrencyAccount Account { get; set; }
+    [Parameter] public CurrencyAccount? Account { get; set; }
     [Parameter] public required CurrencyAccountEntry Entry { get; set; }
     [Parameter] public required string Currency { get; set; }
+    [Parameter] public bool ShowBalance { get; set; } = true;
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool InitiallyExpanded { get; set; }
 
@@ -97,6 +98,7 @@ public partial class TransactionRow
 
     private async Task ConfirmRemove()
     {
+        if (Account is null) return;
         _removeEntryVisibility = false;
         _expanded = false;
 

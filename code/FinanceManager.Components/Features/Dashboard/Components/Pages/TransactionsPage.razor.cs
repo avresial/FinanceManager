@@ -20,7 +20,7 @@ namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
 
 /// <summary>
 /// Every transaction of the user's accounts in one newest-first list, grouped by day. The list is read
-/// page by page through the transaction log cursor; changing the date range or the account filters starts
+/// page by page through the transaction log cursor; changing the date range or the kind or currency filters starts
 /// again from the newest entry of the new selection. Each entry renders with its account page's own row
 /// (details, labels, valuation, edit and delete); a successful edit or delete reloads from the first page.
 /// </summary>
@@ -40,7 +40,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     private DateTime _rangeStart;
     private DateTime _rangeEnd;
 
-    private IReadOnlyList<TransactionLogAccountOption> _accounts = [];
+    private IReadOnlyList<string> _currencies = [];
     private TransactionLogFilter _filter = TransactionLogFilter.None;
 
     private List<TransactionHistoryItem> _entries = [];
@@ -74,7 +74,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     [Inject] public required ILogger<TransactionsPage> Logger { get; set; }
     [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required InvestmentValuationHttpClient InvestmentValuationHttpClient { get; set; }
@@ -96,10 +96,10 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         if (_disposed) return;
 
         _userId = user?.UserId;
-        // The account list only feeds the filter options, so it must not delay (or fail) the first page.
-        var accountsTask = LoadAccountsAsync();
+        // The currency list only feeds the filter options, so it must not delay (or fail) the first page.
+        var currenciesTask = LoadCurrenciesAsync();
         await LoadAsync(reset: true);
-        await accountsTask;
+        await currenciesTask;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -163,34 +163,22 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         return LoadAsync(reset: true);
     }
 
-    private async Task LoadAccountsAsync()
+    private async Task LoadCurrenciesAsync()
     {
         try
         {
-            var types = await FinancialAccountService.GetAvailableAccounts();
-            var names = await FinancialAccountService.GetAvailableAccountNames();
+            var catalog = await CurrencyHttpClient.GetAll();
             if (_disposed) return;
-
-            _accounts =
-            [
-                .. types.Select(account => (account.Key, Type: ToAccountType(account.Value)))
-                    .Where(account => account.Type.HasValue && names.ContainsKey(account.Key))
-                    .Select(account => new TransactionLogAccountOption(account.Key, names[account.Key], account.Type!.Value))
-            ];
+            _currencies = [.. catalog.Select(c => c.ShortName).Concat(DefaultCurrency.MinorQuoteUnits.Keys)
+                .Where(c => c.Length == 3 && c.All(char.IsAsciiLetter)).Select(c => c.ToUpperInvariant()).Distinct().Order()];
             StateHasChanged();
         }
         catch (Exception ex)
         {
-            // Without the list the account select stays disabled; the type chips and the log itself still work.
-            Logger.LogError(ex, "Failed to load the accounts for the transaction filters.");
+            // Without the list the currency select stays disabled; the type chips and the log itself still work.
+            Logger.LogError(ex, "Failed to load the currencies for the transaction filters.");
         }
     }
-
-    private static AccountType? ToAccountType(Type accountType) =>
-        accountType == typeof(CurrencyAccount) ? AccountType.Currency
-        : accountType == typeof(BondAccount) ? AccountType.Bond
-        : accountType == typeof(InvestmentAccount) ? AccountType.Stock
-        : null;
 
     private void ApplyRange()
     {
@@ -244,7 +232,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         {
             TransactionHistoryPage? page = null;
             if (_userId is int userId)
-                page = await TransactionLogHttpClient.GetItemsPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.AccountTypes, _filter.AccountIds, _search), cts.Token);
+                page = await TransactionLogHttpClient.GetItemsPage(userId, new TransactionLogQuery(_rangeStart, _rangeEnd, PageSize, cursor, _filter.Kinds, _filter.Currencies, _search), cts.Token);
             if (_disposed || !_loadGate.IsCurrent(version)) return;
 
             if (page is not null)
@@ -308,8 +296,8 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         var bondDetailsIds = items.OfType<BondTransactionHistoryItem>().Select(item => item.Entry.BondDetailsId)
             .Distinct().Where(id => !_bondDetails.ContainsKey(id)).ToList();
         var buysByAccount = items.OfType<InvestmentTransactionHistoryItem>()
-            .Where(item => item.Transaction.Type == InvestmentTransactionTypeDto.Buy)
-            .GroupBy(item => item.AccountId, item => item.Transaction.Id)
+            .Where(item => item.LegacyAccountId.HasValue && item.Transaction.Type == InvestmentTransactionTypeDto.Buy)
+            .GroupBy(item => item.LegacyAccountId!.Value, item => item.Transaction.Id)
             .ToList();
         if (bondDetailsIds.Count == 0 && buysByAccount.Count == 0) return;
 
@@ -382,6 +370,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
     private void ShowInvestmentEdit(InvestmentTransactionDto transaction)
     {
+        if (transaction.AccountId is null) return;
         _editingInvestment = transaction;
         _investmentFormVisible = true;
     }
@@ -402,9 +391,10 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
     private async Task DeleteInvestmentAsync(InvestmentTransactionDto transaction)
     {
+        if (transaction.AccountId is not int accountId) return;
         try
         {
-            if (await InvestmentTransactionHttpClient.DeleteAsync(transaction.AccountId, transaction.Id))
+            if (await InvestmentTransactionHttpClient.DeleteAsync(accountId, transaction.Id))
             {
                 Snackbar.Add("Transaction removed.", Severity.Success);
                 await LoadAsync(reset: true);

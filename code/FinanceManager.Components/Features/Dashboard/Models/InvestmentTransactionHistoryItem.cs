@@ -1,12 +1,12 @@
 using FinanceManager.Contracts.FinancialAccounts.Investments;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Dashboard.Dtos;
 
 namespace FinanceManager.Components.Features.Dashboard.Models;
 
-public record InvestmentTransactionHistoryItem(int AccountId, string AccountName, InvestmentTransactionDto Transaction)
-    : TransactionHistoryItem(AccountId, AccountName)
+public record InvestmentTransactionHistoryItem(InvestmentTransactionDto Transaction)
+    : TransactionHistoryItem(Transaction.AccountId)
 {
-    public override AccountType AccountType => AccountType.Stock;
+    public override TransactionKind Kind => TransactionKind.Investment;
     public override long EntryId => Transaction.Id;
 
     // Trades are date-only and are stored at UTC midnight.

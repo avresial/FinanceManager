@@ -1,0 +1,6 @@
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+
+namespace FinanceManager.Domain.Transactions.Bonds.Dtos;
+
+public record BondLogEntry(int? LegacyAccountId, long EntryId, DateTime PostingDate, decimal ValueChange,
+    string Description, int BondDetailsId, string? Currency, string? BondName, IReadOnlyList<FinancialLabel> Labels);

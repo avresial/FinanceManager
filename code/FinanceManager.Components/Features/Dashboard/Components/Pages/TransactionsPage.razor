@@ -10,7 +10,7 @@
     <TransactionLogToolbar SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
                            CustomDateRange="@_customRange" CustomDateRangeChanged="OnCustomRangeChanged"
                            SearchText="@_search" SearchTextChanged="OnSearchChanged"
-                           Accounts="_accounts" Filter="_filter" FilterChanged="OnFilterChanged" />
+                           Currencies="_currencies" Filter="_filter" FilterChanged="OnFilterChanged" />
 
     @if (_isLoading)
     {
@@ -100,10 +100,10 @@
     }
 </MudContainer>
 
-@if (_editingInvestment is not null)
+@if (_editingInvestment?.AccountId is int accountId)
 {
     @* One form for the whole page, bound to the selected trade's own account. *@
-    <InvestmentTransactionForm @key="_editingInvestment.Id" AccountId="@_editingInvestment.AccountId" Visible="@_investmentFormVisible"
+    <InvestmentTransactionForm @key="_editingInvestment.Id" AccountId="@accountId" Visible="@_investmentFormVisible"
                                VisibleChanged="OnInvestmentFormVisibleChanged" Transaction="@_editingInvestment"
                                OnSaved="OnInvestmentSavedAsync" />
 }

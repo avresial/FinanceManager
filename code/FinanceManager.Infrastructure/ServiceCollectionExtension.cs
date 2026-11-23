@@ -33,6 +33,8 @@ using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Domain.TransactionRules.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Services;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
@@ -49,6 +51,8 @@ using FinanceManager.Infrastructure.Features.Labels.Repositories;
 using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using FinanceManager.Infrastructure.Features.MoneyFlow.Providers;
 using FinanceManager.Infrastructure.Features.TransactionRules.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Ai;
 using FinanceManager.Infrastructure.Shared.Persistence;
@@ -114,6 +118,8 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAssetRepository, AssetRepository>()
                 .AddScoped<IAssetListingRepository, AssetListingRepository>()
                 .AddScoped<IMarketDataSymbolRepository, MarketDataSymbolRepository>()
+                .AddScoped<ICashTransactionReader, CashTransactionRepository>()
+                .AddScoped<IBondTransactionReader, BondTransactionRepository>()
                 .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
                 .AddScoped<IDividendPaymentRepository, DividendPaymentRepository>()
                 .AddScoped<IAtomicOperation, EfAtomicOperation>()

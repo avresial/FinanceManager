@@ -44,7 +44,10 @@
                      Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
                 @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange) units
             </MudText>
-            <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">Position: @FormatUnits(Entry.Value) units</MudText>
+            @if (ShowPosition)
+            {
+                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">Position: @FormatUnits(Entry.Value) units</MudText>
+            }
         </MudStack>
     </MudStack>
 </div>
@@ -57,12 +60,15 @@
                 <MudText Typo="Typo.body2">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
             </MudItem>
             <MudItem xs="6">
-                <MudText Typo="Typo.caption" Color="Color.Default">Units</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">@(ShowPosition ? "Units" : "Units change")</MudText>
                 <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@FormatUnits(Entry.Value)</MudText>
+                    @if (ShowPosition)
+                    {
+                        <MudText Typo="Typo.body2" Class="fm-tabular">@FormatUnits(Entry.Value)</MudText>
+                    }
                     <MudText Typo="Typo.caption" Class="fm-tabular"
                              Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
-                        (@(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange))
+                        @(ShowPosition ? "(" : "")@(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange)@(ShowPosition ? ")" : "")
                     </MudText>
                 </MudStack>
             </MudItem>
@@ -128,24 +134,33 @@
                     </MudStack>
                 </MudItem>
             }
-            <MudItem xs="12">
-                <MudButton Variant="Variant.Text" OnClick="ShowEditOverlay">Edit</MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ShowRemoveOverlay">Remove</MudButton>
-            </MudItem>
+            @if (Account is not null)
+            {
+                <MudItem xs="12">
+                    <MudButton Variant="Variant.Text" OnClick="ShowEditOverlay">Edit</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ShowRemoveOverlay">Remove</MudButton>
+                </MudItem>
+            }
         </MudGrid>
     </div>
 </MudCollapse>
 
-<MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
-    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-        <UpdateBondEntry BondAccount="Account" BondAccountEntry="Entry" ActionCompleted="HideOverlay" />
-    </MudPaper>
-</MudOverlay>
+@if (_updateEntryVisibility && Account is not null)
+{
+    <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <UpdateBondEntry BondAccount="Account" BondAccountEntry="Entry" ActionCompleted="HideOverlay" />
+        </MudPaper>
+    </MudOverlay>
+}
 
-<MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
-    <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-        <RemoveBondEntry BondAccountName="@Account.Name" BondAccountEntry="Entry"
-                         Cancel="HideOverlay" Confirm="ConfirmRemove" />
-    </MudPaper>
-</MudOverlay>
+@if (_removeEntryVisibility && Account is not null)
+{
+    <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <RemoveBondEntry BondAccountName="@Account.Name" BondAccountEntry="Entry"
+                             Cancel="HideOverlay" Confirm="ConfirmRemove" />
+        </MudPaper>
+    </MudOverlay>
+}
 

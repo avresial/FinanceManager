@@ -10,9 +10,5 @@ public interface ITransactionLogService
     /// </summary>
     Task<List<TransactionLogEntryDto>> GetLastTransactions(int userId, int count, CancellationToken cancellationToken = default);
 
-    /// <summary>Returns an inclusive date-range page in dashboard order, with an exclusive continuation cursor.</summary>
-    Task<TransactionLogPage> GetPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
-
-    /// <summary>Same selection, order and cursor as <see cref="GetPage"/>, with each row carrying its full source entry.</summary>
     Task<TransactionLogItemsPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default);
 }

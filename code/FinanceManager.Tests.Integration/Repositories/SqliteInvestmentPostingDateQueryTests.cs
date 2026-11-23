@@ -86,8 +86,8 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         await Seed();
         var ct = TestContext.Current.CancellationToken;
 
-        var first = await _repository.GetHistoryPage([_accountId], _start, _end, 2, cancellationToken: ct);
-        var second = await _repository.GetHistoryPage([_accountId], _start, _end, 2, first[^1].TradeDate, first[^1].EntryId, ct);
+        var first = await _repository.GetHistoryByUser(_userId, new(_start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), _end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), 2), ct);
+        var second = await _repository.GetHistoryByUser(_userId, new(_start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), _end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), 2, new(first[^1].PostingDate, first[^1].EntryId, false)), ct);
 
         Assert.Equal([4L, 3L], first.Select(t => t.EntryId));
         Assert.Equal([2L], second.Select(t => t.EntryId));

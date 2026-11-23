@@ -1,6 +1,5 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Domain.Dashboard.Dtos;
 
-public record CurrencyTransactionLogItem(int AccountId, string AccountName, int CurrencyId, string Currency, CurrencyAccountEntry Entry)
-    : TransactionLogItem(AccountId, AccountName);
+public record CurrencyTransactionLogItem(CashLogEntry Entry) : TransactionLogItem(Entry.LegacyAccountId);

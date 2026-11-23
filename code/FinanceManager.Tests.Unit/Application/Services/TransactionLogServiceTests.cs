@@ -10,6 +10,9 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -18,787 +21,89 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class TransactionLogServiceTests
 {
-    private const int _userId = 1;
+    private const int Guest = -7;
+    private static readonly DateTime Day = new(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
+    private readonly Mock<ICashTransactionReader> _cash = new(MockBehavior.Strict);
+    private readonly Mock<IBondTransactionReader> _bonds = new(MockBehavior.Strict);
+    private readonly Mock<IInvestmentTransactionRepository> _trades = new(MockBehavior.Strict);
 
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepository = new();
-    private readonly Mock<IAccountRepository<BondAccount>> _bondAccountRepository = new();
-    private readonly Mock<IAccountRepository<InvestmentAccount>> _investmentAccountRepository = new();
-    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepository = new();
-    private readonly Mock<IAccountEntryRepository<BondAccountEntry>> _bondEntryRepository = new();
-    private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepository = new();
-    private readonly Mock<IBondDetailsRepository> _bondDetailsRepository = new();
-    private readonly TransactionLogService _service;
+    private TransactionLogService Service => new(_cash.Object, _bonds.Object, _trades.Object);
 
-    public TransactionLogServiceTests()
+    [Fact]
+    public async Task CompactFeedReadsSequentiallyAndReturnsSignedAmountsWithFallbackDescriptions()
     {
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId)).Returns(ToAsyncEnumerable<AvailableAccount>([]));
-        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId)).Returns(ToAsyncEnumerable<AvailableAccount>([]));
-        _investmentAccountRepository.Setup(r => r.GetAvailableAccounts(_userId)).Returns(ToAsyncEnumerable<AvailableAccount>([]));
-
-        _service = new TransactionLogService(
-            _currencyAccountRepository.Object,
-            _bondAccountRepository.Object,
-            _investmentAccountRepository.Object,
-            _currencyEntryRepository.Object,
-            _bondEntryRepository.Object,
-            _investmentTransactionRepository.Object,
-            _bondDetailsRepository.Object);
+        var ct = TestContext.Current.CancellationToken;
+        var sequence = new MockSequence();
+        _cash.InSequence(sequence).Setup(r => r.GetHistory(Guest, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
+            .ReturnsAsync([new(null, 1, Day, -11m, "", 0, "PLN", "Bakery", [])]);
+        _bonds.InSequence(sequence).Setup(r => r.GetHistory(Guest, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
+            .ReturnsAsync([new(null, 1, Day, 2m, "", 1, "PLN", "Treasury", [])]);
+        _trades.InSequence(sequence).Setup(r => r.GetHistoryByUser(Guest, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
+            .ReturnsAsync([new InvestmentTransaction(1) { Type = InvestmentTransactionType.Sell, Quantity = 3, UnitPrice = 5,
+                Currency = "GBX", PostingDate = Day, AssetListing = new() { Ticker = "ABC" } }]);
+        var rows = await Service.GetLastTransactions(Guest, 3, ct);
+        Assert.Equal([
+            new(TransactionKind.Cash, 1, Day, -11, "Bakery", "PLN"),
+            new(TransactionKind.Bond, 1, Day, 2, "Treasury", "units"),
+            new(TransactionKind.Investment, 1, Day, -15, "Sell 3 ABC", "GBX")], rows);
     }
 
     [Fact]
-    public async Task GetLastTransactions_MergesAllAccountTypes_NewestFirst()
+    public async Task MaxIdTieKeepsLaterKindsAndRequestsOneLookahead()
     {
-        // Arrange
-        SetupCurrencyAccount(accountId: 10, "Bank", [
-            new CurrencyAccountEntry(10, 1, new DateTime(2024, 3, 5), 100, -50) { Description = "Groceries" },
-            new CurrencyAccountEntry(10, 2, new DateTime(2024, 3, 1), 150, 150) { Description = "Salary" },
-        ]);
-
-        SetupBondAccount(accountId: 20, "Bonds", [new BondAccountEntry(20, 3, new DateTime(2024, 3, 3), 10, 10, bondDetailsId: 7)]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(7)),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
-
-        SetupInvestmentAccount(accountId: 30, "Broker", [new InvestmentTransaction
-        {
-            EntryId = 4,
-            AccountId = 30,
-            Type = InvestmentTransactionType.Buy,
-            Quantity = 2,
-            UnitPrice = 500,
-            TradeDate = new DateOnly(2024, 3, 4),
-            AssetListing = new AssetListing { Ticker = "CSPX" },
-        }]);
-
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(4, result.Count);
-        Assert.Equal([new DateTime(2024, 3, 5), new DateTime(2024, 3, 4), new DateTime(2024, 3, 3), new DateTime(2024, 3, 1)],
-            result.Select(x => x.Date));
-
-        var currencyEntry = result[0];
-        Assert.Equal(AccountType.Currency, currencyEntry.AccountType);
-        Assert.Equal("Bank", currencyEntry.AccountName);
-        Assert.Equal("Groceries", currencyEntry.Description);
-        Assert.Equal(-50, currencyEntry.ValueChange);
-
-        var investmentEntry = result[1];
-        Assert.Equal(AccountType.Stock, investmentEntry.AccountType);
-        Assert.Equal("Broker", investmentEntry.AccountName);
-        Assert.Equal("Buy 2 CSPX", investmentEntry.Description);
-        Assert.Equal(1000, investmentEntry.ValueChange);
-
-        var bondEntry = result[2];
-        Assert.Equal(AccountType.Bond, bondEntry.AccountType);
-        Assert.Equal("EDO0134", bondEntry.Description);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task MixedStreams_PreserveSourceCurrencyOrUnit_WithoutChangingAmounts(bool paged)
-    {
-        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
-        SetupCurrencyAccount(10, "Dollar cash", [new(10, 1, day, 0, -76)]);
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([new AvailableAccount(10, "Dollar cash", Currency: "USD")]));
-        SetupBondAccount(20, "Bonds", [new(20, 2, day, 0, -2, 7)]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string>());
-        SetupInvestmentAccount(30, "Broker", [new InvestmentTransaction
-        {
-            EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day),
-            Type = InvestmentTransactionType.Sell, Quantity = 2.5m, UnitPrice = 125,
-            Fee = 10, Currency = "GBX", AssetListing = new AssetListing { TradingCurrency = "GBP" }
-        }]);
-
-        var result = paged
-            ? (await _service.GetPage(_userId, new(day, day), TestContext.Current.CancellationToken)).Items
-            : await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        Assert.Equal([(AccountType.Stock, -312.5m, "GBX"), (AccountType.Bond, -2m, "units"), (AccountType.Currency, -76m, "USD")],
-            result.Select(e => (e.AccountType, e.ValueChange, e.CurrencyOrUnit)));
+        var ct = TestContext.Current.CancellationToken;
+        var cursor = new TransactionLogCursor(Day, TransactionKind.Cash, long.MaxValue);
+        _cash.Setup(r => r.GetHistory(Guest, It.Is<OwnerHistoryQuery>(q => q.Boundary == new OwnerHistoryBoundary(Day, long.MaxValue, false)
+            && q.Start == Day && q.End == Day && q.Take == 2 && q.IncludeDetails), ct)).ReturnsAsync([]);
+        _bonds.Setup(r => r.GetHistory(Guest, It.Is<OwnerHistoryQuery>(q => q.Boundary == new OwnerHistoryBoundary(Day, long.MaxValue, true)
+            && q.Currencies!.Contains("PLN") && q.Search == "sale"), ct)).ReturnsAsync([
+                new(null, long.MaxValue, Day, 1, "sale", 1, "PLN", null, []), new(9, 2, Day, 1, "sale", 1, "PLN", null, [])]);
+        var page = await Service.GetItemsPage(Guest, new(Day, Day.AddDays(1), 1, cursor,
+            [TransactionKind.Cash, TransactionKind.Bond], ["PLN"], "sale"), ct);
+        Assert.Null(Assert.Single(page.Items).LegacyAccountId);
+        Assert.Equal(new(Day, TransactionKind.Bond, long.MaxValue), page.NextCursor);
+        _trades.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task GetLastTransactions_LimitsMergedResultToCount()
+    public async Task IntradayCursorPreservesEarlierMidnightTradesAndNormalizesUnspecifiedDates()
     {
-        // Arrange
-        SetupCurrencyAccount(accountId: 10, "Bank", [
-            new CurrencyAccountEntry(10, 1, new DateTime(2024, 3, 5), 100, -50) { Description = "Newest" },
-            new CurrencyAccountEntry(10, 2, new DateTime(2024, 3, 4), 150, 10) { Description = "Middle" },
-            new CurrencyAccountEntry(10, 3, new DateTime(2024, 3, 3), 140, 5) { Description = "Oldest" },
-        ]);
-
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 2, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal(["Newest", "Middle"], result.Select(x => x.Description));
+        var ct = TestContext.Current.CancellationToken;
+        var noon = DateTime.SpecifyKind(Day.AddHours(12), DateTimeKind.Unspecified);
+        _trades.Setup(r => r.GetHistoryByUser(Guest, It.Is<OwnerHistoryQuery>(q =>
+            q.Boundary!.Date == noon && q.Boundary.Date.Kind == DateTimeKind.Utc && q.End == noon && q.Take == 26), ct))
+            .ReturnsAsync([new InvestmentTransaction(long.MaxValue) { PostingDate = Day }]);
+        var page = await Service.GetItemsPage(Guest, new(Day, Day.AddDays(1), Cursor: new(noon, TransactionKind.Cash, 1),
+            Kinds: [TransactionKind.Investment]), ct);
+        Assert.IsType<InvestmentTransactionLogItem>(Assert.Single(page.Items));
+        Assert.Null(page.NextCursor);
     }
 
     [Fact]
-    public async Task GetLastTransactions_ReturnsEmpty_WhenCountIsNotPositive()
+    public async Task CursorBeforeRangeSkipsAllReaders()
     {
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 0, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Empty(result);
-        _currencyAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_ReturnsEmpty_WhenUserHasNoAccounts()
-    {
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Empty(result);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_FallsBackToContractorDetails_WhenDescriptionIsEmpty()
-    {
-        // Arrange
-        SetupCurrencyAccount(accountId: 10, "Bank", [
-            new CurrencyAccountEntry(10, 1, new DateTime(2024, 3, 5), 100, -50) { Description = "", ContractorDetails = "Shop" },
-        ]);
-
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal("Shop", Assert.Single(result).Description);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_BatchesBondNameResolution_AndFallsBackForMissingDetails()
-    {
-        SetupBondAccount(accountId: 20, "Bonds", [
-            new BondAccountEntry(20, 2, new DateTime(2024, 3, 2), 10, 10, bondDetailsId: 8),
-            new BondAccountEntry(20, 1, new DateTime(2024, 3, 1), 10, 10, bondDetailsId: 7),
-        ]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
-
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        Assert.Equal(["Bond", "EDO0134"], result.Select(entry => entry.Description));
-        _bondDetailsRepository.Verify(r => r.GetNamesByIdsAsync(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(7) && ids.Contains(8)),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _bondDetailsRepository.Verify(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_UsesBondDescription_AndFallsBackToBondNameWhenBlank()
-    {
-        SetupBondAccount(accountId: 20, "Bonds", [
-            new BondAccountEntry(20, 3, new DateTime(2024, 3, 3), 10, 10, bondDetailsId: 7) { Description = "   " },
-            new BondAccountEntry(20, 2, new DateTime(2024, 3, 2), 10, 10, bondDetailsId: 7) { Description = "Quarterly top-up" },
-            new BondAccountEntry(20, 1, new DateTime(2024, 3, 1), 10, 10, bondDetailsId: 7),
-        ]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
-
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        Assert.Equal(["EDO0134", "Quarterly top-up", "EDO0134"], result.Select(entry => entry.Description));
-    }
-
-    [Fact]
-    public async Task GetPage_UsesBondDescription_AndFallsBackToBondName()
-    {
-        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        SetupBondAccount(accountId: 20, "Bonds", [
-            new BondAccountEntry(20, 2, day, 10, 10, bondDetailsId: 7) { Description = "Quarterly top-up" },
-            new BondAccountEntry(20, 1, day, 10, 10, bondDetailsId: 7),
-        ]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "EDO0134" });
-
-        var page = await _service.GetPage(_userId, new(day, day), TestContext.Current.CancellationToken);
-
-        Assert.Equal(["Quarterly top-up", "EDO0134"], page.Items.Select(entry => entry.Description));
-    }
-
-    [Fact]
-    public async Task GetPage_PassesSearchTextToBondHistory_SoDescriptionsCanMatch()
-    {
-        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        SetupBondAccount(accountId: 20, "Bonds", []);
-
-        await _service.GetPage(_userId, new(day, day, Search: " top-up "), TestContext.Current.CancellationToken);
-
-        _bondEntryRepository.Verify(r => r.GetHistoryPage(
-            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(),
-            It.IsAny<CancellationToken>(), "top-up", It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_KeepsInvestmentTextUnchanged_WhenTheTradeHasADescription()
-    {
-        SetupInvestmentAccount(accountId: 30, "Broker", [
-            new InvestmentTransaction
-            {
-                EntryId = 1, AccountId = 30, UserId = _userId, Type = InvestmentTransactionType.Buy, Quantity = 2m, UnitPrice = 5m, Currency = "USD",
-                TradeDate = new DateOnly(2024, 3, 1), Description = "Monthly ETF contribution",
-                AssetListing = new AssetListing { Ticker = "CSPX", Asset = new Asset { Name = "iShares" } }
-            },
-        ]);
-
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        Assert.Equal("Buy 2 CSPX", Assert.Single(result).Description);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_PassesOnlyAvailableAccountIdsToBatchQueries()
-    {
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([
-                new AvailableAccount(10, "Bank"),
-                new AvailableAccount(11, "Savings"),
-            ]));
-        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([new AvailableAccount(20, "Bonds")]));
-        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-                3,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-                3,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-
-        await _service.GetLastTransactions(_userId, 3, TestContext.Current.CancellationToken);
-
-        _currencyEntryRepository.Verify(r => r.GetMostRecentByAccounts(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-            3,
-            It.IsAny<CancellationToken>()), Times.Once);
-        _bondEntryRepository.Verify(r => r.GetMostRecentByAccounts(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-            3,
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetLastTransactions_DoesNotQueryEntries_WhileAccountStreamIsStillOpen()
-    {
-        // A scoped EF Core DbContext allows only one active query: issuing an entry
-        // query while the accounts stream is still enumerating throws on relational
-        // providers ("A second operation was started on this context instance...").
-        var currencyStreamOpen = new System.Runtime.CompilerServices.StrongBox<bool>(false);
-        var bondStreamOpen = new System.Runtime.CompilerServices.StrongBox<bool>(false);
-
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(TrackedAsyncEnumerable([new AvailableAccount(10, "Bank")], currencyStreamOpen));
-        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .Callback(() => Assert.False(currencyStreamOpen.Value, "Entry query issued while the currency accounts stream was still open."))
-            .ReturnsAsync([]);
-
-        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(TrackedAsyncEnumerable([new AvailableAccount(20, "Bonds")], bondStreamOpen));
-        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .Callback(() => Assert.False(bondStreamOpen.Value, "Entry query issued while the bond accounts stream was still open."))
-            .ReturnsAsync([]);
-
-        // Act
-        var result = await _service.GetLastTransactions(_userId, 10, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Empty(result);
-        _currencyEntryRepository.Verify(r => r.GetMostRecentByAccounts(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
-            10,
-            It.IsAny<CancellationToken>()), Times.Once);
-        _bondEntryRepository.Verify(r => r.GetMostRecentByAccounts(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-            10,
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(100)]
-    public async Task GetPage_WalksEveryEntryExactlyOnce_InDashboardOrder(int pageSize)
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupCurrencyAccount(10, "Bank", [
-            new(10, 1, day, 10, 1), new(10, 2, day, 10, 2),
-            new(10, int.MaxValue, day, 10, 3), new(10, 4, day.AddHours(1), 10, 4),
-            new(10, 5, day.AddDays(-1), 10, 5), new(10, 6, day.AddDays(-2), 10, 6)]);
-        SetupBondAccount(20, "Bonds", [
-            new(20, 1, day, 10, 1, 7), new(20, 2, day, 10, 2, 7),
-            new(20, int.MaxValue, day, 10, 3, 7)]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
-        SetupInvestmentAccount(30, "Broker", [
-            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { EntryId = int.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { EntryId = long.MaxValue, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 }]);
-
-        var expected = (await _service.GetLastTransactions(_userId, 100, TestContext.Current.CancellationToken))
-            .Where(e => e.Date >= day.AddDays(-1)).ToList();
-        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), pageSize);
-        var first = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
-        Assert.Equal(expected.Take(pageSize), first.Items);
-        Assert.Equal([AccountType.Currency, AccountType.Bond, AccountType.Stock],
-            expected.Where(e => e.Date == day && e.EntryId == 1).Select(e => e.AccountType));
-
-        List<TransactionLogEntryDto> actual = [];
-        var page = first;
-        for (var i = 0; ; i++)
-        {
-            Assert.True(i < 20, "Cursor failed to advance.");
-            actual.AddRange(page.Items);
-            if (page.NextCursor is not TransactionLogCursor next)
-                break;
-            var last = page.Items[^1];
-            Assert.Equal(new TransactionLogCursor(last.Date, last.AccountType, last.EntryId), next);
-            page = await _service.GetPage(_userId, query with { Cursor = next }, TestContext.Current.CancellationToken);
-        }
-        Assert.Equal(expected, actual);
-        Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(100)]
-    public async Task GetItemsPage_PagesTheSameRowsAsGetPage_WithTheirSourceEntries(int pageSize)
-    {
-        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
-        var currencyEntry = new CurrencyAccountEntry(10, 1, day.AddHours(2), 10, -5) { Description = "Coffee" };
-        SetupCurrencyAccount(10, "Bank", [currencyEntry]);
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(() => ToAsyncEnumerable([new AvailableAccount(10, "Bank", Currency: "EUR", CurrencyId: 3)]));
-        var bondEntry = new BondAccountEntry(20, 1, day.AddHours(1), 10, 2, 7);
-        SetupBondAccount(20, "Bonds", [bondEntry]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
-        var trade = new InvestmentTransaction { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 };
-        SetupInvestmentAccount(30, "Broker", [trade]);
-        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize);
-
-        List<TransactionLogEntryDto> summaries = [];
-        List<TransactionLogItem> items = [];
-        TransactionLogCursor? cursor = null;
-        for (var i = 0; i < 10; i++)
-        {
-            var summaryPage = await _service.GetPage(_userId, query with { Cursor = cursor }, TestContext.Current.CancellationToken);
-            var itemsPage = await _service.GetItemsPage(_userId, query with { Cursor = cursor }, TestContext.Current.CancellationToken);
-            Assert.Equal(summaryPage.NextCursor, itemsPage.NextCursor);
-            summaries.AddRange(summaryPage.Items);
-            items.AddRange(itemsPage.Items);
-            if ((cursor = itemsPage.NextCursor) is null) break;
-        }
-
-        Assert.Equal(summaries.Select(e => (e.AccountId, e.AccountName)), items.Select(i => (i.AccountId, i.AccountName)));
-        var currency = Assert.IsType<CurrencyTransactionLogItem>(items[0]);
-        Assert.Same(currencyEntry, currency.Entry);
-        Assert.Equal((3, "EUR"), (currency.CurrencyId, currency.Currency));
-        Assert.Same(bondEntry, Assert.IsType<BondTransactionLogItem>(items[1]).Entry);
-        Assert.Same(trade, Assert.IsType<InvestmentTransactionLogItem>(items[2]).Transaction);
-    }
-
-    [Fact]
-    public async Task GetPage_IntradayRange_ExcludesMidnightTrades_AndIncludesExactEndpoints()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupCurrencyAccount(10, "Bank", [new(10, 1, day, 0, 1), new(10, 2, day.AddHours(1), 0, 2)]);
-        SetupInvestmentAccount(30, "Broker", [
-            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
-            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(1)) }]);
-
-        var result = await _service.GetPage(_userId, new(day.AddHours(1), day.AddDays(1)), TestContext.Current.CancellationToken);
-
-        Assert.Equal([AccountType.Stock, AccountType.Currency], result.Items.Select(e => e.AccountType));
-        Assert.All(result.Items, e => Assert.Equal(2, e.EntryId));
-        Assert.Null(result.NextCursor);
-    }
-
-    [Fact]
-    public async Task GetPage_IntradayCursorIncludesSameDayInvestmentRegardlessOfId()
-    {
-        var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
-        SetupCurrencyAccount(10, "Bank", [new(10, 1, day.AddHours(1), 0, 1)]);
-        SetupInvestmentAccount(30, "Broker", [
-            new() { EntryId = 100, AccountId = 30, TradeDate = DateOnly.FromDateTime(day) },
-            new() { EntryId = 101, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)) }]);
-        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), 1);
-        var first = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
-        Assert.Equal(AccountType.Currency, Assert.Single(first.Items).AccountType);
-        var second = await _service.GetPage(_userId, query with { Cursor = first.NextCursor }, TestContext.Current.CancellationToken);
-        Assert.Equal(100, Assert.Single(second.Items).EntryId);
-        var third = await _service.GetPage(_userId, query with { Cursor = second.NextCursor }, TestContext.Current.CancellationToken);
-        Assert.Equal(101, Assert.Single(third.Items).EntryId);
-        Assert.Null(third.NextCursor);
-    }
-
-    [Fact]
-    public async Task GetPage_NoAccounts_ReturnsEmptyWithoutEntryQueries()
-    {
-        var page = await _service.GetPage(_userId, new(DateTime.MinValue, DateTime.MaxValue), TestContext.Current.CancellationToken);
+        var page = await Service.GetItemsPage(Guest, new(Day, Day, Cursor: new(Day.AddTicks(-1), TransactionKind.Cash, 1)), TestContext.Current.CancellationToken);
         Assert.Empty(page.Items);
         Assert.Null(page.NextCursor);
-        _currencyEntryRepository.VerifyNoOtherCalls();
-        _bondEntryRepository.VerifyNoOtherCalls();
-        _investmentTransactionRepository.VerifyNoOtherCalls();
     }
-
-    [Fact]
-    public async Task GetPage_EmptyStreams_UsesOnlyOwnerAccounts_AndBoundedSequentialQueries()
-    {
-        var start = new DateTime(2024, 1, 1);
-        var end = start.AddDays(1);
-        var streamOpen = new System.Runtime.CompilerServices.StrongBox<bool>(false);
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(TrackedAsyncEnumerable([new AvailableAccount(10, "Bank"), new AvailableAccount(11, "Savings")], streamOpen));
-        var pending = new TaskCompletionSource<IReadOnlyList<CurrencyAccountEntry>>();
-        _currencyEntryRepository.Setup(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .Callback(() => Assert.False(streamOpen.Value)).Returns(pending.Task);
-        SetupBondAccount(20, "Bonds", []);
-        SetupInvestmentAccount(30, "Broker", []);
-
-        var task = _service.GetPage(_userId, new(start, end, 2), TestContext.Current.CancellationToken);
-        Assert.False(task.IsCompleted);
-        _bondAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        pending.SetResult([]);
-        var result = await task;
-
-        Assert.Empty(result.Items);
-        Assert.Null(result.NextCursor);
-        _currencyEntryRepository.Verify(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 2 && ids.Contains(10) && ids.Contains(11)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-        _bondEntryRepository.Verify(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(20)),
-            start, end, 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-        _investmentTransactionRepository.Verify(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(30)),
-            DateOnly.FromDateTime(start), DateOnly.FromDateTime(end), 3, null, null, It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetPage_AccountTypeFilter_SkipsUnselectedStreamsEntirely()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Bond]),
-            TestContext.Current.CancellationToken);
-
-        Assert.All(page.Items, e => Assert.Equal(AccountType.Bond, e.AccountType));
-        Assert.Equal(2, page.Items.Count);
-        _currencyAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        _investmentAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        VerifyCurrencyEntryQueries(Times.Never());
-        VerifyInvestmentEntryQueries(Times.Never());
-        VerifyBondEntryQueries(Times.Once());
-    }
-
-    [Fact]
-    public async Task GetPage_MultipleAccountTypes_QueriesOnlyTheSelectedStreams()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Stock, AccountType.Currency]),
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal([AccountType.Currency, AccountType.Currency, AccountType.Currency, AccountType.Currency, AccountType.Stock, AccountType.Stock],
-            page.Items.Select(e => e.AccountType).Order());
-        _bondAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        VerifyBondEntryQueries(Times.Never());
-    }
-
-    [Fact]
-    public async Task GetPage_EmptyFilters_BehaveLikeNoFilter()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountTypes: [], AccountIds: []),
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(8, page.Items.Count);
-        Assert.Equal(3, page.Items.Select(e => e.AccountType).Distinct().Count());
-    }
-
-    [Fact]
-    public async Task GetPage_AccountIdFilter_RestrictsToThoseAccounts()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [11]),
-            TestContext.Current.CancellationToken);
-
-        Assert.All(page.Items, e => Assert.Equal(11, e.AccountId));
-        Assert.Equal(2, page.Items.Count);
-        _currencyEntryRepository.Verify(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(11)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-        // None of the other accounts is selected, so their streams never reach an entry query.
-        VerifyBondEntryQueries(Times.Never());
-        VerifyInvestmentEntryQueries(Times.Never());
-    }
-
-    [Fact]
-    public async Task GetPage_AccountIdFilter_IgnoresIdsOfOtherUsers()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [10, 999]),
-            TestContext.Current.CancellationToken);
-
-        Assert.All(page.Items, e => Assert.Equal(10, e.AccountId));
-        Assert.Equal(2, page.Items.Count);
-        _currencyEntryRepository.Verify(r => r.GetHistoryPage(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.Count == 1 && ids.Contains(10)),
-            It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetPage_OnlyForeignAccountIds_ReturnsEmptyPageWithoutEntryQueries()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        var page = await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), AccountIds: [999, 1000]),
-            TestContext.Current.CancellationToken);
-
-        Assert.Empty(page.Items);
-        Assert.Null(page.NextCursor);
-        VerifyCurrencyEntryQueries(Times.Never());
-        VerifyBondEntryQueries(Times.Never());
-        VerifyInvestmentEntryQueries(Times.Never());
-        _bondDetailsRepository.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task GetPage_TypeAndAccountIdFilters_AreCombinedWithAnd()
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-
-        // Account 30 is an investment account, which the type filter excludes; account 20 is a bond account
-        // that the id filter excludes.
-        var page = await _service.GetPage(_userId,
-            new(day.AddDays(-1), day.AddDays(1), AccountTypes: [AccountType.Currency, AccountType.Bond], AccountIds: [10, 30]),
-            TestContext.Current.CancellationToken);
-
-        Assert.All(page.Items, e => Assert.Equal((10, AccountType.Currency), (e.AccountId, e.AccountType)));
-        Assert.Equal(2, page.Items.Count);
-        _investmentAccountRepository.Verify(r => r.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        VerifyBondEntryQueries(Times.Never());
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    public async Task GetPage_WithFilters_PagesWithoutGapsOrDuplicates(int pageSize)
-    {
-        var day = new DateTime(2024, 3, 5);
-        SetupAllStreams(day);
-        var unfiltered = (await _service.GetPage(_userId, new(day.AddDays(-1), day.AddDays(1), 100), TestContext.Current.CancellationToken)).Items;
-        var expected = unfiltered.Where(e => e.AccountType != AccountType.Bond && e.AccountId != 11).ToList();
-        Assert.Equal(4, expected.Count);
-        var query = new TransactionLogQuery(day.AddDays(-1), day.AddDays(1), pageSize,
-            AccountTypes: [AccountType.Currency, AccountType.Stock], AccountIds: [10, 30, 20, 999]);
-
-        List<TransactionLogEntryDto> actual = [];
-        var page = await _service.GetPage(_userId, query, TestContext.Current.CancellationToken);
-        for (var i = 0; ; i++)
-        {
-            Assert.True(i < 20, "Cursor failed to advance.");
-            actual.AddRange(page.Items);
-            if (page.NextCursor is not TransactionLogCursor next)
-                break;
-            page = await _service.GetPage(_userId, query with { Cursor = next }, TestContext.Current.CancellationToken);
-        }
-
-        Assert.Equal(expected, actual);
-    }
-
-    // Two currency accounts (10, 11), one bond account (20) and one investment account (30), each with
-    // entries on the same two days so every filter has something to include and something to exclude.
-    private void SetupAllStreams(DateTime day)
-    {
-        SetupCurrencyAccount(10, "Bank", [
-            new(10, 1, day, 10, 1), new(10, 2, day.AddDays(-1), 10, 2),
-            new(11, 3, day, 10, 3), new(11, 4, day.AddDays(-1), 10, 4)]);
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(() => ToAsyncEnumerable([new AvailableAccount(10, "Bank"), new AvailableAccount(11, "Savings")]));
-        SetupBondAccount(20, "Bonds", [new(20, 1, day, 10, 1, 7), new(20, 2, day.AddDays(-1), 10, 2, 7)]);
-        _bondDetailsRepository.Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, string> { [7] = "Bond name" });
-        SetupInvestmentAccount(30, "Broker", [
-            new() { EntryId = 1, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2 },
-            new() { EntryId = 2, AccountId = 30, TradeDate = DateOnly.FromDateTime(day.AddDays(-1)), Quantity = 1, UnitPrice = 2 }]);
-    }
-
-    private void VerifyCurrencyEntryQueries(Times times) =>
-        _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
-
-    private void VerifyBondEntryQueries(Times times) =>
-        _bondEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
-
-    private void VerifyInvestmentEntryQueries(Times times) =>
-        _investmentTransactionRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
-            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()), times);
 
     [Theory]
     [InlineData(0)]
     [InlineData(101)]
-    public async Task GetPage_RejectsInvalidPageSizes(int size)
+    public async Task InvalidLimitsRejected(int count)
     {
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.GetPage(_userId,
-            new(DateTime.MinValue, DateTime.MaxValue, size), TestContext.Current.CancellationToken));
+        var ct = TestContext.Current.CancellationToken;
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.GetLastTransactions(Guest, count, ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.GetItemsPage(Guest, new(Day, Day, count), ct));
     }
 
     [Fact]
-    public async Task GetPage_RejectsReversedRangeAndInvalidCursor()
+    public async Task CancelledAndInvalidQueriesDoNotOpenReaders()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetPage(_userId,
-            new(DateTime.MaxValue, DateTime.MinValue), TestContext.Current.CancellationToken));
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.GetPage(_userId,
-            new(DateTime.MinValue, DateTime.MaxValue, Cursor: new(DateTime.MinValue, (AccountType)99, 1)), TestContext.Current.CancellationToken));
-    }
-
-    [Theory]
-    [InlineData(AccountType.Currency, 10)]
-    [InlineData(AccountType.Bond, 20)]
-    [InlineData(AccountType.Stock, 30)]
-    public async Task GetPage_SearchIsTrimmedAndAccountMatchesStayInsideAuthorizedFilters(AccountType type, int accountId)
-    {
-        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        SetupCurrencyAccount(10, "MiXeD cash", []);
-        SetupBondAccount(20, "MiXeD bonds", []);
-        SetupInvestmentAccount(30, "MiXeD broker", []);
-        await _service.GetPage(_userId, new(day, day, AccountTypes: [type], AccountIds: [accountId, 999], Search: " mixed "), TestContext.Current.CancellationToken);
-        if (type == AccountType.Currency)
-            _currencyEntryRepository.Verify(r => r.GetHistoryPage(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 10 })), day, day, 26, null, null,
-                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 10 }))), Times.Once);
-        else if (type == AccountType.Bond)
-            _bondEntryRepository.Verify(r => r.GetHistoryPage(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 20 })), day, day, 26, null, null,
-                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 20 }))), Times.Once);
-        else
-            _investmentTransactionRepository.Verify(r => r.GetHistoryPage(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 30 })), DateOnly.FromDateTime(day), DateOnly.FromDateTime(day), 26, null, null,
-                TestContext.Current.CancellationToken, "mixed", It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.SequenceEqual(new[] { 30 }))), Times.Once);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("   ")]
-    public async Task GetPage_EmptySearchDoesNotRestrictAccountScope(string? search)
-    {
-        var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        SetupCurrencyAccount(10, "Cash", []);
-        await _service.GetPage(_userId, new(day, day, Search: search), TestContext.Current.CancellationToken);
-        _currencyEntryRepository.Verify(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), day, day, 26, null, null,
-            TestContext.Current.CancellationToken, null, It.Is<IReadOnlyCollection<int>?>(ids => ids != null && ids.Count == 0)), Times.Once);
-    }
-
-    private void SetupCurrencyAccount(int accountId, string name, List<CurrencyAccountEntry> entries)
-    {
-        _currencyAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _currencyEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                entries.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.PostingDate >= start && e.PostingDate <= end &&
-                    (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
-                .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
-        _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
-    }
-
-    private void SetupBondAccount(int accountId, string name, List<BondAccountEntry> entries)
-    {
-        _bondAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _bondEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-            It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                entries.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.PostingDate >= start && e.PostingDate <= end &&
-                    (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
-                .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
-        _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(entries);
-    }
-
-    private void SetupInvestmentAccount(int accountId, string name, List<InvestmentTransaction> transactions)
-    {
-        _investmentAccountRepository.Setup(r => r.GetAvailableAccounts(_userId))
-            .Returns(ToAsyncEnumerable([new AvailableAccount(accountId, name)]));
-        _investmentTransactionRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
-            It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
-            .ReturnsAsync((IReadOnlyCollection<int> ids, DateOnly start, DateOnly end, int take, DateOnly? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                transactions.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.TradeDate >= start && e.TradeDate <= end &&
-                    (date == null || e.TradeDate < date || (e.TradeDate == date && e.EntryId < id)))
-                .OrderByDescending(e => e.TradeDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
-        _investmentTransactionRepository.Setup(r => r.GetMostRecentByAccounts(It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(transactions);
-    }
-
-    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
-    {
-        foreach (var item in items)
-            yield return item;
-        await Task.CompletedTask;
-    }
-
-    // Mirrors a deferred EF query: isOpen stays true from the first MoveNextAsync
-    // until the stream is exhausted, like an open data reader.
-    private static async IAsyncEnumerable<T> TrackedAsyncEnumerable<T>(IEnumerable<T> items, System.Runtime.CompilerServices.StrongBox<bool> isOpen)
-    {
-        isOpen.Value = true;
-        try
-        {
-            foreach (var item in items)
-                yield return item;
-            await Task.CompletedTask;
-        }
-        finally
-        {
-            isOpen.Value = false;
-        }
+        var ct = TestContext.Current.CancellationToken;
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Service.GetItemsPage(Guest, new(Day, Day), new CancellationToken(true)));
+        await Assert.ThrowsAsync<ArgumentException>(() => Service.GetItemsPage(Guest, new(Day, Day.AddTicks(-1)), ct));
+        await Assert.ThrowsAsync<ArgumentException>(() => Service.GetItemsPage(Guest, new(Day, Day, Cursor: new(Day, TransactionKind.Cash, 0)), ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.GetItemsPage(0, new(Day, Day), ct));
     }
 }

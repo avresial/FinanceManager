@@ -3,23 +3,15 @@
 @using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.TransactionHistory
 @using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents.TransactionHistory
 
-@* One Transactions page entry: the owning account (linked) above the account page's own row for that entry
-   kind, so details, labels, valuation and edit/delete behave exactly as on the account page. The link sits
-   outside the row so it never toggles the row's expansion. *@
-<div data-testid="transaction-history-row" data-kind="@Item.AccountType">
-    <a class="@($"fm-txhist-account d-flex align-center gap-1 {(IsMobile ? "px-4" : "px-2")} pt-2")" href="@AccountHref"
-       aria-label="@($"Open account {Item.AccountName}")">
-        <MudIcon Icon="@AccountTypeIcon" Size="Size.Small" Style="font-size: 14px;" />
-        <MudText Typo="Typo.caption" Class="text-truncate">@Item.AccountName</MudText>
-    </a>
+<div data-testid="transaction-history-row" data-kind="@Item.Kind">
     @switch (Item)
     {
         case CurrencyTransactionHistoryItem currency:
-            <TransactionRow @key="Item.Key" Account="currency.Account" Entry="currency.Entry" Currency="@currency.Currency"
+            <TransactionRow @key="Item.Key" ShowBalance="false" Account="currency.Account" Entry="currency.Entry" Currency="@currency.Currency"
                             IsMobile="@IsMobile" SiblingsShareSameTime="@SiblingsShareSameTime" />
             break;
         case BondTransactionHistoryItem bond:
-            <BondTransactionRow @key="Item.Key" Account="bond.Account" Entry="bond.Entry" BondDetails="@BondDetails" IsMobile="@IsMobile" />
+            <BondTransactionRow @key="Item.Key" ShowPosition="false" BondName="@bond.BondName" Account="bond.Account" Entry="bond.Entry" BondDetails="@BondDetails" IsMobile="@IsMobile" />
             break;
         case InvestmentTransactionHistoryItem investment:
             <InvestmentTransactionRow @key="Item.Key" Transaction="investment.Transaction" Valuation="@Valuation" IsMobile="@IsMobile"

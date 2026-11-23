@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Shared.Helpers;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
@@ -13,11 +13,11 @@ public partial class TransactionLogToolbar : ComponentBase
     /// <summary>Preset ranges offered by the dropdown: the same ones the account details pages use.</summary>
     public static readonly string[] Ranges = AccountHistoryToolbar.Ranges;
 
-    private static readonly (AccountType Type, string Label)[] _typeOptions =
+    private static readonly (TransactionKind Type, string Label)[] _typeOptions =
     [
-        (AccountType.Currency, "Cash"),
-        (AccountType.Bond, "Bonds"),
-        (AccountType.Stock, "Investments"),
+        (TransactionKind.Cash, "Cash"),
+        (TransactionKind.Bond, "Bonds"),
+        (TransactionKind.Investment, "Investments"),
     ];
 
     private readonly string _searchPanelId = $"fm-txlog-search-{Guid.NewGuid():N}";
@@ -73,16 +73,9 @@ public partial class TransactionLogToolbar : ComponentBase
     [Parameter] public DateRange? CustomDateRange { get; set; }
     [Parameter] public EventCallback<DateRange?> CustomDateRangeChanged { get; set; }
 
-    /// <summary>The user's accounts, offered by the account select.</summary>
-    [Parameter] public IReadOnlyList<TransactionLogAccountOption> Accounts { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> Currencies { get; set; } = [];
     [Parameter] public TransactionLogFilter Filter { get; set; } = TransactionLogFilter.None;
     [Parameter] public EventCallback<TransactionLogFilter> FilterChanged { get; set; }
-
-    /// <summary>Accounts offered by the select: only those of the selected types, or all when no type is selected.</summary>
-    private IReadOnlyList<TransactionLogAccountOption> VisibleAccounts =>
-        [.. Accounts
-            .Where(account => Filter.AccountTypes.Count == 0 || Filter.AccountTypes.Contains(account.AccountType))
-            .OrderBy(account => account.AccountName, StringComparer.CurrentCultureIgnoreCase)];
 
     private bool IsCustomRange => SelectedRange == DateRangeHelper.CustomRangeKey;
 
@@ -128,28 +121,9 @@ public partial class TransactionLogToolbar : ComponentBase
         await CustomDateRangeChanged.InvokeAsync(value);
     }
 
-    private string GetAccountName(int accountId) =>
-        Accounts.FirstOrDefault(account => account.AccountId == accountId)?.AccountName ?? string.Empty;
+    private Task OnKindsChanged(IReadOnlyCollection<TransactionKind>? selected) =>
+        FilterChanged.InvokeAsync(Filter with { Kinds = [.. (selected ?? []).Distinct().Order()] });
 
-    private static string GetAccountsSummary(IReadOnlyList<string> selectedNames) => selectedNames.Count switch
-    {
-        0 => string.Empty,
-        1 => selectedNames[0],
-        _ => $"{selectedNames.Count} accounts",
-    };
-
-    private async Task OnAccountTypesChanged(IReadOnlyCollection<AccountType>? selected)
-    {
-        var types = (selected ?? []).Distinct().Order().ToList();
-        // Narrowing the types hides accounts of the other types, so they stop being part of the filter.
-        var visibleIds = Accounts
-            .Where(account => types.Count == 0 || types.Contains(account.AccountType))
-            .Select(account => account.AccountId)
-            .ToHashSet();
-        var accountIds = Filter.AccountIds.Where(visibleIds.Contains).ToList();
-        await FilterChanged.InvokeAsync(new TransactionLogFilter(types, accountIds));
-    }
-
-    private async Task OnAccountIdsChanged(IEnumerable<int>? selected) =>
-        await FilterChanged.InvokeAsync(new TransactionLogFilter(Filter.AccountTypes, [.. (selected ?? []).Distinct()]));
+    private Task OnCurrenciesChanged(IEnumerable<string>? selected) =>
+        FilterChanged.InvokeAsync(Filter with { Currencies = [.. (selected ?? []).Distinct()] });
 }

@@ -21,31 +21,8 @@ public interface IAccountEntryRepository<T>
     Task<(List<T> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0);
     Task<T?> Get(int accountId, long entryId);
     Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// Returns the most recent <paramref name="count"/> entries across the supplied accounts in one
-    /// bounded database query, ordered by posting date descending and entry id descending. Implementations
-    /// may project the returned entities to the scalar fields needed by the recent-activity consumer.
-    /// </summary>
-    Task<IReadOnlyList<T>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// Returns at most <paramref name="take"/> entries across the supplied accounts within the inclusive
-    /// date range, ordered by posting date descending then entry id descending. The optional cursor
-    /// is an exclusive (posting date, entry id) boundary; both parts must be supplied together.
-    /// Callers request page size plus one when they need lookahead. Empty accounts or nonpositive take
-    /// return an empty list without querying; a reversed range is rejected. Nonblank search matches stream
-    /// text OR searchAccountIds within accountIds before paging. The caller derives searchAccountIds
-    /// from the authorized account names; they never widen the supplied account scope.
-    /// </summary>
-    Task<IReadOnlyList<T>> GetHistoryPage(
-        IReadOnlyCollection<int> accountIds,
-        DateTime startDate,
-        DateTime endDate,
-        int take,
-        DateTime? cursorPostingDate = null,
-        long? cursorId = null,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        IReadOnlyCollection<int>? searchAccountIds = null);
+
+
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
     Task<T?> GetYoungest(int accountId);
     Task<T?> GetNextYounger(int accountId, long entryId);

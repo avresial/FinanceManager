@@ -1,5 +1,6 @@
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,24 +54,49 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetMostRecentByAccounts(IReadOnlyCollection<int> accountIds, int count, CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0 || count <= 0) return [];
-
-        return await context.InvestmentTransactions.AsNoTracking()
-            .Include(x => x.AssetListing)
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value))
-            .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
-            .Take(count)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default) =>
-        await context.InvestmentTransactions.AsNoTracking()
+        await OwnedTrades(userId, startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .Include(x => x.AssetListing)
-            .Where(x => x.UserId == userId && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
+
+    private IQueryable<InvestmentTransaction> OwnedTrades(long userId, DateTime? start, DateTime? end)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var trades = context.InvestmentTransactions.AsNoTracking().Where(x => x.UserId == userId);
+        if (start.HasValue) trades = trades.Where(x => x.PostingDate >= start.Value);
+        if (end.HasValue) trades = trades.Where(x => x.PostingDate <= end.Value);
+        return trades;
+    }
+
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetHistoryByUser(long userId, OwnerHistoryQuery query, CancellationToken ct = default)
+    {
+        var trades = OwnedTrades(userId, query.Start, query.End);
+        if (query.Boundary is OwnerHistoryBoundary cursor)
+            trades = trades.Where(x => x.PostingDate < cursor.Date || x.PostingDate == cursor.Date &&
+                (cursor.IncludeEqualId ? x.EntryId <= cursor.EntryId : x.EntryId < cursor.EntryId));
+        if (query.Currencies is { Count: > 0 } currencies)
+            trades = trades.Where(x => currencies.Contains(x.Currency.ToUpper()));
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim().ToUpperInvariant();
+            trades = trades.Where(x => x.AssetListing.Ticker.ToUpper().Contains(term) || x.AssetListing.Asset.Name.ToUpper().Contains(term));
+        }
+        var page = trades.OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId).Take(query.Take);
+        if (query.IncludeDetails)
+            return await page.AsSplitQuery().Include(x => x.Labels).ThenInclude(l => l.Classifications)
+                .Include(x => x.AssetListing).ThenInclude(l => l.Asset)
+                .Include(x => x.AssetListing).ThenInclude(l => l.MarketDataSymbols).ToListAsync(ct);
+        return await page.Select(x => new InvestmentTransaction(x.EntryId)
+        {
+            PostingDate = x.PostingDate,
+            Type = x.Type,
+            Quantity = x.Quantity,
+            UnitPrice = x.UnitPrice,
+            Currency = x.Currency,
+            AssetListing = new() { Ticker = x.AssetListing.Ticker }
+        }).ToListAsync(ct);
+    }
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
@@ -332,51 +358,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
-
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetHistoryPage(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly startDate,
-        DateOnly endDate,
-        int take,
-        DateOnly? cursorTradeDate = null,
-        long? cursorId = null,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        IReadOnlyCollection<int>? searchAccountIds = null)
-    {
-        if (cursorTradeDate.HasValue != cursorId.HasValue)
-            throw new ArgumentException("Both cursor trade date and transaction id must be supplied together.");
-        if (startDate > endDate)
-            throw new ArgumentException("Start date must be on or before end date.", nameof(startDate));
-        if (accountIds.Count == 0 || take <= 0) return [];
-
-        var query = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToUpperInvariant();
-            var matchedAccounts = searchAccountIds ?? [];
-            query = query.Where(x => x.AccountId.HasValue && matchedAccounts.Contains(x.AccountId.Value) ||
-                x.AssetListing.Ticker.ToUpper().Contains(term) ||
-                x.AssetListing.Asset.Name.ToUpper().Contains(term));
-        }
-
-        if (cursorTradeDate is DateOnly date && cursorId is long id)
-            query = query.Where(x => x.PostingDate < date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) || (x.PostingDate == date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.EntryId < id));
-
-        // Labels are loaded so a trade edited from the Transactions page resubmits them instead of clearing them.
-        return await query
-            .AsSplitQuery().Include(x => x.Labels)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
-            .OrderByDescending(x => x.PostingDate)
-            .ThenByDescending(x => x.EntryId)
-            .Take(take)
-            .ToListAsync(cancellationToken);
-    }
 
     public async Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
         int accountId,

@@ -11,6 +11,10 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 /// </summary>
 public class InvestmentTransaction
 {
+    public InvestmentTransaction() { }
+
+    public InvestmentTransaction(long entryId) => EntryId = entryId;
+
     /// <summary>User who owns this transaction.</summary>
     public long UserId { get; set; }
 
