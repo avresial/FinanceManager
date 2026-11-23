@@ -10,6 +10,9 @@ public partial class AssetsPage : ComponentBase
     [
         new("assets-history", "Assets value over time", new(12, 12)),
         new("assets-distribution", "Assets distribution", new(4, 6)),
+        new("investments-value", "Investments value", new(6, 8)),
+        new("holdings", "Holdings", new(6, 6)),
+        new("dividends", "Dividend income", new(6, 6)),
         new("portfolio-return", "Portfolio return", new(6, 12)),
         new("return-attribution", "Return attribution", new(4, 6)),
         new("investment-paycheck", "Investment paycheck", new(4, 6)),
@@ -18,7 +21,7 @@ public partial class AssetsPage : ComponentBase
         new("fee-drag", "ETF fee drag", new(6, 6)),
     ];
     // Cards that reload when the selected range changes and report it through RefreshingChanged.
-    private static readonly string[] _rangeDependentCards = ["assets-history", "assets-distribution", "portfolio-return", "return-attribution"];
+    private static readonly string[] _rangeDependentCards = ["assets-history", "assets-distribution", "portfolio-return", "return-attribution", "investments-value", "holdings"];
     // Cards whose reload for the selected range is in flight; their frames show the refresh indicator.
     private readonly HashSet<string> _refreshingCards = [];
     // Cards that still owe a reload for a range the user picked. Only those reloads show the indicator:
@@ -51,6 +54,8 @@ public partial class AssetsPage : ComponentBase
     // Stable callbacks let indicator-only renders leave unchanged card parameters alone.
     private Task SetHistoryRefreshing(bool refreshing) => SetCardRefreshing("assets-history", refreshing);
     private Task SetDistributionRefreshing(bool refreshing) => SetCardRefreshing("assets-distribution", refreshing);
+    private Task SetInvestmentsValueRefreshing(bool refreshing) => SetCardRefreshing("investments-value", refreshing);
+    private Task SetHoldingsRefreshing(bool refreshing) => SetCardRefreshing("holdings", refreshing);
     private Task SetPortfolioReturnRefreshing(bool refreshing) => SetCardRefreshing("portfolio-return", refreshing);
     private Task SetReturnAttributionRefreshing(bool refreshing) => SetCardRefreshing("return-attribution", refreshing);
 

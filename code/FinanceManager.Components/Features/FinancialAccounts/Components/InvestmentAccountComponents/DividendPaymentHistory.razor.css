@@ -1,0 +1,20 @@
+.dividend-list {
+    padding: 0;
+    list-style: none;
+}
+.dividend-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+.dividend-holding {
+    display: flex;
+    flex-direction: column;
+    overflow-wrap: anywhere;
+}
+.dividend-amount {
+    font-variant-numeric: tabular-nums;
+}

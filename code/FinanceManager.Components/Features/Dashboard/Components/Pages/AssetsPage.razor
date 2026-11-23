@@ -1,5 +1,7 @@
 @page "/Assets"
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets
+@using FinanceManager.Components.Features.Portfolio.Components
+@using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
 @using FinanceManager.Components.Shared.Helpers
 @using FinanceManager.Components.Features.Dashboard.Models
 @using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries
@@ -23,6 +25,16 @@
                 case "assets-distribution":
                     <AssetsDistributionOverviewCard StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
                                                     RefreshingChanged="SetDistributionRefreshing" />
+                    break;
+                case "investments-value":
+                    <InvestmentsValueCardContainer StartDateTime="@StartDate" EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"
+                                                   RefreshingChanged="SetInvestmentsValueRefreshing" />
+                    break;
+                case "holdings":
+                    <InvestmentHoldingsCardContainer AsOf="@EndDate" Height="@DashboardCardGrid.CardHeight" RefreshingChanged="SetHoldingsRefreshing" />
+                    break;
+                case "dividends":
+                    <DividendPaymentHistory Height="@DashboardCardGrid.CardHeight" />
                     break;
                 case "portfolio-return":
                     <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"

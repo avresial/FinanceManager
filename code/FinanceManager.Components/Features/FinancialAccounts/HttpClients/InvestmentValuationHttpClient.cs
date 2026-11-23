@@ -35,27 +35,32 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<Dictionary<long, decimal>>() ?? [];
     }
 
-    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int currencyId, DateTime start, DateTime end)
-    {
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/ValueSeries/{currencyId}/{Iso(start)}/{Iso(end)}");
-        if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();
-        return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];
-    }
+    public Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int currencyId, DateTime start, DateTime end, bool requireSuccess = false) =>
+        ReadSeriesAsync($"api/InvestmentValuation/ValueSeries/{currencyId}/{Iso(start)}/{Iso(end)}", requireSuccess);
 
-    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
+    public Task<IReadOnlyDictionary<DateTime, decimal>> GetCapitalSeriesAsync(int currencyId, DateTime start, DateTime end) =>
+        ReadSeriesAsync($"api/InvestmentValuation/CapitalSeries/{currencyId}/{Iso(start)}/{Iso(end)}", requireSuccess: true);
+
+    public Task<IReadOnlyDictionary<DateTime, decimal>> GetBenchmarkSeriesAsync(
         int currencyId,
         DateTime start,
         DateTime end,
-        long? listingId)
+        long? listingId,
+        bool requireSuccess = false)
     {
         var url = $"{httpClient.BaseAddress}api/InvestmentValuation/BenchmarkSeries/"
             + $"{currencyId}/{Iso(start)}/{Iso(end)}";
         if (listingId is long id)
             url += $"?listingId={id}";
 
+        return ReadSeriesAsync(url, requireSuccess);
+    }
+
+    private async Task<IReadOnlyDictionary<DateTime, decimal>> ReadSeriesAsync(string url, bool requireSuccess)
+    {
         using var response = await httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode) return new Dictionary<DateTime, decimal>();
+        if (!response.IsSuccessStatusCode && !requireSuccess) return new Dictionary<DateTime, decimal>();
+        response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<Dictionary<DateTime, decimal>>() ?? [];
     }
 

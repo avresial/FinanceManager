@@ -137,3 +137,7 @@
 .fm-tsvc-note .fm-unconverted-chip {
     margin-left: 0;
 }
+
+.fm-tsvc-card .apexcharts-legend-text {
+    color: var(--mud-palette-text-secondary) !important;
+}

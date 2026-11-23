@@ -344,6 +344,28 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToListAsync(cancellationToken);
     }
 
+    private IQueryable<InvestmentTransaction> LatestOwnerTrades(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds)
+    {
+        var trades = context.InvestmentTransactions.AsNoTracking();
+        var end = asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var ids = trades.Where(t => t.UserId == userId && t.PostingDate <= end && listingIds.Contains(t.AssetListingId))
+            .GroupBy(t => t.AssetListingId)
+            .Select(g => g.OrderByDescending(t => t.PostingDate).ThenByDescending(t => t.EntryId).Select(t => t.EntryId).First());
+        return trades.Where(t => ids.Contains(t.EntryId));
+    }
+
+    public async Task<IReadOnlyList<IInvestmentTransactionRepository.ListingTradePrice>> GetLatestPricesByUserAsOf(
+        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct) =>
+        await LatestOwnerTrades(userId, asOf, listingIds)
+            .Select(t => new IInvestmentTransactionRepository.ListingTradePrice(t.AssetListingId, t.Currency, t.UnitPrice))
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(
+        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct) =>
+        // Recovery saves the trade through Update, which also copies its labels.
+        await LatestOwnerTrades(userId, asOf, listingIds).Where(t => t.UnitPrice <= 0)
+            .Include(t => t.Labels).ToListAsync(ct);
+
     public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(
         int accountId,
         DateOnly asOf,

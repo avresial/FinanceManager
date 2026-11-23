@@ -11,7 +11,8 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Invest
 
 public partial class DividendPaymentHistory : ComponentBase, IDisposable
 {
-    [Parameter] public int AccountId { get; set; }
+    [Parameter] public string? Height { get; set; }
+    [Parameter] public int? AccountId { get; set; }
     [Parameter] public string DefaultCurrency { get; set; } = string.Empty;
     [Inject] public required DividendPaymentHttpClient DividendPaymentHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
@@ -21,6 +22,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private readonly RefreshVersionGate _historyGate = new();
     private CancellationTokenSource _accountLifetime = new();
     private int? _loadedAccount;
+    private bool _initialized;
     private List<DividendPaymentDto> _payments = [];
     private List<DividendHoldingOption> _holdings = [];
     private List<string> _availableCurrencies = [];
@@ -43,7 +45,8 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_loadedAccount == AccountId) return;
+        if (_initialized && _loadedAccount == AccountId) return;
+        _initialized = true;
         _loadedAccount = AccountId;
         _accountLifetime.Cancel();
         _accountLifetime.Dispose();

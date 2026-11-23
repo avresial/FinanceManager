@@ -1,0 +1,40 @@
+@using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
+@using FinanceManager.Components.Features.FinancialAccounts.Models
+@using FinanceManager.Components.Features.Transactions.Investments.HttpClients
+@using FinanceManager.Domain.Assets.Entities
+@inherits PortfolioCardBase<List<InvestmentHoldingModel>>
+
+@if (Failed)
+{
+    <MudAlert Severity="Severity.Error">Couldn't load holdings. <MudButton OnClick="Reload">Retry</MudButton></MudAlert>
+}
+@if (Loading)
+{
+    <MudSkeleton Height="@Height" aria-label="Loading holdings" />
+}
+else if (Model is not null)
+{
+    <InvestmentHoldingCard Holdings="@Model" Height="@Height" />
+}
+
+@code {
+    [Parameter] public DateTime AsOf { get; set; }
+    [Inject] public required InvestmentTradesHttpClient Trades { get; set; }
+
+    protected override Task OnParametersSetAsync() => Reload();
+    private Task Reload() => Refresh(AsOf.Date, AsOf.Date);
+
+    protected override Task<(string Key, Func<Task<List<InvestmentHoldingModel>>> Fetch)> GetRequestAsync(int userId, DateTime start, DateTime end)
+    {
+        async Task<List<InvestmentHoldingModel>> Fetch()
+        {
+            var holdings = await Trades.GetHoldingsAsync(DateOnly.FromDateTime(end));
+            return [.. holdings.Where(h => h.Units != 0)
+                .Select(h => new InvestmentHoldingModel(h.AssetListingId, h.Ticker, h.ExchangeName, h.Currency,
+                    h.Units, h.LatestUnitPrice, h.Units * h.LatestUnitPrice, (AssetType)h.AssetType))
+                .OrderByDescending(h => h.Value)];
+        }
+
+        return Task.FromResult<(string, Func<Task<List<InvestmentHoldingModel>>>)>(($"investment-holdings:v1:{userId}", Fetch));
+    }
+}

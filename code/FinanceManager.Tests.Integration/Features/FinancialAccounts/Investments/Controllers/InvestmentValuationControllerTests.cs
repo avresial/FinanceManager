@@ -129,6 +129,17 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
+    public async Task CapitalSeries_TracksOwnerInvestmentCostAsPositionsAreSold()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
+        var capital = await client.GetCapitalSeriesAsync(_usdCurrencyId, _asOf.AddDays(-8), _asOf);
+        Assert.Equal(450m, capital[_asOf.AddDays(-8)]);
+        Assert.Equal(270m, capital[_asOf]);
+    }
+
+    [Fact]
     public async Task GetValue_ValuesHoldingsAtQuotePrice()
     {
         await SeedHoldingsWithPrice();

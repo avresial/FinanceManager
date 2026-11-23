@@ -26,7 +26,7 @@ public class DividendPaymentHistoryTests
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
                 ? JsonResponse(new[] { new DividendHoldingOption(42, "iShares Core S&P 500", "CSPX", "XLON", "USD") })
-                : request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal)
+                : request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath == "/api/dividends"
                     ? JsonResponse(new DividendPaymentPage(Array.Empty<DividendPaymentDto>(), 0, 1, 20))
                     : request.RequestUri!.AbsolutePath.EndsWith("/Currency/GetAll", StringComparison.Ordinal)
                         ? JsonResponse(new[] { _pln })
@@ -34,11 +34,10 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler);
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
         Assert.Contains("No dividend payments yet.", cut.Markup);
-        var recordButton = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Record dividend");
+        var recordButton = cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend");
         Assert.False(recordButton.HasAttribute("disabled"));
     }
 
@@ -53,7 +52,7 @@ public class DividendPaymentHistoryTests
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
                 ? JsonResponse(new[] { new DividendHoldingOption(42, "iShares Core S&P 500", "CSPX", "XLON", "USD") })
-                : request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal)
+                : request.Method == HttpMethod.Get && request.RequestUri!.AbsolutePath == "/api/dividends"
                     ? JsonResponse(new DividendPaymentPage([later, earlier], 2, 1, 20))
                     : request.RequestUri!.AbsolutePath.EndsWith("/Currency/GetAll", StringComparison.Ordinal)
                         ? JsonResponse(new[] { _pln })
@@ -61,17 +60,11 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler);
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
         // Latest first: the August payment appears before the one in markup preceding it.
         Assert.True(cut.Markup.IndexOf("120.00 USD") < cut.Markup.IndexOf("85.00 USD"));
-        var editButtons = cut.FindAll("button").Where(b => b.HasAttribute("aria-label") &&
-            b.GetAttribute("aria-label")!.ToString().StartsWith("Edit dividend ", StringComparison.Ordinal)).ToList();
-        var deleteButtons = cut.FindAll("button").Where(b => b.HasAttribute("aria-label") &&
-            b.GetAttribute("aria-label")!.ToString().StartsWith("Delete dividend ", StringComparison.Ordinal)).ToList();
-        Assert.Equal(2, editButtons.Count);
-        Assert.Equal(2, deleteButtons.Count);
+        Assert.Equal(2, cut.FindAll("button[aria-label^='Actions for']").Count);
     }
 
     [Fact]
@@ -81,7 +74,7 @@ public class DividendPaymentHistoryTests
         var handler = new StubHttpHandler(async request =>
         {
             if (request.Method == HttpMethod.Post &&
-                request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends")
             {
                 capturedRequest = await JsonSerializer.DeserializeAsync<DividendPaymentRequest>(
                     await request.Content!.ReadAsStreamAsync(),
@@ -90,7 +83,7 @@ public class DividendPaymentHistoryTests
             }
 
             if (request.Method == HttpMethod.Get &&
-                request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends")
             {
                 var items = new List<DividendPaymentDto>();
                 if (capturedRequest is not null)
@@ -114,10 +107,9 @@ public class DividendPaymentHistoryTests
         await using var context = CreateBunitContext(handler);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Record dividend").Click());
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
 
         // The payout currency is explicitly selectable independently of the listing.
         var holdingSelect = cut.FindComponents<MudSelect<long>>()
@@ -151,10 +143,10 @@ public class DividendPaymentHistoryTests
     {
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.Method == HttpMethod.Post &&
-                request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal)
+                request.RequestUri!.AbsolutePath == "/api/dividends"
                 ? BadResponse("The note exceeds the maximum length.")
                 : request.Method == HttpMethod.Get &&
-                    request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal)
+                    request.RequestUri!.AbsolutePath == "/api/dividends"
                     ? JsonResponse(new DividendPaymentPage(Array.Empty<DividendPaymentDto>(), 0, 1, 20))
                     : request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
                         ? JsonResponse(new[] { new DividendHoldingOption(42, "Vanguard FTSE All-World", "VWCE", "XLON", "USD") })
@@ -165,10 +157,9 @@ public class DividendPaymentHistoryTests
         await using var context = CreateBunitContext(handler);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Record dividend").Click());
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
 
         var holdingSelect = cut.FindComponents<MudSelect<long>>()
             .Single(s => s.Instance.Label == "Holding");
@@ -206,7 +197,7 @@ public class DividendPaymentHistoryTests
         var handler = new StubHttpHandler(async request =>
         {
             if (request.Method == HttpMethod.Put &&
-                request.RequestUri!.AbsolutePath.Contains("/dividends/", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends/92")
             {
                 capturedRequest = await JsonSerializer.DeserializeAsync<DividendPaymentRequest>(
                     await request.Content!.ReadAsStreamAsync(),
@@ -215,7 +206,7 @@ public class DividendPaymentHistoryTests
             }
 
             if (request.Method == HttpMethod.Get &&
-                request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends")
             {
                 var item = capturedRequest is not null
                     ? new DividendPaymentDto(92, 10, capturedRequest.AssetListingId, "VWCE", "VWCE",
@@ -237,13 +228,13 @@ public class DividendPaymentHistoryTests
         await using var context = CreateBunitContext(handler);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
         cut.WaitForAssertion(() => Assert.Contains("85.00 USD", cut.Markup));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.HasAttribute("aria-label") &&
-            b.GetAttribute("aria-label")!.ToString().StartsWith("Edit dividend ", StringComparison.Ordinal)).Click());
+        var popovers = context.Render<MudPopoverProvider>();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for']").Click());
+        await cut.InvokeAsync(() => popovers.Find("[aria-label^='Edit dividend']").Click());
 
         var cashField = cut.FindComponents<MudNumericField<decimal>>()
             .Single(f => f.Instance.Label == "Cash received");
@@ -276,14 +267,14 @@ public class DividendPaymentHistoryTests
         var handler = new StubHttpHandler(async request =>
         {
             if (request.Method == HttpMethod.Delete &&
-                request.RequestUri!.AbsolutePath.Contains("/dividends/", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends/92")
             {
                 deleted = true;
                 return new(HttpStatusCode.NoContent);
             }
 
             if (request.Method == HttpMethod.Get &&
-                request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal))
+                request.RequestUri!.AbsolutePath == "/api/dividends")
                 return JsonResponse(new DividendPaymentPage(
                     deleted ? Array.Empty<DividendPaymentDto>() : [original], deleted ? 0 : 1, 1, 20));
 
@@ -299,13 +290,13 @@ public class DividendPaymentHistoryTests
         await using var context = CreateBunitContext(handler, confirmedDelete: true);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
         cut.WaitForAssertion(() => Assert.Contains("85.00 USD", cut.Markup));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.HasAttribute("aria-label") &&
-            b.GetAttribute("aria-label")!.ToString().StartsWith("Delete dividend ", StringComparison.Ordinal)).Click());
+        var popovers = context.Render<MudPopoverProvider>();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for']").Click());
+        await cut.InvokeAsync(() => popovers.Find("[aria-label^='Delete dividend']").Click());
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("85.00 USD", cut.Markup));
         Assert.Contains(snackbar.ShownSnackbars, s => s.Message == "Dividend removed.");
@@ -319,10 +310,10 @@ public class DividendPaymentHistoryTests
 
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.Method == HttpMethod.Delete &&
-                request.RequestUri!.AbsolutePath.Contains("/dividends/", StringComparison.Ordinal)
+                request.RequestUri!.AbsolutePath == "/api/dividends/92"
                 ? new(HttpStatusCode.NoContent)
                 : request.Method == HttpMethod.Get &&
-                    request.RequestUri!.AbsolutePath.EndsWith("/dividends", StringComparison.Ordinal)
+                    request.RequestUri!.AbsolutePath == "/api/dividends"
                     ? JsonResponse(new DividendPaymentPage([original], 1, 1, 20))
                     : request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
                         ? JsonResponse(Array.Empty<DividendHoldingOption>())
@@ -332,13 +323,13 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler, confirmedDelete: false);
         var cut = context.Render<DividendPaymentHistory>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.DefaultCurrency, "PLN"));
 
         cut.WaitForAssertion(() => Assert.Contains("85.00 USD", cut.Markup));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.HasAttribute("aria-label") &&
-            b.GetAttribute("aria-label")!.ToString().StartsWith("Delete dividend ", StringComparison.Ordinal)).Click());
+        var popovers = context.Render<MudPopoverProvider>();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for']").Click());
+        await cut.InvokeAsync(() => popovers.Find("[aria-label^='Delete dividend']").Click());
 
         cut.WaitForAssertion(() => Assert.Contains("85.00 USD", cut.Markup));
     }
@@ -358,7 +349,7 @@ public class DividendPaymentHistoryTests
                 [new(second ? 1 : 2, 10, 42, second ? "Older fund" : "Latest fund", "FUND", new(2020, 1, 1), 5, "PLN", null)], 21, second ? 2 : 1, 20)));
         });
         await using var context = CreateBunitContext(handler);
-        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.AccountId, 10));
+        var cut = context.Render<DividendPaymentHistory>();
         cut.WaitForAssertion(() => Assert.Contains("Latest fund", cut.Markup));
         await cut.InvokeAsync(() => cut.FindAll("button").Single(x => x.TextContent.Trim() == "Load older payments").Click());
         cut.WaitForAssertion(() => Assert.Contains("Older fund", cut.Markup));
@@ -378,7 +369,7 @@ public class DividendPaymentHistoryTests
                     ? JsonResponse(new[] { _pln })
                     : JsonResponse(new DividendPaymentPage([], 0, 1, 20))));
         await using var context = CreateBunitContext(handler);
-        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.AccountId, 10));
+        var cut = context.Render<DividendPaymentHistory>();
         cut.WaitForAssertion(() => Assert.Contains("Could not load dividend payments", cut.Markup));
         Assert.DoesNotContain("No dividend payments yet", cut.Markup);
         Assert.Contains("Retry", cut.Markup);

@@ -8,4 +8,6 @@ public record InvestmentHoldingDto(
     string Ticker,
     string ExchangeName,
     AssetTypeDto AssetType,
-    decimal Units);
+    decimal Units,
+    string Currency,
+    decimal LatestUnitPrice);

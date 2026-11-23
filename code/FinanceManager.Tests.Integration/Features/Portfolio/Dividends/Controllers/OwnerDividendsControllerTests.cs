@@ -97,6 +97,19 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
     }
 
     [Fact]
+    public async Task AssetsNavigation_IncludesOwnersWithOnlyDividends()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        Db.DividendPayments.Add(new DividendPayment { UserId = -2, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 1, Currency = "USD" });
+        await Db.SaveChangesAsync(ct);
+        Authorize("guest", -2, UserRole.User);
+        Assert.True(await Client.GetFromJsonAsync<bool>("api/Assets/IsAnyAccountWithAssets/-2", ct));
+        Authorize("other", -3, UserRole.User);
+        Assert.False(await Client.GetFromJsonAsync<bool>("api/Assets/IsAnyAccountWithAssets/-3", ct));
+    }
+
+    [Fact]
     public async Task History_CoversAccountLinkedAndUnlinkedPayments_ButNotOtherOwners()
     {
         Seed();

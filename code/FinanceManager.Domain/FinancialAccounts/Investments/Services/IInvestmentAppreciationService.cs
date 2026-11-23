@@ -9,6 +9,8 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Services;
 /// </summary>
 public interface IInvestmentAppreciationService
 {
+    Task<UnrealizedGainLossAccountResult?> GetForUserAsync(int userId, Currency currency, DateTime asOfDate, CancellationToken ct = default);
+
     /// <summary>
     /// Returns the selected account's appreciation when it belongs to <paramref name="userId"/>.
     /// An account owned by another user is treated as not found.

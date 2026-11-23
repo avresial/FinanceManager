@@ -42,6 +42,11 @@ public interface IInvestmentTransactionRepository
     /// </summary>
     Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ListingTradePrice>> GetLatestPricesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
+    Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
+
+    public sealed record ListingTradePrice(long AssetListingId, string Currency, decimal UnitPrice);
+
     /// <summary>
     /// Gets the latest transaction on or before a date for each listing held by an account, with
     /// listing and asset metadata eagerly loaded for holding-card rendering.

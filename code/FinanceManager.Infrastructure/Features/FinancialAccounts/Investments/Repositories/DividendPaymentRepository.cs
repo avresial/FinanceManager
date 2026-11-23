@@ -8,6 +8,9 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.R
 
 public class DividendPaymentRepository(AppDbContext context) : IDividendPaymentRepository
 {
+    public Task<bool> HasPayments(int userId, CancellationToken ct = default) =>
+        Payments(userId, null).AnyAsync(ct);
+
     public Task<DividendPayment?> Get(long id, CancellationToken ct = default) =>
         context.DividendPayments.FirstOrDefaultAsync(x => x.Id == id, ct);
 

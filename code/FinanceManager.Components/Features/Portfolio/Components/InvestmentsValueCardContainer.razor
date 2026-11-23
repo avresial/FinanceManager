@@ -1,0 +1,8 @@
+@using FinanceManager.Components.Features.Portfolio.Models
+@inherits PortfolioCardBase<InvestmentsValueModel>
+
+<TimeSeriesValueCard Title="Investments value" Data="@(Model?.Series ?? [])" Overlays="@(Model?.Overlays ?? [])"
+                     SummaryValue="@Model?.CurrentValue" DeltaBaseline="@Model?.CostBasis" CurrencyShortName="@Model?.Currency"
+                     SummaryCaption="@(Model is null ? null : $"Cost basis {MoneyFormatter.Format(Model.CostBasis, Model.Currency)} · vs {Model.BenchmarkName}")"
+                     Description="Value of your shares and ETFs, capital contributed, and a benchmark bought with the same contributions. Unrealized gain compares the current value with the cost basis of your open positions."
+                     Height="@Height" IsLoading="@Loading" HasError="@Failed" OnRetry="Reload" />

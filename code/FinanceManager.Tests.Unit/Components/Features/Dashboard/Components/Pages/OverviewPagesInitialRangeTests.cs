@@ -7,7 +7,9 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
 using FinanceManager.Components.Features.Dashboard.Services;
+using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Portfolio.Components;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Sections;
@@ -71,6 +73,9 @@ public class OverviewPagesInitialRangeTests
             Mock.Of<ILoginService>(), NullLogger<DashboardCardVisibilityService>.Instance));
         context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(new HttpClient(returnsHandler ?? new HttpClientHandler()) { BaseAddress = new Uri("http://localhost/") }),
             NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
+        context.ComponentFactories.AddStub<InvestmentsValueCardContainer>();
+        context.ComponentFactories.AddStub<InvestmentHoldingsCardContainer>();
+        context.ComponentFactories.AddStub<DividendPaymentHistory>();
         context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
         if (returnsHandler is null)

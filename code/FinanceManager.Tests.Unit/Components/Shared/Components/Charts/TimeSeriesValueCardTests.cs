@@ -128,6 +128,27 @@ public class TimeSeriesValueCardTests
         Assert.Equal(-16, labels.OffsetY);
     }
 
+    [Theory]
+    [InlineData(80, "25.0%")]
+    [InlineData(0, null)]
+    public async Task PortfolioChip_LabelsUnrealizedGainAndScalesForOverlays(int baseline, string? percent)
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, Points(75, 100))
+            .Add(x => x.SummaryValue, 100m).Add(x => x.DeltaBaseline, (decimal)baseline)
+            .Add(x => x.Overlays, [new TimeSeriesOverlay("Capital", Points(115, 180), "#66bb6a")]));
+        var badge = cut.Find(".fm-tsvc-delta").TextContent;
+        Assert.Contains($"Unrealized gain +{100 - baseline}.00", badge);
+        if (percent is null) Assert.DoesNotContain("%", badge);
+        else Assert.Contains(percent, badge);
+        var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>();
+        Assert.Equal(2, cut.FindComponents<ApexPointSeries<TimeSeriesModel>>().Count);
+        Assert.True(Convert.ToDouble(chart.Instance.Options.Yaxis!.Single().Max) >= 180);
+    }
+
     private static List<TimeSeriesModel> Points(params decimal[] values) =>
         [.. values.Select((value, i) => new TimeSeriesModel(_start.AddDays(i), value))];
 

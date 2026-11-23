@@ -28,13 +28,17 @@ public partial class TimeSeriesValueCard
     // ask the live chart to redraw when the series content actually changed
     // (e.g. the dashboard reloading all cards after a date-range change).
     private ApexChart<TimeSeriesModel>? _drawnChart;
-    private List<(DateTime DateTime, decimal Value)> _drawnPoints = [];
+    private List<(string Name, string Color, DateTime DateTime, decimal Value)> _drawnPoints = [];
 
     /// <summary>Card title shown top-left (e.g. "Assets value over time").</summary>
     [Parameter] public string Title { get; set; } = string.Empty;
 
     /// <summary>Series points, ascending by <see cref="TimeSeriesModel.DateTime"/>.</summary>
     [Parameter] public IReadOnlyList<TimeSeriesModel> Data { get; set; } = [];
+
+    [Parameter] public IReadOnlyList<TimeSeriesOverlay> Overlays { get; set; } = [];
+    [Parameter] public decimal? DeltaBaseline { get; set; }
+    [Parameter] public string? Description { get; set; }
 
     [Parameter] public bool AnimateChart { get; set; } = true;
     [Parameter] public bool IsLoading { get; set; }
@@ -106,7 +110,7 @@ public partial class TimeSeriesValueCard
     // The delta chip compares the shown point to the range start; that pairing is
     // meaningless next to a summary hero (a period sum), so it's hidden whenever a
     // summary value is supplied.
-    private bool ShowDelta => HasDelta && SummaryValue is null;
+    private bool ShowDelta => DeltaBaseline.HasValue || (HasDelta && SummaryValue is null);
 
     // The point reflected in the header: the latest. Hovered points are read from the
     // tooltip; the header cannot follow them reliably because Blazor-ApexCharts' mouse-move
@@ -131,7 +135,7 @@ public partial class TimeSeriesValueCard
     private decimal DebtChange => Data.Count == 0 ? 0m : -(Shown.Value - Data[0].Value);
 
     private bool DeltaIsUp => IsDebt ? DebtChange > 0 : DeltaPct >= 0;
-    private bool DeltaIsGood => IsDebt ? DebtChange <= 0 : DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
+    private bool DeltaIsGood => DeltaBaseline is decimal baseline ? HeaderValue >= baseline : IsDebt ? DebtChange <= 0 : DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
     // Colors come from theme-aware tokens in time-series-card.css so the badge stays legible in light and dark mode.
     private string DeltaClass => DeltaIsGood ? "fm-tsvc-delta--good" : "fm-tsvc-delta--bad";
 
@@ -139,6 +143,13 @@ public partial class TimeSeriesValueCard
     {
         get
         {
+            if (DeltaBaseline is decimal baseline)
+            {
+                var change = HeaderValue - baseline;
+                var gainSign = change > 0 ? "+" : string.Empty;
+                var percent = baseline == 0 ? string.Empty : $" · {change / Math.Abs(baseline):+0.0%;-0.0%;0.0%}";
+                return $"Unrealized gain {gainSign}{FormatMoney(change)}{percent}";
+            }
             if (IsDebt)
                 return DebtChange == 0m
                     ? "Debt unchanged"
@@ -158,6 +169,10 @@ public partial class TimeSeriesValueCard
             || _options.Chart.Animations.Enabled != AnimateChart)
             BuildOptions();
 
+        _options!.Colors = [ChartAccent, .. Overlays.Select(o => o.Color)];
+        _options.Markers.Colors = _options.Colors;
+        _options.Legend.Show = Overlays.Count > 0;
+        _options.Fill.Type = [FillType.Gradient, .. Overlays.Select(_ => FillType.Solid)];
         ApplyYScale();
     }
 
@@ -166,7 +181,8 @@ public partial class TimeSeriesValueCard
         if (State != LoadState.Ready || _chart is null) return;
 
         // Compare lazily and only materialize the points when they are actually stored.
-        var points = Data.Select(p => (p.DateTime, p.Value));
+        var points = Data.Select(p => (Title, ChartAccent, p.DateTime, p.Value))
+            .Concat(Overlays.SelectMany(s => s.Data.Select(p => (s.Name, s.Color, p.DateTime, p.Value))));
         if (!ReferenceEquals(_chart, _drawnChart))
         {
             // A freshly created chart instance (first render, or remounted after a
@@ -190,8 +206,9 @@ public partial class TimeSeriesValueCard
         var axis = _options?.Yaxis?.FirstOrDefault();
         if (axis is null || Data.Count == 0) return;
 
+        var points = Data.Concat(Overlays.SelectMany(o => o.Data));
         var scale = ChartHelper.GetYScaleWithLabelGutter(
-            (double)Data.Min(p => p.Value), (double)Data.Max(p => p.Value), ChartHelper.GetYTargetBands(Height));
+            (double)points.Min(p => p.Value), (double)points.Max(p => p.Value), ChartHelper.GetYTargetBands(Height));
         axis.Min = scale.Min;
         axis.Max = scale.Max;
         axis.TickAmount = scale.TickAmount;
@@ -221,7 +238,14 @@ public partial class TimeSeriesValueCard
             Colors = [ChartAccent],
             Stroke = new Stroke { Curve = Curve.Stepline, Width = 2.5, LineCap = LineCap.Round },
             DataLabels = new DataLabels { Enabled = false },
-            Legend = new Legend { Show = false },
+            Legend = new Legend
+            {
+                Show = false,
+                Position = LegendPosition.Top,
+                HorizontalAlign = ApexCharts.Align.Left,
+                ItemMargin = new LegendItemMargin { Horizontal = 8 },
+                Markers = new LegendMarkers { OffsetX = -2 }
+            },
             Fill = new Fill
             {
                 Type = [FillType.Gradient],

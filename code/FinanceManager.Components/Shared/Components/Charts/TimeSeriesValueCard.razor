@@ -5,7 +5,7 @@
 <MudCard Outlined="true" Class="rounded-lg fm-tsvc-card" Style="@($"overflow:hidden;height:{Height};display:flex;flex-direction:column;")">
 
     <CardHeader Title="@Title"
-                InfoText="@InfoText"
+                InfoText="@(Description ?? InfoText)"
                 InfoAriaLabel="@($"About {Title} card")">
         <SubtitleContent>
             <span class="fm-tsvc-caption" title="@CaptionText">@CaptionText</span>
@@ -87,6 +87,11 @@
                                          SeriesType="SeriesType.Area"
                                          XValue="@(p => p.DateTime.ToLocalTime())"
                                          YValue="@(p => p.Value)" />
+                        @foreach (var overlay in Overlays)
+                        {
+                            <ApexPointSeries @key="overlay.Name" TItem="TimeSeriesModel" Items="overlay.Data" Name="@overlay.Name"
+                                             SeriesType="SeriesType.Line" XValue="@(p => p.DateTime.ToLocalTime())" YValue="@(p => p.Value)" />
+                        }
                     </ApexChart>
                 </div>
                 break;

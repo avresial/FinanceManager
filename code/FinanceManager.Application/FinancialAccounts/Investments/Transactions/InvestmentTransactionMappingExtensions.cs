@@ -94,6 +94,6 @@ public static class InvestmentTransactionMappingExtensions
         Labels = (request.LabelIds ?? []).Distinct().Select(labelId => new FinancialLabel { Id = labelId, Name = string.Empty }).ToList()
     };
 
-    public static InvestmentHoldingDto ToDto(this InvestmentHolding holding) => new(
-        holding.AssetListingId, holding.Ticker, holding.ExchangeName, (AssetTypeDto)holding.AssetType, holding.Units);
+    public static InvestmentHoldingDto ToDto(this InvestmentHolding holding, string currency, decimal latestUnitPrice) => new(
+        holding.AssetListingId, holding.Ticker, holding.ExchangeName, (AssetTypeDto)holding.AssetType, holding.Units, currency, latestUnitPrice);
 }

@@ -12,10 +12,6 @@
     flex-direction: column;
 }
 
-.fm-holdings-list > hr:last-child {
-    display: none;
-}
-
 .fm-holding-item {
     display: flex;
     flex-direction: column;
@@ -81,4 +77,16 @@
     .fm-holding-grid {
         grid-template-columns: 1fr;
     }
+}
+
+.fm-holding-item + .fm-holding-item {
+    border-top: 1px solid var(--mud-palette-divider);
+}
+
+@media (max-width: 599.98px) {
+    .fm-holdings-compact > article:nth-child(n+4) {
+        display: none;
+    }
+    .fm-holding-header { align-items: center; }
+    .fm-holding-title-group { flex-direction: row; align-items: baseline; gap: .5rem; }
 }

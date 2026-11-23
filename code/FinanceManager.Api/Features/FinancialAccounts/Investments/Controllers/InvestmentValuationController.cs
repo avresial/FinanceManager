@@ -22,6 +22,7 @@ public class InvestmentValuationController(
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentValuationService valuationService,
     IInvestmentBenchmarkService benchmarkService,
+    IInvestmentCapitalSeriesService capitalSeriesService,
     IInvestmentTransactionValuationService transactionValuationService,
     ICurrencyRepository currencyRepository,
     IAssetListingRepository assetListingRepository) : ControllerBase
@@ -69,6 +70,22 @@ public class InvestmentValuationController(
         if (currency is null) return NotFound("Currency not found.");
 
         return Ok(await valuationService.GetUserValueSeriesAsync(userId, currency, startDate, endDate, cancellationToken));
+    }
+
+    [HttpGet("CapitalSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<DateTime, decimal>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCapitalSeries(int currencyId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+    {
+        if (endDate < startDate) return BadRequest("End date must be on or after start date.");
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null) return NotFound("Currency not found.");
+
+        return Ok(await capitalSeriesService.GetCapitalSeriesAsync(userId, currency, startDate, endDate, cancellationToken));
     }
 
     [HttpGet("BenchmarkSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]

@@ -2,17 +2,18 @@
 @using FinanceManager.Components.Features.FinancialAccounts.Models
 @using FinanceManager.Domain.Assets.Entities
 
-<MudCard Outlined="true" Class="fm-holdings-card" Style="background-color: transparent;">
-    <CardHeader Title="Holdings" InfoText="Every open holding with its units, latest price and current value."
+<MudCard Outlined="true" Class="fm-holdings-card rounded-lg d-flex flex-column" Style="@($"height:{Height}")">
+    <CardHeader Title="Holdings" Subtitle="@(Holdings.Count == 1 ? "1 open position" : $"{Holdings.Count} open positions")" InfoText="Open positions valued at the latest trade price on or before the selected date."
                 InfoAriaLabel="About holdings card" />
-    <MudCardContent Class="pa-0">
+    <MudCardContent Class="pa-0 overflow-y-auto">
         @if (Holdings.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
+            <MudButton Href="/Transactions?dialog=add-entry&amp;kind=investment" Color="Color.Primary" Class="mx-4">Add trade</MudButton>
         }
         else
         {
-            <div class="fm-holdings-list" role="list" aria-label="Holdings">
+            <div class="@($"fm-holdings-list {(_showAll ? "" : "fm-holdings-compact")}")" role="list" aria-label="Holdings">
                 @foreach (var holding in Holdings)
                 {
                     <article class="fm-holding-item px-4 py-3" role="listitem" @key="holding.ListingId">
@@ -35,7 +36,7 @@
                                 <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@holding.Quantity.ToString("N4")</MudText>
                             </div>
                             <div class="fm-holding-field">
-                                <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Current price</MudText>
+                                <MudText Typo="Typo.overline" Color="Color.Default" Class="fm-field-label">Last trade price</MudText>
                                 <MudText Typo="Typo.body2" Class="fm-field-value fm-tabular">@MoneyFormatter.Format(holding.LatestPrice, holding.Currency)</MudText>
                             </div>
                             <div class="fm-holding-field">
@@ -44,15 +45,26 @@
                             </div>
                         </div>
                     </article>
-                    <MudDivider />
+
                 }
             </div>
+            @if (Holdings.Count > 3)
+            {
+                <div class="d-flex d-sm-none justify-center">
+                    <MudButton OnClick="@(() => _showAll = !_showAll)" Color="Color.Primary">
+                        @(_showAll ? "Show less" : $"Show all {Holdings.Count}")
+                    </MudButton>
+                </div>
+            }
         }
     </MudCardContent>
 </MudCard>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<InvestmentHoldingModel> Holdings { get; set; } = [];
+
+    [Parameter] public string? Height { get; set; }
+    private bool _showAll;
 
     private static string FormatAssetType(AssetType type) => type switch
     {

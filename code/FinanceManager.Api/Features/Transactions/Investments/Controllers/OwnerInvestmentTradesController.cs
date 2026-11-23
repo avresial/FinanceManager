@@ -76,8 +76,26 @@ public class OwnerInvestmentTradesController(
     {
         if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var ownerId)) return Forbid();
 
-        var holdings = await transactionRepository.GetHoldingsByUserAsOf(ownerId, asOf ?? DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken);
-        return Ok(holdings.Select(x => x.ToDto()).ToList());
+        var date = asOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var holdings = await transactionRepository.GetHoldingsByUserAsOf(ownerId, date, cancellationToken);
+        if (holdings.Count == 0) return Ok(Array.Empty<InvestmentHoldingDto>());
+
+        var prices = (await transactionRepository.GetLatestPricesByUserAsOf(ownerId, date,
+            holdings.Select(h => h.AssetListingId).ToList(), cancellationToken)).ToDictionary(p => p.AssetListingId);
+        var missing = prices.Values.Where(p => p.UnitPrice <= 0).Select(p => p.AssetListingId).ToList();
+        if (missing.Count > 0)
+        {
+            var trades = await transactionRepository.GetLatestUnpricedTradesByUserAsOf(ownerId, date, missing, cancellationToken);
+            await priceRecoveryService.RecoverMissingPricesAsync(trades, ownerId, cancellationToken);
+            foreach (var trade in trades)
+                prices[trade.AssetListingId] = new(trade.AssetListingId, trade.Currency, trade.UnitPrice);
+        }
+
+        return Ok(holdings.Where(h => prices.ContainsKey(h.AssetListingId)).Select(h =>
+        {
+            var price = prices[h.AssetListingId];
+            return h.ToDto(price.Currency, price.UnitPrice);
+        }).ToList());
     }
 
     [HttpGet("{id:long}")]
