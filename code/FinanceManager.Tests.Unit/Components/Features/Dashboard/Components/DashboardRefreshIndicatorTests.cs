@@ -98,7 +98,8 @@ public class DashboardRefreshIndicatorTests
         cut.WaitForAssertion(() => Assert.Contains("Individual cards use the time", cut.Find(".mud-alert").TextContent), _timeout);
         Assert.Equal(fallback, cut.FindComponent<Stub<NetWorthTimeSeriesCard>>().Instance.Parameters.Get(x => x.EndDateTime));
 
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry").Click();
+        // A late re-render can replace the button between finding and clicking it; retry with a fresh lookup.
+        cut.WaitForAssertion(() => cut.FindAll("button").Single(button => button.TextContent.Trim() == "Retry").Click(), _timeout);
         cut.WaitForAssertion(() => Assert.Equal(handler.RequestUri(0), handler.RequestUri(2)), _timeout);
     }
 
