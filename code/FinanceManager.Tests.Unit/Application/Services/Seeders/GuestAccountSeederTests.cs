@@ -13,12 +13,13 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -52,18 +53,18 @@ public class GuestAccountSeederTests
 
     private static async Task<List<(DateTime PostingDate, decimal ValueChange, string Description)>> SeedCashEntries(DateTime utcNow)
     {
-        var saved = new List<CurrencyAccount>();
-        var accountRepository = new Mock<IFinancialAccountRepository>();
-        accountRepository.Setup(r => r.AddAccount(It.IsAny<CurrencyAccount>()))
-            .Callback<CurrencyAccount>(saved.Add)
-            .ReturnsAsync(0);
-        var currencyRepository = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
-        currencyRepository.Setup(r => r.GetAvailableAccounts(It.IsAny<int>())).Returns(AsyncEnumerable.Empty<AvailableAccount>());
+        var saved = new List<CurrencyAccountEntry>();
+        var cashReader = new Mock<ICashTransactionReader>();
+        cashReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        var cashEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        cashEntries.Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((entries, _, _) => saved.AddRange(entries))
+            .ReturnsAsync(true);
         var labelsRepository = new Mock<IFinancialLabelsRepository>();
         labelsRepository.Setup(r => r.GetLabels(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<FinancialLabel>());
 
-        var bondRepository = new Mock<IAccountRepository<BondAccount>>();
-        bondRepository.Setup(r => r.GetAvailableAccounts(It.IsAny<int>())).Returns(AsyncEnumerable.Empty<AvailableAccount>());
+        var bondReader = new Mock<IBondTransactionReader>();
+        bondReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var bondDetailsRepository = new Mock<IBondDetailsRepository>();
         bondDetailsRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<BondDetails>());
 
@@ -86,18 +87,16 @@ public class GuestAccountSeederTests
             userRepository.Object,
             new FinancialLabelSeeder(Mock.Of<IFinancialLabelsRepository>(), NullLogger<FinancialLabelSeeder>.Instance),
             new BondDetailsSeeder(bondDetailsRepository.Object, Mock.Of<ICurrencyRepository>(), NullLogger<BondDetailsSeeder>.Instance),
-            new CurrencyAccountSeeder(accountRepository.Object, currencyRepository.Object, labelsRepository.Object, NullLogger<CurrencyAccountSeeder>.Instance),
-            new InvestmentAccountSeeder(Mock.Of<IAccountRepository<InvestmentAccount>>(), Mock.Of<IAssetRepository>(), Mock.Of<IAssetListingRepository>(),
+            new CurrencyAccountSeeder(cashReader.Object, cashEntries.Object, labelsRepository.Object, NullLogger<CurrencyAccountSeeder>.Instance),
+            new InvestmentAccountSeeder(Mock.Of<IAssetRepository>(), Mock.Of<IAssetListingRepository>(),
                 Mock.Of<IMarketDataSymbolRepository>(), Mock.Of<IPriceQuoteRepository>(), investmentTransactions.Object, NullLogger<InvestmentAccountSeeder>.Instance),
-            new BondAccountSeeder(accountRepository.Object, bondRepository.Object, bondDetailsRepository.Object, NullLogger<BondAccountSeeder>.Instance),
+            new BondAccountSeeder(bondReader.Object, Mock.Of<IBondAccountEntryRepository<BondAccountEntry>>(), bondDetailsRepository.Object, NullLogger<BondAccountSeeder>.Instance),
             new FinancialInsightsSeeder(insightsRepository.Object, userRepository.Object, new ConfigurationBuilder().Build(), NullLogger<FinancialInsightsSeeder>.Instance),
             dateTimeProvider.Object,
             NullLogger<GuestAccountSeeder>.Instance);
 
         await seeder.SeedForGuest(1, TestContext.Current.CancellationToken);
 
-        return saved.Single(a => a.AccountType == AccountLabel.Cash).Entries
-            .Select(e => (e.PostingDate, e.ValueChange, e.Description))
-            .ToList();
+        return saved.Select(e => (e.PostingDate, e.ValueChange, e.Description)).ToList();
     }
 }

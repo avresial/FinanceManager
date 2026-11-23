@@ -45,14 +45,14 @@ public class CurrencyAccountImportServiceTests
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         // create a real UserPlanVerifier so its CanAddMoreEntries method can be used in test
-        _userPlanVerifier = new UserPlanVerifier(_mockAccountRepository.Object, _mockAccountEntryRepository.Object,
+        _userPlanVerifier = new UserPlanVerifier(_mockAccountEntryRepository.Object,
             _mockInvestmentTransactionRepository.Object, _mockBondEntryRepository.Object, _mockUserRepository.Object);
 
         // Default: users have no recorded entries of any type, so plan checks pass unless a test overrides this.
         _mockAccountEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
-        _mockInvestmentTransactionRepository.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<FinanceManager.Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction>());
+        _mockInvestmentTransactionRepository.Setup(x => x.GetCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
         _mockBondEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
 

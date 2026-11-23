@@ -25,7 +25,6 @@ public class BondAccountImportServiceTests
 {
     private readonly Mock<IAccountRepository<BondAccount>> _mockAccountRepository;
     private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _mockBondEntryRepository;
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockCurrencyAccountRepository;
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockCurrencyEntryRepository;
     private readonly Mock<IInvestmentTransactionRepository> _mockInvestmentTransactionRepository;
     private readonly Mock<IUserRepository> _mockUserRepository;
@@ -36,7 +35,6 @@ public class BondAccountImportServiceTests
     {
         _mockAccountRepository = new Mock<IAccountRepository<BondAccount>>();
         _mockBondEntryRepository = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
-        _mockCurrencyAccountRepository = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
         _mockCurrencyEntryRepository = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         _mockInvestmentTransactionRepository = new Mock<IInvestmentTransactionRepository>();
         _mockUserRepository = new Mock<IUserRepository>();
@@ -45,7 +43,6 @@ public class BondAccountImportServiceTests
         _mockUserRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
 
         _userPlanVerifier = new UserPlanVerifier(
-            _mockCurrencyAccountRepository.Object,
             _mockCurrencyEntryRepository.Object,
             _mockInvestmentTransactionRepository.Object,
             _mockBondEntryRepository.Object,
@@ -55,8 +52,8 @@ public class BondAccountImportServiceTests
             .ReturnsAsync(new Dictionary<int, int>());
         _mockBondEntryRepository.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
-        _mockInvestmentTransactionRepository.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        _mockInvestmentTransactionRepository.Setup(x => x.GetCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
 
         // Default: return empty list for Get queries with or without cancellation token
         _mockBondEntryRepository.Setup(x => x.Get(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))

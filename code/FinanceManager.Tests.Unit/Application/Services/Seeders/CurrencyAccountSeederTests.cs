@@ -1,13 +1,12 @@
 using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -41,30 +40,30 @@ public class CurrencyAccountSeederTests
         new() { Id = 15, Name = "Loan" },
     ];
 
-    private readonly Mock<IFinancialAccountRepository> _accountRepository = new();
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepository = new();
+    private readonly Mock<ICashTransactionReader> _cashReader = new();
+    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _entryRepository = new();
     private readonly Mock<IFinancialLabelsRepository> _labelsRepository = new();
-    private readonly List<CurrencyAccount> _savedAccounts = [];
+    private readonly List<CurrencyAccountEntry> _savedEntries = [];
     private readonly CurrencyAccountSeeder _seeder;
 
     public CurrencyAccountSeederTests()
     {
-        _currencyAccountRepository
-            .Setup(r => r.GetAvailableAccounts(It.IsAny<int>()))
-            .Returns(AsyncEnumerable.Empty<AvailableAccount>());
+        _cashReader
+            .Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         _labelsRepository
             .Setup(r => r.GetLabels(It.IsAny<CancellationToken>()))
             .Returns(_seededLabels.ToAsyncEnumerable());
 
-        _accountRepository
-            .Setup(r => r.AddAccount(It.IsAny<CurrencyAccount>()))
-            .Callback<CurrencyAccount>(a => _savedAccounts.Add(a))
-            .ReturnsAsync(0);
+        _entryRepository
+            .Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((entries, _, _) => _savedEntries.AddRange(entries))
+            .ReturnsAsync(true);
 
         _seeder = new CurrencyAccountSeeder(
-            _accountRepository.Object,
-            _currencyAccountRepository.Object,
+            _cashReader.Object,
+            _entryRepository.Object,
             _labelsRepository.Object,
             NullLogger<CurrencyAccountSeeder>.Instance);
     }
@@ -99,7 +98,7 @@ public class CurrencyAccountSeederTests
     }
 
     [Fact]
-    public async Task Seed_IncomeIsOnlyOpeningBalanceLoanDisbursementAndSalary()
+    public async Task Seed_IncomeIsOnlyOpeningBalanceAndSalary()
     {
         var start = new DateTime(2026, 1, 15);
         var end = new DateTime(2026, 5, 1);
@@ -109,9 +108,9 @@ public class CurrencyAccountSeederTests
         var cashEntries = GetCashEntries();
         var positives = cashEntries.Where(e => e.ValueChange > 0).ToList();
 
-        // Allowed positives: opening balance and the loan disbursement on the first day, plus one salary per 1st-of-month.
+        // Allowed positives: the opening balance on the first day, plus one salary per 1st-of-month. No loan disbursement.
         Assert.Contains(positives, e => e.PostingDate == start && e.Description == "Opening balance");
-        Assert.Contains(positives, e => e.PostingDate == start && e.Description == "Loan disbursement");
+        Assert.DoesNotContain(cashEntries, e => e.Description == "Loan disbursement");
         Assert.All(positives.Where(e => e.PostingDate != start),
             e => Assert.Equal(1, e.PostingDate.Day));
     }
@@ -190,7 +189,7 @@ public class CurrencyAccountSeederTests
 
         await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
-        var fixedDescriptions = new[] { "Opening balance", "Loan disbursement", "Monthly salary", "Rent payment", "Utilities bill", "Loan repayment" };
+        var fixedDescriptions = new[] { "Opening balance", "Monthly salary", "Rent payment", "Utilities bill", "Loan repayment" };
         var randomNegatives = GetCashEntries()
             .Where(e => e.ValueChange < 0
                 && !fixedDescriptions.Contains(e.Description)
@@ -211,68 +210,67 @@ public class CurrencyAccountSeederTests
     }
 
     [Fact]
-    public async Task Seed_SeedsCashAndLoanAccounts()
+    public async Task Seed_WritesOnePooledPlnStreamOwnedByTheUser_WithoutAnyAccount()
     {
-        var start = new DateTime(2026, 1, 15);
-        var end = new DateTime(2026, 3, 15);
+        await _seeder.Seed(userId: -12, new DateTime(2026, 1, 15), new DateTime(2026, 3, 15), new Random(1), TestContext.Current.CancellationToken);
 
-        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
+        Assert.NotEmpty(_savedEntries);
+        Assert.All(_savedEntries, e =>
+        {
+            Assert.Null(e.AccountId);
+            Assert.Equal(-12, e.UserId);
+            Assert.Equal(DefaultCurrency.PLN.Id, e.CurrencyId);
+            Assert.Equal(0m, e.Value);
+        });
+        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()), Times.Once);
+    }
 
-        Assert.Equal(2, _savedAccounts.Count);
-        Assert.Contains(_savedAccounts, a => a.AccountType == AccountLabel.Cash);
-        Assert.Contains(_savedAccounts, a => a.AccountType == AccountLabel.Loan);
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Seed_SkipsWhenTheUserAlreadyHasEntries_OrIsNotAUser(bool hasEntries, int userId)
+    {
+        _cashReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(hasEntries);
+
+        await _seeder.Seed(userId, new DateTime(2026, 1, 15), new DateTime(2026, 2, 15), new Random(1), TestContext.Current.CancellationToken);
+
+        Assert.Empty(_savedEntries);
     }
 
     [Fact]
-    public async Task Seed_SkipsWhenAccountsAlreadyExist()
-    {
-        _currencyAccountRepository
-            .Setup(r => r.GetAvailableAccounts(It.IsAny<int>()))
-            .Returns(new[] { new AvailableAccount(1, "Existing") }.ToAsyncEnumerable());
-
-        await _seeder.Seed(userId: 1, new DateTime(2026, 1, 15), new DateTime(2026, 2, 15), new Random(1), TestContext.Current.CancellationToken);
-
-        Assert.Empty(_savedAccounts);
-    }
-
-    [Fact]
-    public async Task Seed_BorrowsLoanOnFirstDayAndCreditsCashWithSameAmount()
-    {
-        var start = new DateTime(2026, 1, 15);
-        var end = new DateTime(2026, 3, 15);
-
-        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
-
-        var cashDisbursement = GetCashEntries().Single(e => e.Description == "Loan disbursement");
-        Assert.Equal(start, cashDisbursement.PostingDate);
-        Assert.Equal(GuestInvestmentPlan.LoanPrincipal, cashDisbursement.ValueChange);
-        Assert.Contains(cashDisbursement.Labels, l => l.Name == "Loan");
-
-        var loanPrincipal = GetLoanEntries().Single(e => e.Description == "Loan principal");
-        Assert.Equal(start, loanPrincipal.PostingDate);
-        // The loan books the debt as a negative; cash receives the same magnitude as a positive inflow.
-        Assert.Equal(-cashDisbursement.ValueChange, loanPrincipal.ValueChange);
-        Assert.Contains(loanPrincipal.Labels, l => l.Name == "Loan");
-    }
-
-    [Fact]
-    public async Task Seed_RepaysLoanMonthlyInBothCashAndLoanAccounts()
+    public async Task Seed_DoesNotBorrowALoan_AndRepaysItMonthlyAsAPlainOutflow()
     {
         var start = new DateTime(2026, 1, 31);
         var end = new DateTime(2026, 4, 10);
 
         await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
+        Assert.DoesNotContain(GetCashEntries(), e => e.Description is "Loan disbursement" or "Loan principal");
         foreach (var month in new[] { new DateTime(2026, 2, 1), new DateTime(2026, 3, 1), new DateTime(2026, 4, 1) })
         {
             var repaymentDay = month.AddDays(GuestInvestmentPlan.LoanRepaymentDayOfMonth - 1);
 
-            var cashRepayment = GetCashEntries().Single(e => e.PostingDate == repaymentDay && e.Description == "Loan repayment");
-            Assert.Equal(-GuestInvestmentPlan.LoanMonthlyRepayment, cashRepayment.ValueChange);
-            Assert.Contains(cashRepayment.Labels, l => l.Name == "Loan");
+            var repayment = GetCashEntries().Single(e => e.PostingDate == repaymentDay && e.Description == "Loan repayment");
+            Assert.Equal(-GuestInvestmentPlan.LoanMonthlyRepayment, repayment.ValueChange);
+            Assert.Contains(repayment.Labels, l => l.Name == "Loan");
+        }
+    }
 
-            var loanRepayment = GetLoanEntries().Single(e => e.PostingDate == repaymentDay && e.Description == "Loan repayment");
-            Assert.Equal(GuestInvestmentPlan.LoanMonthlyRepayment, loanRepayment.ValueChange);
+    [Fact]
+    public async Task Seed_PooledBalanceNeverGoesNegative()
+    {
+        // The opening balance equals one salary and each month's outflows stay below the salary, so with no disbursement
+        // the demo never reports a negative cash balance (which net worth would show as a liability).
+        var start = new DateTime(2025, 12, 15);
+        var end = new DateTime(2026, 6, 15);
+
+        await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
+
+        var balance = 0m;
+        foreach (var entry in GetCashEntries().OrderBy(e => e.PostingDate).ThenByDescending(e => e.ValueChange))
+        {
+            balance += entry.ValueChange;
+            Assert.True(balance >= 0m, $"Pooled balance {balance} went negative on {entry.PostingDate:d} ({entry.Description}).");
         }
     }
 
@@ -313,7 +311,7 @@ public class CurrencyAccountSeederTests
 
     private async Task<List<string>> SeedCashEntries(GuestDemoSeed demoSeed)
     {
-        _savedAccounts.Clear();
+        _savedEntries.Clear();
         var end = demoSeed.Date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         await _seeder.Seed(userId: 1, end.AddMonths(-6), end, demoSeed.CreateRandom(GuestDemoSeed.CashSalt), TestContext.Current.CancellationToken);
@@ -323,9 +321,5 @@ public class CurrencyAccountSeederTests
             .ToList();
     }
 
-    private List<CurrencyAccountEntry> GetCashEntries() =>
-        _savedAccounts.Single(a => a.AccountType == AccountLabel.Cash).Entries.ToList();
-
-    private List<CurrencyAccountEntry> GetLoanEntries() =>
-        _savedAccounts.Single(a => a.AccountType == AccountLabel.Loan).Entries.ToList();
+    private List<CurrencyAccountEntry> GetCashEntries() => _savedEntries;
 }

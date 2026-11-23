@@ -300,6 +300,26 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         Assert.True(result);
     }
 
+    [Fact]
+    public async Task Delete_RemovesTheUsersOwnedEntries_AndKeepsOtherUsersData()
+    {
+        // arrange: one entry without an account for the deleted user and one for somebody else
+        await SeedUser();
+        var context = _testDatabase!.Context;
+        context.CurrencyEntries.AddRange(
+            new FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry(null, 0, DateTime.UtcNow, 0, 10m) { UserId = _testUserId, CurrencyId = 0 },
+            new FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry(null, 0, DateTime.UtcNow, 0, 20m) { UserId = _testUserId + 1, CurrencyId = 0 });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize(_testUserName, _testUserId, UserRole.Admin);
+
+        // act
+        Assert.True(await new UserHttpClient(Client).Delete(_testUserId));
+
+        // assert
+        Assert.False(await context.Users.AnyAsync(x => x.Id == _testUserId, TestContext.Current.CancellationToken));
+        Assert.Equal([_testUserId + 1], await context.CurrencyEntries.Select(x => x.UserId!.Value).ToListAsync(TestContext.Current.CancellationToken));
+    }
+
     public override void Dispose()
     {
         base.Dispose();

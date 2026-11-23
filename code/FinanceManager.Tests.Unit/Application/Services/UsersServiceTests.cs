@@ -1,6 +1,5 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -11,69 +10,52 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class UsersServiceTests
 {
-    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
+    private readonly Mock<ICacheInvalidator> _cacheInvalidatorMock = new();
     private readonly Mock<ILogger<UsersService>> _loggerMock = new();
     private readonly UsersService _usersService;
 
-    public UsersServiceTests() => _usersService = new UsersService(_financialAccountRepositoryMock.Object, _userRepositoryMock.Object, _loggerMock.Object);
+    public UsersServiceTests() => _usersService = new UsersService(_userRepositoryMock.Object, _cacheInvalidatorMock.Object, _loggerMock.Object);
 
     [Fact]
-    public async Task DeleteUser_UserExistsWithAccounts_DeletesAccountsAndUser()
+    public async Task DeleteUser_RemovesUserAndInvalidatesTheirCache()
     {
-        // Arrange
         var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Free };
-        var accounts = new Dictionary<int, Type> { { 1, typeof(object) }, { 2, typeof(object) } };
+        _userRepositoryMock.Setup(repo => repo.RemoveUser(userId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
-        _userRepositoryMock.Setup(repo => repo.RemoveUser(userId)).ReturnsAsync(true);
+        var result = await _usersService.DeleteUser(userId, TestContext.Current.CancellationToken);
 
-        // Act
-        var result = await _usersService.DeleteUser(userId);
-
-        // Assert
         Assert.True(result);
-        _financialAccountRepositoryMock.Verify(repo => repo.RemoveAccount(It.IsAny<Type>(), 1), Times.Once);
-        _financialAccountRepositoryMock.Verify(repo => repo.RemoveAccount(It.IsAny<Type>(), 2), Times.Once);
-        _userRepositoryMock.Verify(repo => repo.RemoveUser(userId), Times.Once);
+        _userRepositoryMock.Verify(repo => repo.RemoveUser(userId, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheInvalidatorMock.Verify(cache => cache.InvalidateUser(userId, CancellationToken.None), Times.Once);
     }
 
     [Fact]
-    public async Task DeleteUser_UserExistsWithoutAccounts_DeletesUser()
+    public async Task DeleteUser_UserDoesNotExist_ReturnsFalseAndLeavesCacheAlone()
     {
-        // Arrange
-        var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Free };
-        var accounts = new Dictionary<int, Type>();
+        _userRepositoryMock.Setup(repo => repo.RemoveUser(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId)).ReturnsAsync(accounts);
-        _userRepositoryMock.Setup(repo => repo.RemoveUser(userId)).ReturnsAsync(true);
+        var result = await _usersService.DeleteUser(1, TestContext.Current.CancellationToken);
 
-        // Act
-        var result = await _usersService.DeleteUser(userId);
-
-        // Assert
-        Assert.True(result);
-        _financialAccountRepositoryMock.Verify(repo => repo.RemoveAccount(It.IsAny<Type>(), It.IsAny<int>()), Times.Never);
-        _userRepositoryMock.Verify(repo => repo.RemoveUser(userId), Times.Once);
-    }
-
-    [Fact]
-    public async Task DeleteUser_UserDoesNotExist_ReturnsFalse()
-    {
-        // Arrange
-        var userId = 1;
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync((User?)null);
-
-        // Act
-        var result = await _usersService.DeleteUser(userId);
-
-        // Assert
         Assert.False(result);
-        _financialAccountRepositoryMock.Verify(repo => repo.GetAvailableAccounts(It.IsAny<int>()), Times.Never);
-        _userRepositoryMock.Verify(repo => repo.RemoveUser(It.IsAny<int>()), Times.Never);
+        _cacheInvalidatorMock.Verify(cache => cache.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteUser_CacheInvalidationFails_StillReportsTheCommittedDelete()
+    {
+        _userRepositoryMock.Setup(repo => repo.RemoveUser(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _cacheInvalidatorMock.Setup(cache => cache.InvalidateUser(1, It.IsAny<CancellationToken>())).Throws(new InvalidOperationException("cache down"));
+
+        Assert.True(await _usersService.DeleteUser(1, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task DeleteUser_RepositoryFailure_Propagates()
+    {
+        _userRepositoryMock.Setup(repo => repo.RemoveUser(1, It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("db"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _usersService.DeleteUser(1, TestContext.Current.CancellationToken));
+        _cacheInvalidatorMock.Verify(cache => cache.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

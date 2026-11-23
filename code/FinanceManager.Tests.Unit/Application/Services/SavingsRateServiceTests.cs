@@ -3,7 +3,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using Moq;
 
@@ -13,7 +12,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class SavingsRateServiceTests
 {
-    private readonly Mock<IFinancialAccountRepository> _accounts = new();
+    private readonly InMemoryOwnerLedger _ledger = new();
     private readonly Mock<IFinancialLabelsRepository> _labels = new();
     private readonly Mock<ICurrencyRepository> _currencies = new();
     private readonly Mock<ICurrencyExchangeService> _exchange = new();
@@ -23,8 +22,7 @@ public class SavingsRateServiceTests
     {
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { new FinancialLabel { Id = 1, Name = "Salary" } }.ToAsyncEnumerable());
         _currencies.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>())).Returns(new[] { DefaultCurrency.PLN, DefaultCurrency.USD }.ToAsyncEnumerable());
-        _accounts.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(AsyncEnumerable.Empty<CurrencyAccount>());
-        _service = new SavingsRateService(_accounts.Object, _labels.Object, _currencies.Object, _exchange.Object);
+        _service = new SavingsRateService(_ledger, _labels.Object, _currencies.Object, _exchange.Object);
     }
 
     [Fact]
@@ -35,12 +33,10 @@ public class SavingsRateServiceTests
         var salary = new FinancialLabel { Id = 1, Name = "Salary" };
         var investment = new FinancialLabel { Id = 2, Name = "Investments", Classifications = [new() { Kind = FinancialLabelClassificationCatalog.SpendingNecessityKind, Value = FinancialLabelClassificationCatalog.InvestmentValue }] };
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salary, investment }.ToAsyncEnumerable());
-        var account = new CurrencyAccount(1, 1, "USD", AccountLabel.Cash, DefaultCurrency.USD.Id);
-        account.Add(new CurrencyAccountEntry(1, 1, start.AddDays(-1), 10000m, 10000m) { Labels = [salary] }, false);
-        account.Add(new CurrencyAccountEntry(1, 2, start, 10000m, 10000m) { Labels = [salary] }, false);
-        account.Add(new CurrencyAccountEntry(1, 3, start.AddDays(1), 3000m, -7000m) { Labels = [] }, false);
-        account.Add(new CurrencyAccountEntry(1, 4, start.AddDays(2), 2000m, -1000m) { Labels = [investment] }, false);
-        _accounts.Setup(x => x.GetAccounts<CurrencyAccount>(1, start, end)).Returns(new[] { account }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.USD.Id, start.AddDays(-1), 10000m, [salary.Id])
+            .Add(DefaultCurrency.USD.Id, start, 10000m, [salary.Id])
+            .Add(DefaultCurrency.USD.Id, start.AddDays(1), -7000m)
+            .Add(DefaultCurrency.USD.Id, start.AddDays(2), -1000m, [investment.Id]);
         _exchange.Setup(x => x.GetExchangeRateAsync(DefaultCurrency.USD, DefaultCurrency.PLN, It.IsAny<DateTime>())).ReturnsAsync(4m);
 
         var result = Assert.Single(await _service.GetSavingsRate(1, DefaultCurrency.PLN, start, end).ToListAsync(TestContext.Current.CancellationToken));
@@ -60,9 +56,7 @@ public class SavingsRateServiceTests
         var end = start.AddMonths(1);
         var salary = new FinancialLabel { Id = 1, Name = "Salary" };
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salary }.ToAsyncEnumerable());
-        var account = new CurrencyAccount(1, 1, "PLN", AccountLabel.Cash, DefaultCurrency.PLN.Id);
-        account.Add(new CurrencyAccountEntry(1, 1, start, 1000m, -100m) { Labels = [salary] }, false);
-        _accounts.Setup(x => x.GetAccounts<CurrencyAccount>(1, start, end)).Returns(new[] { account }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, start, -100m, [salary.Id]);
 
         var result = Assert.Single(await _service.GetSavingsRate(1, DefaultCurrency.PLN, start, end).ToListAsync(TestContext.Current.CancellationToken));
 
@@ -77,9 +71,7 @@ public class SavingsRateServiceTests
         var end = start.AddMonths(1);
         var salary = new FinancialLabel { Id = 1, Name = "Salary" };
         _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salary }.ToAsyncEnumerable());
-        var account = new CurrencyAccount(1, 1, "USD", AccountLabel.Cash, DefaultCurrency.USD.Id);
-        account.Add(new CurrencyAccountEntry(1, 1, start, 1000m, 1000m) { Labels = [salary] }, false);
-        _accounts.Setup(x => x.GetAccounts<CurrencyAccount>(1, start, end)).Returns(new[] { account }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.USD.Id, start, 1000m, [salary.Id]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await _service.GetSavingsRate(1, DefaultCurrency.PLN, start, end).ToListAsync(TestContext.Current.CancellationToken));
     }
@@ -89,14 +81,29 @@ public class SavingsRateServiceTests
     {
         var start = new DateTime(2026, 1, 1);
         var end = start.AddMonths(1);
-        var account = new CurrencyAccount(1, 1, "PLN", AccountLabel.Cash, DefaultCurrency.PLN.Id);
-        account.Add(new CurrencyAccountEntry(1, 1, start, 100m, -100m) { Labels = [] }, false);
-        _accounts.Setup(x => x.GetAccounts<CurrencyAccount>(1, start, end)).Returns(new[] { account }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, start, -100m);
 
         var result = Assert.Single(await _service.GetSavingsRate(1, DefaultCurrency.PLN, start, end).ToListAsync(TestContext.Current.CancellationToken));
 
         Assert.Equal(0m, result.Salary);
         Assert.False(result.HasRate);
         Assert.Null(result.GetPercentage());
+    }
+
+    [Fact]
+    public async Task GetSavingsRate_GuestOwnerWithUnlinkedEntries_IsCounted()
+    {
+        // Guest owners have negative ids and their entries are not linked to an account; PLN is currency id 0.
+        var start = new DateTime(2026, 1, 1);
+        var end = start.AddMonths(1);
+        var salary = new FinancialLabel { Id = 1, Name = "Salary" };
+        _labels.Setup(x => x.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salary }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, start, 5000m, [salary.Id], "Monthly salary")
+            .Add(DefaultCurrency.PLN.Id, end, -250m);
+
+        var result = Assert.Single(await _service.GetSavingsRate(-12, DefaultCurrency.PLN, start, end).ToListAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(5000m, result.Salary);
+        Assert.Equal(250m, result.Spending);
     }
 }

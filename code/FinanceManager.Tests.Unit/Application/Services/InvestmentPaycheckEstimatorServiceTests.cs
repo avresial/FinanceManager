@@ -5,7 +5,6 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared;
 using Moq;
@@ -18,7 +17,7 @@ public class InvestmentPaycheckEstimatorServiceTests
 {
     private static readonly DateTime _asOfDate = new(2026, 3, 14, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly InMemoryOwnerLedger _cashLedger = new();
     private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
     private readonly Mock<IInvestmentValuationService> _investmentValuationServiceMock = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepositoryMock = new();
@@ -35,7 +34,7 @@ public class InvestmentPaycheckEstimatorServiceTests
             .ReturnsAsync((IReadOnlyCollection<int> ids, CancellationToken _) => [.. ids.Select(CreateBondDetails)]);
 
         _service = new InvestmentPaycheckEstimatorService(
-            _financialAccountRepositoryMock.Object,
+            _cashLedger,
             _financialLabelsRepositoryMock.Object,
             _investmentValuationServiceMock.Object,
             _bondLedger,
@@ -48,18 +47,14 @@ public class InvestmentPaycheckEstimatorServiceTests
         var userId = 1;
         var salaryLabel = new FinancialLabel { Id = 1, Name = "salary" };
 
-        var salaryAccount = new CurrencyAccount(userId, 10, "Salary", AccountLabel.Cash);
-        salaryAccount.Add(new CurrencyAccountEntry(10, 1, new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 3000m, 3000m) { Labels = [salaryLabel] }, false);
-        salaryAccount.Add(new CurrencyAccountEntry(10, 2, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 4500m, 4500m) { Labels = [salaryLabel] }, false);
+        _cashLedger.Add(0, new DateTime(2026, 1, 15, 0, 0, 0, DateTimeKind.Utc), 3000m, [salaryLabel.Id])
+            .Add(0, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 4500m, [salaryLabel.Id]);
 
         _bondLedger.Add(1, _asOfDate.AddDays(-2), 12000m);
 
         _financialLabelsRepositoryMock
             .Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
             .Returns(new[] { salaryLabel }.ToAsyncEnumerable());
-        _financialAccountRepositoryMock
-            .Setup(x => x.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(new[] { salaryAccount }.ToAsyncEnumerable());
         // Pooled holdings: the owner's value counts regardless of which account (or none) a trade was booked in.
         _investmentValuationServiceMock
             .Setup(x => x.GetUserValueByListingAsync(userId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
@@ -94,6 +89,27 @@ public class InvestmentPaycheckEstimatorServiceTests
         Assert.Null(result.AverageMonthlySalary);
         Assert.Null(result.IncomeReplacementRatio);
         Assert.False(result.HasSalaryData);
+    }
+
+    [Fact]
+    public async Task GetEstimate_AveragesSalaryPerMonthAcrossCurrenciesAndUnlinkedEntries_ForGuestOwner()
+    {
+        var userId = -9;
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock
+            .Setup(x => x.GetLabels(It.IsAny<CancellationToken>()))
+            .Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+        // Two paychecks in January count as one month; the boundary entry on the 1st of March (the current month) is excluded.
+        _cashLedger.Add(0, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 1000m, [salaryLabel.Id])
+            .Add(0, new DateTime(2026, 1, 20, 0, 0, 0, DateTimeKind.Utc), 500m, [salaryLabel.Id])
+            .Add(0, new DateTime(2026, 2, 5, 0, 0, 0, DateTimeKind.Utc), 3000m, [salaryLabel.Id])
+            .Add(0, new DateTime(2026, 2, 6, 0, 0, 0, DateTimeKind.Utc), 9999m)
+            .Add(0, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 4500m, [salaryLabel.Id]);
+
+        var result = await _service.GetEstimate(userId, DefaultCurrency.PLN, _asOfDate, 0.05m, 3);
+
+        Assert.Equal(2, result.SalaryMonthsUsed);
+        Assert.Equal(2250m, result.AverageMonthlySalary);
     }
 
     [Fact]

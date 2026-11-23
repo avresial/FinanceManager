@@ -2,11 +2,8 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using Moq;
@@ -17,7 +14,6 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class UserPlanVerifierTests
 {
-    private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _currencyAccountRepositoryMock = new();
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepositoryMock = new();
     private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepositoryMock = new();
     private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
@@ -25,11 +21,8 @@ public class UserPlanVerifierTests
     private readonly UserPlanVerifier _userPlanVerifier;
 
     public UserPlanVerifierTests() => _userPlanVerifier = new(
-        _currencyAccountRepositoryMock.Object, _currencyEntryRepositoryMock.Object,
+        _currencyEntryRepositoryMock.Object,
         _investmentTransactionRepositoryMock.Object, _bondEntryRepositoryMock.Object, _userRepositoryMock.Object);
-
-    private static IReadOnlyList<InvestmentTransaction> Transactions(int count) =>
-        Enumerable.Range(0, count).Select(_ => new InvestmentTransaction()).ToList();
 
     // Used capacity is the sum of the user's entries across every account type, so a test fixes a count per type.
     // Investment capacity counts the user's investment transactions.
@@ -37,8 +30,8 @@ public class UserPlanVerifierTests
     {
         _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [userId] = currency });
-        _investmentTransactionRepositoryMock.Setup(repo => repo.GetByUser(userId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Transactions(stock));
+        _investmentTransactionRepositoryMock.Setup(repo => repo.GetCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [userId] = stock });
         _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [userId] = bond });
     }
@@ -92,8 +85,8 @@ public class UserPlanVerifierTests
         var userIds = new[] { 1, 2, 3 };
         _currencyEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [1] = 100 });
-        _investmentTransactionRepositoryMock.Setup(repo => repo.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((long uid, DateOnly _, DateOnly _, CancellationToken _) => Transactions(uid == 1 ? 25 : uid == 2 ? 50 : 0));
+        _investmentTransactionRepositoryMock.Setup(repo => repo.GetCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int> { [1] = 25, [2] = 50 });
         _bondEntryRepositoryMock.Setup(repo => repo.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int> { [1] = 5 });
 
@@ -117,8 +110,8 @@ public class UserPlanVerifierTests
         Assert.Empty(result);
         _currencyEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
             It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
-        _investmentTransactionRepositoryMock.Verify(repo => repo.GetByUser(
-            It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+        _investmentTransactionRepositoryMock.Verify(repo => repo.GetCountPerUser(
+            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
         _bondEntryRepositoryMock.Verify(repo => repo.GetEntriesCountPerUser(
             It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -169,28 +162,6 @@ public class UserPlanVerifierTests
     [InlineData(PricingLevel.Free)]
     [InlineData(PricingLevel.Basic)]
     [InlineData(PricingLevel.Premium)]
-    public async Task CanAddMoreAccounts_ReturnsTrue_WhenUnderLimit(PricingLevel pricingLevel)
-    {
-        // Arrange
-        var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
-
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(new[] { new AvailableAccount(1, "Account1") }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _userPlanVerifier.CanAddMoreAccounts(userId);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Theory]
-    [InlineData(PricingLevel.Free)]
-    [InlineData(PricingLevel.Basic)]
-    [InlineData(PricingLevel.Premium)]
     public async Task CanAddMoreEntries_ReturnsFalse_WhenOverLimit(PricingLevel pricingLevel)
     {
         // Arrange
@@ -202,30 +173,6 @@ public class UserPlanVerifierTests
 
         // Act
         var result = await _userPlanVerifier.CanAddMoreEntries(userId, 1);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Theory]
-    [InlineData(PricingLevel.Free)]
-    [InlineData(PricingLevel.Basic)]
-    [InlineData(PricingLevel.Premium)]
-    public async Task CanAddMoreAccounts_ReturnsFalse_WhenOverLimit(PricingLevel pricingLevel)
-    {
-        // Arrange
-        var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = pricingLevel };
-
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var limit = PricingProvider.GetMaxAccountCount(user.PricingLevel);
-        var accounts = Enumerable.Range(1, limit).Select(i => new AvailableAccount(i, $"Account{i}")).ToArray();
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(accounts.ToAsyncEnumerable());
-
-        // Act
-        var result = await _userPlanVerifier.CanAddMoreAccounts(userId);
 
         // Assert
         Assert.False(result);
@@ -310,62 +257,6 @@ public class UserPlanVerifierTests
     }
 
     [Fact]
-    public async Task CanAddMoreAccounts_ReturnsFalse_WhenUserNotFound()
-    {
-        // Arrange
-        var userId = 999;
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync((User?)null);
-
-        // Act
-        var result = await _userPlanVerifier.CanAddMoreAccounts(userId);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task CanAddMoreAccounts_ExactlyAtLimit_ReturnsFalse()
-    {
-        // Arrange
-        var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Free };
-
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var limit = PricingProvider.GetMaxAccountCount(user.PricingLevel);
-        var accounts = Enumerable.Range(1, limit).Select(i => new AvailableAccount(i, $"Account{i}")).ToArray();
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(accounts.ToAsyncEnumerable());
-
-        // Act
-        var result = await _userPlanVerifier.CanAddMoreAccounts(userId);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task CanAddMoreAccounts_OneUnderLimit_ReturnsTrue()
-    {
-        // Arrange
-        var userId = 1;
-        var user = new User { UserId = userId, Login = "test", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Free };
-
-        _userRepositoryMock.Setup(repo => repo.GetUser(userId)).ReturnsAsync(user);
-
-        var limit = PricingProvider.GetMaxAccountCount(user.PricingLevel);
-        var accounts = Enumerable.Range(1, limit - 1).Select(i => new AvailableAccount(i, $"Account{i}")).ToArray();
-        _currencyAccountRepositoryMock.Setup(repo => repo.GetAvailableAccounts(userId))
-        .Returns(accounts.ToAsyncEnumerable());
-
-        // Act
-        var result = await _userPlanVerifier.CanAddMoreAccounts(userId);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
     public async Task CanAddMoreEntries_ZeroEntriesToAdd_ReturnsTrue()
     {
         // Arrange
@@ -402,5 +293,21 @@ public class UserPlanVerifierTests
 
         // Assert
         Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanAddMoreEntries_GuestOwner_CountsTradesAndEntriesNotLinkedToAnyAccount()
+    {
+        // Guest ids are negative; the counts come from the owner's own entries, so the cap holds without any account.
+        var guestId = -42;
+        var user = new User { UserId = guestId, Login = "guest", CreationDate = DateTime.UtcNow, PricingLevel = PricingLevel.Free };
+        _userRepositoryMock.Setup(repo => repo.GetUser(guestId)).ReturnsAsync(user);
+        var limit = PricingProvider.GetMaxAllowedEntries(PricingLevel.Free);
+        SetupUsedEntries(guestId, currency: limit - 3, stock: 2, bond: 1);
+
+        Assert.True(await _userPlanVerifier.CanAddMoreEntries(guestId, 0));
+        Assert.False(await _userPlanVerifier.CanAddMoreEntries(guestId, 1));
+        _investmentTransactionRepositoryMock.Verify(repo => repo.GetCountPerUser(
+            It.Is<IReadOnlyCollection<int>>(ids => ids.Single() == guestId), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 }

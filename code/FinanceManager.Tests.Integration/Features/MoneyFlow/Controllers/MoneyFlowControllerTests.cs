@@ -237,6 +237,33 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     }
 
     [Fact]
+    public async Task LabelSavingsAndInvestmentReports_CountEntriesThatAreNotLinkedToAnAccount()
+    {
+        // Entries without an account belong to their owner; another owner's entry and an entry without a currency never count.
+        FinancialLabel salary = new() { Name = "Salary" };
+        _testDatabase!.Context.FinancialLabels.Add(salary);
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-2), 0, 1000m) { Labels = [salary], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, -200m) { Labels = [], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, 5000m) { Labels = [salary], UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+        var client = new MoneyFlowHttpClient(Client);
+        var start = _nowUtc.AddDays(-7);
+
+        var labels = await client.GetLabelsValue(1, start, _nowUtc);
+        var savings = Assert.Single((await Client.GetFromJsonAsync<List<FinanceManager.Domain.MoneyFlow.Entities.SavingsRate>>(
+            $"api/MoneyFlow/GetSavingsRate?userId=1&currencyId={DefaultCurrency.PLN.Id}&start={start:O}&end={_nowUtc:O}", TestContext.Current.CancellationToken))!);
+        var investment = Assert.Single(await client.GetInvestmentRate(1, DefaultCurrency.PLN, start, _nowUtc).ToListAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(1000m, labels.Single(x => x.Name == "Salary").Value);
+        Assert.Equal(1000m, savings.Salary);
+        Assert.Equal(200m, savings.Spending);
+        Assert.Equal(1000m, investment.Salary);
+    }
+
+    [Fact]
     public async Task GetInvestmentRate_ReturnsList()
     {
         await SeedWithTestCurrencyAccount();

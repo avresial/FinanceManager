@@ -41,7 +41,6 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // Mock user plan verifier to allow any number of entries
         var planVerifierMock = new Mock<IUserPlanVerifier>();
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.GetUsedRecordsCapacity(_testUserId)).ReturnsAsync(0);
         services.AddSingleton(planVerifierMock.Object);
     }

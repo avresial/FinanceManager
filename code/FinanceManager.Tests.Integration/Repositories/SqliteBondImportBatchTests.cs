@@ -175,7 +175,6 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         mockAccountRepo.Setup(x => x.Get(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
         mockAccountRepo.Setup(x => x.Get(_accountId)).ReturnsAsync(account);
 
-        var mockCurrencyAccountRepo = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
         var mockCurrencyEntryRepo = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         var mockInvestmentRepo = new Mock<IInvestmentTransactionRepository>();
         var mockUserRepo = new Mock<IUserRepository>();
@@ -185,11 +184,10 @@ public sealed class SqliteBondImportBatchTests : IDisposable
 
         mockCurrencyEntryRepo.Setup(x => x.GetEntriesCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<int, int>());
-        mockInvestmentRepo.Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+        mockInvestmentRepo.Setup(x => x.GetCountPerUser(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
 
         var userPlanVerifier = new UserPlanVerifier(
-            mockCurrencyAccountRepo.Object,
             mockCurrencyEntryRepo.Object,
             mockInvestmentRepo.Object,
             _repo,

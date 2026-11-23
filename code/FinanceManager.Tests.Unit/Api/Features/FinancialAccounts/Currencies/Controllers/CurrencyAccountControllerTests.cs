@@ -31,7 +31,6 @@ public class CurrencyAccountControllerTests
     private readonly Mock<ICurrencyRepository> _mockCurrencyRepository = new();
 
     private readonly Mock<IUserRepository> _userRepository = new();
-    private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
     private readonly Mock<IAccountCsvExportService<CurrencyAccountExportDto>> _currencyAccountCsvExportService = new();
 
     private readonly CurrencyAccountController _controller;
@@ -47,7 +46,6 @@ public class CurrencyAccountControllerTests
             _mockAccountRepository.Object,
             _mockAccountEntryRepository.Object,
             _mockCurrencyRepository.Object,
-            _userPlanVerifier.Object,
             _currencyAccountCsvExportService.Object,
             Mock.Of<ICacheInvalidator>(),
             Mock.Of<IFinancialAlertService>());
@@ -145,7 +143,6 @@ public class CurrencyAccountControllerTests
         AddAccount addAccount = new("New Account");
         var newAccountId = 1;
         _mockAccountRepository.Setup(repo => repo.Add(userId, addAccount.AccountName, AccountLabel.Other, addAccount.CurrencyId)).ReturnsAsync(newAccountId);
-        _userPlanVerifier.Setup(x => x.CanAddMoreAccounts(userId)).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Add(addAccount);

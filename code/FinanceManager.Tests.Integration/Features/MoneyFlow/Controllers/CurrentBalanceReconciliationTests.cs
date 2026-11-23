@@ -98,8 +98,9 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
 
         Assert.Equal(expectedCash, account!.Entries.First().Value);
         Assert.Equal(expectedCash, cashSeries![^1].Value);
-        Assert.Equal(expectedCash, forecast!.HistoricalSeries[^1].Value);
-        Assert.Equal(expectedCash, forecast.ForecastSeries[0].Value);
+        // The forecast pools every owned cash entry, including the one on the loan-typed account, like net worth does.
+        Assert.Equal(expectedCash - 200m, forecast!.HistoricalSeries[^1].Value);
+        Assert.Equal(expectedCash - 200m, forecast.ForecastSeries[0].Value);
         Assert.Equal(expectedCash - 200m, overview!.NetWorthSeries[^1].Value);
         Assert.Equal(overview.NetWorthSeries[^1].Value, overview.ClosingBalanceSeries[^1].Value);
     }
