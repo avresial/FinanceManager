@@ -59,6 +59,8 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
             new CurrencyAccountEntry(_cashAccountId, 4, _asOf.AddMinutes(1), 9634m, 9000m),
             new CurrencyAccountEntry(_loanAccountId, 5, _asOf.Date.AddDays(-2), -200m, -200m));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // From here on every write goes through the real repositories, which must stamp the owner keys themselves.
+        _database.StopStampingOwnerKeys();
         Authorize("current-balances", _userId, UserRole.User);
 
         await AssertCurrentBalances(634m);

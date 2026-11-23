@@ -27,6 +27,12 @@ public interface IInvestmentValuationService
     Task<IReadOnlyDictionary<long, decimal>> GetValueByListingAsync(IReadOnlyList<InvestmentHolding> holdings, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
 
     /// <summary>
+    /// The same pooled valuation as <see cref="GetUserValueByListingAsync"/>, with each listing's display metadata (ticker, exchange) kept next to its value
+    /// so callers that name rows read the owner's holdings once.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentHoldingValue>> GetUserHoldingValuesAsync(int userId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
+
+    /// <summary>
     /// Daily value of the owner's pooled holdings in <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>], each listing priced from its own per-day series
     /// (holdings are carried forward on days without a trade) with an explicit zero on the last day.
     /// Empty when the owner has no holding or trade in the window.

@@ -40,7 +40,14 @@ internal class AssetsServiceInvestment(
         if (start == default) return [];
 
         var series = await valuationService.GetUserValueSeriesAsync(userId, currency, start, end);
-        return [.. series.Select(x => new TimeSeriesModel(x.Key, x.Value))];
+        if (series.Count == 0) return [];
+
+        // The valuation omits days that value to zero; fill them so a position sold out mid-range drops to zero
+        // instead of being carried forward by the bucketing, as cash and bonds already do.
+        List<TimeSeriesModel> result = [];
+        for (var day = start.Date; day <= end.Date; day = day.AddDays(1))
+            result.Add(new TimeSeriesModel(day, series.GetValueOrDefault(day)));
+        return result;
     }
 
     // Investments hold equities/ETFs, classified under the Stock investment type. Other types
@@ -54,11 +61,10 @@ internal class AssetsServiceInvestment(
     public async Task<AssetsDistributionResult> GetEndAssetsDistribution(
         int userId, Currency currency, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
-        var values = await valuationService.GetUserValueByListingAsync(userId, currency, asOfDate, cancellationToken);
+        var values = await valuationService.GetUserHoldingValuesAsync(userId, currency, asOfDate, cancellationToken);
         if (values.Count == 0) return new([], []);
 
-        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOfDate), cancellationToken);
-        return new(GetPerType(values).ToList(), GetPerListing(values, holdings).ToList());
+        return new(GetPerType(values).ToList(), GetPerListing(values).ToList());
     }
 
     public async IAsyncEnumerable<NameValueResult> GetEndAssetsPerAccount(int userId, Currency currency, DateTime asOfDate)
@@ -73,30 +79,25 @@ internal class AssetsServiceInvestment(
             yield return row;
     }
 
-    private static IEnumerable<NameValueResult> GetPerType(IReadOnlyDictionary<long, decimal> values)
+    private static IEnumerable<NameValueResult> GetPerType(IReadOnlyList<InvestmentHoldingValue> values)
     {
-        var total = values.Values.Sum();
+        var total = values.Sum(x => x.Value);
         if (total > 0)
             yield return new NameValueResult(InvestmentType.Stock.ToString(), total);
     }
 
-    // One row per held listing, named by ticker. Two held listings that share a ticker also show their exchange so the rows stay distinguishable.
-    private static IEnumerable<NameValueResult> GetPerListing(IReadOnlyDictionary<long, decimal> values, IReadOnlyList<InvestmentHolding> holdings)
+    // One row per held (positive) listing, named by ticker. Two shown listings that share a ticker also show their exchange so the rows stay distinguishable.
+    private static IEnumerable<NameValueResult> GetPerListing(IReadOnlyList<InvestmentHoldingValue> values)
     {
-        var listings = holdings.ToDictionary(h => h.AssetListingId);
-        var tickerCounts = values.Keys
-            .Select(id => listings.TryGetValue(id, out var holding) ? holding.Ticker : null)
-            .Where(ticker => ticker is not null)
-            .GroupBy(ticker => ticker!)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var shown = values.Where(x => x.Value > 0).ToList();
+        var tickerCounts = shown.GroupBy(x => x.Holding.Ticker).ToDictionary(g => g.Key, g => g.Count());
 
-        foreach (var (listingId, value) in values.Where(x => x.Value > 0))
+        foreach (var (holding, value) in shown)
         {
-            var name = $"Listing {listingId}";
-            if (listings.TryGetValue(listingId, out var holding))
-                name = tickerCounts[holding.Ticker] > 1 ? $"{holding.Ticker} ({holding.ExchangeName})" : holding.Ticker;
-
-            yield return new NameValueResult(name, value);
+            var name = tickerCounts[holding.Ticker] > 1 && !string.IsNullOrWhiteSpace(holding.ExchangeName)
+                ? $"{holding.Ticker} ({holding.ExchangeName})"
+                : holding.Ticker;
+            yield return new NameValueResult(name, value) { Kind = InvestmentType.Stock.ToString() };
         }
     }
 

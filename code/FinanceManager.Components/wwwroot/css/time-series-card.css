@@ -106,3 +106,19 @@
 .fm-tsvc-card .apexcharts-marker {
     stroke: var(--mud-palette-surface);
 }
+
+/* "Includes EUR, not converted": a muted pill next to a figure that adds amounts in different currencies. */
+.fm-unconverted-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+    background: color-mix(in srgb, var(--mud-palette-warning) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 40%, transparent);
+}

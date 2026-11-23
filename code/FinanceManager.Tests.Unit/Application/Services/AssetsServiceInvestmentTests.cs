@@ -46,9 +46,22 @@ public class AssetsServiceInvestmentTests
 
         var all = await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end);
 
-        Assert.Equal([(start, 10m), (end, 20m)], all.Select(x => (x.DateTime, x.Value)));
-        Assert.Equal(2, (await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end, InvestmentType.Stock)).Count);
+        // The valuation leaves out the day that values to zero; the series carries it as an explicit zero.
+        Assert.Equal([(start, 10m), (start.AddDays(1), 0m), (end, 20m)], all.Select(x => (x.DateTime, x.Value)));
+        Assert.Equal(3, (await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end, InvestmentType.Stock)).Count);
         Assert.Empty(await service.GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end, InvestmentType.Bond));
+    }
+
+    [Fact]
+    public async Task GetAssetsTimeSeries_ReturnsNothing_WhenTheOwnerHoldsNothingInTheRange()
+    {
+        var start = new DateTime(2024, 1, 1);
+        var end = new DateTime(2024, 1, 3);
+        var valuation = new Mock<IInvestmentValuationService>();
+        valuation.Setup(x => x.GetUserValueSeriesAsync(1, DefaultCurrency.PLN, start, end, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<DateTime, decimal>());
+
+        Assert.Empty(await CreateService(valuation).GetAssetsTimeSeries(1, DefaultCurrency.PLN, start, end));
     }
 
     [Fact]

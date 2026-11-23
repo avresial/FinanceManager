@@ -49,11 +49,11 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Outlined" Required="@(CurrencyAccount is null)"
+                <MudTextField @bind-Value="Description" T="string" Label="Description" Variant="Variant.Outlined" Immediate="true" Required="@(CurrencyAccount is null)"
                     MaxLines="5" AutoGrow="true" />
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="ContractorDetails" T="string" Label="Contractor Details"
+                <MudTextField @bind-Value="ContractorDetails" T="string" Label="Contractor Details" Immediate="true"
                     Variant="Variant.Outlined" MaxLength="140" Counter="140" />
             </MudItem>
             <MudItem xs="12">
