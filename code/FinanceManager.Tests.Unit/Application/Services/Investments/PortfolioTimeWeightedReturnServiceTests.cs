@@ -30,7 +30,7 @@ public class PortfolioTimeWeightedReturnServiceTests
         var fixture = CreateFixture(
             [new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-                1m, 100m, null, "PLN", null)],
+                1m, 100m, null, "PLN")],
             new IInvestmentTransactionRepository.UserValuationInputs(
                 [], [new(_listingId, DateOnly.FromDateTime(_start), 1m)]));
         fixture.PriceProvider
@@ -66,7 +66,7 @@ public class PortfolioTimeWeightedReturnServiceTests
         var fixture = CreateFixture(
             [new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-                1m, 100m, null, "EUR", null)],
+                1m, 100m, null, "EUR")],
             new IInvestmentTransactionRepository.UserValuationInputs(
                 [], [new(_listingId, DateOnly.FromDateTime(_start), 1m)]));
         fixture.PriceProvider
@@ -93,7 +93,7 @@ public class PortfolioTimeWeightedReturnServiceTests
         var fixture = CreateFixture(
             [new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-                1m, 100m, null, minorCurrency, 1m)],
+                1m, 100m, null, minorCurrency)],
             new IInvestmentTransactionRepository.UserValuationInputs(
                 [], [new(_listingId, DateOnly.FromDateTime(_start), 1m)]));
         fixture.PriceProvider
@@ -134,10 +134,10 @@ public class PortfolioTimeWeightedReturnServiceTests
         {
             new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 2, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-                1m, 100m, null, "PLN", null),
+                1m, 100m, null, "PLN"),
             new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-                1m, 100m, null, "PLN", null),
+                1m, 100m, null, "PLN"),
         };
         var valuationInputs = new IInvestmentTransactionRepository.UserValuationInputs(
             [], [new(_listingId, DateOnly.FromDateTime(_start), 2m)]);
@@ -287,7 +287,7 @@ public class PortfolioTimeWeightedReturnServiceTests
         const int guestUserId = -4;
         var fixture = CreateFixture(
             [new IInvestmentTransactionRepository.UserCapitalFlowInput(
-                1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN", null)],
+                1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN")],
             new IInvestmentTransactionRepository.UserValuationInputs(
                 [], [new(_listingId, DateOnly.FromDateTime(_start), 1m)]),
             userId: guestUserId);
@@ -358,7 +358,7 @@ public class PortfolioTimeWeightedReturnServiceTests
 
     // The opening unit comes from a trade before the period, so there is no flow inside it.
     private static IInvestmentTransactionRepository.UserCapitalFlowInput PriorBuy() =>
-        new(1, _listingId, DateOnly.FromDateTime(_start.AddDays(-1)), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN", null);
+        new(1, _listingId, DateOnly.FromDateTime(_start.AddDays(-1)), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN");
 
     private static IReadOnlyDictionary<DateTime, decimal> Prices(params (decimal Offset, decimal Value)[] values) =>
         values.ToDictionary(value => _start.AddDays((double)value.Offset - 100d), value => value.Value);

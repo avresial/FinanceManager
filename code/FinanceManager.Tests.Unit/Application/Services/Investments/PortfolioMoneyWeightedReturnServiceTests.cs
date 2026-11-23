@@ -37,8 +37,7 @@ public class PortfolioMoneyWeightedReturnServiceTests
             1m,
             100m,
             null,
-            "PLN",
-            null);
+            "PLN");
         var fixture = CreateFixture(
             [transaction],
             openingHoldings: new Dictionary<long, decimal>(),
@@ -58,7 +57,7 @@ public class PortfolioMoneyWeightedReturnServiceTests
     {
         var transaction = new IInvestmentTransactionRepository.UserCapitalFlowInput(
             1, _listingId, DateOnly.FromDateTime(_start),
-            InvestmentTransactionType.Buy, 1m, 100m, 5m, "PLN", null);
+            InvestmentTransactionType.Buy, 1m, 100m, 5m, "PLN");
         var fixture = CreateFixture(
             [transaction],
             openingHoldings: new Dictionary<long, decimal>(),
@@ -83,8 +82,7 @@ public class PortfolioMoneyWeightedReturnServiceTests
             1m,
             100m,
             null,
-            "EUR",
-            null);
+            "EUR");
         var fixture = CreateFixture(
             [transaction],
             openingHoldings: new Dictionary<long, decimal>(),
@@ -123,8 +121,7 @@ public class PortfolioMoneyWeightedReturnServiceTests
             1m,
             100m,
             null,
-            "PLN",
-            null);
+            "PLN");
         var fixture = CreateFixture(
             [priorTransaction],
             openingHoldings: new Dictionary<long, decimal> { [_listingId] = 1m },
@@ -241,7 +238,7 @@ public class PortfolioMoneyWeightedReturnServiceTests
         const int guestUserId = -4;
         var fixture = CreateFixture(
             [new IInvestmentTransactionRepository.UserCapitalFlowInput(
-                1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN", null)],
+                1, _listingId, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy, 1m, 100m, null, "PLN")],
             new Dictionary<long, decimal>(),
             new Dictionary<long, decimal> { [_listingId] = 1m },
             userId: guestUserId);

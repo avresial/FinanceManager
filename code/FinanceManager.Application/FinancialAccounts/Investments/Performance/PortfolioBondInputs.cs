@@ -68,7 +68,7 @@ internal sealed record PortfolioBondInputs(
                 || value == 0m
                 || !PortfolioDailyValuation.TryConvert(
                     value,
-                    details.Currency.ShortName,
+                    PortfolioRates.NormalizeCurrency(details.Currency.ShortName),
                     valuationDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                     targetCurrency,
                     ratesByCurrency,

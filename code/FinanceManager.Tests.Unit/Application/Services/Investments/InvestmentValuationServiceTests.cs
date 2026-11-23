@@ -331,7 +331,7 @@ public class InvestmentValuationServiceTests
                 _userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 1, 1, DateOnly.FromDateTime(date), InvestmentTransactionType.Buy,
-                2m, 100m, null, minorCurrency, 1m)]);
+                2m, 100m, null, minorCurrency)]);
 
         var series = await CreateCapitalSut().GetCapitalSeriesAsync(
             _userId, new Currency(0, majorCurrency, majorCurrency), date, date, TestContext.Current.CancellationToken);
@@ -645,8 +645,7 @@ public class InvestmentValuationServiceTests
                         t.Quantity,
                         t.UnitPrice,
                         t.Fee,
-                        t.Currency,
-                        t.AssetListing?.PriceMultiplier))
+                        t.Currency))
                     .ToList());
 
     private void SetupPrices(long listingId, Dictionary<DateTime, decimal> prices) =>

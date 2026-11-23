@@ -335,7 +335,6 @@ public class InvestmentModelRepositoryTests
         var result = await txRepo.GetByUserAndIds(1, everyId, ct);
 
         Assert.Equal([unlinked.EntryId, linked.EntryId], result.Select(transaction => transaction.EntryId));
-        Assert.All(result, transaction => Assert.NotNull(transaction.AssetListing.Asset));
         Assert.Equal(guest.EntryId, Assert.Single(await txRepo.GetByUserAndIds(-4, everyId, ct)).EntryId);
         Assert.Empty(await txRepo.GetByUserAndIds(1, [], ct));
         Assert.Empty(await txRepo.GetByUserAndIds(0, everyId, ct));
@@ -381,7 +380,6 @@ public class InvestmentModelRepositoryTests
 
         // Guest ids are negative; trades pool across accounts and unlinked rows in posting-date then id order and never cross owners.
         Assert.Equal([first.EntryId, second.EntryId, sell.EntryId], flows.Select(flow => flow.TransactionId));
-        Assert.All(flows, flow => Assert.Equal(0.01m, flow.ListingPriceMultiplier));
         Assert.Equal(new DateOnly(2026, 1, 10), flows[0].TradeDate);
         Assert.Empty(await repository.GetCapitalFlowInputsByUser(0, new DateOnly(2026, 1, 20), ct));
         Assert.Single(await repository.GetCapitalFlowInputsByUser(1, new DateOnly(2026, 1, 20), ct));
@@ -1140,7 +1138,6 @@ public class InvestmentModelRepositoryTests
         Assert.Equal(40000m, buyFlow.UnitPrice);
         Assert.Equal(500m, buyFlow.Fee);
         Assert.Equal("GBX", buyFlow.Currency);
-        Assert.Equal(0.01m, buyFlow.ListingPriceMultiplier);
 
         var sellFlow = flows[1];
         Assert.Equal(gbxListing.Id, sellFlow.AssetListingId);
@@ -1150,6 +1147,5 @@ public class InvestmentModelRepositoryTests
         Assert.Equal(42000m, sellFlow.UnitPrice);
         Assert.Equal(250m, sellFlow.Fee);
         Assert.Equal("GBX", sellFlow.Currency);
-        Assert.Equal(0.01m, sellFlow.ListingPriceMultiplier);
     }
 }

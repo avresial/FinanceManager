@@ -13,7 +13,7 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 /// </summary>
 internal sealed class PooledBondValuation(BondDashboardContext context, DateOnly throughDate)
 {
-    private readonly Dictionary<(int BondDetailsId, DateOnly AnchorDate, decimal Units), Dictionary<DateOnly, decimal>> _histories = [];
+    private readonly Dictionary<(int BondDetailsId, DateOnly AnchorDate, decimal Units), (Dictionary<DateOnly, decimal> Prices, DateOnly Through)> _histories = [];
 
     /// <summary>Loads the definitions of every bond the given positions hold, so valuation can run synchronously.</summary>
     public static Task LoadDetailsAsync(BondDashboardContext context, IEnumerable<OwnerLedgerPosition> positions, CancellationToken ct = default) =>
@@ -56,13 +56,15 @@ internal sealed class PooledBondValuation(BondDashboardContext context, DateOnly
 
             var details = context.GetDetails(position.PartitionId);
             var key = (position.PartitionId, anchorDate, position.Value);
-            if (!_histories.TryGetValue(key, out var history) || date > throughDate)
+            // A date beyond the history's last day extends it once; later calls up to that day reuse it.
+            if (!_histories.TryGetValue(key, out var history) || date > history.Through)
             {
-                history = BondAccountEntry.GetPrice(anchorDate, position.Value, date > throughDate ? date : throughDate, details);
+                var through = date > throughDate ? date : throughDate;
+                history = (BondAccountEntry.GetPrice(anchorDate, position.Value, through, details), through);
                 _histories[key] = history;
             }
 
-            return history.GetValueOrDefault(date);
+            return history.Prices.GetValueOrDefault(date);
         });
     }
 }

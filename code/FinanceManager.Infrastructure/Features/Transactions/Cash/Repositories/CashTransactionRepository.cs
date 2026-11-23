@@ -73,9 +73,9 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     public async Task<OwnerLedgerRange> GetValueRange(int userId, DateTime start, DateTime end, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
-        if (end < start) return OwnerLedgerRange.Empty;
         var startUtc = OwnerLedgerTimestamps.ToUtc(start);
         var endUtc = OwnerLedgerTimestamps.ToUtc(end);
+        if (endUtc < startUtc) return OwnerLedgerRange.Empty;
 
         // Two plain sequential reads: the grouped balance before the range, then the range's deltas.
         var opening = await Positions(OwnerEntries(userId).Where(e => e.PostingDate < startUtc)).ToListAsync(ct);

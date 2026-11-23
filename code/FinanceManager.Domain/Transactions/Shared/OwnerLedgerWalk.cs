@@ -11,6 +11,7 @@ public sealed class OwnerLedgerWalk
 {
     private readonly Dictionary<int, PartitionLedger> _partitions = [];
 
+    // A conventional constructor: the per-partition prefix sums are built from the range's grouped points, not just assigned.
     public OwnerLedgerWalk(OwnerLedgerRange range)
     {
         foreach (var opening in range.Opening)
@@ -36,6 +37,8 @@ public sealed class OwnerLedgerWalk
     /// </summary>
     public IReadOnlyList<OwnerLedgerPosition> At(DateTime instant)
     {
+        // Posting dates are UTC and DateTime comparison ignores Kind, so a local instant is converted first.
+        if (instant.Kind == DateTimeKind.Local) instant = instant.ToUniversalTime();
         List<OwnerLedgerPosition> positions = [];
         foreach (var (partitionId, ledger) in _partitions.OrderBy(p => p.Key))
             if (ledger.At(partitionId, instant) is OwnerLedgerPosition position)

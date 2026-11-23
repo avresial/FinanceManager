@@ -52,6 +52,8 @@ public class AssetsServiceCurrencyTests
 
         Assert.Equal([("PLN", 15m), ("EUR", 7m)], distribution.PerAccount.Select(x => (x.Name, x.Value)));
         Assert.All(distribution.PerAccount, x => Assert.Null(x.AccountId));
+        // Each balance stays in its own currency, which the row carries.
+        Assert.Equal([("Cash", "PLN"), ("Cash", "EUR")], distribution.PerAccount.Select(x => (x.Kind, x.CurrencyCode)));
         var total = Assert.Single(distribution.PerType);
         Assert.Equal(("Cash", 22m), (total.Name, total.Value));
     }

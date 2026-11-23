@@ -106,7 +106,7 @@
             <MudSelectItem T="int" Value="label.Id">@label.Name</MudSelectItem>
         }
     </MudSelect>
-    <MudTextField Variant="Variant.Outlined" T="string" Label="Notes (optional)" @bind-Value="_formNotes" />
+    <MudTextField Variant="Variant.Outlined" T="string" Label="Notes (optional)" @bind-Value="_formNotes" Immediate="true" />
     <FormActions>
         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="OnCancel" Disabled="@_saving">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="@(_saving || !CanSave)">Save</MudButton>

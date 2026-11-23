@@ -152,8 +152,8 @@ public sealed class McpToolsTests
                 new InvestmentHolding(100, "OWN", "NYSE", AssetType.Stock, 3),
                 new InvestmentHolding(200, "AAA", "NYSE", AssetType.Stock, 1)
             ]);
-        valuation.Setup(service => service.GetUserValueByListingAsync(
-                _userId, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        valuation.Setup(service => service.GetValueByListingAsync(
+                It.IsAny<IReadOnlyList<InvestmentHolding>>(), DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<long, decimal> { [100] = 1200m, [200] = 50m, [300] = 25m });
         listings.Setup(repository => repository.GetByIds(
                 It.Is<IReadOnlyCollection<long>>(ids => ids.OrderBy(id => id).SequenceEqual(new long[] { 100, 200 })), It.IsAny<CancellationToken>()))

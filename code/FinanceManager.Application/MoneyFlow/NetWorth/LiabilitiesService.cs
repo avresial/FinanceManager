@@ -30,7 +30,9 @@ public class LiabilitiesService(ICashTransactionReader cashTransactionReader, IC
             {
                 Name = names.GetValueOrDefault(liability.PartitionId) ?? $"Currency {liability.PartitionId}",
                 Value = liability.Value,
-                AccountId = null
+                AccountId = null,
+                // The balance is in its own currency, not converted to the display currency.
+                CurrencyCode = names.GetValueOrDefault(liability.PartitionId),
             };
     }
 

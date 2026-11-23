@@ -56,6 +56,7 @@ public class LiabilitiesServiceTests
         var list = await _service.GetEndLiabilitiesPerAccount(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal([("PLN", -200m), ("EUR", -20m)], list.Select(x => (x.Name, x.Value)));
+        Assert.Equal(["PLN", "EUR"], list.Select(x => x.CurrencyCode));
         Assert.All(list, x => Assert.Null(x.AccountId));
     }
 

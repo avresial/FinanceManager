@@ -3,9 +3,7 @@ using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
@@ -52,7 +50,7 @@ public class PortfolioMoneyWeightedReturnService(
         var movements = PortfolioPeriodLedger.Build(transactionFlows, bonds.Range.Points, bonds.Details, startDate, endDate).Movements;
         var ratesByCurrency = await PortfolioRates.LoadAsync(
             currencyExchangeService,
-            movements.Select(flow => flow.Currency).Concat(bonds.Details.Values.Select(details => details.Currency.ShortName)),
+            movements.Select(flow => flow.Currency).Concat(bonds.Details.Values.Select(details => PortfolioRates.NormalizeCurrency(details.Currency.ShortName))),
             currency,
             startDate,
             endDate,

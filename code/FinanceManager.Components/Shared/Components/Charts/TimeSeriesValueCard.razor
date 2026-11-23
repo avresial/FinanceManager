@@ -6,8 +6,15 @@
 
     <CardHeader Title="@Title"
                 InfoText="@InfoText"
-                InfoAriaLabel="@($"About {Title} card")"
-                Subtitle="@CaptionText">
+                InfoAriaLabel="@($"About {Title} card")">
+        <SubtitleContent>
+            <span class="fm-tsvc-caption" title="@CaptionText">@CaptionText</span>
+            @if (ShowUnconvertedNote && State == LoadState.Ready)
+            {
+                @* Own line: the subtitle does not wrap, so an inline chip would be cut off on a phone. *@
+                <div class="fm-tsvc-note"><UnconvertedCurrenciesNote /></div>
+            }
+        </SubtitleContent>
         <KeyFigure>
             @if (State == LoadState.Loading)
             {
@@ -15,7 +22,7 @@
             }
             else if (State == LoadState.Ready)
             {
-                <span class="fm-tsvc-value">@FormatMoney(HeaderValue)</span>
+                <span class="fm-tsvc-value">@FormatMoney(IsDebt ? Math.Abs(HeaderValue) : HeaderValue)</span>
             }
             else
             {

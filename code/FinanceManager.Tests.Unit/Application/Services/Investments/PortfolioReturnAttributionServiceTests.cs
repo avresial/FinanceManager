@@ -382,8 +382,7 @@ public class PortfolioReturnAttributionServiceTests
             quantity,
             unitPrice,
             fee,
-            currency,
-            null);
+            currency);
 
     private static Dictionary<long, decimal> Holdings(decimal quantity) =>
         new() { [_listingId] = quantity };

@@ -208,6 +208,17 @@ public class BondBalanceServiceTests
     }
 
     [Fact]
+    public async Task GetCapital_Unfiltered_IgnoresABondBoughtAndFullySoldBeforeTheRange()
+    {
+        DateTime start = new(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+        _ledger.Add(1, start.AddDays(-9), 10).Add(1, start.AddDays(-5), -10);
+        // The closed bond's definition is gone; a bond with no units must not need it.
+        SetupDetails();
+
+        Assert.Empty(await _service.GetCapital(1, DefaultCurrency.PLN, start, start.AddDays(2)));
+    }
+
+    [Fact]
     public async Task GetClosingBalance_Unfiltered_KeepsTheMissingDefinitionError()
     {
         DateTime start = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);

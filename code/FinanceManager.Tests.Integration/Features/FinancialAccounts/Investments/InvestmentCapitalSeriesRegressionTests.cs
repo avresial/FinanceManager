@@ -111,7 +111,6 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             Assert.Equal(expected.UnitPrice, actual.UnitPrice);
             Assert.Null(actual.Fee);
             Assert.Equal("USD", actual.Currency);
-            Assert.Equal(1m, actual.ListingPriceMultiplier);
         }
     }
 
@@ -205,7 +204,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             var transactionDetails = flowsForDay.Count == 0
                 ? "no transaction; opening capital carries forward"
                 : string.Join("; ", flowsForDay.Select(flow =>
-                    $"id={flow.TransactionId}, date={flow.TradeDate:yyyy-MM-dd}, quantity={flow.Quantity}, unitPrice={flow.UnitPrice}, multiplier={flow.ListingPriceMultiplier}, currency={flow.Currency}, fee={flow.Fee}, FX USD/PLN=4, expected raw cost={_productionTrades.Single(trade => trade.TradeDate == flow.TradeDate && trade.Quantity == flow.Quantity).ExpectedRawUsd}, expected PLN cost={_productionTrades.Single(trade => trade.TradeDate == flow.TradeDate && trade.Quantity == flow.Quantity).ExpectedRawUsd * 4m}"));
+                    $"id={flow.TransactionId}, date={flow.TradeDate:yyyy-MM-dd}, quantity={flow.Quantity}, unitPrice={flow.UnitPrice}, currency={flow.Currency}, fee={flow.Fee}, FX USD/PLN=4, expected raw cost={_productionTrades.Single(trade => trade.TradeDate == flow.TradeDate && trade.Quantity == flow.Quantity).ExpectedRawUsd}, expected PLN cost={_productionTrades.Single(trade => trade.TradeDate == flow.TradeDate && trade.Quantity == flow.Quantity).ExpectedRawUsd * 4m}"));
             var context = $"{date:yyyy-MM-dd}: {transactionDetails}";
 
             Assert.True(usdDaily.TryGetValue(date, out var usdValue), $"Missing USD valuation for {context}");

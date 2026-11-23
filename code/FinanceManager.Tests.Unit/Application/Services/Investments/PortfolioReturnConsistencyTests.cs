@@ -215,7 +215,7 @@ public class PortfolioReturnConsistencyTests
         InvestmentTransactionType type,
         decimal quantity,
         decimal unitPrice) =>
-        new(id, _listingId, DateOnly.FromDateTime(date), type, quantity, unitPrice, null, "PLN", null);
+        new(id, _listingId, DateOnly.FromDateTime(date), type, quantity, unitPrice, null, "PLN");
 
     private static Fixture CreateFixture(
         IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput> transactions,

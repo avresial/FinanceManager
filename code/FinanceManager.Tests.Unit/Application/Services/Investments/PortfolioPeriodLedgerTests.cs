@@ -19,7 +19,7 @@ public class PortfolioPeriodLedgerTests
     {
         var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
             11, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 100m, 5m, "GBX", 0.01m);
+            2m, 100m, 5m, "GBX");
         var sell = buy with
         {
             TransactionId = 12,
@@ -63,7 +63,7 @@ public class PortfolioPeriodLedgerTests
     {
         var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
             11, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 100m, null, minorCurrency, 1m);
+            2m, 100m, null, minorCurrency);
 
         var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
 
@@ -77,7 +77,7 @@ public class PortfolioPeriodLedgerTests
     {
         var sell = new IInvestmentTransactionRepository.UserCapitalFlowInput(
             12, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Sell,
-            2m, 100m, -3m, "PLN", null);
+            2m, 100m, -3m, "PLN");
 
         var movements = PortfolioPeriodLedger.Build([sell], [], new Dictionary<int, BondDetails>(), _start, _end).Movements;
 
@@ -113,7 +113,7 @@ public class PortfolioPeriodLedgerTests
     {
         var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
             13, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 0m, null, "EUR", null);
+            2m, 0m, null, "EUR");
 
         var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
 

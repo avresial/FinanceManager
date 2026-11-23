@@ -3,7 +3,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;
-using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 
@@ -47,7 +46,11 @@ public class DiversificationService(
             groups.Add(new AssetClassHoldings("Bonds", await GetBondHoldingNames(held.BondIds, cancellationToken)));
 
         if (held.CashCurrencyIds.Count > 0)
-            groups.Add(new AssetClassHoldings("Cash", await GetCashCurrencyCodes(held.CashCurrencyIds, cancellationToken)));
+        {
+            var cashCurrencies = await GetCashCurrencyCodes(held.CashCurrencyIds, cancellationToken);
+            if (cashCurrencies.Count > 0)
+                groups.Add(new AssetClassHoldings("Cash", cashCurrencies));
+        }
 
         return new DiversificationBreakdown(groups);
     }

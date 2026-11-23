@@ -55,6 +55,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<EssentialSpendingHttpClient>()
                 .AddScoped<AssetsHttpClient>()
                 .AddScoped<LiabilitiesHttpClient>()
+                .AddScoped<UnconvertedCurrenciesHttpClient>()
                 .AddScoped<UserHttpClient>()
                 .AddScoped<GiftCodeHttpClient>()
                 .AddScoped<PasswordResetHttpClient>()

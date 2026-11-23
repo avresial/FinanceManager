@@ -42,6 +42,8 @@ public class AssetsServiceBondTests
 
         Assert.Equal([("Bond 1", 12m), ("Bond 2", 5m)], distribution.PerAccount.Select(x => (x.Name, x.Value)));
         Assert.All(distribution.PerAccount, x => Assert.Null(x.AccountId));
+        // Bond values stay in the bond's own currency, and the row says which class it is.
+        Assert.All(distribution.PerAccount, x => Assert.Equal(("Bond", "PLN"), (x.Kind, x.CurrencyCode)));
         var total = Assert.Single(distribution.PerType);
         Assert.Equal(("Bond", 17m), (total.Name, total.Value));
     }

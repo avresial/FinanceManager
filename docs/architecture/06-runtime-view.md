@@ -108,7 +108,7 @@ sequenceDiagram
         Price-->>Value: Price or scalar zero for unavailable result
         Value->>Value: Add quantity times positive price
     end
-    Value-->>API: Total
+    Value-->>API: Value per listing (controller sums the total)
     API-->>Client: JSON decimal
     Client-->>UI: Render result
 ```
