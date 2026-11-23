@@ -25,7 +25,6 @@ public partial class FinancialInsightsCarousel : IDisposable
 
     [Parameter] public string Height { get; set; } = "300px";
     [Parameter] public int Count { get; set; } = 3;
-    [Parameter] public int? AccountId { get; set; }
 
     protected override async Task OnParametersSetAsync() => await LoadInsightsAsync();
 
@@ -46,10 +45,9 @@ public partial class FinancialInsightsCarousel : IDisposable
         var result = await SnapshotStore.RefreshInsightsAsync(
             user.UserId,
             Count,
-            AccountId,
             _refreshGate,
             version,
-            async () => await FinancialInsightsHttpClient.GetLatestAsync(Count, AccountId),
+            async () => await FinancialInsightsHttpClient.GetLatestAsync(Count),
             onSnapshotPainted: ShowInsights,
             onSnapshotMissing: ShowLoading,
             onRefreshed: ShowInsights);

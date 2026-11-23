@@ -15,7 +15,7 @@ public class FinancialInsightsHttpClientTests
             Content = JsonContent.Create(Array.Empty<object>())
         });
 
-        var result = await client.GetLatestAsync(3, null, TestContext.Current.CancellationToken);
+        var result = await client.GetLatestAsync(3, TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
     }
@@ -28,7 +28,7 @@ public class FinancialInsightsHttpClientTests
         // The dashboard carousel caches what it renders, so a failure must not be reported as an
         // empty result — that would clear the card and overwrite its snapshot with nothing.
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.GetLatestAsync(3, null, TestContext.Current.CancellationToken));
+            () => client.GetLatestAsync(3, TestContext.Current.CancellationToken));
     }
 
     private static FinancialInsightsHttpClient CreateClient(HttpResponseMessage response) =>

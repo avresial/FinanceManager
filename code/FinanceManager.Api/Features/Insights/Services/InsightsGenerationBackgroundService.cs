@@ -33,7 +33,7 @@ public sealed class InsightsGenerationBackgroundService(
                 var financialInsightsRepository = scope.ServiceProvider.GetRequiredService<IFinancialInsightsRepository>();
                 var financialInsightsAiGenerator = scope.ServiceProvider.GetRequiredService<IFinancialInsightsAiGenerator>();
 
-                var latest = await financialInsightsRepository.GetLatestByUser(userId, 1, cancellationToken: stoppingToken);
+                var latest = await financialInsightsRepository.GetLatestByUser(userId, 1, stoppingToken);
                 if (!InsightsFreshness.IsStale(latest.FirstOrDefault()?.CreatedAt, dateTimeProvider.UtcNow))
                 {
                     outcome = "skipped";
@@ -41,7 +41,7 @@ public sealed class InsightsGenerationBackgroundService(
                     continue;
                 }
 
-                var insights = await financialInsightsAiGenerator.GenerateInsights(userId, null, _insightsCountToGenerate, stoppingToken);
+                var insights = await financialInsightsAiGenerator.GenerateInsights(userId, _insightsCountToGenerate, stoppingToken);
                 if (insights.Count == 0)
                 {
                     outcome = "empty";

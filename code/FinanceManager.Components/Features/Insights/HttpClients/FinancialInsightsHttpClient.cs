@@ -11,21 +11,17 @@ public class FinancialInsightsHttpClient(HttpClient httpClient)
     /// genuinely has no insights, and callers that cache the result must be able to tell the two
     /// apart before overwriting what they already show.
     /// </summary>
-    public async Task<List<FinancialInsight>> GetLatestAsync(int count = 3, int? accountId = null, CancellationToken cancellationToken = default)
+    public async Task<List<FinancialInsight>> GetLatestAsync(int count = 3, CancellationToken cancellationToken = default)
     {
         var endpoint = $"{httpClient.BaseAddress}api/FinancialInsights/get-latest?count={count}";
-        if (accountId.HasValue)
-            endpoint += $"&accountId={accountId.Value}";
 
         var result = await httpClient.GetFromJsonAsync<List<FinancialInsight>>(endpoint, cancellationToken);
         return result ?? [];
     }
 
-    public async Task<List<FinancialInsight>> GenerateAsync(int count = 3, int? accountId = null, CancellationToken cancellationToken = default)
+    public async Task<List<FinancialInsight>> GenerateAsync(int count = 3, CancellationToken cancellationToken = default)
     {
         var endpoint = $"{httpClient.BaseAddress}api/FinancialInsights/generate?count={count}";
-        if (accountId.HasValue)
-            endpoint += $"&accountId={accountId.Value}";
 
         try
         {

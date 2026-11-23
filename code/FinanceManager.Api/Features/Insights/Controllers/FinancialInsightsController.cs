@@ -24,26 +24,29 @@ public class FinancialInsightsController(
     IDateTimeProvider dateTimeProvider,
     ILogger<FinancialInsightsController> logger) : ControllerBase
 {
+    // The count goes straight into the AI request and the query, so it is bounded.
+    private const int _maxCount = 10;
+
     [HttpGet("get-latest")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<FinancialInsight>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetLatest([FromQuery] int count = 3, [FromQuery] int? accountId = null, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetLatest([FromQuery] int count = 3, CancellationToken cancellationToken = default)
     {
         if (count <= 0)
             return BadRequest("Count must be greater than zero.");
 
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-        var result = await financialInsightsRepository.GetLatestByUser(userId, count, accountId, cancellationToken);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId))
+            return Forbid();
+
+        var result = await financialInsightsRepository.GetLatestByUser(userId, Math.Min(count, _maxCount), cancellationToken);
 
         // Generation used to be triggered by an explicit login only, so a session kept alive by refresh tokens
         // could show the same insights for weeks. Reading them is the usage signal: once the newest one has aged
         // out, queue a regeneration for the background worker rather than making this response wait for the model.
-        // Account-scoped reads are left out — generation produces insights for the whole user, so it belongs to
-        // the unfiltered view that can actually tell whether the user's newest insight is stale. Guests are left
-        // out too: their sandbox is seeded with demo insights and thrown away within the hour, and the worker
-        // resolves its own scope, which cannot reach a guest's per-session in-memory database anyway.
-        if (accountId is null
-            && !IsGuest()
+        // Guests are left out: their sandbox is seeded with demo insights and thrown away within the hour, and the
+        // worker resolves its own scope, which cannot reach a guest's per-session in-memory database anyway.
+        if (!IsGuest()
             && InsightsFreshness.IsStale(result.FirstOrDefault()?.CreatedAt, dateTimeProvider.UtcNow))
             await QueueRegeneration(userId, cancellationToken);
 
@@ -53,13 +56,16 @@ public class FinancialInsightsController(
     [HttpPost("generate")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<FinancialInsight>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Generate([FromQuery] int count = 3, [FromQuery] int? accountId = null, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Generate([FromQuery] int count = 3, CancellationToken cancellationToken = default)
     {
         if (count <= 0)
             return BadRequest("Count must be greater than zero.");
 
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-        var insights = await financialInsightsAiGenerator.GenerateInsights(userId, accountId, count, cancellationToken);
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId))
+            return Forbid();
+
+        var insights = await financialInsightsAiGenerator.GenerateInsights(userId, Math.Min(count, _maxCount), cancellationToken);
         if (insights.Count == 0)
             return Ok(insights);
 

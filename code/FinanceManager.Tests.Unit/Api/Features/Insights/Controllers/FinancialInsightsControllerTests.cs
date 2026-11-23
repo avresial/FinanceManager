@@ -55,10 +55,10 @@ public class FinancialInsightsControllerTests
         };
 
         _mockRepository
-            .Setup(repo => repo.GetLatestByUser(_testUserId, 3, 7, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.GetLatestByUser(_testUserId, 3, It.IsAny<CancellationToken>()))
             .ReturnsAsync(insights);
 
-        var result = await _controller.GetLatest(3, 7, TestContext.Current.CancellationToken);
+        var result = await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<List<FinancialInsight>>(okResult.Value);
@@ -70,7 +70,7 @@ public class FinancialInsightsControllerTests
     {
         SetupLatestInsights(BuildInsight(_utcNow.AddDays(-7).AddMinutes(-1)));
 
-        await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
+        await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         _mockGenerationChannel.Verify(channel => channel.QueueUser(_testUserId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -80,7 +80,7 @@ public class FinancialInsightsControllerTests
     {
         SetupLatestInsights();
 
-        await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
+        await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         _mockGenerationChannel.Verify(channel => channel.QueueUser(_testUserId, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -90,21 +90,50 @@ public class FinancialInsightsControllerTests
     {
         SetupLatestInsights(BuildInsight(_utcNow.AddDays(-6)));
 
-        await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
+        await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task GetLatest_DoesNotQueueRegeneration_ForAccountScopedRead()
+    public async Task GetLatest_ClampsCount_ToTen()
     {
         _mockRepository
-            .Setup(repo => repo.GetLatestByUser(_testUserId, 3, 7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+            .Setup(repo => repo.GetLatestByUser(_testUserId, 10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([BuildInsight(_utcNow)]);
 
-        await _controller.GetLatest(3, 7, TestContext.Current.CancellationToken);
+        var result = await _controller.GetLatest(500, TestContext.Current.CancellationToken);
 
-        _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Single(Assert.IsType<List<FinancialInsight>>(okResult.Value));
+        _mockRepository.Verify(repo => repo.GetLatestByUser(_testUserId, 10, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetLatest_ReturnsForbid_WhenUserIdIsZero()
+    {
+        _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new(ClaimTypes.NameIdentifier, "0")], "mock"));
+
+        var result = await _controller.GetLatest(3, TestContext.Current.CancellationToken);
+
+        Assert.IsType<ForbidResult>(result);
+        _mockRepository.Verify(repo => repo.GetLatestByUser(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetLatest_ReadsWithNegativeGuestUserId()
+    {
+        const int guestId = -4;
+        _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new(ClaimTypes.NameIdentifier, guestId.ToString()), new(GuestClaims.IsGuest, "true")], "mock"));
+        _mockRepository
+            .Setup(repo => repo.GetLatestByUser(guestId, 3, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([BuildInsight(_utcNow)]);
+
+        var result = await _controller.GetLatest(3, TestContext.Current.CancellationToken);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Single(Assert.IsType<List<FinancialInsight>>(okResult.Value));
     }
 
     [Fact]
@@ -115,7 +144,7 @@ public class FinancialInsightsControllerTests
             [new(ClaimTypes.NameIdentifier, _testUserId.ToString()), new(GuestClaims.IsGuest, "true")], "mock"));
         _controller.ControllerContext.HttpContext.User = guest;
 
-        await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
+        await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         _mockGenerationChannel.Verify(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -128,7 +157,7 @@ public class FinancialInsightsControllerTests
             .Setup(channel => channel.QueueUser(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("channel unavailable"));
 
-        var result = await _controller.GetLatest(3, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.GetLatest(3, TestContext.Current.CancellationToken);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<List<FinancialInsight>>(okResult.Value);
@@ -137,7 +166,7 @@ public class FinancialInsightsControllerTests
 
     private void SetupLatestInsights(params FinancialInsight[] insights) =>
         _mockRepository
-            .Setup(repo => repo.GetLatestByUser(_testUserId, 3, null, It.IsAny<CancellationToken>()))
+            .Setup(repo => repo.GetLatestByUser(_testUserId, 3, It.IsAny<CancellationToken>()))
             .ReturnsAsync([.. insights]);
 
     private static FinancialInsight BuildInsight(DateTime createdAt) =>

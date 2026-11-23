@@ -5,7 +5,7 @@ namespace FinanceManager.Application.Insights.Generation;
 
 internal sealed class FinancialInsightNormalizer
 {
-    public List<FinancialInsight> Normalize(IReadOnlyList<InsightItem> items, int userId, int? accountId, int count)
+    public List<FinancialInsight> Normalize(IReadOnlyList<InsightItem> items, int userId, int count)
     {
         var now = DateTime.UtcNow;
         var result = new List<FinancialInsight>(Math.Min(count, items.Count));
@@ -22,7 +22,6 @@ internal sealed class FinancialInsightNormalizer
             result.Add(new FinancialInsight
             {
                 UserId = userId,
-                AccountId = accountId,
                 Title = title,
                 Message = message,
                 Tags = Truncate(string.Join(',', tags), 256),

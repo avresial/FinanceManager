@@ -20,10 +20,9 @@ namespace FinanceManager.Components.Features.Dashboard.Services;
 /// </remarks>
 public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coordinator)
 {
-    /// <summary>Stale-while-revalidate for the Financial insights carousel, scoped to user + account + requested count.</summary>
+    /// <summary>Stale-while-revalidate for the Financial insights carousel, scoped to user + requested count.</summary>
     /// <param name="userId">Owner of the data; scopes the snapshot key.</param>
     /// <param name="count">How many insights the carousel asked for; scopes the snapshot key.</param>
-    /// <param name="accountId">Account the carousel is filtered to, or <c>null</c> for all accounts; scopes the snapshot key.</param>
     /// <param name="gate">Race protection shared with the card's other reloads.</param>
     /// <param name="claimedVersion">
     /// The version the caller already claimed from <paramref name="gate"/> before this call. Forwarded to the
@@ -38,7 +37,6 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
     public Task<SnapshotRefreshResult<List<FinancialInsight>>> RefreshInsightsAsync(
         int userId,
         int count,
-        int? accountId,
         RefreshVersionGate gate,
         int? claimedVersion,
         Func<Task<List<FinancialInsight>?>> fetchAsync,
@@ -47,14 +45,13 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
         Func<List<FinancialInsight>, Task>? onRefreshed = null) =>
         coordinator.RunAsync(new SnapshotRefreshRequest<FinancialInsightsSnapshot, List<FinancialInsight>>
         {
-            Key = BuildInsightsKey(userId, accountId, count),
+            Key = BuildInsightsKey(userId, count),
             Gate = gate,
             ClaimedVersion = claimedVersion,
 
-            // A snapshot stored for a different user, account or count is unusable; rejecting it falls back to a plain load.
+            // A snapshot stored for a different user or count is unusable; rejecting it falls back to a plain load.
             ToModel = snapshot => snapshot.UserId == userId
                 && snapshot.Count == count
-                && snapshot.AccountId == accountId
                 ? snapshot.Insights
                 : null,
             FetchAsync = fetchAsync,
@@ -62,7 +59,6 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
             {
                 UserId = userId,
                 Count = count,
-                AccountId = accountId,
                 Insights = model
             },
             OnSnapshotPainted = onSnapshotPainted,
@@ -153,9 +149,9 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
         });
 
     // Per-user keys with no date component, so a single snapshot per card is overwritten on each save.
-    // Count and account are part of the key because they change what the card renders.
-    private static string BuildInsightsKey(int userId, int? accountId, int count) =>
-        $"financial-insights:{userId}:{accountId?.ToString() ?? "all"}:{count}";
+    // The count is part of the key because it changes what the card renders; v2 retires snapshots keyed per account.
+    private static string BuildInsightsKey(int userId, int count) =>
+        $"financial-insights:v2:{userId}:{count}";
 
     private static string BuildRecurringTransactionsKey(int userId) => $"recurring-transactions:v2:{userId}";
 

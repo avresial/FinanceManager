@@ -12,16 +12,14 @@ public class FinancialInsightsRepository(AppDbContext context) : IFinancialInsig
     public Task<int> GetCountByUser(int userId, CancellationToken cancellationToken = default) =>
         context.FinancialInsights.CountAsync(x => x.UserId == userId, cancellationToken);
 
-    public async Task<List<FinancialInsight>> GetLatestByUser(int userId, int count, int? accountId = null, CancellationToken cancellationToken = default)
-    {
-        var query = context.FinancialInsights.AsNoTracking().Where(x => x.UserId == userId);
-        if (accountId.HasValue)
-            query = query.Where(x => x.AccountId == accountId);
-
-        return await query.OrderByDescending(x => x.CreatedAt)
+    // Returns every stored insight of the owner, including historical rows that were generated for one account.
+    public async Task<List<FinancialInsight>> GetLatestByUser(int userId, int count, CancellationToken cancellationToken = default) =>
+        await context.FinancialInsights.AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
             .Take(count)
             .ToListAsync(cancellationToken);
-    }
 
     public async Task<bool> AddRange(IEnumerable<FinancialInsight> insights, CancellationToken cancellationToken = default)
     {
