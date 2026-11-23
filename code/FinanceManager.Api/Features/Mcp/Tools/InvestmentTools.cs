@@ -31,8 +31,8 @@ public sealed class InvestmentTools(
         if (holdings.Count == 0)
             return new McpInvestmentPortfolio(asOf, currency.ShortName, 0, []);
 
-        var values = await valuationService.GetUserValueByListingAsync(
-            userId, currency, asOf.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc), cancellationToken);
+        var values = await valuationService.GetValueByListingAsync(
+            holdings, currency, asOf.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc), cancellationToken);
         var listings = (await assetListings.GetByIds([.. holdings.Select(holding => holding.AssetListingId)], cancellationToken))
             .ToDictionary(listing => listing.Id);
 

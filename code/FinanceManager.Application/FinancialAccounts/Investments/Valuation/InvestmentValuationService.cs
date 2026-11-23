@@ -1,5 +1,6 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
@@ -22,6 +23,15 @@ internal class InvestmentValuationService(
         CancellationToken ct = default)
     {
         var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOf), ct);
+        return await GetValueByListingAsync(holdings, targetCurrency, asOf, ct);
+    }
+
+    public async Task<IReadOnlyDictionary<long, decimal>> GetValueByListingAsync(
+        IReadOnlyList<InvestmentHolding> holdings,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct = default)
+    {
         var result = new Dictionary<long, decimal>();
 
         foreach (var holding in holdings)

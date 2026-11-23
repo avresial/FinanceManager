@@ -105,7 +105,7 @@ internal class AssetsServiceInvestment(
         if (userId == 0) return [];
 
         // A trade posted at any time on the as-of day counts, so read through the following midnight and keep the day filter below.
-        var transactions = await transactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.FromDateTime(asOfDate).AddDays(1));
+        var transactions = await transactionRepository.GetByUser(userId, DateOnly.MinValue, asOfDate.Date == DateTime.MaxValue.Date ? DateOnly.MaxValue : DateOnly.FromDateTime(asOfDate).AddDays(1));
         return await GetUnrealizedGainLossInstrumentsAsync(transactions, null, _investmentsGroupName, currency, asOfDate);
     }
 

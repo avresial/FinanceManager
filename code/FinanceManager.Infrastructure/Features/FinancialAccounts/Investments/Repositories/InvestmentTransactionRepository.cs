@@ -47,10 +47,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (userId == 0 || transactionIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
             .Where(x => x.UserId == userId && transactionIds.Contains(x.EntryId))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
@@ -430,8 +426,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
                 x.Quantity,
                 x.UnitPrice,
                 x.Fee,
-                x.Currency,
-                (decimal?)x.AssetListing.PriceMultiplier))
+                x.Currency))
             .ToListAsync(cancellationToken);
     }
 

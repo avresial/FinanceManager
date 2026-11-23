@@ -86,8 +86,8 @@ public sealed class McpEndpointTests : IDisposable
         var bondDetails = new Mock<IBondDetailsRepository>();
         var valuation = new Mock<IInvestmentValuationService>();
         // Only the caller's pooled holdings are read: the user id comes from the MCP identity, never from tool input.
-        valuation.Setup(service => service.GetUserValueByListingAsync(
-                _userId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        valuation.Setup(service => service.GetValueByListingAsync(
+                It.IsAny<IReadOnlyList<InvestmentHolding>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Dictionary<long, decimal> { [401] = 1234m });
         investmentTransactions.Setup(repository => repository.GetHoldingsByUserAsOf(
                 _userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
