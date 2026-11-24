@@ -1,5 +1,6 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Pages;
@@ -29,8 +30,24 @@ public partial class AssetsPage : ComponentBase
     // shows the card's own loading state instead. #985
     private readonly HashSet<string> _pendingRangeChangeCards = [];
 
+    private string _displayCurrency = string.Empty;
+
+    [Inject] public required ISettingsService Settings { get; set; }
+
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; } = DateTime.UtcNow;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _displayCurrency = (await Settings.GetCurrencyAsync()).ShortName;
+        }
+        catch (Exception)
+        {
+            // The dividend dialog falls back to the holding's own currency when the display currency is unknown.
+        }
+    }
 
     protected override void OnInitialized()
     {

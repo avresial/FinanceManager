@@ -1,14 +1,16 @@
 @using FinanceManager.Components.Shared.Helpers
 
-<MudCard Outlined="true" Class="rounded-lg d-flex flex-column" Style="@($"height:{Height}")">
+@* The sizing hooks live on a plain wrapper: scoped CSS is stamped on markup elements, not on a child component's root. *@
+<div class="@(Height is null ? "fm-dividend-sizer" : "fm-dividend-sizer fm-dividend-sizer--sized")" style="@(Height is null ? null : $"--fm-card-height:{Height}")">
+<MudCard Outlined="true" Class="fm-dividend-card rounded-lg d-flex flex-column">
     <section aria-label="Dividend income" class="d-flex flex-column overflow-hidden" inert="@(_editVisible || _confirmingDelete)">
-        <CardHeader Title="Dividend income" Subtitle="Manual cash received" InfoText="Recorded payouts do not change balances or investment returns.">
+        <CardHeader Title="Dividend income" Subtitle="@Subtitle" InfoText="Recorded payouts do not change balances or investment returns.">
             <Actions>
                 <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
                            Disabled="@(Busy || _error is not null)" OnClick="ShowRecord" aria-label="Record dividend">Record</MudButton>
             </Actions>
         </CardHeader>
-        <div class="overflow-y-auto px-4 pb-3">
+        <div class="fm-dividend-content overflow-y-auto px-4 pb-3">
             @if (_isLoading)
             {
                 <MudProgressLinear Indeterminate Color="Color.Primary" aria-label="Loading dividend payments" />
@@ -56,20 +58,25 @@
         </div>
     </section>
 </MudCard>
+</div>
 @if (_editVisible)
 {
     <MudOverlay Visible DarkBackground ZIndex="1300">
         <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
-            <MudPaper Class="pa-5" Style="width:min(520px,92vw);max-height:90dvh;overflow-y:auto" role="dialog" aria-modal="true" aria-label="@(_editingPayment is null ? "Record dividend" : "Edit dividend")">
+            <MudPaper Class="pa-5" Style="width:min(520px,92vw);max-height:90dvh;overflow-y:auto" role="dialog" aria-modal="true" aria-label="@(_editingPayment is null ? "Record dividend" : "Edit dividend")"
+                      @onkeydown="OnDialogKeyDown">
                 <MudText Typo="Typo.h6" Class="mb-3">@(_editingPayment is null ? "Record dividend" : "Edit dividend")</MudText>
                 <MudStack Spacing="2">
                     @if (_holdings.Count == 0) { <MudAlert Severity="Severity.Info">Record a trade before recording its dividend.</MudAlert> }
-                    <MudSelect T="long" Label="Holding" @bind-Value="_formHoldingId" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense">
-                        @foreach (var holding in _holdings) { <MudSelectItem Value="holding.AssetListingId">@holding.Name (@holding.Ticker)</MudSelectItem> }
-                    </MudSelect>
+                    @if (_holdings.Count > 0)
+                    {
+                        <MudSelect T="long" Label="Holding" Value="_formHoldingId" ValueChanged="OnHoldingChanged" ToStringFunc="HoldingLabel" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var holding in _holdings) { <MudSelectItem Value="holding.AssetListingId">@holding.Name (@holding.Ticker)</MudSelectItem> }
+                        </MudSelect>
+                    }
                     <MudDatePicker Label="Received date" @bind-Date="_formPaymentDate" MaxDate="DateTime.UtcNow.Date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudNumericField T="decimal" Label="Cash received" @bind-Value="_formAmount" Min="0.00000001m" Step="0.01m" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudSelect T="string" Label="Payout currency" @bind-Value="_formCurrency" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudNumericField T="decimal?" Label="Cash received" @bind-Value="_formAmount" Min="0.00000001m" Step="0.01m" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudSelect T="string" Label="Payout currency" Value="_formCurrency" ValueChanged="OnCurrencyChanged" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense">
                         @foreach (var currency in _availableCurrencies) { <MudSelectItem Value="currency">@currency</MudSelectItem> }
                     </MudSelect>
                     <MudTextField T="string" Label="Notes (optional)" @bind-Value="_formNotes" MaxLength="512" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />

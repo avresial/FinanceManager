@@ -135,9 +135,11 @@ public partial class TimeSeriesValueCard
     private decimal DebtChange => Data.Count == 0 ? 0m : -(Shown.Value - Data[0].Value);
 
     private bool DeltaIsUp => IsDebt ? DebtChange > 0 : DeltaPct >= 0;
+    // A gain that rounds to 0.00 is neither good nor bad, so the chip stays neutral.
+    private bool DeltaIsNeutral => DeltaBaseline is decimal baseline && Math.Round(HeaderValue - baseline, 2) == 0m;
     private bool DeltaIsGood => DeltaBaseline is decimal baseline ? HeaderValue >= baseline : IsDebt ? DebtChange <= 0 : DeltaPositiveWhenFalling ? DeltaPct <= 0 : DeltaPct >= 0;
     // Colors come from theme-aware tokens in time-series-card.css so the badge stays legible in light and dark mode.
-    private string DeltaClass => DeltaIsGood ? "fm-tsvc-delta--good" : "fm-tsvc-delta--bad";
+    private string DeltaClass => DeltaIsNeutral ? "fm-tsvc-delta--neutral" : DeltaIsGood ? "fm-tsvc-delta--good" : "fm-tsvc-delta--bad";
 
     private string DeltaText
     {
@@ -145,10 +147,12 @@ public partial class TimeSeriesValueCard
         {
             if (DeltaBaseline is decimal baseline)
             {
+                // The change is measured against the cost basis of the open positions, not against the range start.
                 var change = HeaderValue - baseline;
-                var gainSign = change > 0 ? "+" : string.Empty;
-                var percent = baseline == 0 ? string.Empty : $" · {change / Math.Abs(baseline):+0.0%;-0.0%;0.0%}";
-                return $"Unrealized gain {gainSign}{FormatMoney(change)}{percent}";
+                var percent = baseline == 0
+                    ? string.Empty
+                    : string.Create(CultureInfo.InvariantCulture, $" · {change / Math.Abs(baseline):+0.0%;-0.0%;0.0%}");
+                return $"All-time unrealized {MoneyFormatter.FormatSigned(change, CurrencyShortName)}{percent}";
             }
             if (IsDebt)
                 return DebtChange == 0m
@@ -215,7 +219,9 @@ public partial class TimeSeriesValueCard
         axis.ForceNiceScale = false;
 
         if (axis.Labels is YAxisLabels labels)
-            labels.Formatter = ChartHelper.GetYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount);
+            labels.Formatter = points.Min(p => p.Value) >= 0m
+                ? ChartHelper.GetNonNegativeYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount)
+                : ChartHelper.GetYAxisTickFormatter(scale.Min, scale.Max, scale.TickAmount);
     }
 
     private string FormatMoney(decimal value) => MoneyFormatter.Format(value, CurrencyShortName);

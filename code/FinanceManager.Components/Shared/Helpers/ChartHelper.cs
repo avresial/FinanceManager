@@ -105,6 +105,13 @@ public static class ChartHelper
     }
 
     /// <summary>
+    /// <see cref="GetYAxisTickFormatter"/> for series that never go below zero: ticks under zero belong to the empty label
+    /// gutter of <see cref="GetYScaleWithLabelGutter"/>, so they are left blank instead of reading as a negative value.
+    /// </summary>
+    public static string GetNonNegativeYAxisTickFormatter(double minimum, double maximum, int tickCount) =>
+        "function(v){ if(v<0) return ''; return (" + GetYAxisTickFormatter(minimum, maximum, tickCount) + ")(v); }";
+
+    /// <summary>
     /// ApexCharts tooltip formatter that renders money exactly like <see cref="MoneyFormatter.Format"/>:
     /// comma thousands grouping, two decimals and a regular space before the currency (<c>12,480.00 PLN</c>).
     /// The locale is fixed to en-US so the tooltip never depends on the browser locale.

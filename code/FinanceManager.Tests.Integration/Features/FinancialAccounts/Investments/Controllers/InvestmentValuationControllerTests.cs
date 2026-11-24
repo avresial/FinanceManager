@@ -140,6 +140,37 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
+    public async Task CapitalSeries_RejectsInvertedRange_UnknownCurrency_AndForbidsUserZero()
+    {
+        await SeedHoldingsWithPrice();
+        var ct = TestContext.Current.CancellationToken;
+        Authorize("testuser", _testUserId, UserRole.User);
+        var route = "api/InvestmentValuation/CapitalSeries";
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await Client.GetAsync($"{route}/{_usdCurrencyId}/2024-06-10/2024-06-01", ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.GetAsync($"{route}/99999/2024-06-01/2024-06-10", ct)).StatusCode);
+        Authorize("nobody", 0, UserRole.User);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client.GetAsync($"{route}/{_usdCurrencyId}/2024-06-01/2024-06-10", ct)).StatusCode);
+    }
+
+    [Fact]
+    public async Task CapitalSeries_ForAGuestWithANegativeId_UsesOnlyThatGuestsTrades()
+    {
+        await SeedHoldingsWithPrice();
+        var context = _testDatabase!.Context;
+        context.InvestmentTransactions.Add(new InvestmentTransaction { UserId = -7, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 1m, UnitPrice = 80m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 2) });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var client = new InvestmentValuationHttpClient(Client);
+
+        Authorize("guest", -7, UserRole.User);
+        var guest = await client.GetCapitalSeriesAsync(_usdCurrencyId, _asOf.AddDays(-8), _asOf);
+        Assert.Equal(80m, guest[_asOf]);
+
+        Authorize("stranger", -8, UserRole.User);
+        Assert.Empty(await client.GetCapitalSeriesAsync(_usdCurrencyId, _asOf.AddDays(-8), _asOf));
+    }
+
+    [Fact]
     public async Task GetValue_ValuesHoldingsAtQuotePrice()
     {
         await SeedHoldingsWithPrice();

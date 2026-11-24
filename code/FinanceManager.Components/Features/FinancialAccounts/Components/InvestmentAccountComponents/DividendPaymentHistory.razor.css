@@ -18,3 +18,21 @@
 .dividend-amount {
     font-variant-numeric: tabular-nums;
 }
+
+/* Wide screens keep the shared card height so a row of cards lines up; phones size to the content, up to that
+   height, so a short list does not leave a screen of blank card. */
+.fm-dividend-sizer--sized ::deep .fm-dividend-card {
+    height: var(--fm-card-height);
+}
+
+@media (max-width: 599.98px) {
+    .fm-dividend-sizer--sized ::deep .fm-dividend-card {
+        height: auto;
+        max-height: var(--fm-card-height);
+    }
+}
+
+.fm-dividend-content {
+    flex: 1 1 auto;
+    min-height: 0;
+}

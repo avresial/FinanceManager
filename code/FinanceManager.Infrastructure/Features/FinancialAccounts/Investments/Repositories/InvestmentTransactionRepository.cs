@@ -355,16 +355,26 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     }
 
     public async Task<IReadOnlyList<IInvestmentTransactionRepository.ListingTradePrice>> GetLatestPricesByUserAsOf(
-        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct) =>
-        await LatestOwnerTrades(userId, asOf, listingIds)
+        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (listingIds.Count == 0) return [];
+
+        return await LatestOwnerTrades(userId, asOf, listingIds)
             .Select(t => new IInvestmentTransactionRepository.ListingTradePrice(t.AssetListingId, t.Currency, t.UnitPrice))
             .ToListAsync(ct);
+    }
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(
-        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct) =>
+        long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (listingIds.Count == 0) return [];
+
         // Recovery saves the trade through Update, which also copies its labels.
-        await LatestOwnerTrades(userId, asOf, listingIds).Where(t => t.UnitPrice <= 0)
+        return await LatestOwnerTrades(userId, asOf, listingIds).Where(t => t.UnitPrice <= 0)
             .Include(t => t.Labels).ToListAsync(ct);
+    }
 
     public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(
         int accountId,

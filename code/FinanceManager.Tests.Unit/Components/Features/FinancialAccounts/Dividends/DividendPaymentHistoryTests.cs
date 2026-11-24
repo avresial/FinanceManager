@@ -1,6 +1,7 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Shared.Components.Dialogs;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -106,6 +107,7 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
+        var syncCount = CountAccountSyncs(context);
         var cut = context.Render<DividendPaymentHistory>(p => p
             .Add(x => x.DefaultCurrency, "PLN"));
 
@@ -119,7 +121,7 @@ public class DividendPaymentHistoryTests
         var currencySelect = cut.FindComponents<MudSelect<string>>().Single(s => s.Instance.Label == "Payout currency");
         await cut.InvokeAsync(() => currencySelect.Instance.ValueChanged.InvokeAsync("PLN"));
 
-        var cashField = cut.FindComponents<MudNumericField<decimal>>()
+        var cashField = cut.FindComponents<MudNumericField<decimal?>>()
             .Single(f => f.Instance.Label == "Cash received");
         await cut.InvokeAsync(() => cashField.Instance.ValueChanged.InvokeAsync(150m));
 
@@ -136,6 +138,7 @@ public class DividendPaymentHistoryTests
         Assert.Equal("PLN", capturedRequest.Currency);
 
         Assert.Contains(snackbar.ShownSnackbars, s => s.Message == "Dividend recorded.");
+        Assert.Equal(1, syncCount());
     }
 
     [Fact]
@@ -165,7 +168,7 @@ public class DividendPaymentHistoryTests
             .Single(s => s.Instance.Label == "Holding");
         await cut.InvokeAsync(() => holdingSelect.Instance.ValueChanged.InvokeAsync(42));
 
-        var cashField = cut.FindComponents<MudNumericField<decimal>>()
+        var cashField = cut.FindComponents<MudNumericField<decimal?>>()
             .Single(f => f.Instance.Label == "Cash received");
         await cut.InvokeAsync(() => cashField.Instance.ValueChanged.InvokeAsync(100m));
 
@@ -227,6 +230,7 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
+        var syncCount = CountAccountSyncs(context);
         var cut = context.Render<DividendPaymentHistory>(p => p
             .Add(x => x.DefaultCurrency, "PLN"));
 
@@ -236,7 +240,7 @@ public class DividendPaymentHistoryTests
         await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for']").Click());
         await cut.InvokeAsync(() => popovers.Find("[aria-label^='Edit dividend']").Click());
 
-        var cashField = cut.FindComponents<MudNumericField<decimal>>()
+        var cashField = cut.FindComponents<MudNumericField<decimal?>>()
             .Single(f => f.Instance.Label == "Cash received");
         await cut.InvokeAsync(() => cashField.Instance.ValueChanged.InvokeAsync(200m));
 
@@ -255,6 +259,7 @@ public class DividendPaymentHistoryTests
         Assert.Equal(new DateTime(2026, 9, 1), capturedRequest.PaymentDate.ToDateTime(TimeOnly.MinValue));
 
         Assert.Contains(snackbar.ShownSnackbars, s => s.Message == "Dividend updated.");
+        Assert.Equal(1, syncCount());
     }
 
     [Fact]
@@ -289,6 +294,7 @@ public class DividendPaymentHistoryTests
 
         await using var context = CreateBunitContext(handler, confirmedDelete: true);
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
+        var syncCount = CountAccountSyncs(context);
         var cut = context.Render<DividendPaymentHistory>(p => p
             .Add(x => x.DefaultCurrency, "PLN"));
 
@@ -300,6 +306,7 @@ public class DividendPaymentHistoryTests
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("85.00 USD", cut.Markup));
         Assert.Contains(snackbar.ShownSnackbars, s => s.Message == "Dividend removed.");
+        Assert.Equal(1, syncCount());
     }
 
     [Fact]
@@ -415,6 +422,109 @@ public class DividendPaymentHistoryTests
         cut.WaitForAssertion(() => Assert.Contains(expected, cut.Markup));
     }
 
+    [Fact]
+    public async Task RecordDialog_PreselectsTheFirstHoldingAndItsCurrency_AndStartsWithAnEmptyAmount()
+    {
+        await using var context = CreateBunitContext(HoldingsHandler());
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.DefaultCurrency, "PLN"));
+        cut.WaitForAssertion(() => Assert.Contains("No dividend payments yet.", cut.Markup));
+
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
+
+        Assert.Equal("Alpha ETF (ALPH)", ShownValue(cut.FindComponents<MudSelect<long>>().Single(s => s.Instance.Label == "Holding")));
+        Assert.Equal("USD", ShownValue(cut.FindComponents<MudSelect<string>>().Single(s => s.Instance.Label == "Payout currency")));
+        Assert.Equal(string.Empty, ShownValue(cut.FindComponents<MudNumericField<decimal?>>().Single(f => f.Instance.Label == "Cash received")));
+        Assert.True(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task RecordDialog_CurrencyFollowsTheHolding_UntilTheUserPicksOne()
+    {
+        await using var context = CreateBunitContext(HoldingsHandler());
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.DefaultCurrency, "PLN"));
+        cut.WaitForAssertion(() => Assert.Contains("No dividend payments yet.", cut.Markup));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
+        string Currency() => ShownValue(cut.FindComponents<MudSelect<string>>().Single(s => s.Instance.Label == "Payout currency"));
+        var holding = cut.FindComponents<MudSelect<long>>().Single(s => s.Instance.Label == "Holding");
+
+        await cut.InvokeAsync(() => holding.Instance.ValueChanged.InvokeAsync(42));
+        Assert.Equal("PLN", Currency());
+
+        await cut.InvokeAsync(() => cut.FindComponents<MudSelect<string>>().Single(s => s.Instance.Label == "Payout currency").Instance.ValueChanged.InvokeAsync("USD"));
+        await cut.InvokeAsync(() => holding.Instance.ValueChanged.InvokeAsync(42));
+        Assert.Equal("USD", Currency());
+    }
+
+    [Fact]
+    public async Task RecordDialog_FallsBackToTheDisplayCurrency_WhenTheHoldingCurrencyIsUnknown()
+    {
+        var handler = HoldingsHandler(new DividendHoldingOption(43, "No currency fund", "NOCUR", null, null));
+        await using var context = CreateBunitContext(handler);
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.DefaultCurrency, "PLN"));
+        cut.WaitForAssertion(() => Assert.Contains("No dividend payments yet.", cut.Markup));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
+
+        await cut.InvokeAsync(() => cut.FindComponents<MudSelect<long>>().Single(s => s.Instance.Label == "Holding").Instance.ValueChanged.InvokeAsync(43));
+
+        Assert.Equal("PLN", ShownValue(cut.FindComponents<MudSelect<string>>().Single(s => s.Instance.Label == "Payout currency")));
+    }
+
+    [Fact]
+    public async Task RecordDialog_ClosesOnEscape()
+    {
+        await using var context = CreateBunitContext(HoldingsHandler());
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.DefaultCurrency, "PLN"));
+        cut.WaitForAssertion(() => Assert.Contains("No dividend payments yet.", cut.Markup));
+        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend").Click());
+        Assert.Contains("role=\"dialog\"", cut.Markup);
+
+        await cut.InvokeAsync(() => cut.Find("[role=dialog]").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" }));
+
+        Assert.DoesNotContain("role=\"dialog\"", cut.Markup);
+    }
+
+    [Fact]
+    public async Task Header_SumsEachCurrencySeparately_WhenEveryPaymentIsLoaded()
+    {
+        DividendPaymentDto[] payments =
+        [
+            new(1, 10, 41, "Fund", "FUND", new(2026, 1, 1), 10m, "USD", null),
+            new(2, 10, 41, "Fund", "FUND", new(2026, 2, 1), 5.5m, "USD", null),
+            new(3, 10, 42, "Other", "OTH", new(2026, 3, 1), 7m, "PLN", null)
+        ];
+        var handler = new StubHttpHandler(request => Task.FromResult(
+            request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal) ? JsonResponse(Array.Empty<DividendHoldingOption>())
+            : request.RequestUri.AbsolutePath.EndsWith("/Currency/GetAll", StringComparison.Ordinal) ? JsonResponse(new[] { _pln })
+            : JsonResponse(new DividendPaymentPage(payments, 3, 1, 20))));
+        await using var context = CreateBunitContext(handler);
+
+        var cut = context.Render<DividendPaymentHistory>();
+
+        cut.WaitForAssertion(() => Assert.Equal("3 payments \u00B7 total 7.00 PLN \u00B7 15.50 USD", cut.Find(".fm-card-header-subtitle").TextContent.Trim()));
+    }
+
+    private static StubHttpHandler HoldingsHandler(params DividendHoldingOption[] extra) => new(request => Task.FromResult(
+        request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
+            ? JsonResponse(new[]
+            {
+                new DividendHoldingOption(41, "Alpha ETF", "ALPH", "XLON", "USD"),
+                new DividendHoldingOption(42, "Beta ETF", "BETA", "XWAR", "PLN")
+            }.Concat(extra))
+            : request.RequestUri.AbsolutePath.EndsWith("/Currency/GetAll", StringComparison.Ordinal)
+                ? JsonResponse(new[] { _pln, new Currency(1, "USD", "$") })
+                : JsonResponse(new DividendPaymentPage([], 0, 1, 20))));
+
+    // What the user reads in the field: the text of the component's input.
+    private static string ShownValue<T>(IRenderedComponent<T> field) where T : Microsoft.AspNetCore.Components.IComponent =>
+        field.Find("input").GetAttribute("value") ?? string.Empty;
+
+    private static Func<int> CountAccountSyncs(BunitContext context)
+    {
+        var count = 0;
+        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => count++;
+        return () => count;
+    }
+
     private static BunitContext CreateBunitContext(HttpMessageHandler handler, bool confirmedDelete = true)
     {
         var context = new BunitContext();
@@ -423,6 +533,7 @@ public class DividendPaymentHistoryTests
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
         context.Services.AddSingleton(new DividendPaymentHttpClient(httpClient));
         context.Services.AddSingleton(new CurrencyHttpClient(httpClient));
+        context.Services.AddSingleton(new AccountDataSynchronizationService());
 
         var dialogServiceMock = new Mock<IDialogService>();
         var referenceMock = new Mock<IDialogReference>();

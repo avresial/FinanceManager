@@ -26,13 +26,16 @@ internal class AssetsServiceInvestment(
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider,
-    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped, IInvestmentAppreciationService
+    ICurrencyExchangeService currencyExchangeService,
+    IDividendPaymentRepository dividendRepository) : IAssetsServiceTyped, IInvestmentAppreciationService
 {
     private const string _investmentsGroupName = "Investments";
 
-    // Legacy parity: any non-zero holding counts, including an oversold (negative) one.
+    // Legacy parity: any non-zero holding counts, including an oversold (negative) one. A recorded dividend also counts, so the
+    // Assets page stays reachable for an owner who sold everything but still has payouts to review.
     public async Task<bool> IsAnyAccountWithAssets(int userId) =>
-        (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0;
+        (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0
+        || await dividendRepository.HasPayments(userId);
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {

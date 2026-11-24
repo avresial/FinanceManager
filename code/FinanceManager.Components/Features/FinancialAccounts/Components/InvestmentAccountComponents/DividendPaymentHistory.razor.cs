@@ -1,9 +1,11 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Shared.Components.Dialogs;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 using System.Globalization;
 
@@ -18,6 +20,8 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IDialogService DialogService { get; set; }
+    // Publishes that holdings or dividends changed, so the navigation menu re-evaluates its cached "Assets" link.
+    [Inject] public required AccountDataSynchronizationService AccountDataSynchronization { get; set; }
     private const int _historyPageSize = 20;
     private readonly RefreshVersionGate _historyGate = new();
     private CancellationTokenSource _accountLifetime = new();
@@ -37,7 +41,9 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private DividendPaymentDto? _editingPayment;
     private long _formHoldingId;
     private DateTime? _formPaymentDate;
-    private decimal _formAmount;
+    private decimal? _formAmount;
+    // Once the user picks a currency themselves, changing the holding no longer overrides it.
+    private bool _currencyChosen;
     private string _formCurrency = string.Empty;
     private string? _formNotes;
     private bool _savingEdit;
@@ -117,11 +123,11 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     {
         if (Busy) return;
         _editingPayment = null;
-        _formHoldingId = 0;
+        _formHoldingId = _holdings.FirstOrDefault()?.AssetListingId ?? 0;
         _formPaymentDate = DateTime.UtcNow.Date;
-        _formAmount = 0;
-        _formCurrency = _availableCurrencies.FirstOrDefault(x => string.Equals(x, DefaultCurrency, StringComparison.OrdinalIgnoreCase))
-            ?? _availableCurrencies.FirstOrDefault() ?? string.Empty;
+        _formAmount = null;
+        _currencyChosen = false;
+        _formCurrency = CurrencyFor(_formHoldingId);
         _formNotes = null;
         _formError = null;
         _editVisible = true;
@@ -134,10 +140,55 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         _formPaymentDate = payment.PaymentDate.ToDateTime(TimeOnly.MinValue);
         _formAmount = payment.Amount;
         _formCurrency = payment.Currency;
+        _currencyChosen = true;
         _formNotes = payment.Notes;
         _formError = null;
         _editVisible = true;
     }
+    // A payout normally arrives in the currency the holding trades in; fall back to the display currency, then the first known one.
+    private string CurrencyFor(long listingId)
+    {
+        var tradingCurrency = _holdings.FirstOrDefault(x => x.AssetListingId == listingId)?.TradingCurrency;
+        return FindCurrency(tradingCurrency) ?? FindCurrency(DefaultCurrency) ?? _availableCurrencies.FirstOrDefault() ?? string.Empty;
+    }
+
+    private string? FindCurrency(string? shortName) =>
+        string.IsNullOrWhiteSpace(shortName) ? null : _availableCurrencies.FirstOrDefault(x => string.Equals(x, shortName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    // Without this the closed select shows the raw listing id until its items have rendered.
+    private string HoldingLabel(long listingId) =>
+        _holdings.FirstOrDefault(x => x.AssetListingId == listingId) is { } holding ? $"{holding.Name} ({holding.Ticker})" : string.Empty;
+
+    private void OnHoldingChanged(long listingId)
+    {
+        _formHoldingId = listingId;
+        if (!_currencyChosen) _formCurrency = CurrencyFor(listingId);
+    }
+
+    private void OnCurrencyChanged(string currency)
+    {
+        _formCurrency = currency;
+        _currencyChosen = true;
+    }
+
+    private void OnDialogKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape") CloseEdit();
+    }
+
+    // The header names what the card holds; the total is only honest while every payment is loaded, and each currency keeps its own sum.
+    private string Subtitle
+    {
+        get
+        {
+            if (_isLoading || _payments.Count == 0) return "Cash received from your holdings";
+            if (_hasMore) return "Latest payments";
+            var totals = _payments.GroupBy(x => x.Currency, StringComparer.OrdinalIgnoreCase).OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(x => MoneyFormatter.Format(x.Sum(p => p.Amount), x.Key));
+            return $"{(_payments.Count == 1 ? "1 payment" : $"{_payments.Count} payments")} · total {string.Join(" · ", totals)}";
+        }
+    }
+
     private void CloseEdit()
     {
         if (_savingEdit) return;
@@ -148,7 +199,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private static string FormatCashReceived(DividendPaymentDto payment) =>
         $"{payment.Amount.ToString("#,##0.00######", CultureInfo.InvariantCulture)} {payment.Currency}";
 
-    private bool CanSaveEdit => !_savingEdit && _formHoldingId > 0 && _formAmount > 0
+    private bool CanSaveEdit => !_savingEdit && _formHoldingId > 0 && _formAmount is decimal amount && amount > 0
         && !string.IsNullOrWhiteSpace(_formCurrency) && _formPaymentDate is DateTime date && date <= DateTime.UtcNow.Date;
 
     private async Task SaveEditAsync()
@@ -161,13 +212,14 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         _formError = null;
         try
         {
-            var request = new DividendPaymentRequest { AssetListingId = _formHoldingId, PaymentDate = DateOnly.FromDateTime(_formPaymentDate!.Value), Amount = _formAmount, Currency = _formCurrency, Notes = _formNotes };
+            var request = new DividendPaymentRequest { AssetListingId = _formHoldingId, PaymentDate = DateOnly.FromDateTime(_formPaymentDate!.Value), Amount = _formAmount!.Value, Currency = _formCurrency, Notes = _formNotes };
             if (creating) await DividendPaymentHttpClient.AddAsync(account, request, ct);
             else await DividendPaymentHttpClient.UpdateAsync(account, _editingPayment!.Id, request, ct);
             if (ct.IsCancellationRequested) return;
             _editVisible = false;
             _editingPayment = null;
             Snackbar.Add(creating ? "Dividend recorded." : "Dividend updated.", Severity.Success);
+            await AccountDataSynchronization.AccountChanged();
             await ReloadHistoryAsync();
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -191,6 +243,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
             await DividendPaymentHttpClient.DeleteAsync(account, payment.Id, ct);
             if (ct.IsCancellationRequested) return;
             Snackbar.Add("Dividend removed.", Severity.Success);
+            await AccountDataSynchronization.AccountChanged();
             await ReloadHistoryAsync();
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }

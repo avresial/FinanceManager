@@ -90,3 +90,25 @@
     .fm-holding-header { align-items: center; }
     .fm-holding-title-group { flex-direction: row; align-items: baseline; gap: .5rem; }
 }
+
+/* Wide screens keep the shared card height so a row of cards lines up; phones size to the content, up to that
+   height, so a short list does not leave a screen of blank card. */
+.fm-holdings-sizer--sized ::deep .fm-holdings-card {
+    height: var(--fm-card-height);
+}
+
+@media (max-width: 599.98px) {
+    .fm-holdings-sizer--sized ::deep .fm-holdings-card {
+        height: auto;
+        max-height: var(--fm-card-height);
+    }
+}
+
+.fm-holdings-sizer ::deep .fm-holdings-content {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.fm-holdings-totals {
+    border-top: 1px solid var(--mud-palette-divider);
+}

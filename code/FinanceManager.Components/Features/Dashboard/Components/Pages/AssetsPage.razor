@@ -34,7 +34,7 @@
                     <InvestmentHoldingsCardContainer AsOf="@EndDate" Height="@DashboardCardGrid.CardHeight" RefreshingChanged="SetHoldingsRefreshing" />
                     break;
                 case "dividends":
-                    <DividendPaymentHistory Height="@DashboardCardGrid.CardHeight" />
+                    <DividendPaymentHistory Height="@DashboardCardGrid.CardHeight" DefaultCurrency="@_displayCurrency" />
                     break;
                 case "portfolio-return":
                     <PortfolioReturnCardContainer StartDateTime=StartDate EndDateTime="@EndDate" Height="@DashboardCardGrid.CardHeight"

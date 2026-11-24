@@ -2,7 +2,6 @@ using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
@@ -33,8 +32,8 @@ public class AssetsController(
 {
     [HttpGet("IsAnyAccountWithAssets/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    public async Task<IActionResult> IsAnyAccountWithAssets(int userId, [FromServices] IDividendPaymentRepository dividends, CancellationToken cancellationToken = default) =>
-        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.IsAnyAccountWithAssets(userId) || await dividends.HasPayments(userId, cancellationToken)) : Forbid();
+    public async Task<IActionResult> IsAnyAccountWithAssets(int userId, CancellationToken cancellationToken = default) =>
+        ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.IsAnyAccountWithAssets(userId)) : Forbid();
 
     [HttpGet("GetEndAssetsPerAccount/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<NameValueResult>))]
@@ -136,6 +135,7 @@ public class AssetsController(
     [ProducesResponseType<UnrealizedGainLossAccountResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetInvestmentGainLoss(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();

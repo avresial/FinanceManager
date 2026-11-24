@@ -71,6 +71,60 @@ public class PortfolioCardsTests
     }
 
     [Fact]
+    public async Task Holdings_LoadFailure_StaysInsideTheCardAndRetryRecovers()
+    {
+        var fail = true;
+        InvestmentHoldingDto[] rows = [new(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m)];
+        using var handler = new RecordingHttpHandler(_ => fail ? new(HttpStatusCode.ServiceUnavailable) : Json(rows));
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<InvestmentHoldingsCardContainer>(p => p.Add(c => c.AsOf, _end).Add(c => c.Height, "390px"));
+
+        Assert.Single(cut.FindAll(".fm-holdings-card"));
+        Assert.Contains("Couldn't load holdings.", cut.Find(".fm-holdings-card .mud-alert").TextContent);
+        Assert.Equal("--fm-card-height:390px", cut.Find(".fm-holdings-sizer--sized").GetAttribute("style"));
+        fail = false;
+        await cut.InvokeAsync(() => cut.Find(".fm-holdings-card .mud-alert button").Click());
+        Assert.Empty(cut.FindAll(".mud-alert"));
+        Assert.Equal(["FUND"], cut.FindComponent<InvestmentHoldingCard>().Instance.Holdings.Select(h => h.Ticker));
+    }
+
+    [Fact]
+    public async Task Holdings_StaleRowsKeepTheirCardAndShowACompactAlert_AndTotalsStayPerCurrency()
+    {
+        using var handler = new RecordingHttpHandler();
+        await using var context = CreateContext(handler);
+        InvestmentHoldingModel[] rows = [new(1, "A", "X", "USD", 1, 100, 100), new(2, "B", "X", "USD", 1, 50, 50), new(3, "C", "X", "EUR", 1, 20, 20)];
+
+        var cut = context.Render<InvestmentHoldingCard>(p => p.Add(c => c.Holdings, rows).Add(c => c.HasError, true));
+
+        Assert.Single(cut.FindAll(".fm-holdings-card"));
+        Assert.Contains("Couldn't refresh holdings.", cut.Find(".fm-holdings-card .mud-alert").TextContent);
+        Assert.Equal(3, cut.FindAll(".fm-holding-item").Count);
+        Assert.Equal("20.00 EUR · 150.00 USD", cut.Find(".fm-holdings-totals .mud-typography-body2").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task Value_AfterAFullExit_HidesTheGainChipAndSaysThereAreNoOpenPositions()
+    {
+        using var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
+        {
+            var path when path.Contains("/GetInvestmentGainLoss/") => new(HttpStatusCode.NoContent),
+            var path when path.Contains("/ValueSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-3)] = 100, [_end] = 0 }),
+            _ => Json(new Dictionary<DateTime, decimal>())
+        });
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<InvestmentsValueCardContainer>(p => p.Add(c => c.StartDateTime, _end.AddDays(-30)).Add(c => c.EndDateTime, _end));
+
+        var chart = cut.FindComponent<TimeSeriesValueCard>().Instance;
+        Assert.Null(chart.DeltaBaseline);
+        Assert.Empty(cut.FindAll(".fm-tsvc-delta"));
+        Assert.Equal("No open positions", chart.SummaryCaption);
+        Assert.Equal("PLN", chart.CurrencyShortName);
+    }
+
+    [Fact]
     public async Task Value_RetriesFailedSeries_AndRefreshesOwnerChartUnderStableKey()
     {
         bool fail = true;

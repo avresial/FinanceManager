@@ -4,18 +4,8 @@
 @using FinanceManager.Domain.Assets.Entities
 @inherits PortfolioCardBase<List<InvestmentHoldingModel>>
 
-@if (Failed)
-{
-    <MudAlert Severity="Severity.Error">Couldn't load holdings. <MudButton OnClick="Reload">Retry</MudButton></MudAlert>
-}
-@if (Loading)
-{
-    <MudSkeleton Height="@Height" aria-label="Loading holdings" />
-}
-else if (Model is not null)
-{
-    <InvestmentHoldingCard Holdings="@Model" Height="@Height" />
-}
+<InvestmentHoldingCard Holdings="@(Model ?? [])" Height="@Height" IsLoading="@(Loading && Model is null)"
+                       HasError="@Failed" OnRetry="Reload" />
 
 @code {
     [Parameter] public DateTime AsOf { get; set; }

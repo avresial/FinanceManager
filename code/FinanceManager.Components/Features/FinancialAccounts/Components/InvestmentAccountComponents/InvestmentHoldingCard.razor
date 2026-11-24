@@ -2,17 +2,35 @@
 @using FinanceManager.Components.Features.FinancialAccounts.Models
 @using FinanceManager.Domain.Assets.Entities
 
-<MudCard Outlined="true" Class="fm-holdings-card rounded-lg d-flex flex-column" Style="@($"height:{Height}")">
-    <CardHeader Title="Holdings" Subtitle="@(Holdings.Count == 1 ? "1 open position" : $"{Holdings.Count} open positions")" InfoText="Open positions valued at the latest trade price on or before the selected date."
+@* The sizing hooks live on a plain wrapper: scoped CSS is stamped on markup elements, not on a child component's root. *@
+<div class="@(Height is null ? "fm-holdings-sizer" : "fm-holdings-sizer fm-holdings-sizer--sized")" style="@(Height is null ? null : $"--fm-card-height:{Height}")">
+<MudCard Outlined="true" Class="fm-holdings-card rounded-lg d-flex flex-column">
+    <CardHeader Title="Holdings" Subtitle="@Subtitle" InfoText="Open positions valued at the latest trade price on or before the selected date."
                 InfoAriaLabel="About holdings card" />
-    <MudCardContent Class="pa-0 overflow-y-auto">
-        @if (Holdings.Count == 0)
+    <MudCardContent Class="fm-holdings-content pa-0 overflow-y-auto">
+        @if (IsLoading)
+        {
+            <MudSkeleton Height="120px" Class="mx-4" aria-label="Loading holdings" />
+        }
+        else if (HasError && Holdings.Count == 0)
+        {
+            <MudAlert Severity="Severity.Error" Class="ma-4" role="alert">Couldn't load holdings.
+                @if (OnRetry.HasDelegate) { <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnRetry">Retry</MudButton> }
+            </MudAlert>
+        }
+        else if (Holdings.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Class="ma-4">No open holdings.</MudAlert>
             <MudButton Href="/Transactions?dialog=add-entry&amp;kind=investment" Color="Color.Primary" Class="mx-4">Add trade</MudButton>
         }
         else
         {
+            @if (HasError)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mx-4 mb-2" role="alert">Couldn't refresh holdings.
+                    @if (OnRetry.HasDelegate) { <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="OnRetry">Retry</MudButton> }
+                </MudAlert>
+            }
             <div class="@($"fm-holdings-list {(_showAll ? "" : "fm-holdings-compact")}")" role="list" aria-label="Holdings">
                 @foreach (var holding in Holdings)
                 {
@@ -48,6 +66,13 @@
 
                 }
             </div>
+            @if (Holdings.Count > 1)
+            {
+                <div class="fm-holdings-totals px-4 py-3" aria-label="Total value per currency">
+                    <MudText Typo="Typo.overline" Class="mud-text-secondary">Total value</MudText>
+                    <MudText Typo="Typo.body2" Class="fm-tabular">@string.Join(" · ", Totals)</MudText>
+                </div>
+            }
             @if (Holdings.Count > 3)
             {
                 <div class="d-flex d-sm-none justify-center">
@@ -59,12 +84,24 @@
         }
     </MudCardContent>
 </MudCard>
+</div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<InvestmentHoldingModel> Holdings { get; set; } = [];
 
+    /// <summary>Card height on wide screens; on phones it is only a ceiling so a short list does not leave blank space.</summary>
     [Parameter] public string? Height { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
     private bool _showAll;
+
+    private string Subtitle => IsLoading ? "Loading open positions" : Holdings.Count == 0 ? "No open positions" : Holdings.Count == 1 ? "1 open position" : $"{Holdings.Count} open positions";
+
+    // Native currencies are never converted into one figure, so each currency gets its own total.
+    private IEnumerable<string> Totals => Holdings.GroupBy(h => h.Currency, StringComparer.OrdinalIgnoreCase)
+        .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+        .Select(g => MoneyFormatter.Format(g.Sum(h => h.Value), g.Key));
 
     private static string FormatAssetType(AssetType type) => type switch
     {
