@@ -50,8 +50,8 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
         context.Accounts.AddRange(
-            new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Cash },
-            new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Loan });
+            new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, CurrencyId = _currencyId, AccountLabel = AccountLabel.Cash },
+            new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, CurrencyId = _currencyId, AccountLabel = AccountLabel.Loan });
         context.CurrencyEntries.AddRange(
             new CurrencyAccountEntry(_cashAccountId, 1, _asOf.Date.AddDays(-2), 900m, 900m),
             new CurrencyAccountEntry(_cashAccountId, 2, _asOf.AddMinutes(-1), 1000m, 100m),
@@ -70,9 +70,9 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
             TestContext.Current.CancellationToken);
         Assert.Equal(900m, historical![^1].Value);
 
-        var write = await Client.PostAsJsonAsync("api/CurrencyEntry", new
+        var write = await Client.PostAsJsonAsync("api/transactions/cash", new
         {
-            AccountId = _cashAccountId,
+            CurrencyId = _currencyId,
             PostingDate = _asOf.Date.AddDays(-1),
             ValueChange = -10m,
             Description = "Backdated expense"
@@ -98,8 +98,9 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
             $"api/CashFlowForecast?userId={_userId}&currencyId={_currencyId}&horizonDays=30",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(expectedCash, account!.Entries.First().Value);
-        Assert.Equal(expectedCash, cashSeries![^1].Value);
+        // These reads explicitly select the historical account. The new owner-only expense has no account link.
+        Assert.Equal(634m, account!.Entries.First().Value);
+        Assert.Equal(634m, cashSeries![^1].Value);
         // The forecast pools every owned cash entry, including the one on the loan-typed account, like net worth does.
         Assert.Equal(expectedCash - 200m, forecast!.HistoricalSeries[^1].Value);
         Assert.Equal(expectedCash - 200m, forecast.ForecastSeries[0].Value);

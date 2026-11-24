@@ -33,7 +33,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Currency, entryList.Select(e => e.AccountId), cancellationToken);
         if (accounts is null) return false;
         // An unlinked entry is owned by the server-stamped owner and currency it carries.
-        if (entryList.Any(e => e.AccountId is null && (e.UserId is not int owner || owner == 0 || e.CurrencyId is null))) return false;
+        if (entryList.Any(e => e.AccountId is null && e.UserId == 0)) return false;
 
         // Re-resolve already-persisted labels to context-tracked instances in one query so EF reuses the
         // existing rows instead of trying to INSERT detached copies — the guest seeder reads labels via
@@ -305,8 +305,8 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         // The entry carries its owner, so linked and unlinked rows are each counted exactly once.
         var rows = await context.CurrencyEntries.AsNoTracking()
-            .Where(entry => entry.UserId != null && userIds.Contains(entry.UserId.Value))
-            .GroupBy(entry => entry.UserId!.Value)
+            .Where(entry => userIds.Contains(entry.UserId))
+            .GroupBy(entry => entry.UserId)
             .Select(grouped => new { UserId = grouped.Key, Count = grouped.Count() })
             .ToListAsync(cancellationToken);
         return rows.ToDictionary(x => x.UserId, x => x.Count);

@@ -68,20 +68,4 @@ public class CurrencyAccountHttpClient(HttpClient httpClient)
 
         return new(result.UserId, result.AccountId, result.Name, entries, (AccountLabel)result.AccountLabel, nextOlderEntry, nextYoungerEntry, result.CurrencyId);
     }
-
-    public async Task<int?> AddAccountAsync(AddAccount addAccount)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyAccount", addAccount);
-        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();
-        throw new Exception(await response.Content.ReadAsStringAsync());
-    }
-
-    public async Task<bool> UpdateAccountAsync(UpdateAccount updateAccount)
-    {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyAccount", updateAccount);
-        return response.IsSuccessStatusCode;
-    }
-
-    public Task<bool> DeleteAccountAsync(int accountId) =>
-         httpClient.DeleteFromJsonAsync<bool>($"{httpClient.BaseAddress}api/CurrencyAccount/{accountId}");
 }

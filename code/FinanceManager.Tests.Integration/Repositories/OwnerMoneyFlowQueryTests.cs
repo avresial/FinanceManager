@@ -53,7 +53,7 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task AddCash(int owner, int? currency, DateTime date, decimal change, int? account = null, string description = "", string? contractor = null, params FinancialLabel[] labels)
+    private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, string description = "", string? contractor = null, params FinancialLabel[] labels)
     {
         _context.CurrencyEntries.Add(new CurrencyAccountEntry(account, 0, date, 999, change) { UserId = owner, CurrencyId = currency, Description = description, ContractorDetails = contractor, Labels = labels });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -63,7 +63,6 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
     public async Task Cash_HasAnyEntries_SeesLinkedAndUnlinkedRowsOfTheOwnerOnly()
     {
         await AddCash(_other, 0, _jan1, 5);
-        await AddCash(_owner, null, _jan1, 5); // no currency: not part of the pooled ledger
         Assert.False(await _cash.HasAnyEntries(_owner, TestContext.Current.CancellationToken));
 
         await AddCash(_owner, 0, _jan1, 5);
@@ -96,7 +95,6 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
         await AddCash(_owner, 0, _jan1.AddDays(2), -7); // no label
         await AddCash(_owner, 0, _jan1.AddDays(5), 1000, labels: [_salary]); // on the window end: counts
         await AddCash(_owner, 0, _jan1.AddDays(6), 5000, labels: [_salary]); // after the window
-        await AddCash(_owner, null, _jan1, 5000, labels: [_salary]); // no currency
         await AddCash(_other, 0, _jan1, 9999, labels: [_salary]);
 
         var totals = await _cash.GetLabelTotals(_owner, _jan1, _jan1.AddDays(5), TestContext.Current.CancellationToken);
@@ -149,7 +147,6 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
         await AddCash(_owner, 2, _jan1.AddDays(1), -40, account: 9, labels: [_rent, _salary]);
         await AddCash(_owner, 0, _jan1.AddDays(2), -7);
         await AddCash(_owner, 0, _jan1.AddDays(3), 60, labels: [_salary]);
-        await AddCash(_owner, null, _jan1.AddDays(1), 8000, labels: [_salary]);
         await AddCash(_other, 0, _jan1.AddDays(1), 9999, labels: [_salary]);
         var ct = TestContext.Current.CancellationToken;
 
@@ -186,7 +183,6 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
         await AddCash(_owner, 2, _jan1.AddDays(1), 500, description: "Salary");
         await AddCash(_owner, 0, _jan1.AddDays(2), 0, description: "Zero");
         await AddCash(_owner, 0, _jan1.AddDays(3), -1, description: "On the end");
-        await AddCash(_owner, null, _jan1.AddDays(1), -9, description: "No currency");
         await AddCash(_other, 0, _jan1.AddDays(1), -9999, description: "Someone else");
 
         var candidates = await _cash.GetRecurringCandidates(_owner, _jan1, _jan1.AddDays(3), TestContext.Current.CancellationToken);

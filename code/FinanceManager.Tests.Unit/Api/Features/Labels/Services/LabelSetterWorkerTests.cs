@@ -86,7 +86,7 @@ public sealed class LabelSetterWorkerTests
         {
             var label = new FinancialLabel { Name = "Food" };
             seed.FinancialLabels.Add(label);
-            CurrencyAccountEntry Entry(int? userId, int? accountId, string description, string? contractor = null, params FinancialLabel[] labels) =>
+            CurrencyAccountEntry Entry(int userId, int? accountId, string description, string? contractor = null, params FinancialLabel[] labels) =>
                 new(accountId, 0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 0, -1m) { UserId = userId, CurrencyId = 1, Description = description, ContractorDetails = contractor, Labels = labels };
             seed.CurrencyEntries.AddRange(
                 Entry(5, null, "unlinked"),
@@ -97,7 +97,7 @@ public sealed class LabelSetterWorkerTests
                 Entry(6, null, "other user"),
                 Entry(demoUserId, null, "demo user"),
                 Entry(-3, null, "guest sandbox"),
-                Entry(null, null, "orphan"));
+                Entry(0, null, "orphan"));
             await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 

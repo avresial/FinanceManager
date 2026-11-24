@@ -34,56 +34,69 @@ Use that runbook for:
 
 The expand migration adds nullable ownership columns for cash and bonds and a nullable cash currency. Its two backfill statements copy keys only from accounts of the matching kind with a nonzero owner. Existing trades and dividends retain their stored owners. Account-based reads continue during rollout.
 
-Dev CI applies migrations before replacing the API. During that interval an old writer can leave cash or bond keys empty, and an old investment-account delete can fail if dividends still reference it. Retry a failed delete after deployment. Before enabling owner reads and again during the #1138 maintenance window, rerun the two provider-specific UPDATE statements from [ExpandTransactionOwnerKeys](../../../code/FinanceManager.Api/Migrations/20261122201026_ExpandTransactionOwnerKeys.cs) and run the inventory below. During cutover, take a backup and stop writers first. The updates can be repeated. Resolve discrepancies before exposing the affected rows or enforcing ownership. Confirm a normal cash and bond write persists the expected keys.
+During earlier dev deployments, account writers could leave cash or bond keys empty between migration and API replacement. The cutover migration catches up those rows during the maintenance window below.
 
 Reverse the expand migration only while every ledger row still has an account link. The migration checks all four tables before restoring the required columns and cascading dividend foreign key. Use the backup recovery procedure after account-free writes begin.
 
-### Data-quality inventory
+### Cutover inventory and maintenance window (#1138)
 
-Run the following read-only batch on the expanded database before enabling owner reads, after an expand deployment, and again before the #1138 cutover. Use a consistent snapshot, or drain writers for the final inventory. SQL Server sessions need `SET QUOTED_IDENTIFIER ON;` and the usual default schema; PostgreSQL uses the ordinary search path. The first result set includes every anomalous row once and preserves the IDs needed for adjudication.
+The deployment jobs for `main` (production) and `develop` (dev) apply pending EF migrations **before** deploying the published API. Stop all writers for this promotion. The catch-up in `EnforceTransactionOwnerKeys` fills only missing keys from a linked account of the correct kind with a nonzero owner. It preserves already stamped keys for comparison. [CI workflow](../../../.github/workflows/ci.yml) · [Cutover migration](../../../code/FinanceManager.Api/Migrations/20261124013806_EnforceTransactionOwnerKeys.cs)
 
-~~~sql
-WITH entries AS (
-    SELECT 'cash' AS kind, 0 AS account_type, "EntryId" AS entry_id,
-           "AccountId" AS account_id, "UserId" AS owner_id, "CurrencyId" AS currency_id
-    FROM "CurrencyEntries"
-    UNION ALL
-    SELECT 'bond', 2, "EntryId", "AccountId", "UserId", NULL FROM "BondEntries"
-    UNION ALL
-    SELECT 'trade', 1, "Id", "AccountId", "UserId", NULL FROM "InvestmentTransactions"
-    UNION ALL
-    SELECT 'dividend', 1, "Id", "AccountId", "UserId", NULL FROM "DividendPayments"
+**Inventory.** Check the last applied migration in `__EFMigrationsHistory` first. On the expanded schema, run the following read-only queries on a consistent snapshot. SQL Server sessions need `SET QUOTED_IDENTIFIER ON;`. The first query projects the same catch-up the migration will perform. It returns the affected ledger IDs and separate flags so an operator can identify each discrepancy. Positive and negative owners are both valid. Rows with complete owner keys and a null account link are expected.
+
+```sql
+WITH entries(kind, account_type, entry_id, account_id, stored_owner, stored_currency) AS (
+    SELECT 'cash', 0, "EntryId", "AccountId", CAST("UserId" AS bigint), "CurrencyId" FROM "CurrencyEntries"
+    UNION ALL SELECT 'bond', 2, "EntryId", "AccountId", CAST("UserId" AS bigint), NULL FROM "BondEntries"
+    UNION ALL SELECT 'trade', 1, "Id", "AccountId", CAST("UserId" AS bigint), NULL FROM "InvestmentTransactions"
+    UNION ALL SELECT 'dividend', 1, "Id", "AccountId", CAST("UserId" AS bigint), NULL FROM "DividendPayments"
+), projected AS (
+    SELECT e.*, a."AccountId" AS linked_id, a."AccountType" AS linked_type,
+           a."UserId" AS linked_owner, a."CurrencyId" AS linked_currency,
+           COALESCE(stored_owner, CASE WHEN kind IN ('cash','bond') AND a."AccountType" = account_type
+                                               AND a."UserId" <> 0 THEN a."UserId" END) AS owner_id,
+           COALESCE(stored_currency, CASE WHEN kind = 'cash' AND a."AccountType" = 0
+                                               AND a."UserId" <> 0 THEN a."CurrencyId" END) AS currency_id
+    FROM entries e LEFT JOIN "Accounts" a ON a."AccountId" = e.account_id
+), inventory AS (
+    SELECT p.*, c."ShortName" AS currency_code,
+           CASE WHEN owner_id IS NULL OR owner_id = 0 OR (kind = 'cash' AND currency_id IS NULL)
+                THEN 1 ELSE 0 END AS null_or_zero_keys,
+           CASE WHEN kind = 'cash' AND currency_id IS NOT NULL AND
+                (c."Id" IS NULL OR (currency_id = 0 AND UPPER(c."ShortName") <> 'PLN'))
+                THEN 1 ELSE 0 END AS invalid_cash_currency,
+           CASE WHEN linked_id IS NOT NULL AND
+                (linked_type <> account_type OR linked_owner = 0 OR linked_owner <> owner_id
+                 OR (kind = 'cash' AND linked_currency <> currency_id))
+                THEN 1 ELSE 0 END AS account_mismatch,
+           CASE WHEN account_id IS NOT NULL AND linked_id IS NULL THEN 1 ELSE 0 END AS orphan_account_link,
+           CASE WHEN owner_id <> 0 AND u."Id" IS NULL THEN 1 ELSE 0 END AS missing_user
+    FROM projected p
+    LEFT JOIN "Currencies" c ON c."Id" = p.currency_id
+    LEFT JOIN "Users" u ON u."Id" = p.owner_id
 )
-SELECT e.*, a."AccountType" AS actual_account_type, a."UserId" AS account_owner_id,
-       a."CurrencyId" AS account_currency_id, c."ShortName" AS currency_code,
-       CASE WHEN e.account_id IS NULL THEN 1 ELSE 0 END AS unlinked,
-       CASE WHEN e.account_id IS NOT NULL AND a."AccountId" IS NULL THEN 1 ELSE 0 END AS missing_account,
-       CASE WHEN e.owner_id > 0 AND u."Id" IS NULL THEN 1 ELSE 0 END AS missing_user
-FROM entries AS e
-LEFT JOIN "Accounts" AS a ON a."AccountId" = e.account_id
-LEFT JOIN "Currencies" AS c ON c."Id" = e.currency_id
-LEFT JOIN "Users" AS u ON u."Id" = e.owner_id
-WHERE a."AccountId" IS NULL OR a."AccountType" <> e.account_type
-   OR a."UserId" = 0 OR e.owner_id IS NULL OR e.owner_id = 0 OR e.owner_id <> a."UserId"
-   OR (e.owner_id > 0 AND u."Id" IS NULL)
-   OR (e.kind = 'cash' AND (c."Id" IS NULL OR e.currency_id <> a."CurrencyId"
-                           OR (e.currency_id = 0 AND UPPER(c."ShortName") <> 'PLN')))
-ORDER BY e.kind, e.entry_id;
+SELECT * FROM inventory WHERE null_or_zero_keys + invalid_cash_currency + account_mismatch
+                            + orphan_account_link + missing_user <> 0
+ORDER BY kind, entry_id;
 
-SELECT "Id", "ShortName", "Symbol"
-FROM "Currencies"
-WHERE "Id" = 0 OR UPPER("ShortName") = 'PLN'
-ORDER BY "Id";
+SELECT "Id", "AccountId" FROM "FinancialAlerts" WHERE "AccountId" IS NOT NULL;
+SELECT "Id", "ShortName" FROM "Currencies" WHERE "Id" = 0 OR UPPER("ShortName") = 'PLN';
+```
 
-SELECT COUNT(*) AS legacy_cash_entries_on_id_zero
-FROM "CurrencyEntries" AS e
-JOIN "Accounts" AS a ON a."AccountId" = e."AccountId"
-WHERE a."AccountType" = 0 AND a."CurrencyId" = 0;
-~~~
+- **Blocking after catch-up:** missing or zero owner or missing cash currency (`null_or_zero_keys`), a cash currency absent from the catalog or referenced ID 0 mapped to a code other than PLN (`invalid_cash_currency`), a link to an existing account with a different kind, owner or cash currency (`account_mismatch`), and an alert with a remaining account scope (`legacy_alert_scope`). Correct the source of the discrepancy and verify the intended owner and currency before editing financial data. An empty database does not need a default-currency row. Historical insight links are allowed.
+- **Report only:** a dangling account link with valid owner keys (`orphan_account_link`) and a nonzero owner absent from the user table (`missing_user`). Keep the IDs for reconciliation. Either row can still have a separate blocking flag.
+- **Before the expand migration:** use `CAST(NULL AS bigint)` for the cash and bond owner expressions and `CAST(NULL AS int)` for the cash currency expression in the first CTE. The projected keys then come from the historical accounts. Step 2 removes linked trades and dividends whose accounts are missing or have the wrong kind. Review those rows and retain the backup before promotion. Alert links are expected before `MigrateAlertsToCurrencyScope` clears them. To see the precise post-migration inventory before production, rehearse the promotion on a restored copy.
 
-- For a pre-expand run of the first result set, replace the cash and bond `"UserId"` references in the CTE with a correlated lookup of `Accounts.UserId` by the existing `AccountId`, and replace the cash `"CurrencyId"` reference with the same lookup of `Accounts.CurrencyId`. Use that form only to inventory historical relationships. It cannot detect missing expanded values. The other two statements work on either schema.
-- If legacy cash references ID 0, require exactly the row `(0, PLN)` and no conflicting PLN row. An empty schema may have no currencies before lazy defaults are created. Where referenced ID 0 and PLN are both absent, repair using the existing default-currency path before enabling owner reads. An occupied ID 0 or PLN at another ID requires explicit reconciliation. Do not substitute a different currency.
-- Step 2 deletes trades and dividends with a non-null account link that is missing or belongs to a non-stock account. It preserves null links and leaves owner mismatches for adjudication. Run the inventory and retain a backup before deployment. Rolling the indexes back cannot restore deleted rows. Investment-account deletion now removes its linked trades and dividends together.
+**Operator sequence**
+
+1. Record the deployed build and migration history, run the inventory, and review the planned promotion. Confirm that outstanding cash imports have completed and that all app instances, workers, and other database writers can be stopped.
+2. Stop the target Azure Web App (`FinanceManagerApi` or `FinanceManagerApi-dev`), drain all writers, and confirm the database is quiescent.
+3. Take a manual logical backup, verify managed recovery availability, and record the restore point. Repeat the inventory against the stopped database. [Database recovery runbook](database-recovery.md)
+4. Merge the promotion PR, or approve the protected deployment environment if the job is already waiting there. Keep the old build stopped while CI runs `dotnet ef database update` and deploys the matching artifact.
+5. Confirm both CI steps succeeded and verify the applied migration history. Start the deployed build. Outside Development the API refuses to start with pending migrations.
+6. Check `/alive`, `/health`, sign-in, Dashboard, Assets, Transactions, rules and alerts. Open a historical account bookmark and confirm it reaches Transactions. With a test owner, create, edit and delete a transaction. Verify the new row's owner and null account link before deletion, and verify the chosen currency for cash. Confirm the legacy account-create request cannot mutate accounts. Repeat the inventory, check for null cash/bond owners and null cash currencies directly, and review application and migration logs before releasing traffic.
+
+**Recovery.** EF commits each migration separately. A failure of a step-12 check rolls back that migration's catch-up and DDL. Earlier migrations in the promotion can already be committed while the pre-epic API is still installed. Keep the app stopped, inspect `__EFMigrationsHistory` and the four counts, then either repair the data and rerun the failed deploy job or restore the verified pre-window backup and matching application build. If migration succeeded but artifact deployment failed, retry the matching artifact deployment with writers still stopped. The step-12 `Down` only restores nullable columns; it cannot undo earlier data migrations, recover previous stamps, or rebuild account links for new owner-only transactions. After accepting new traffic, reconcile post-backup writes before a restore.
 
 ## Transaction rule account conditions
 

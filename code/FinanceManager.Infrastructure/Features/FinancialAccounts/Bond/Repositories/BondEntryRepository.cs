@@ -34,7 +34,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Bond, entryList.Select(e => e.AccountId), cancellationToken);
         if (accounts is null) return false;
         // An unlinked entry is owned by the server-stamped owner it carries.
-        if (entryList.Any(e => e.AccountId is null && (e.UserId is not int owner || owner == 0))) return false;
+        if (entryList.Any(e => e.AccountId is null && e.UserId == 0)) return false;
 
         var existingLabelIds = entryList.SelectMany(e => e.Labels).Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
         var trackedById = existingLabelIds.Count == 0
@@ -286,8 +286,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         // The entry carries its owner, so linked and unlinked rows are each counted exactly once.
         var rows = await context.BondEntries.AsNoTracking()
-            .Where(entry => entry.UserId != null && userIds.Contains(entry.UserId.Value))
-            .GroupBy(entry => entry.UserId!.Value)
+            .Where(entry => userIds.Contains(entry.UserId))
+            .GroupBy(entry => entry.UserId)
             .Select(grouped => new { UserId = grouped.Key, Count = grouped.Count() })
             .ToListAsync(cancellationToken);
         return rows.ToDictionary(x => x.UserId, x => x.Count);

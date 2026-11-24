@@ -32,7 +32,7 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     [JsonIgnore]
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     [JsonPropertyOrder(2)]
     public int? AccountId { get; set; } = accountId;

@@ -30,10 +30,10 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     [JsonIgnore]
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     [JsonIgnore]
-    public int? CurrencyId { get; set; }
+    public int CurrencyId { get; set; }
 
     [JsonPropertyOrder(2)]
     public int? AccountId { get; set; } = accountId;

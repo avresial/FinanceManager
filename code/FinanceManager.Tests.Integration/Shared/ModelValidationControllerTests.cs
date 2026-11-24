@@ -1,8 +1,9 @@
 using FinanceManager.Application.Commands.Login;
+using FinanceManager.Contracts.Transactions.Bonds;
+using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Domain.Administration;
 using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Commands;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
@@ -31,10 +32,10 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
         { "api/User/UpdatePricingPlan", HttpMethod.Put, new UpdatePricingPlan(0, PricingLevel.Basic), UserRole.Admin },
         { "api/PasswordReset/forgot-password", HttpMethod.Post, new ForgotPasswordRequest("not-an-email"), null },
         { "api/PasswordReset/reset-password", HttpMethod.Post, new ResetPasswordRequest("token", "short"), null },
-        { "api/CurrencyEntry", HttpMethod.Post, new AddCurrencyAccountEntry(0, 0, new DateTime(1899, 12, 31), 0, -10, "", null), UserRole.User },
-        { "api/CurrencyEntry", HttpMethod.Put, new UpdateCurrencyAccountEntry(1, 0, DateTime.UtcNow.AddYears(2), 0, -10, "", null, [new UpdateFinancialLabel(0, "")]), UserRole.User },
-        { "api/BondEntry", HttpMethod.Post, new AddBondAccountEntry(0, 0, new DateTime(1899, 12, 31), 0, -10, 0), UserRole.User },
-        { "api/BondEntry", HttpMethod.Put, new UpdateBondAccountEntry(0, 0, DateTime.UtcNow.AddYears(2), 0, -10, 0), UserRole.User },
+        { "api/transactions/cash", HttpMethod.Post, new CreateCashEntryRequest(0, new DateTime(1899, 12, 31), -10, "", null), UserRole.User },
+        { "api/transactions/cash/1", HttpMethod.Put, new UpdateCashEntryRequest(DateTime.UtcNow.AddYears(2), -10, "", null, [0]), UserRole.User },
+        { "api/transactions/bonds", HttpMethod.Post, new SaveBondEntryRequest(0, new DateTime(1899, 12, 31), -10, null), UserRole.User },
+        { "api/transactions/bonds/1", HttpMethod.Put, new SaveBondEntryRequest(0, DateTime.UtcNow.AddYears(2), -10, null), UserRole.User },
         { "api/FinancialLabel/add", HttpMethod.Post, new AddFinancialLabel(""), null },
         { "api/FinancialLabel/add-classification", HttpMethod.Post, new AddFinancialLabelClassification(0, "", ""), null },
         { "api/BondDetails", HttpMethod.Put, new UpdateBondDetails(0, "", "", -1), UserRole.Admin },
@@ -43,8 +44,8 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
         { "api/admin/ai-providers/OpenRouter/models/1", HttpMethod.Put, new UpdateModelRequest("", true), UserRole.Admin },
         { "api/admin/ai-providers/fallback", HttpMethod.Put, new UpdateFallbackRequest([]), UserRole.Admin },
         { "api/admin/service-keys/AlphaVantage", HttpMethod.Put, new UpdateServiceKeyRequest("not-a-url", null, true), UserRole.Admin },
-        { "api/CurrencyAccountImport/ImportCurrencyEntries", HttpMethod.Post, new CurrencyDataImportDto(0, [new CurrencyEntryImportRecordDto(DateTime.UtcNow.AddYears(2), 1)]), UserRole.User },
-        { "api/BondAccountImport/ImportBondEntries", HttpMethod.Post, new BondDataImportDto(0, [new BondEntryImportRecordDto(DateTime.UtcNow, 1, 0)]), UserRole.User },
+        { "api/transactions/cash/import?currencyId=0", HttpMethod.Post, new[] { new CurrencyEntryImportRecordDto(DateTime.UtcNow.AddYears(2), 1) }, UserRole.User },
+        { "api/transactions/bonds/import", HttpMethod.Post, new[] { new BondEntryImportRecordDto(DateTime.UtcNow, 1, 0) }, UserRole.User },
         { "api/CurrencyAccountImport/ResolveAsyncImportConflicts", HttpMethod.Post, new CurrencyImportResolveConflictsRequestDto { JobId = Guid.NewGuid(), Decisions = [new CurrencyImportConflictResolutionDecisionDto("", true, true)] }, UserRole.User },
         { "api/CsvHeaderMapping/SaveMappings", HttpMethod.Post, new SaveMappingRequestDto([new HeaderMappingRequestItemDto("", "")]), UserRole.User },
     };

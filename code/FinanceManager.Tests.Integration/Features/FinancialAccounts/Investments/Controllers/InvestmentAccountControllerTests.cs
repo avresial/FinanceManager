@@ -92,64 +92,6 @@ public class InvestmentAccountControllerTests(OptionsProvider optionsProvider) :
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Add_CreatesNewAccount()
-    {
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentAccountHttpClient(Client);
-        var newAccountCmd = new AddAccount("New Investment Account");
-
-        var newAccountId = await client.AddAccountAsync(newAccountCmd);
-
-        Assert.NotNull(newAccountId);
-        Assert.True(newAccountId > 0);
-
-        Assert.NotNull(_testDatabase);
-        var accountInDb = await _testDatabase!.Context.Accounts
-            .FirstOrDefaultAsync(a => a.AccountId == newAccountId!.Value, TestContext.Current.CancellationToken);
-        Assert.NotNull(accountInDb);
-        Assert.Equal("New Investment Account", accountInDb!.Name);
-        Assert.Equal(_testUserId, accountInDb.UserId);
-        Assert.Equal(AccountType.Stock, accountInDb.AccountType);
-    }
-
-    [Fact]
-    public async Task Update_ModifiesAccountName()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentAccountHttpClient(Client);
-        var updatedName = "Updated Investment Account Name";
-        var updateCmd = new UpdateAccount(_testAccountId, updatedName, AccountLabel.Stock);
-
-        var result = await client.UpdateAccountAsync(updateCmd);
-
-        Assert.True(result);
-
-        Assert.NotNull(_testDatabase);
-        var accountInDb = await _testDatabase!.Context.Accounts
-            .FirstOrDefaultAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken);
-        Assert.NotNull(accountInDb);
-        Assert.Equal(updatedName, accountInDb!.Name);
-    }
-
-    [Fact]
-    public async Task Delete_RemovesAccount()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentAccountHttpClient(Client);
-
-        var result = await client.DeleteAccountAsync(_testAccountId);
-
-        Assert.True(result);
-
-        Assert.NotNull(_testDatabase);
-        var accountInDb = await _testDatabase!.Context.Accounts
-            .FirstOrDefaultAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken);
-        Assert.Null(accountInDb);
-    }
-
     public override void Dispose()
     {
         base.Dispose();

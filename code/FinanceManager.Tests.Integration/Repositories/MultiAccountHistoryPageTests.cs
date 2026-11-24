@@ -123,14 +123,13 @@ public class MultiAccountHistoryPageTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Cash_SkipsEntriesWithoutOwnerOrCurrency_AndKeepsUnknownCurrenciesVisible(bool sqlite)
+    public async Task Cash_SkipsOtherOwners_AndKeepsUnknownCurrenciesVisible(bool sqlite)
     {
         await using var context = CreateContext(sqlite);
         context.Currencies.Add(DefaultCurrency.PLN);
         context.CurrencyEntries.AddRange(
             new CurrencyAccountEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 0 },
-            new CurrencyAccountEntry(1, 2, _start, 100m, 1m) { UserId = null, CurrencyId = 0 },
-            new CurrencyAccountEntry(1, 3, _start, 100m, 1m) { UserId = -1, CurrencyId = null },
+            new CurrencyAccountEntry(1, 2, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 },
             new CurrencyAccountEntry(1, 4, _start, 100m, 1m) { UserId = -1, CurrencyId = 999 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
@@ -148,13 +147,13 @@ public class MultiAccountHistoryPageTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Bonds_SkipEntriesWithoutOwner_AndKeepMissingBondDefinitionsVisible(bool sqlite)
+    public async Task Bonds_SkipOtherOwners_AndKeepMissingBondDefinitionsVisible(bool sqlite)
     {
         await using var context = CreateContext(sqlite);
         context.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(_start), DateOnly.FromDateTime(_end), []) { Id = 7 });
         context.BondEntries.AddRange(
             new BondAccountEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 },
-            new BondAccountEntry(1, 2, _start, 100m, 1m, 7) { UserId = null },
+            new BondAccountEntry(1, 2, _start, 100m, 1m, 7) { UserId = 2 },
             new BondAccountEntry(1, 3, _start, 100m, 1m, 999) { UserId = -1 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
@@ -288,8 +287,7 @@ public class MultiAccountHistoryPageTests
         context.CurrencyEntries.AddRange(
             new CurrencyAccountEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
             new CurrencyAccountEntry(1, 2, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
-            new CurrencyAccountEntry(1, 3, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 },
-            new CurrencyAccountEntry(1, 4, _start, 100m, 1m) { UserId = -1, CurrencyId = null });
+            new CurrencyAccountEntry(1, 3, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 });
         context.BondEntries.AddRange(new BondAccountEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 }, new BondAccountEntry(1, 2, _start, 100m, 1m, 7) { UserId = 2 });
         context.InvestmentTransactions.AddRange(Trade(1, 1, DateOnly.FromDateTime(_start)), Trade(2, 3, DateOnly.FromDateTime(_start)));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);

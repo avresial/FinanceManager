@@ -20,12 +20,12 @@ public class RequestSizeLimitTests(OptionsProvider optionsProvider) : Controller
     public async Task ImportEndpoint_WithOversizedPayload_ReturnsRequestEntityTooLarge()
     {
         Authorize("user", 1, UserRole.User);
-        const long contentLength = 100L * 1024 * 1024;
+        const long contentLength = 31L * 1024 * 1024;
         using var content = new StreamContent(new RepeatingByteStream(contentLength));
         content.Headers.ContentLength = contentLength;
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-        var response = await Client.PostAsync("api/BondAccountImport/ImportBondEntries", content, TestContext.Current.CancellationToken);
+        var response = await Client.PostAsync("api/transactions/bonds/import", content, TestContext.Current.CancellationToken);
 
         Assert.Equal((HttpStatusCode)413, response.StatusCode);
     }

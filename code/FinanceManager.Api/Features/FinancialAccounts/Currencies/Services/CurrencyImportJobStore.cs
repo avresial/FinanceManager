@@ -1,4 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using System.Collections.Concurrent;
@@ -14,31 +15,25 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
     private readonly object _cleanupGate = new();
     private DateTime _lastCleanupUtc = DateTime.MinValue;
 
-    public Guid CreateJob(int userId, int accountId, int totalEntries) =>
-        CreateJob(userId, new CurrencyImportJobScope(accountId, null), totalEntries);
-
-    public Guid CreateOwnerJob(int userId, int currencyId, int totalEntries) =>
-        CreateJob(userId, new CurrencyImportJobScope(null, currencyId), totalEntries);
-
-    private Guid CreateJob(int userId, CurrencyImportJobScope scope, int totalEntries)
+    public Guid CreateOwnerJob(int userId, int currencyId, int totalEntries)
     {
         CleanupExpiredCompletedJobs();
 
         var jobId = Guid.NewGuid();
-        var state = new CurrencyImportJobState(jobId, userId, scope, totalEntries);
+        var state = new CurrencyImportJobState(jobId, userId, currencyId, totalEntries);
         _jobs[jobId] = state;
         return jobId;
     }
 
-    public bool TryGetScope(Guid jobId, int userId, out CurrencyImportJobScope? scope)
+    public bool TryGetCurrencyId(Guid jobId, int userId, out int currencyId)
     {
         CleanupExpiredCompletedJobs();
 
-        scope = null;
+        currencyId = default;
         if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
             return false;
 
-        scope = state.Scope;
+        currencyId = state.CurrencyId;
         return true;
     }
 
@@ -169,11 +164,11 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
     public bool CanAccessJob(Guid jobId, int userId) =>
         CanAccessJobInternal(jobId, userId);
 
-    public bool TryResolveConflict(Guid jobId, int userId, CurrencyImportConflictResolutionDecisionDto decision, out ResolvedImportConflict? resolvedConflict)
+    public bool TryResolveConflict(Guid jobId, int userId, CurrencyImportConflictResolutionDecisionDto decision, out CurrencyEntryImport? addition)
     {
         CleanupExpiredCompletedJobs();
 
-        resolvedConflict = null;
+        addition = null;
 
         if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
             return false;
@@ -188,37 +183,8 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
             if (current.IsResolved)
                 return true;
 
-            var conflict = current.Conflict;
-            // An owner conflict carries no account; the legacy command still needs the job's own account.
-            var conflictAccountId = conflict.AccountId ?? state.Scope.AccountId ?? 0;
-            if (decision.PickImported)
-            {
-                if (conflict.ImportEntry is null && conflict.ExistingEntry is null)
-                    return false;
-
-                resolvedConflict = new ResolvedImportConflict(
-                    conflictAccountId,
-                    conflict.ImportEntry is not null,
-                    conflict.ImportEntry,
-                    false,
-                    conflict.ExistingEntry?.EntryId);
-            }
-            else if (decision.PickExisting)
-            {
-                if (conflict.ImportEntry is null && conflict.ExistingEntry is null)
-                    return false;
-
-                resolvedConflict = new ResolvedImportConflict(
-                    conflictAccountId,
-                    false,
-                    conflict.ImportEntry,
-                    true,
-                    conflict.ExistingEntry?.EntryId);
-            }
-            else
-            {
-                return false;
-            }
+            if (decision.PickImported == decision.PickExisting) return false;
+            addition = decision.PickImported ? current.Conflict.ImportEntry : null;
 
             state.Conflicts[index] = current with { IsResolved = true };
             state.LastUpdatedUtc = DateTime.UtcNow;
@@ -294,11 +260,11 @@ public sealed class CurrencyImportJobStore : ICurrencyImportJobStore
 
     private static bool IsActionableUnresolved(ImportJobConflict conflict) => IsActionable(conflict) && !conflict.IsResolved;
 
-    private sealed class CurrencyImportJobState(Guid jobId, int userId, CurrencyImportJobScope scope, int totalEntries)
+    private sealed class CurrencyImportJobState(Guid jobId, int userId, int currencyId, int totalEntries)
     {
         public Guid JobId { get; } = jobId;
         public int UserId { get; } = userId;
-        public CurrencyImportJobScope Scope { get; } = scope;
+        public int CurrencyId { get; } = currencyId;
         public int TotalEntries { get; } = totalEntries;
 
         public object Gate { get; } = new();

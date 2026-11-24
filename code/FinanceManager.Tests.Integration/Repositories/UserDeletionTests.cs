@@ -82,11 +82,10 @@ public sealed class UserDeletionTests : IDisposable
         context.CurrencyEntries.AddRange(
             new CurrencyAccountEntry(accountId, 0, _jan1, 0, 10m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
             new CurrencyAccountEntry(null, 0, _jan1, 0, 20m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
-            // A legacy row that never got its owner stamped: only the legacy account links it to the user.
-            new CurrencyAccountEntry(accountId, 0, _jan1, 0, 30m) { UserId = null, CurrencyId = null });
+            new CurrencyAccountEntry(accountId, 0, _jan1, 0, 30m) { UserId = userId, CurrencyId = 0 });
         context.BondEntries.AddRange(
             new BondAccountEntry(null, 0, _jan1, 0, 1m, 5) { UserId = userId, Labels = [bondLabel] },
-            new BondAccountEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = null, Labels = [legacyBondLabel] });
+            new BondAccountEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = userId, Labels = [legacyBondLabel] });
         context.Assets.Add(new Asset { Id = entryBase, Name = $"Equity {userId}", Type = AssetType.Stock });
         context.AssetListings.Add(new AssetListing { Id = entryBase, AssetId = entryBase, Ticker = $"T{userId}", ExchangeMic = "XNAS", ExchangeName = "N", TradingCurrency = "USD", PriceMultiplier = 1m, IsActive = true });
         await context.SaveChangesAsync(ct);
@@ -114,7 +113,7 @@ public sealed class UserDeletionTests : IDisposable
         var shared = new FinancialLabel { Name = "Shared" };
         var targetBondLabel = new FinancialLabel { Name = "Target bond label" };
         var otherBondLabel = new FinancialLabel { Name = "Other bond label" };
-        // A bond label belongs to one entry, so the legacy (unowned, account-linked) bond entries carry their own labels.
+        // A bond label belongs to one entry, so the legacy account-linked bond entries carry their own labels.
         var targetLegacyBondLabel = new FinancialLabel { Name = "Target legacy bond label" };
         var otherLegacyBondLabel = new FinancialLabel { Name = "Other legacy bond label" };
         context.FinancialLabels.AddRange(shared, targetBondLabel, otherBondLabel, targetLegacyBondLabel, otherLegacyBondLabel);

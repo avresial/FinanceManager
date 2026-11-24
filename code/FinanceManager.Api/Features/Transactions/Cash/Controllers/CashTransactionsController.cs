@@ -166,7 +166,7 @@ public class CashTransactionsController(
         if (await currencyRepository.GetCurrency(currencyId, cancellationToken) is null) return BadRequest("Unknown currency.");
 
         var jobId = jobStore.CreateOwnerJob(ownerId, currencyId, entries.Count);
-        await jobChannel.QueueJob(new CurrencyImportJobRequest(jobId, ownerId, null, entries, guestSessionAccessor.GuestUserId, currencyId), cancellationToken);
+        await jobChannel.QueueJob(new CurrencyImportJobRequest(jobId, ownerId, currencyId, entries, guestSessionAccessor.GuestUserId), cancellationToken);
 
         return Accepted(new CurrencyImportJobStartResponseDto(jobId));
     }
@@ -207,7 +207,7 @@ public class CashTransactionsController(
         var saved = await entryRepository.GetByOwner(ownerId, entryId, cancellationToken);
         if (saved is null) return NotFound();
 
-        currencyCode ??= saved.CurrencyId is int currencyId ? (await currencyRepository.GetCurrency(currencyId, cancellationToken))?.ShortName : null;
+        currencyCode ??= (await currencyRepository.GetCurrency(saved.CurrencyId, cancellationToken))?.ShortName;
         return Ok(saved.ToLogItemDto(currencyCode));
     }
 }

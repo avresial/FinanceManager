@@ -288,8 +288,8 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
     private static CurrencyAccountEntry NewEntry(int userId, int? accountId, int? currencyId, CurrencyEntryImport import) =>
         new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), accountId is null ? 0 : import.ValueChange, import.ValueChange)
         {
-            UserId = accountId is null ? userId : null,
-            CurrencyId = accountId is null ? currencyId : null,
+            UserId = userId,
+            CurrencyId = currencyId.GetValueOrDefault(),
             Description = import.Description ?? string.Empty,
             ContractorDetails = import.ContractorDetails,
             Labels = []

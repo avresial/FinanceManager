@@ -39,11 +39,11 @@ internal sealed class OwnerKeyStampingInterceptor : SaveChangesInterceptor
         {
             switch (entry.Entity)
             {
-                case CurrencyAccountEntry { AccountId: int accountId, UserId: null } cash when FindAccount(context, accountId) is FinancialAccountBaseDto account:
+                case CurrencyAccountEntry { AccountId: int accountId, UserId: 0 } cash when FindAccount(context, accountId) is FinancialAccountBaseDto account:
                     cash.UserId = account.UserId;
-                    cash.CurrencyId ??= account.CurrencyId;
+                    cash.CurrencyId = account.CurrencyId;
                     break;
-                case BondAccountEntry { AccountId: int accountId, UserId: null } bond when FindAccount(context, accountId) is FinancialAccountBaseDto account:
+                case BondAccountEntry { AccountId: int accountId, UserId: 0 } bond when FindAccount(context, accountId) is FinancialAccountBaseDto account:
                     bond.UserId = account.UserId;
                     break;
                 case InvestmentTransaction { AccountId: int accountId, UserId: 0 } trade when FindAccount(context, accountId) is FinancialAccountBaseDto account:

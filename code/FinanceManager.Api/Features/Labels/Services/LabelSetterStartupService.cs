@@ -31,13 +31,13 @@ internal sealed class LabelSetterStartupService(
                 // Owned entries without a label, linked to an account or not. Ephemeral guest sandboxes (negative ids)
                 // and the configured demo user never go through the shared AI labeling queue.
                 var unlabeledEntries = await dbContext.CurrencyEntries.AsNoTracking()
-                    .Where(entry => entry.UserId != null && entry.UserId > 0
+                    .Where(entry => entry.UserId > 0
                         && (excludedUserId == null || entry.UserId != excludedUserId)
                         && !entry.Labels.Any()
                         && (entry.Description != ""
                             || (entry.ContractorDetails != null && entry.ContractorDetails != "")))
                     .OrderBy(entry => entry.UserId).ThenBy(entry => entry.EntryId)
-                    .Select(entry => new { UserId = entry.UserId!.Value, entry.EntryId })
+                    .Select(entry => new { UserId = entry.UserId, entry.EntryId })
                     .ToListAsync(cancellationToken);
 
                 if (unlabeledEntries.Count == 0)

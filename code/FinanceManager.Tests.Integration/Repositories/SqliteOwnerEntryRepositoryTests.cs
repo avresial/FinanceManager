@@ -72,18 +72,17 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
 
         var rows = await _context.CurrencyEntries.AsNoTracking().OrderBy(e => e.EntryId).ToListAsync(ct);
         Assert.Equal([10m, 0m, 15m, 0m], rows.Select(e => e.Value));
-        Assert.Equal([_owner, _owner, _owner, _guest], rows.Select(e => e.UserId!.Value));
+        Assert.Equal([_owner, _owner, _owner, _guest], rows.Select(e => e.UserId));
         Assert.Equal([_cashAccount, (int?)null, _cashAccount, (int?)null], rows.Select(e => e.AccountId));
         Assert.All(rows, e => Assert.NotEqual(0, e.EntryId));
     }
 
     [Fact]
-    public async Task Cash_UnlinkedRowNeedsAStampedOwnerAndCurrency()
+    public async Task Cash_UnlinkedRowRejectsZeroOwner()
     {
         var ct = TestContext.Current.CancellationToken;
 
         Assert.False(await _cash.Add([Cash(null, _jan1, 1, owner: 0)], recalculate: true, ct));
-        Assert.False(await _cash.Add([new CurrencyAccountEntry(null, 0, _jan1, 0, 1) { UserId = _owner }], recalculate: true, ct));
         Assert.Empty(_context.CurrencyEntries);
     }
 
@@ -129,7 +128,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         // The unlinked row keeps its zero value and is edited or deleted without any account to repair.
         Assert.True(await _cash.UpdateByOwner(_owner, new CurrencyAccountEntry(null, ids[3], _jan1.AddDays(3), 0, 50) { Description = "free" }, ct));
         var free = await _context.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == ids[3], ct);
-        Assert.Equal((50m, 0m, (int?)null, _owner), (free.ValueChange, free.Value, free.AccountId, free.UserId!.Value));
+        Assert.Equal((50m, 0m, (int?)null, _owner), (free.ValueChange, free.Value, free.AccountId, free.UserId));
         Assert.True(await _cash.DeleteByOwner(_owner, ids[3], ct));
         Assert.Equal([20m, 22m], await CashValues(_cashAccount));
     }
@@ -144,7 +143,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         Assert.True(await _cash.UpdateByOwner(_owner, new CurrencyAccountEntry(_cashAccount, id, _jan1, 99, 2) { UserId = _other, CurrencyId = 0, Description = "x" }, ct));
 
         var stored = await _context.CurrencyEntries.AsNoTracking().SingleAsync(ct);
-        Assert.Equal((_owner, 1, (int?)null, 0m, 2m), (stored.UserId!.Value, stored.CurrencyId!.Value, stored.AccountId, stored.Value, stored.ValueChange));
+        Assert.Equal((_owner, 1, (int?)null, 0m, 2m), (stored.UserId, stored.CurrencyId, stored.AccountId, stored.Value, stored.ValueChange));
     }
 
     [Fact]

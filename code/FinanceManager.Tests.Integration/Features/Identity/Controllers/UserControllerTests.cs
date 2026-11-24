@@ -317,7 +317,7 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
 
         // assert
         Assert.False(await context.Users.AnyAsync(x => x.Id == _testUserId, TestContext.Current.CancellationToken));
-        Assert.Equal([_testUserId + 1], await context.CurrencyEntries.Select(x => x.UserId!.Value).ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal([_testUserId + 1], await context.CurrencyEntries.Select(x => x.UserId).ToListAsync(TestContext.Current.CancellationToken));
     }
 
     public override void Dispose()

@@ -135,7 +135,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
     private IQueryable<CurrencyAccountEntry> GetUserEntries(int userId, DateTime endDate) =>
         context.CurrencyEntries
             .AsNoTracking()
-            .Where(entry => entry.UserId == userId && entry.CurrencyId != null && entry.PostingDate <= endDate);
+            .Where(entry => entry.UserId == userId && entry.PostingDate <= endDate);
 
     private static IQueryable<CurrencyAccountEntry> InCurrency(IQueryable<CurrencyAccountEntry> entries, FinancialAlert alert) =>
         alert.CurrencyId is int currencyId

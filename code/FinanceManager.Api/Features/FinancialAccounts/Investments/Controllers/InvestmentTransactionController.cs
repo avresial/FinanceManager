@@ -25,14 +25,10 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 public class InvestmentTransactionController(
     IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentTransactionRepository transactionRepository,
-    IInvestmentTransactionService transactionService,
-    ICacheInvalidator dashboardCacheInvalidator,
     IAssetListingRepository assetListingRepository,
     IInvestmentInstrumentSearchService instrumentSearchService,
     IInvestmentPriceProvider priceProvider,
-    InvestmentTransactionPriceRecoveryService priceRecoveryService,
-    IFinancialAlertService financialAlertService,
-    FinanceManager.Domain.Labels.Repositories.IFinancialLabelsRepository labelsRepository) : ControllerBase
+    InvestmentTransactionPriceRecoveryService priceRecoveryService) : ControllerBase
 {
     [HttpGet("GetByAccount/{accountId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InvestmentTransactionDto>))]
@@ -133,85 +129,6 @@ public class InvestmentTransactionController(
         return Ok(transaction.ToDto());
     }
 
-    [HttpPost("Add")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InvestmentTransactionDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Add(AddInvestmentTransactionRequest request, CancellationToken cancellationToken = default)
-    {
-        var account = await accountRepository.Get(request.AccountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        if (!await AreLabelsValid(request.LabelIds, cancellationToken)) return BadRequest("Unknown label ID.");
-
-        try
-        {
-            var result = await transactionService.AddAsync(request, account.UserId, cancellationToken);
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
-            return Ok(result);
-        }
-        catch (InvestmentTransactionCommandException ex)
-        {
-            return Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Could not save the transaction.",
-                detail: ex.Message,
-                type: $"https://financemanager.dev/problems/{ex.Code}",
-                extensions: new Dictionary<string, object?> { ["code"] = ex.Code });
-        }
-    }
-
-    [HttpPut("Update")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Update(UpdateInvestmentTransactionRequest request, CancellationToken cancellationToken = default)
-    {
-        if (!IsValid(request.AssetListingId, request.Quantity, request.UnitPrice, request.Currency, request.TradeDate))
-            return BadRequest("Invalid input parameters.");
-
-        var account = await accountRepository.Get(request.AccountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        var existing = await transactionRepository.Get(request.Id, cancellationToken);
-        if (existing is null || existing.AccountId != request.AccountId) return NotFound();
-
-        if (!await AreLabelsValid(request.LabelIds, cancellationToken)) return BadRequest("Unknown label ID.");
-        var transaction = request.ToEntity();
-        // Omitted LabelIds leaves labels unchanged, so older clients can't clear them by accident; an empty list clears them.
-        if (request.LabelIds is null)
-            transaction.Labels = existing.Labels;
-        var result = await transactionRepository.Update(transaction, cancellationToken);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpDelete("Delete/{accountId:int}/{id:long}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Delete(int accountId, long id, CancellationToken cancellationToken = default)
-    {
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        var existing = await transactionRepository.Get(id, cancellationToken);
-        if (existing is null || existing.AccountId != accountId) return NotFound();
-
-        var result = await transactionRepository.Delete(id, cancellationToken);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, cancellationToken);
-        return Ok(result);
-    }
-
     [HttpGet("SearchListings")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<InstrumentSearchResultDto>))]
     public async Task<IActionResult> SearchListings([FromQuery] string? q, [FromQuery] int maxResults = 20, CancellationToken cancellationToken = default)
@@ -265,16 +182,4 @@ public class InvestmentTransactionController(
             InvestmentPriceResult.NotFound => new ListingPriceDto(null, listing.TradingCurrency),
         });
     }
-
-    private async Task<bool> AreLabelsValid(IReadOnlyCollection<int>? ids, CancellationToken cancellationToken)
-    {
-        if (ids is null || ids.Count == 0) return true;
-        var available = new HashSet<int>();
-        await foreach (var label in labelsRepository.GetLabels(cancellationToken)) available.Add(label.Id);
-        return ids.All(available.Contains);
-    }
-
-    private static bool IsValid(long assetListingId, decimal quantity, decimal unitPrice, string? currency, DateOnly tradeDate) =>
-        assetListingId > 0 && quantity > 0 && unitPrice >= 0 && !string.IsNullOrWhiteSpace(currency) && tradeDate != default;
-
 }

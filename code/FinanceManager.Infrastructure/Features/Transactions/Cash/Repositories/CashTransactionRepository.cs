@@ -15,7 +15,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
         if (query.Take <= 0) return [];
-        var entries = context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && e.CurrencyId != null);
+        var entries = context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId);
         if (query.Start is DateTime start) entries = entries.Where(e => e.PostingDate >= start);
         if (query.End is DateTime end) entries = entries.Where(e => e.PostingDate <= end);
         if (query.Boundary is OwnerHistoryBoundary cursor)
@@ -38,7 +38,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
 
         var page = await rows.OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
             .Take(query.Take).Select(x => new CashLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate,
-                x.Entry.ValueChange, x.Entry.Description, x.Entry.CurrencyId!.Value, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>())).ToListAsync(ct);
+                x.Entry.ValueChange, x.Entry.Description, x.Entry.CurrencyId, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>())).ToListAsync(ct);
         if (!query.IncludeDetails || page.Count == 0) return page;
 
         var labels = await LabelsByEntry(userId, [.. page.Select(x => x.EntryId)], ct);
@@ -52,7 +52,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         if (ids.Length == 0) return [];
 
         var rows = await context.CurrencyEntries.AsNoTracking()
-            .Where(e => e.UserId == userId && e.CurrencyId != null && ids.Contains(e.EntryId))
+            .Where(e => e.UserId == userId && ids.Contains(e.EntryId))
             .Select(e => new
             {
                 Entry = e,
@@ -60,7 +60,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
             })
             .OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
             .Select(x => new CashLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate, x.Entry.ValueChange,
-                x.Entry.Description, x.Entry.CurrencyId!.Value, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>()))
+                x.Entry.Description, x.Entry.CurrencyId, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>()))
             .ToListAsync(ct);
         if (rows.Count == 0) return rows;
 
@@ -71,7 +71,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
     public async Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);
-        var currencyIds = context.CurrencyEntries.Where(e => e.UserId == userId && e.CurrencyId != null).Select(e => e.CurrencyId);
+        var currencyIds = context.CurrencyEntries.Where(e => e.UserId == userId).Select(e => e.CurrencyId);
         return await context.Currencies.AsNoTracking().Where(c => currencyIds.Contains(c.Id)).Select(c => c.ShortName).Distinct().ToListAsync(ct);
     }
 
@@ -93,7 +93,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         var opening = await Positions(OwnerEntries(userId).Where(e => e.PostingDate < startUtc)).ToListAsync(ct);
         var points = await OwnerEntries(userId).Where(e => e.PostingDate >= startUtc && e.PostingDate <= endUtc)
             .OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId)
-            .Select(e => new OwnerLedgerPoint(e.CurrencyId!.Value, e.EntryId, e.PostingDate, e.ValueChange)).ToListAsync(ct);
+            .Select(e => new OwnerLedgerPoint(e.CurrencyId, e.EntryId, e.PostingDate, e.ValueChange)).ToListAsync(ct);
         return new OwnerLedgerRange(opening, points);
     }
 
@@ -128,7 +128,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         if (labelId is int label) entries = entries.Where(e => e.Labels.Any(l => l.Id == label));
 
         // Two reads over the same predicate (no id list to outgrow a parameter limit): the entries, then their label links.
-        var rows = await entries.Select(e => new { e.EntryId, CurrencyId = e.CurrencyId!.Value, e.PostingDate, e.ValueChange }).ToListAsync(ct);
+        var rows = await entries.Select(e => new { e.EntryId, CurrencyId = e.CurrencyId, e.PostingDate, e.ValueChange }).ToListAsync(ct);
         if (rows.Count == 0) return [];
 
         var labelLinks = await LabelLinks(entries).Select(x => new { x.EntryId, x.LabelId }).ToListAsync(ct);
@@ -182,8 +182,8 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         return endInclusive ? entries.Where(e => e.PostingDate <= endUtc) : entries.Where(e => e.PostingDate < endUtc);
     }
 
-    private IQueryable<CurrencyAccountEntry> OwnerEntries(int userId) => context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && e.CurrencyId != null);
+    private IQueryable<CurrencyAccountEntry> OwnerEntries(int userId) => context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId);
 
     private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<CurrencyAccountEntry> entries) =>
-        entries.GroupBy(e => e.CurrencyId!.Value).Select(g => new OwnerLedgerPosition(g.Key, g.Sum(e => e.ValueChange), g.Max(e => e.PostingDate)));
+        entries.GroupBy(e => e.CurrencyId).Select(g => new OwnerLedgerPosition(g.Key, g.Sum(e => e.ValueChange), g.Max(e => e.PostingDate)));
 }

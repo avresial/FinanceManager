@@ -5,6 +5,7 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -186,8 +187,7 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
         var ct = TestContext.Current.CancellationToken;
         (await Client.PostAsJsonAsync(_route, Request(7), ct)).EnsureSuccessStatusCode();
 
-        using var removed = await Client.DeleteAsync($"api/InvestmentAccount/Delete/{_accountId}", ct);
-        removed.EnsureSuccessStatusCode();
+        Assert.True(await new InvestmentAccountRepository(Db).Delete(_accountId));
 
         Db.ChangeTracker.Clear();
         var remaining = await Db.DividendPayments.SingleAsync(ct);

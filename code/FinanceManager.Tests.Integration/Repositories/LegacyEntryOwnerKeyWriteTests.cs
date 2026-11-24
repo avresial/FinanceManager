@@ -50,25 +50,25 @@ public class LegacyEntryOwnerKeyWriteTests
         foreach (var invalid in new int?[] { 99, 1, 6 })
             Assert.False(await bonds.Add([Bond(3), Bond(invalid)], recalculate, ct));
         // An entry without a link needs a stamped owner (and currency); the caller's keys are what is checked, not an account.
-        foreach (var unowned in new CurrencyAccountEntry[] { new(null, 0, date, 0, 10), new(null, 0, date, 0, 10) { UserId = 0, CurrencyId = 7 }, new(null, 0, date, 0, 10) { UserId = 6 } })
+        foreach (var unowned in new CurrencyAccountEntry[] { new(null, 0, date, 0, 10), new(null, 0, date, 0, 10) { UserId = 0, CurrencyId = 7 } })
             Assert.False(await cash.Add([Cash(1), unowned], recalculate, ct));
         foreach (var unowned in new BondAccountEntry[] { new(null, 0, date, 0, 3, 10), new(null, 0, date, 0, 3, 10) { UserId = 0 } })
             Assert.False(await bonds.Add([Bond(3), unowned], recalculate, ct));
 
         var cashRows = await context.CurrencyEntries.AsNoTracking().OrderBy(e => e.EntryId).ToListAsync(ct);
         var bondRows = await context.BondEntries.AsNoTracking().OrderBy(e => e.EntryId).ToListAsync(ct);
-        Assert.Equal(new int?[] { -5, -5, 6 }, cashRows.Select(e => e.UserId));
-        Assert.Equal(new int?[] { 0, 0, 7 }, cashRows.Select(e => e.CurrencyId));
-        Assert.Equal(new int?[] { -5, -5, 6 }, bondRows.Select(e => e.UserId));
+        Assert.Equal(new int[] { -5, -5, 6 }, cashRows.Select(e => e.UserId));
+        Assert.Equal(new int[] { 0, 0, 7 }, cashRows.Select(e => e.CurrencyId));
+        Assert.Equal(new int[] { -5, -5, 6 }, bondRows.Select(e => e.UserId));
         if (recalculate)
         {
             Assert.Equal(new decimal[] { 10, 20, 10 }, cashRows.Select(e => e.Value));
             Assert.Equal(new decimal[] { 3, 6, 3 }, bondRows.Select(e => e.Value));
         }
 
-        // Simulate historical rows missed by expand and a caller supplying conflicting metadata.
-        await context.CurrencyEntries.ExecuteUpdateAsync(s => s.SetProperty(e => e.UserId, (int?)null).SetProperty(e => e.CurrencyId, (int?)null), ct);
-        await context.BondEntries.ExecuteUpdateAsync(s => s.SetProperty(e => e.UserId, (int?)null), ct);
+        // Simulate historical rows with incorrect stamps and a caller supplying conflicting metadata.
+        await context.CurrencyEntries.ExecuteUpdateAsync(s => s.SetProperty(e => e.UserId, 99).SetProperty(e => e.CurrencyId, 99), ct);
+        await context.BondEntries.ExecuteUpdateAsync(s => s.SetProperty(e => e.UserId, 99), ct);
         Assert.True(await cash.Update(firstCash));
         Assert.True(await bonds.Update(firstBond));
         var updated = await context.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == firstCash.EntryId, ct);

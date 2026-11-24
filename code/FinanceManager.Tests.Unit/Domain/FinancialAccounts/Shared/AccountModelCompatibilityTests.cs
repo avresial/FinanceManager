@@ -38,9 +38,9 @@ public class AccountModelCompatibilityTests
         var trade = context.Model.FindEntityType(typeof(InvestmentTransaction))!;
         var dividend = context.Model.FindEntityType(typeof(DividendPayment))!;
         Assert.All(new[] { cash, bond, trade, dividend }, entity => Assert.True(entity.FindProperty("AccountId")!.IsNullable));
-        Assert.True(cash.FindProperty("CurrencyId")!.IsNullable);
-        Assert.True(cash.FindProperty("UserId")!.IsNullable);
-        Assert.True(bond.FindProperty("UserId")!.IsNullable);
+        Assert.False(cash.FindProperty("CurrencyId")!.IsNullable);
+        Assert.False(cash.FindProperty("UserId")!.IsNullable);
+        Assert.False(bond.FindProperty("UserId")!.IsNullable);
         Assert.Equal(typeof(long), trade.FindProperty("UserId")!.ClrType);
         Assert.Equal(typeof(int), dividend.FindProperty("UserId")!.ClrType);
         Assert.Equal(DeleteBehavior.ClientNoAction, dividend.FindProperty("AccountId")!.GetContainingForeignKeys().Single().DeleteBehavior);
