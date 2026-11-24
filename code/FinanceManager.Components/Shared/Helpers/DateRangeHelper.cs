@@ -11,7 +11,7 @@ public static class DateRangeHelper
     /// </summary>
     public const string CustomRangeKey = "Custom";
 
-    public static (DateTime Start, DateTime End) GetAccountDetailsRange(
+    public static (DateTime Start, DateTime End) GetRange(
         string selection,
         DateTime? customStart,
         DateTime? customEnd,

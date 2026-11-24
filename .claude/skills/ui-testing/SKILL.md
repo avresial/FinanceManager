@@ -5,7 +5,7 @@ description: Use this skill whenever a change touches the Blazor UI (any .razor/
 
 # Testing the UI on the guest account
 
-A green build and passing unit tests prove the markup compiles — they do **not** prove the page looks right. Any user-visible UI change must be verified by rendering the actual app and looking at a screenshot. The app is auth-gated, so the verified path is the built-in **guest / demo** account, which seeds demo accounts (Cash 1, Loan 1, Investments, Bond 1) in an in-memory database — no credentials, no external DB.
+A green build and passing unit tests prove the markup compiles — they do **not** prove the page looks right. Any user-visible UI change must be verified by rendering the actual app and looking at a screenshot. The app is auth-gated, so the verified path is the built-in **guest / demo** account, which seeds a pooled demo (cash, bond and ETF transactions, a loan repayment stream and a small USD card debt; there are no accounts) in an in-memory database — no credentials, no external DB.
 
 Follow the steps in order. Steps 1-2 start the app; skip them when the app is already running and you were given its address. **Step 3 takes every screenshot with one command — do not write a Playwright script for anything that command can do.**
 
@@ -43,15 +43,15 @@ curl -s --retry 20 --retry-all-errors --retry-delay 2 \
 
 ```bash
 dotnet run scripts/Screenshot.cs -- --list          # feature ids: what each one shows and its route
-dotnet run scripts/Screenshot.cs -- transactions account-stock account-add-entry cash-flow-forecast alerts \
+dotnet run scripts/Screenshot.cs -- transactions portfolio transactions-add-entry cash-flow-forecast alerts \
   --base-url http://localhost:$PORT --out /tmp/shots
 ```
 
 Run it from the repository root; it writes nothing into the repository (the build goes to the .NET cache, the PNGs to `--out`). It signs in as guest once, opens each target inside the running app, waits for the page to settle and prints one PNG path per target, viewport and theme (`/tmp/shots/<target>-<viewport>-<theme>.png`). Defaults: `--viewports mobile,desktop`, `--theme light` (`dark` or `both` for the dark theme). The first run compiles the script, which takes a few seconds; on a new machine run `dotnet run scripts/Screenshot.cs -- --install` once to download Chromium.
 
-**Targets are feature ids** from [`docs/agents/features.json`](../../../docs/agents/features.json): `--list` prints them with a one-line description. Feature ids find accounts by name and open states that need clicks, such as the add-entry dialog (`account-add-entry`, `account-stock-add-trade`), so you never need an account id or a selector. Plain in-app routes (`Transactions`, `""` for the dashboard) work too.
+**Targets are feature ids** from [`docs/agents/features.json`](../../../docs/agents/features.json): `--list` prints them with a one-line description. Feature ids open states that need a query string or clicks, such as the add-transaction dialog (`transactions-add-entry`), so you never need a selector. Plain in-app routes (`Transactions`, `""` for the dashboard) work too.
 
-**UI state is addressable by URL**, so a route can open it directly: `AccountDetails/<id>?dialog=add-entry` opens the add-entry form; `Transactions?search=<text>&range=1M` pre-fills the Transactions page filters.
+**UI state is addressable by URL**, so a route can open it directly: `Transactions?dialog=add-entry` opens the add-transaction dialog (`&kind=cash|bond|investment` picks its kind); `Transactions?search=<text>&range=1M` pre-fills the Transactions page filters.
 
 ## 4. Look at the screenshots
 
@@ -99,7 +99,7 @@ guest, and lands directly on the page under test. Save it as `/tmp/pw-scratch/ui
 ```js
 import { chromium } from 'playwright';
 const BASE = `http://localhost:${process.env.PORT ?? 5113}`;
-const TARGET = process.env.TARGET ?? '';   // in-app route, e.g. 'AccountDetails/1'; '' for the dashboard
+const TARGET = process.env.TARGET ?? '';   // in-app route, e.g. 'Transactions'; '' for the dashboard
 // Cloud sandbox only: set PW_CHROMIUM to /opt/pw-browsers/chromium-<build>/chrome-linux/chrome.
 const browser = await chromium.launch({ headless: true, executablePath: process.env.PW_CHROMIUM, args: ['--no-sandbox'] });
 
@@ -126,7 +126,7 @@ await browser.close();
 ```
 
 ```bash
-cd /tmp/pw-scratch && PORT=$PORT TARGET='AccountDetails/1' node ui-shot.mjs
+cd /tmp/pw-scratch && PORT=$PORT TARGET='Transactions' node ui-shot.mjs
 ```
 
 **Screenshot one component** with `page.locator('<selector>').screenshot({ path })`. It scrolls the element into view, including inside inner scroll containers: dashboard cards sit in a scrollable grid that `window.scrollTo` does not move, so a `clip` computed from `getBoundingClientRect()` after `window.scrollTo` comes out empty.
@@ -139,11 +139,11 @@ cd /tmp/pw-scratch && PORT=$PORT TARGET='AccountDetails/1' node ui-shot.mjs
 
 - Preferred trigger: **`/DevelopLogin/guest`** (optionally `/DevelopLogin/guest/{page}` to deep-link), the develop-only auto test login documented in `AGENTS.md`. It is disabled (404) in Production/Release.
 - Manual fallback: the **"Check out demo"** link/button on the landing and login pages. Equivalent to `POST /api/Login` with `{"userName":"guest","password":"GuestPassword"}`. Either way the JWT is stored under `localStorage["userSession"]`.
-- After login you land on the dashboard (`/`) unless you deep-linked. The left nav lists the seeded accounts: **Cash 1**, **Loan 1**, **Investments** (the stock/ETF account), **Bond 1**. Other routes: `/Assets`, `/Liabilities`, account details open at `/AccountDetails/{id}`.
+- After login you land on the dashboard (`/`) unless you deep-linked. The demo is pooled (no accounts): the left nav lists Dashboard, Assets, Liabilities, Transactions and the rest of the main pages. Old account links such as `/AccountDetails/{id}` redirect to `/Transactions`.
 
 ## Gotchas (these will bite you)
 
-- **Deep-link through `/DevelopLogin/guest/{page}`, not by hard URL.** A `page.goto()` straight to an authenticated route (e.g. `/AccountDetails/1`) reloads the WASM app and bounces to `/login` — the auth state lives in the running app. Going to `/DevelopLogin/guest/AccountDetails/1` instead authenticates first and then navigates within the SPA. In-SPA clicks after login also work.
+- **Deep-link through `/DevelopLogin/guest/{page}`, not by hard URL.** A `page.goto()` straight to an authenticated route (e.g. `/Transactions`) reloads the WASM app and bounces to `/login` — the auth state lives in the running app. Going to `/DevelopLogin/guest/Transactions` instead authenticates first and then navigates within the SPA. In-SPA clicks after login also work.
 - **Mobile drawer is collapsed.** On viewports `< 700px` the nav is a temporary overlay; if you need to click nav links, open the app-bar hamburger (`header button`) first.
 - **Cloud sandbox only: charts render blank + a red "An unhandled error has occurred" bar appears.** The chart script CDN is blocked there (`Chart is not defined`). This is a **sandbox artifact, not a regression** — ignore it. Filter these from logs: `grep -vE "ERR_CERT|Chart is not defined|WebAssemblyRenderer|Unhandled exception"`. Locally, charts must render; a blank chart is a real failure.
 - **Playwright renders the light theme unless you set `colorScheme: 'dark'`.** Capture both. Use palette variables like `color: var(--mud-palette-text-primary);` so text contrasts in both themes, rather than relying on an inherited color that only happens to work in one.

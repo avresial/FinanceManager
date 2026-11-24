@@ -1,9 +1,9 @@
 @using Microsoft.AspNetCore.Components.Forms
-@inherits ImportEntriesComponentBase<FinanceManager.Domain.FinancialAccounts.Bond.Entities.BondAccount, ImportBondEntriesComponent>
+@inherits ImportEntriesComponentBase<ImportBondEntriesComponent>
 
 <div>
 
-    <PageHeader Title="@(AccountId is null ? "Import bond entries" : $"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
+    <PageHeader Title="Import bond entries" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
 
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
         <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
@@ -159,13 +159,13 @@
                         @if (HasUnresolvedConflicts && _importResult is not null)
                         {
                             <BondEntryConflictResolver @ref="_resolverRef"
-                                Conflicts="_importResult.Conflicts" AccountName="@AccountName" OwnerRows="_ownerRows"
+                                Conflicts="_importResult.Conflicts" ImportRows="_importRows"
                                 OnResolutionChanged="StateHasChanged"
                                 OnSubmitted="OnConflictsSubmitted" />
                         }
                         else if (ShowImportCompletedMessage)
                         {
-                            <ImportCompletePanel ReturnHref="@ReturnHref" ReturnText="@ReturnText" AccountName="@AccountName" Clear="Clear" />
+                            <ImportCompletePanel Clear="Clear" />
                         }
 
                     </MudStack>

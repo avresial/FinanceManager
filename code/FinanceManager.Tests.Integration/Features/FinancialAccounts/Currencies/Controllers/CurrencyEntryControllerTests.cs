@@ -8,6 +8,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
+using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;

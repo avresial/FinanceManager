@@ -27,14 +27,6 @@ public class InvestmentValuationHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<IReadOnlyList<InvestmentTransactionValuationDto>>(cancellationToken) ?? [];
     }
 
-    public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsync(DateTime date)
-    {
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentValuation/Holdings/{Iso(date)}");
-        if (!response.IsSuccessStatusCode) return new Dictionary<long, decimal>();
-        return await response.Content.ReadFromJsonAsync<Dictionary<long, decimal>>() ?? [];
-    }
-
     public Task<IReadOnlyDictionary<DateTime, decimal>> GetValueSeriesAsync(int currencyId, DateTime start, DateTime end, bool requireSuccess = false) =>
         ReadSeriesAsync($"api/InvestmentValuation/ValueSeries/{currencyId}/{Iso(start)}/{Iso(end)}", requireSuccess);
 

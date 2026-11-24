@@ -126,7 +126,7 @@
 
 @if (_editingInvestment is not null)
 {
-    @* One form for the whole page; a trade is edited through its owner route, whichever account it is linked to. *@
+    @* One form for the whole page; a trade is edited through its owner route, whatever it is linked to. *@
     <InvestmentTransactionForm @key="_editingInvestment.Id" Visible="@_investmentFormVisible"
                                VisibleChanged="OnInvestmentFormVisibleChanged" Transaction="@_editingInvestment"
                                OnSaved="OnInvestmentSavedAsync" />

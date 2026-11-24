@@ -2,7 +2,6 @@ using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
@@ -25,7 +24,6 @@ public partial class NavMenu : ComponentBase, IDisposable
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
 
 
-    public Dictionary<int, string> Accounts = [];
     public string ErrorMessage { get; set; } = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -42,7 +40,7 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Unable to load accounts.";
+            ErrorMessage = "Unable to load the menu.";
             Logger.LogError(ex, "Error while loading nav menu");
         }
     }
@@ -137,7 +135,7 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Unable to load accounts.";
+            ErrorMessage = "Unable to load the menu.";
             Logger.LogError(ex, "Error while getting logged user for nav menu");
             return null;
         }
@@ -162,7 +160,7 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Unable to load accounts.";
+            ErrorMessage = "Unable to load the menu.";
             Logger.LogError(ex, "Error while refreshing nav menu snapshot");
         }
 
@@ -184,7 +182,7 @@ public partial class NavMenu : ComponentBase, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Unable to load accounts.";
+            ErrorMessage = "Unable to load the menu.";
             Logger.LogError(ex, "Error while retrying nav menu load");
         }
         finally
@@ -195,7 +193,6 @@ public partial class NavMenu : ComponentBase, IDisposable
 
     private void ApplySnapshot(NavMenuCacheSnapshot snapshot)
     {
-        Accounts = snapshot.Accounts.ToDictionary(account => account.AccountId, account => account.Name);
         _displayAssetsLink = snapshot.DisplayAssetsLink;
         _displayLiabilitiesLink = snapshot.DisplayLiabilitiesLink;
     }
@@ -203,7 +200,6 @@ public partial class NavMenu : ComponentBase, IDisposable
     private void ClearState()
     {
         ErrorMessage = string.Empty;
-        Accounts.Clear();
         _displayAssetsLink = false;
         _displayLiabilitiesLink = false;
     }

@@ -4,16 +4,16 @@
     </MudAvatar>
     <MudText Typo="Typo.h5">Import complete</MudText>
     <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="max-width:460px;text-align:center;">
-        All entries have been added to <b>@AccountName</b> and any conflicts you flagged were resolved.
+        All entries have been added and any conflicts you flagged were resolved.
     </MudText>
     <MudStack Row="true" Spacing="2" Class="mt-2">
         <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="Clear">
             Import another file
         </MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   Href="@ReturnHref"
+                   Href="/Transactions"
                    EndIcon="@Icons.Material.Filled.ArrowForward">
-            @ReturnText
+            Back to Transactions
         </MudButton>
     </MudStack>
 </MudStack>

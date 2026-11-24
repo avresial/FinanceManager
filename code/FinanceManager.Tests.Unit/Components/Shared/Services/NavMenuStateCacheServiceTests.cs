@@ -1,10 +1,6 @@
 using Blazored.LocalStorage;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Models;
-using FinanceManager.Components.Shared.Services;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging.Abstractions;
+using FinanceManager.Domain.Identity.Entities;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Services;
@@ -12,18 +8,14 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Services;
 [Trait("Category", "Unit")]
 public class NavMenuStateCacheServiceTests
 {
-    private readonly Mock<ILocalStorageService> _storage = new();
-    private readonly NavMenuStateCacheService _service;
-
-    public NavMenuStateCacheServiceTests() => _service = new(
-        _storage.Object, new MemoryCache(new MemoryCacheOptions()), Mock.Of<IFinancialAccountService>(),
-        new AssetsHttpClient(new HttpClient()), new LiabilitiesHttpClient(new HttpClient()), NullLogger<NavMenuStateCacheService>.Instance);
+    private static UserSession User(int id) => new() { UserId = id, UserName = "user", Password = string.Empty, UserRole = UserRole.User };
 
     [Fact]
     public async Task GetCachedSnapshotAsync_EvictsASnapshotFromAnOlderSchema()
     {
-        // Pooling changed what the Assets and Liabilities links mean, so a flag cached by the previous schema must not paint.
-        _storage.Setup(x => x.GetItemAsync<NavMenuCacheSnapshot>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        // The snapshot shape changed (accounts removed, HasTransactions added), so one cached by an older schema must not paint.
+        var backend = new NavMenuTestBackend();
+        backend.Storage.Setup(x => x.GetItemAsync<NavMenuCacheSnapshot>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<NavMenuCacheSnapshot?>(new NavMenuCacheSnapshot
             {
                 SchemaVersion = NavMenuCacheSnapshot.CurrentSchemaVersion - 1,
@@ -32,16 +24,44 @@ public class NavMenuStateCacheServiceTests
                 DisplayLiabilitiesLink = true,
             }));
 
-        Assert.Null(await _service.GetCachedSnapshotAsync(5));
-        _storage.Verify(x => x.RemoveItemAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Null(await backend.CreateService().GetCachedSnapshotAsync(5));
+        backend.Storage.Verify(x => x.RemoveItemAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task GetCachedSnapshotAsync_ReturnsASnapshotFromTheCurrentSchema()
     {
-        _storage.Setup(x => x.GetItemAsync<NavMenuCacheSnapshot>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        var backend = new NavMenuTestBackend();
+        backend.Storage.Setup(x => x.GetItemAsync<NavMenuCacheSnapshot>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<NavMenuCacheSnapshot?>(new NavMenuCacheSnapshot { UserId = 5, FetchedAtUtc = DateTime.UtcNow }));
 
-        Assert.NotNull(await _service.GetCachedSnapshotAsync(5));
+        Assert.NotNull(await backend.CreateService().GetCachedSnapshotAsync(5));
+    }
+
+    [Fact]
+    public async Task GetCachedSnapshotAsync_ReadsTheV2KeyOnly_SoAV1SnapshotIsNeverUsed()
+    {
+        var backend = new NavMenuTestBackend();
+
+        await backend.CreateService().GetCachedSnapshotAsync(5);
+
+        backend.Storage.Verify(x => x.GetItemAsync<NavMenuCacheSnapshot>("nav-menu-cache-v2:5", It.IsAny<CancellationToken>()), Times.Once);
+        backend.Storage.Verify(x => x.GetItemAsync<NavMenuCacheSnapshot>("nav-menu-cache-v1:5", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    public async Task RefreshAsync_ComputesHasTransactionsFromTheLatestTransactions(int transactionCount, bool expected)
+    {
+        var backend = new NavMenuTestBackend(hasAssets: true, hasLiabilities: true, transactionCount: transactionCount);
+
+        var snapshot = await backend.CreateService().RefreshAsync(User(5));
+
+        Assert.Equal(expected, snapshot.HasTransactions);
+        Assert.True(snapshot.DisplayAssetsLink);
+        Assert.True(snapshot.DisplayLiabilitiesLink);
+        Assert.Equal("api/TransactionLog/Get/5?count=1", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
+        backend.Storage.Verify(x => x.SetItemAsync("nav-menu-cache-v2:5", snapshot, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

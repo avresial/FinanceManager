@@ -19,6 +19,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
+using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -233,7 +234,7 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(("HIST", "Long term"), (trade.Ticker, Assert.Single(trade.Labels!).Name));
 
         // Saving the trade as the edit form does (labels from the row's DTO) keeps its label.
-        var investmentClient = new InvestmentTransactionHttpClient(Client);
+        var investmentClient = new InvestmentTransactionAccountClient(Client);
         Assert.True(await investmentClient.UpdateAsync(new UpdateInvestmentTransactionRequest(trade.Id, trade.AccountId!.Value, trade.AssetListingId,
             trade.Type, 3m, trade.UnitPrice, trade.Currency, trade.TradeDate, trade.Fee, trade.Notes, [.. trade.Labels!.Select(l => l.Id)])));
         var reloaded = await client.GetItemsPage(641, query with { PageSize = 100, Kinds = [TransactionKind.Investment] }, ct);

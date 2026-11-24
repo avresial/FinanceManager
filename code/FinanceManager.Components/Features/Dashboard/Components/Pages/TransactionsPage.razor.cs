@@ -215,7 +215,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     private void ApplyRange()
     {
         var now = DateTime.UtcNow;
-        var (start, end) = DateRangeHelper.GetAccountDetailsRange(
+        var (start, end) = DateRangeHelper.GetRange(
             _selectedRange, _customRange?.Start, _customRange?.End, now.AddMonths(-3), now.AddMonths(-3), now);
 
         // Whole days from the start day on, and explicitly UTC so the endpoint reads them the same way.

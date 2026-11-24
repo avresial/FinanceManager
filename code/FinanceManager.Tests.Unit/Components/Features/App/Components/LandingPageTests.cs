@@ -41,10 +41,16 @@ public class LandingPageTests
         // Plans are limited by transactions only; no plan promises an account count any more.
         Assert.Contains(cut.FindAll(".mud-list-item"), item => item.TextContent.Contains("transactions", StringComparison.OrdinalIgnoreCase));
         Assert.All(cut.FindAll(".mud-list-item"), item => Assert.DoesNotContain("account", item.TextContent, StringComparison.OrdinalIgnoreCase));
-        Assert.Equal(6, cut.FindAll(".landing-preview img[alt]").Count);
+        Assert.Equal(4, cut.FindAll(".landing-preview img[alt]").Count);
+        // The old Accounts section is a Transactions section: no account screenshot or wording is left.
+        Assert.Single(cut.FindAll("h3"), heading => heading.TextContent == "Transactions");
+        Assert.DoesNotContain(cut.FindAll("h3"), heading => heading.TextContent.Contains("Accounts", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("-account-", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IMGS/landing/transactions-desktop.jpg", cut.Markup);
+        Assert.Contains("IMGS/landing/transactions-add-desktop.jpg", cut.Markup);
 
         var pictures = cut.FindAll(".landing-preview picture");
-        Assert.Equal(6, pictures.Count);
+        Assert.Equal(4, pictures.Count);
         Assert.All(pictures, picture =>
         {
             var mobileSource = picture.QuerySelector("source")!;

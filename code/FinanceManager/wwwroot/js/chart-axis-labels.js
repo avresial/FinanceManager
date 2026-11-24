@@ -1,5 +1,4 @@
-// Keeps the x-axis labels of the dashboard time-series cards (TimeSeriesValueCard) and the
-// account details hero chart (AccountDetailsHero) inside the card.
+// Keeps the x-axis labels of the dashboard time-series cards (TimeSeriesValueCard) inside the card.
 //
 // A datetime tick can land on the plot edge and its centred label is then clipped by the
 // card. ApexCharts has no option for this, so labels are nudged inwards on the rendered SVG
@@ -7,7 +6,7 @@
 (function () {
     'use strict';
 
-    var SELECTOR = '.fm-tsvc-card svg.apexcharts-svg, .fm-hero-chart svg.apexcharts-svg';
+    var SELECTOR = '.fm-tsvc-card svg.apexcharts-svg';
     var EDGE_PADDING_PX = 4;
     var scheduled = false;
 

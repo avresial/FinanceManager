@@ -53,26 +53,6 @@ public class OwnerEntryFormTests
         Assert.Equal((DefaultCurrency.USD.Id, -12.5m, "Lunch"), (body.CurrencyId, body.ValueChange, body.Description));
         Assert.Equal([5], body.LabelIds);
         Assert.Equal(DateTime.Today, body.PostingDate);
-        Mock.Get(context.Services.GetRequiredService<IFinancialAccountService>()).VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task AddCash_WithAnAccount_StillSavesThroughTheAccountService()
-    {
-        var handler = RecordingHttpHandler.ForEntryForms();
-        await using var context = CreateContext(handler);
-        var cut = context.Render<AddCurrencyEntry>(p => p.Add(x => x.CurrencyAccount, new CurrencyAccount(1, 1, "Cash")));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("input")));
-        await cut.InvokeAsync(() => cut.FindComponent<MudTimePicker>().Instance.TimeChanged.InvokeAsync(TimeSpan.Zero));
-        cut.Instance.BalanceChange = -1m;
-        cut.Instance.Description = "x";
-        cut.Render();
-
-        await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "Add").Click());
-
-        Mock.Get(context.Services.GetRequiredService<IFinancialAccountService>())
-            .Verify(service => service.AddEntry(It.IsAny<CurrencyAccountEntry>()), Times.Once);
-        Assert.DoesNotContain(handler.Requests, r => r.PathAndQuery.StartsWith("/api/transactions/", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -166,7 +146,6 @@ public class OwnerEntryFormTests
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new CashTransactionsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton<AccountDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);

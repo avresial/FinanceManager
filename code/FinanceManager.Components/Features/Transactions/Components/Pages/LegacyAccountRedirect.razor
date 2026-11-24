@@ -1,0 +1,19 @@
+@page "/AccountDetails/{AccountId:int}"
+@page "/ManageAccount/{AccountId:int}"
+@page "/Import/{AccountId:int}"
+@page "/Export/{AccountId:int}"
+@page "/AddAccount"
+@* Accounts no longer exist. These routes only keep old bookmarks and links working by sending them to Transactions. *@
+
+@code {
+    // The router needs a matching property for the {AccountId} route segment, but it is not used.
+    [Parameter] public int AccountId { get; set; }
+
+    [Inject] public required NavigationManager Navigation { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var isAddAccount = new Uri(Navigation.Uri).AbsolutePath.Equals("/AddAccount", StringComparison.OrdinalIgnoreCase);
+        Navigation.NavigateTo(isAddAccount ? "Transactions?dialog=add-entry" : "Transactions", replace: true);
+    }
+}

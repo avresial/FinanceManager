@@ -144,7 +144,6 @@ public class AddTransactionDialogTests
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
         context.Services.AddSingleton(new InvestmentTradesHttpClient(http));
         context.Services.AddSingleton(new InvestmentTransactionHttpClient(http));
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton<AccountDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);

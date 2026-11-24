@@ -1,84 +1,12 @@
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class InvestmentTransactionHttpClient(HttpClient httpClient)
 {
-    /// <summary>
-    /// Loads one bounded history page. The cursor and filters are sent back unchanged so the
-    /// database can keep the ordering stable while the page appends older rows.
-    /// </summary>
-    public async Task<InvestmentTransactionHistoryPageDto> GetHistoryPageAsync(
-        int accountId,
-        int pageSize = 100,
-        string? cursor = null,
-        DateOnly? startDate = null,
-        DateOnly? endDate = null,
-        InvestmentTransactionType? type = null,
-        string? search = null,
-        CancellationToken cancellationToken = default)
-    {
-        var query = new List<string> { $"pageSize={Math.Clamp(pageSize, 1, 100)}" };
-        if (!string.IsNullOrWhiteSpace(cursor)) query.Add($"cursor={Uri.EscapeDataString(cursor)}");
-        if (startDate is DateOnly start) query.Add($"startDate={start:yyyy-MM-dd}");
-        if (endDate is DateOnly end) query.Add($"endDate={end:yyyy-MM-dd}");
-        if (type is InvestmentTransactionType transactionType) query.Add($"type={transactionType}");
-        if (!string.IsNullOrWhiteSpace(search)) query.Add($"search={Uri.EscapeDataString(search.Trim())}");
-
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentTransaction/GetHistoryPage/{accountId}?{string.Join('&', query)}",
-            cancellationToken);
-        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent)
-            return new InvestmentTransactionHistoryPageDto([], false);
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InvestmentTransactionHistoryPageDto>(cancellationToken)
-            ?? new InvestmentTransactionHistoryPageDto([], false);
-    }
-
-    /// <summary>
-    /// Loads the latest transaction metadata for each non-zero holding as of a date. This is
-    /// intentionally separate from the paged history so chart cards remain correct after the first
-    /// 100 rows and after history filters are applied.
-    /// </summary>
-    public async Task<IReadOnlyList<InvestmentTransactionDto>> GetHoldingMetadataAsync(
-        int accountId,
-        DateTime date,
-        CancellationToken cancellationToken = default)
-    {
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentTransaction/GetHoldingMetadata/{accountId}/{date:yyyy-MM-dd}",
-            cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<InvestmentTransactionDto>>(cancellationToken) ?? [];
-    }
-
-    public async Task<InvestmentTransactionDto?> AddAsync(AddInvestmentTransactionRequest request)
-    {
-        using var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Add", request);
-        if (!response.IsSuccessStatusCode)
-            throw new HttpRequestException(await GetProblemDetailAsync(response));
-        return await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>();
-    }
-
-    public async Task<bool> UpdateAsync(UpdateInvestmentTransactionRequest request)
-    {
-        using var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Update", request);
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> DeleteAsync(int accountId, long id)
-    {
-        using var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/InvestmentTransaction/Delete/{accountId}/{id}");
-        return response.IsSuccessStatusCode;
-    }
-
     public async Task<IReadOnlyList<InstrumentSearchResultDto>> SearchListingsAsync(
         string query,
         int maxResults = 20,
@@ -120,23 +48,5 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         using var response = await httpClient.GetAsync(url);
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<ListingPriceDto>();
-    }
-
-    private static async Task<string> GetProblemDetailAsync(HttpResponseMessage response)
-    {
-        try
-        {
-            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
-            if (problem.ValueKind == JsonValueKind.Object
-                && problem.TryGetProperty("detail", out var detail)
-                && detail.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(detail.GetString()))
-                return detail.GetString()!;
-        }
-        catch (JsonException)
-        {
-        }
-
-        return "Could not save the transaction.";
     }
 }

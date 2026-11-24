@@ -117,18 +117,6 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetHoldings_ReturnsNetHoldingPerListing()
-    {
-        await SeedHoldingsWithPrice();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentValuationHttpClient(Client);
-
-        var holdings = await client.GetHoldingsAsync(_asOf);
-
-        Assert.Equal(3m, Assert.Contains(_listingId, holdings));
-    }
-
-    [Fact]
     public async Task CapitalSeries_TracksOwnerInvestmentCostAsPositionsAreSold()
     {
         await SeedHoldingsWithPrice();
@@ -288,11 +276,9 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("otheruser", _otherUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
 
-        var holdings = await client.GetHoldingsAsync(_asOf);
         var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
 
         // The other user only holds their own 100 units, never the first user's 3.
-        Assert.Equal(100m, Assert.Contains(_listingId, holdings));
         Assert.Equal(10_000m, value);
     }
 

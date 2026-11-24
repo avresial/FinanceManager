@@ -1,6 +1,5 @@
 using ApexCharts;
 using Bunit;
-using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -14,11 +13,8 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
 [Trait("Category", "Unit")]
 public class BalanceChartThemeTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber(bool accountHero, bool loan)
+    [Fact]
+    public async Task ThemeOnlyChangeRepaintsBalanceChartAndRestoresDarkAmber()
     {
         await using var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -28,13 +24,7 @@ public class BalanceChartThemeTests
         var cut = context.Render<CascadingValue<bool>>(p =>
         {
             p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, false);
-            if (accountHero)
-                p.AddChildContent<AccountDetailsHero>(child => child
-                    .Add(x => x.AccountName, "Cash 1").Add(x => x.Currency, "PLN").Add(x => x.ChartData, points)
-                    .Add(x => x.BalanceColor, loan ? AccountChartColors.BalanceColor(
-                        FinanceManager.Domain.FinancialAccounts.Shared.Entities.AccountLabel.Loan) : "#FFAB00"));
-            else
-                p.AddChildContent<TimeSeriesValueCard>(child => child.Add(x => x.Data, points));
+            p.AddChildContent<TimeSeriesValueCard>(child => child.Add(x => x.Data, points));
         });
 
         var content = Assert.IsType<RenderFragment>(cut.Instance.ChildContent);
@@ -44,8 +34,8 @@ public class BalanceChartThemeTests
             var changed = cut.Instance.Value != dark;
             cut.Render(p => p.Add(x => x.Name, "IsDarkMode").Add(x => x.Value, dark).AddChildContent(content));
             var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>().Instance;
-            Assert.Equal(loan ? ColorsProvider.LiabilityColor : expected, chart.Options.Colors[0]);
-            if (changed && !loan) Assert.NotSame(previous, chart);
+            Assert.Equal(expected, chart.Options.Colors[0]);
+            if (changed) Assert.NotSame(previous, chart);
             Assert.Equal(points.Select(x => x.Value), chart.Series[0].Items.Select(x => x.Value));
         }
     }
@@ -55,8 +45,7 @@ public class BalanceChartThemeTests
     [InlineData(true)]
     public void SemanticAndCustomColoursArePreserved(bool dark)
     {
-        Assert.Equal(ColorsProvider.LiabilityColor, BalanceChartColors.ForTheme(AccountChartColors.BalanceColor(
-            FinanceManager.Domain.FinancialAccounts.Shared.Entities.AccountLabel.Loan), dark));
+        Assert.Equal(ColorsProvider.LiabilityColor, BalanceChartColors.ForTheme(ColorsProvider.LiabilityColor, dark));
         Assert.Equal("#42a5f5", BalanceChartColors.ForTheme("#42a5f5", dark));
         Assert.Equal("#66bb6a", BalanceChartColors.ForTheme("#66bb6a", dark));
         Assert.Equal(dark ? "#FFAB00" : "#D38D00", BalanceChartColors.ForTheme("#ffab00", dark));

@@ -1,7 +1,4 @@
-using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Components.Features.Identity.Services;
-using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -12,24 +9,22 @@ public partial class Home : ComponentBase
 {
     private bool _isLoading;
     private bool _showWelcome;
-    private bool _hasAccountLoadingError;
+    private bool _hasLoadingError;
 
     [Inject] public required ILogger<Home> Logger { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required NavigationManager Navigation { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required TransactionLogHttpClient TransactionLogHttpClient { get; set; }
+    [Inject] public required NavMenuStateCacheService NavMenuStateCache { get; set; }
 
+    protected override Task OnInitializedAsync() => LoadAsync();
 
-    protected override Task OnInitializedAsync() => LoadAccountsAsync();
-
-    private async Task LoadAccountsAsync()
+    private async Task LoadAsync()
     {
         if (_isLoading)
             return;
 
         _isLoading = true;
-        _hasAccountLoadingError = false;
+        _hasLoadingError = false;
         try
         {
             var loggedUser = await LoginService.GetLoggedUser();
@@ -39,16 +34,17 @@ public partial class Home : ComponentBase
                 return;
             }
 
-            // Legacy accounts are already cached by the account service, so they are checked first and the transaction log is
-            // only asked when there are none. Transactions without any account (the guest demo, or entries added on the
-            // Transactions page) are enough to show the dashboard.
-            _showWelcome = (await FinancialAccountService.GetAvailableAccounts()).Count == 0
-                && (await TransactionLogHttpClient.GetLastTransactions(loggedUser.UserId, 1)).Count == 0;
+            // A cached "has transactions" skips the request: it only goes stale once the user deletes every transaction,
+            // which just leaves the dashboard on screen. Anything else is re-checked, so a first add shows the dashboard.
+            var cached = await NavMenuStateCache.GetCachedSnapshotAsync(loggedUser.UserId);
+            var hasTransactions = cached?.HasTransactions == true
+                || (await NavMenuStateCache.RefreshAsync(loggedUser)).HasTransactions;
+            _showWelcome = !hasTransactions;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load accounts");
-            _hasAccountLoadingError = true;
+            Logger.LogError(ex, "Failed to decide between the dashboard and the welcome page");
+            _hasLoadingError = true;
         }
         finally
         {

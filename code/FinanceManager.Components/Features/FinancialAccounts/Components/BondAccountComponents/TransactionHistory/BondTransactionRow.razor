@@ -150,7 +150,7 @@
 {
     <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-            <UpdateBondEntry BondAccount="Account" BondAccountEntry="Entry" ActionCompleted="HideOverlay" />
+            <UpdateBondEntry BondAccountEntry="Entry" ActionCompleted="HideOverlay" />
         </MudPaper>
     </MudOverlay>
 }
@@ -159,7 +159,7 @@
 {
     <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-            <RemoveBondEntry BondAccountName="@(Account?.Name ?? GetTitle())" BondAccountEntry="Entry"
+            <RemoveBondEntry BondAccountName="@GetTitle()" BondAccountEntry="Entry"
                              Cancel="HideOverlay" Confirm="ConfirmRemove" />
         </MudPaper>
     </MudOverlay>

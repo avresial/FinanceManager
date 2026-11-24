@@ -376,33 +376,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(t => t.Labels).ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(
-        int accountId,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountId <= 0) return [];
-
-        var latestIds = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId == accountId && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => x.AssetListingId)
-            .Select(group => group
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .Select(x => x.EntryId)
-                .First());
-
-        return await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => latestIds.Contains(x.EntryId))
-            .OrderBy(x => x.AssetListingId)
-            .ToListAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default) =>
         await context.InvestmentTransactions.AsNoTracking()
             .Select(x => x.AssetListingId)

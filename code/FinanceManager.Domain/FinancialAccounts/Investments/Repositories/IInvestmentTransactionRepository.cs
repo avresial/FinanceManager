@@ -48,12 +48,6 @@ public interface IInvestmentTransactionRepository
     public sealed record ListingTradePrice(long AssetListingId, string Currency, decimal UnitPrice);
 
     /// <summary>
-    /// Gets the latest transaction on or before a date for each listing held by an account, with
-    /// listing and asset metadata eagerly loaded for holding-card rendering.
-    /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.
     /// The owner predicate is applied before materialisation, so ids of other users are never returned.
     /// </summary>

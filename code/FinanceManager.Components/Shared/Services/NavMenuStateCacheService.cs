@@ -1,5 +1,4 @@
 using Blazored.LocalStorage;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Domain.Identity.Entities;
@@ -11,13 +10,13 @@ namespace FinanceManager.Components.Shared.Services;
 public class NavMenuStateCacheService(
     ILocalStorageService localStorageService,
     IMemoryCache memoryCache,
-    IFinancialAccountService financialAccountService,
+    TransactionLogHttpClient transactionLogHttpClient,
     AssetsHttpClient assetsHttpClient,
     LiabilitiesHttpClient liabilitiesHttpClient,
     ILogger<NavMenuStateCacheService> logger)
     : LocalStorageStateCacheService<NavMenuCacheSnapshot, UserSession, int>(localStorageService, memoryCache, logger, _cacheKeyPrefix)
 {
-    private const string _cacheKeyPrefix = "nav-menu-cache-v1";
+    private const string _cacheKeyPrefix = "nav-menu-cache-v2";
     private static readonly TimeSpan _maxStale = TimeSpan.FromHours(24);
 
     public async Task<NavMenuCacheSnapshot?> GetCachedSnapshotAsync(int userId)
@@ -28,25 +27,16 @@ public class NavMenuStateCacheService(
     protected override async Task<NavMenuCacheSnapshot> BuildStateAsync(UserSession user)
     {
         var userId = user.UserId;
-        // The account list endpoints already carry the names, so no per-account request is needed. #890
-        var accountNamesTask = financialAccountService.GetAvailableAccountNames();
+        var hasTransactionsTask = transactionLogHttpClient.GetLastTransactions(userId, 1);
         var displayAssetsTask = GetAssetsFlagAsync(userId);
         var displayLiabilitiesTask = GetLiabilitiesFlagAsync(userId);
-
-        var accounts = (await accountNamesTask)
-            .Select(account => new NavMenuAccountCacheItem
-            {
-                AccountId = account.Key,
-                Name = account.Value,
-            })
-            .ToList();
 
         return new NavMenuCacheSnapshot
         {
             SchemaVersion = NavMenuCacheSnapshot.CurrentSchemaVersion,
             UserId = userId,
             FetchedAtUtc = DateTime.UtcNow,
-            Accounts = accounts,
+            HasTransactions = (await hasTransactionsTask).Count > 0,
             DisplayAssetsLink = await displayAssetsTask,
             DisplayLiabilitiesLink = await displayLiabilitiesTask
         };

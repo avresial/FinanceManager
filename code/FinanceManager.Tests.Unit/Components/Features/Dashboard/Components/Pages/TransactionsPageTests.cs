@@ -786,7 +786,6 @@ public sealed class TransactionsPageTests
             UserRole = UserRole.User
         });
         context.Services.AddSingleton(login.Object);
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new TransactionLogHttpClient(
             new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
 

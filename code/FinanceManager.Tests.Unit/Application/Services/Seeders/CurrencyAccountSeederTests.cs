@@ -149,7 +149,7 @@ public class CurrencyAccountSeederTests
 
         var cashEntries = GetCashEntries();
         var monthlyNegatives = cashEntries
-            .Where(e => e.ValueChange < 0)
+            .Where(e => e.ValueChange < 0 && e.CurrencyId == DefaultCurrency.PLN.Id)
             .GroupBy(e => new DateTime(e.PostingDate.Year, e.PostingDate.Month, 1))
             .Select(g => new { Month = g.Key, Total = -g.Sum(e => e.ValueChange) });
 
@@ -210,7 +210,7 @@ public class CurrencyAccountSeederTests
     }
 
     [Fact]
-    public async Task Seed_WritesOnePooledPlnStreamOwnedByTheUser_WithoutAnyAccount()
+    public async Task Seed_WritesPooledEntriesOwnedByTheUser_WithoutAnyAccount()
     {
         await _seeder.Seed(userId: -12, new DateTime(2026, 1, 15), new DateTime(2026, 3, 15), new Random(1), TestContext.Current.CancellationToken);
 
@@ -219,9 +219,10 @@ public class CurrencyAccountSeederTests
         {
             Assert.Null(e.AccountId);
             Assert.Equal(-12, e.UserId);
-            Assert.Equal(DefaultCurrency.PLN.Id, e.CurrencyId);
+            Assert.True(e.CurrencyId == DefaultCurrency.PLN.Id || e.CurrencyId == DefaultCurrency.USD.Id);
             Assert.Equal(0m, e.Value);
         });
+        Assert.Contains(_savedEntries, e => e.CurrencyId == DefaultCurrency.PLN.Id);
         _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -260,14 +261,14 @@ public class CurrencyAccountSeederTests
     public async Task Seed_PooledBalanceNeverGoesNegative()
     {
         // The opening balance equals one salary and each month's outflows stay below the salary, so with no disbursement
-        // the demo never reports a negative cash balance (which net worth would show as a liability).
+        // the PLN balance never goes negative; the small USD card debt is the demo's only liability.
         var start = new DateTime(2025, 12, 15);
         var end = new DateTime(2026, 6, 15);
 
         await _seeder.Seed(userId: 1, start, end, new Random(1), TestContext.Current.CancellationToken);
 
         var balance = 0m;
-        foreach (var entry in GetCashEntries().OrderBy(e => e.PostingDate).ThenByDescending(e => e.ValueChange))
+        foreach (var entry in GetCashEntries().Where(e => e.CurrencyId == DefaultCurrency.PLN.Id).OrderBy(e => e.PostingDate).ThenByDescending(e => e.ValueChange))
         {
             balance += entry.ValueChange;
             Assert.True(balance >= 0m, $"Pooled balance {balance} went negative on {entry.PostingDate:d} ({entry.Description}).");

@@ -8,12 +8,12 @@
             <MudText Typo="Typo.h3" Class="mb-3">Welcome to FinanceManager</MudText>
             <MudText Typo="Typo.h6" Style="color: var(--mud-palette-text-secondary);" Class="mb-4">
                 Keep all of your finances in one place. Track your net worth, cash flow and
-                investments across cash, stock and bond accounts — and watch your dashboard
+                investments across cash, bonds, shares and ETFs — and watch your dashboard
                 come alive as you add data.
             </MudText>
             <MudText Typo="Typo.body1" Class="mb-2">
-                It only takes a minute: <b>create your first account</b>, then add transactions
-                manually or import a CSV from your bank.
+                It only takes a minute: <b>add your first transaction</b>, or import a CSV
+                statement from your bank.
             </MudText>
         </MudItem>
         <MudItem xs="12" md="6" Class="order-2 d-flex align-center">
@@ -25,23 +25,23 @@
 
     <MudDivider Class="my-6" />
 
-    @* Primary call to action: pick an account type to start with *@
+    @* Primary call to action: pick what to track first *@
     <div class="text-center mb-5">
-        <MudText Typo="Typo.h4" Class="mb-2">Start by creating your first account</MudText>
+        <MudText Typo="Typo.h4" Class="mb-2">Add your first transaction</MudText>
         <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);">
-            Pick whichever fits what you want to track first — you can always add more later.
+            Pick whichever fits what you want to track first — you can always add the rest later.
         </MudText>
     </div>
 
     <MudGrid Class="mb-2">
         <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1" data-testid="welcome-cash">
                 <MudCardHeader Class="py-2 px-4">
                     <CardHeaderContent>
                         <div class="fm-card-info-centered">
-                            <CardInfoTooltip Text="Create a currency account for everyday money: salary, bills and spending."
-                                             AriaLabel="About currency account card">
-                                <MudText Typo="Typo.h6" Class="w-100 text-center">Currency account</MudText>
+                            <CardInfoTooltip Text="Add cash transactions for everyday money: salary, bills and spending."
+                                             AriaLabel="About the cash card">
+                                <MudText Typo="Typo.h6" Class="w-100 text-center">Cash</MudText>
                             </CardInfoTooltip>
                         </div>
                     </CardHeaderContent>
@@ -49,53 +49,30 @@
                 <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
                     <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Default" Size="Size.Large" Class="mb-2" />
                     <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
-                        Everyday cash, salary, bills and spending. Import CSV statements from your bank.
+                        Everyday money: salary, bills and spending. Add transactions by hand or import a CSV statement from your bank.
                     </MudText>
                 </MudCardContent>
-                <MudCardActions Class="justify-center pb-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Currency"))">
-                        Create
+                <MudCardActions Class="justify-center pb-4 gap-2 flex-wrap">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" data-testid="welcome-import-csv"
+                               StartIcon="@Icons.Material.Filled.UploadFile" OnClick="ImportCsv">
+                        Import CSV
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="welcome-add-cash"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddTransaction("cash"))">
+                        Add transaction
                     </MudButton>
                 </MudCardActions>
             </MudCard>
         </MudItem>
 
         <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1" data-testid="welcome-bond">
                 <MudCardHeader Class="py-2 px-4">
                     <CardHeaderContent>
                         <div class="fm-card-info-centered">
-                            <CardInfoTooltip Text="Create a stock account for shares and ETFs, with live valuation of your holdings."
-                                             AriaLabel="About stock account card">
-                                <MudText Typo="Typo.h6" Class="w-100 text-center">Stock account</MudText>
-                            </CardInfoTooltip>
-                        </div>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
-                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Default" Size="Size.Large" Class="mb-2" />
-                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
-                        Shares and ETFs. Track holdings and see how your portfolio value changes over time.
-                    </MudText>
-                </MudCardContent>
-                <MudCardActions Class="justify-center pb-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Stock"))">
-                        Create
-                    </MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
-
-        <MudItem xs="12" sm="4" Class="d-flex">
-            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1">
-                <MudCardHeader Class="py-2 px-4">
-                    <CardHeaderContent>
-                        <div class="fm-card-info-centered">
-                            <CardInfoTooltip Text="Create a bond account for treasury and savings bonds."
-                                             AriaLabel="About bond account card">
-                                <MudText Typo="Typo.h6" Class="w-100 text-center">Bond account</MudText>
+                            <CardInfoTooltip Text="Add bond purchases and redemptions for treasury and savings bonds."
+                                             AriaLabel="About the bond card">
+                                <MudText Typo="Typo.h6" Class="w-100 text-center">Bond</MudText>
                             </CardInfoTooltip>
                         </div>
                     </CardHeaderContent>
@@ -107,9 +84,36 @@
                     </MudText>
                 </MudCardContent>
                 <MudCardActions Class="justify-center pb-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddAccount("Bond"))">
-                        Create
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="welcome-add-bond"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddTransaction("bond"))">
+                        Add transaction
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="4" Class="d-flex">
+            <MudCard Elevation="0" Outlined="true" Class="rounded-lg d-flex flex-column flex-grow-1" data-testid="welcome-investment">
+                <MudCardHeader Class="py-2 px-4">
+                    <CardHeaderContent>
+                        <div class="fm-card-info-centered">
+                            <CardInfoTooltip Text="Add buys and sells of shares and ETFs, with valuation of your holdings."
+                                             AriaLabel="About the investment card">
+                                <MudText Typo="Typo.h6" Class="w-100 text-center">Investment</MudText>
+                            </CardInfoTooltip>
+                        </div>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="d-flex flex-column align-center text-center flex-grow-1">
+                    <MudIcon Icon="@Icons.Material.Filled.ShowChart" Color="Color.Default" Size="Size.Large" Class="mb-2" />
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);" Class="mt-2">
+                        Shares and ETFs. Track holdings and see how your portfolio value changes over time.
+                    </MudText>
+                </MudCardContent>
+                <MudCardActions Class="justify-center pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="welcome-add-investment"
+                               StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddTransaction("investment"))">
+                        Add trade
                     </MudButton>
                 </MudCardActions>
             </MudCard>
@@ -122,7 +126,7 @@
     <div class="text-center mb-4">
         <MudText Typo="Typo.h4" Class="mb-2">See what you'll get</MudText>
         <MudText Typo="Typo.body1" Style="color: var(--mud-palette-text-secondary);">
-            A quick look at the dashboard and accounts once they fill up with data.
+            A quick look at the dashboard, transactions and assets once they fill up with data.
         </MudText>
     </div>
 
@@ -148,8 +152,7 @@
     private readonly Preview[] _previews =
     [
         new("IMGS/onboarding/dashboard-light.jpg", "IMGS/onboarding/dashboard-dark.jpg", "Dashboard — your finances at a glance"),
-        new("IMGS/onboarding/currency-light.jpg", "IMGS/onboarding/currency-dark.jpg", "Currency account — cash flow and transactions"),
-        new("IMGS/onboarding/stock-light.jpg", "IMGS/onboarding/stock-dark.jpg", "Stock account — holdings and portfolio value"),
-        new("IMGS/onboarding/assets-light.jpg", "IMGS/onboarding/assets-dark.jpg", "Assets — net worth over time"),
+        new("IMGS/onboarding/transactions-light.jpg", "IMGS/onboarding/transactions-dark.jpg", "Transactions — every cash, bond and investment entry in one list"),
+        new("IMGS/onboarding/assets-light.jpg", "IMGS/onboarding/assets-dark.jpg", "Assets — net worth, holdings and portfolio value over time"),
     ];
 }

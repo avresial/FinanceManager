@@ -379,7 +379,6 @@ public class DashboardRefreshIndicatorTests
         context.Services.AddSingleton(login.Object);
         context.Services.AddSingleton(settings.Object);
         context.Services.AddSingleton(snapshots.Object);
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton<ISnapshotRefreshCoordinator>(
             new SnapshotRefreshCoordinator(snapshots.Object, NullLogger<SnapshotRefreshCoordinator>.Instance));
         context.Services.AddSingleton(new DashboardCardVisibilityService(

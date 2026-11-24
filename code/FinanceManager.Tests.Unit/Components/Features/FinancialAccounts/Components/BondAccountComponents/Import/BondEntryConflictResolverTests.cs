@@ -19,7 +19,7 @@ public class BondEntryConflictResolverTests
     private static readonly DateTime _dayB = new(2026, 11, 4, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task OwnerMode_ResubmitsEveryRowOfTheAcceptedKeys_AndNothingOfTheSkippedOnes()
+    public async Task ResubmitsEveryRowOfTheAcceptedKeys_AndNothingOfTheSkippedOnes()
     {
         var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 1, 0, [], []));
         await using var context = CreateContext(handler);
@@ -29,8 +29,7 @@ public class BondEntryConflictResolverTests
             new(_dayA, 5m, 1, "first"), new(_dayA, 5m, 1, "second"), new(_dayA, 7m, 2, "other bond"), new(_dayB, 5m, 1, "skipped day"),
         ];
         var cut = context.Render<BondEntryConflictResolver>(p => p
-            .Add(x => x.AccountName, "bonds")
-            .Add(x => x.OwnerRows, rows)
+            .Add(x => x.ImportRows, rows)
             .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1), Conflict(_dayB, 5m, 1)]));
 
         await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Imported));
@@ -43,13 +42,12 @@ public class BondEntryConflictResolverTests
     }
 
     [Fact]
-    public async Task OwnerMode_WhenEveryDayIsSkipped_SendsNothing()
+    public async Task WhenEveryDayIsSkipped_SendsNothing()
     {
         var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 0, [], []));
         await using var context = CreateContext(handler);
         var cut = context.Render<BondEntryConflictResolver>(p => p
-            .Add(x => x.AccountName, "bonds")
-            .Add(x => x.OwnerRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
+            .Add(x => x.ImportRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
             .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1)]));
 
         await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Existing));
@@ -59,14 +57,13 @@ public class BondEntryConflictResolverTests
     }
 
     [Fact]
-    public async Task OwnerMode_WhenTheServerReportsFailedRows_ShowsThemAndDoesNotCompleteTheImport()
+    public async Task WhenTheServerReportsFailedRows_ShowsThemAndDoesNotCompleteTheImport()
     {
         var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 1, ["Posting date must be UTC."], []));
         await using var context = CreateContext(handler);
         var submitted = 0;
         var cut = context.Render<BondEntryConflictResolver>(p => p
-            .Add(x => x.AccountName, "bonds")
-            .Add(x => x.OwnerRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
+            .Add(x => x.ImportRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
             .Add(x => x.OnSubmitted, () => submitted++)
             .Add(x => x.Conflicts, [Conflict(_dayA, 5m, 1)]));
         await cut.InvokeAsync(() => cut.Instance.PickDay(_dayA, BondEntryConflictResolver.ResolveChoice.Imported));
@@ -91,7 +88,6 @@ public class BondEntryConflictResolverTests
         var http = handler.CreateClient();
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
-        context.Services.AddSingleton(new BondAccountImportHttpClient(http));
         return context;
     }
 }

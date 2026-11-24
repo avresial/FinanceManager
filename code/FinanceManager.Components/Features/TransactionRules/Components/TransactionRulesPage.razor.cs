@@ -256,7 +256,7 @@ public partial class TransactionRulesPage : ComponentBase, IAsyncDisposable
     {
         if (IsBusy) return;
 
-        // A rule without conditions matches every cash transaction (a migrated rule loses its retired Account condition),
+        // A rule without conditions matches every cash transaction (a migrated rule loses its retired account filter),
         // so enabling it needs an explicit confirmation first.
         if (enabled && rule.Conditions.Count == 0 && _confirmEnableId != rule.Id)
         {

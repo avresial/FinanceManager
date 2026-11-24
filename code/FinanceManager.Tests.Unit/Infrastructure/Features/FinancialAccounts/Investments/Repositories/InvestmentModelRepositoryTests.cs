@@ -386,68 +386,6 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
-    public async Task GetLatestByListingAsOf_ReturnsLatestMetadataBeforeDate()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        await using var ctx = CreateContext();
-        var assetRepo = new AssetRepository(ctx);
-        var listingRepo = new AssetListingRepository(ctx);
-        var txRepo = new InvestmentTransactionRepository(ctx);
-
-        var asset = await assetRepo.Add(MakeISharesAsset(), ct);
-        var listing = await listingRepo.Add(new AssetListing
-        {
-            AssetId = asset.Id,
-            Ticker = "CSPX",
-            ExchangeMic = "XLON",
-            ExchangeName = "London Stock Exchange",
-            TradingCurrency = "USD"
-        }, ct);
-
-        await txRepo.Add(new InvestmentTransaction
-        {
-            UserId = 1,
-            AccountId = 11,
-            AssetListingId = listing.Id,
-            Type = InvestmentTransactionType.Buy,
-            Quantity = 5m,
-            UnitPrice = 100m,
-            Currency = "USD",
-            TradeDate = new DateOnly(2026, 1, 10)
-        }, ct);
-        var latest = await txRepo.Add(new InvestmentTransaction
-        {
-            UserId = 1,
-            AccountId = 11,
-            AssetListingId = listing.Id,
-            Type = InvestmentTransactionType.Sell,
-            Quantity = 2m,
-            UnitPrice = 120m,
-            Currency = "USD",
-            TradeDate = new DateOnly(2026, 1, 20)
-        }, ct);
-        await txRepo.Add(new InvestmentTransaction
-        {
-            UserId = 1,
-            AccountId = 11,
-            AssetListingId = listing.Id,
-            Type = InvestmentTransactionType.Buy,
-            Quantity = 1m,
-            UnitPrice = 130m,
-            Currency = "USD",
-            TradeDate = new DateOnly(2026, 2, 1)
-        }, ct);
-
-        var result = await txRepo.GetLatestByListingAsOf(11, new DateOnly(2026, 1, 31), ct);
-
-        var metadata = Assert.Single(result);
-        Assert.Equal(latest.EntryId, metadata.EntryId);
-        Assert.Equal(120m, metadata.UnitPrice);
-        Assert.Equal("CSPX", metadata.AssetListing.Ticker);
-        Assert.Equal(AssetType.ETF, metadata.AssetListing.Asset.Type);
-    }
-
-    [Fact]
     public async Task PriceQuote_StoreAndRead_LatestOnOrBefore()
     {
         var ct = TestContext.Current.CancellationToken;

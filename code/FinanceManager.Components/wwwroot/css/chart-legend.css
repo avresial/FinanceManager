@@ -1,0 +1,10 @@
+/* Legend label colour for the cash-flow forecast chart. Shipped as a plain (non-isolated)
+   stylesheet and linked from index.html, because this app's scoped-CSS bundle
+   (FinanceManager.WebUi.styles.css) is not wired up, so .razor.css isolation does not apply
+   at runtime. */
+
+/* ApexCharts defaults legend labels to a fixed dark grey. Use the active MudBlazor palette so
+   the forecast series labels remain readable when the app switches theme. */
+.cash-flow-forecast-chart .apexcharts-legend-text {
+    color: var(--mud-palette-text-primary) !important;
+}

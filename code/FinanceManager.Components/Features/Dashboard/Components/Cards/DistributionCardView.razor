@@ -17,7 +17,7 @@
             <MudButton Variant="Variant.Text" Size="MudBlazor.Size.Small" OnClick="OnRetry">Retry</MudButton>
         </MudAlert>
     }
-    @if (!IsLoading && _slices.Count > 0 && (_mixedCurrencies || (!IsAccountView && _foreignCodes.Count > 0)))
+    @if (!IsLoading && _slices.Count > 0 && (_mixedCurrencies || (!IsDetailView && _foreignCodes.Count > 0)))
     {
         <div class="fm-distribution-note" data-testid="distribution-note">
             @if (_mixedCurrencies)

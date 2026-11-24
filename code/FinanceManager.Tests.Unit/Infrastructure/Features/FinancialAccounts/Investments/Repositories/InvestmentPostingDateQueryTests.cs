@@ -57,7 +57,6 @@ public class InvestmentPostingDateQueryTests
         Assert.Equal(new[] { start.AddDays(-1), start }, (await repository.GetCapitalFlowInputsByUser(1081, end, ct)).Select(flow => flow.TradeDate));
         var holdings = await repository.GetHoldingsAsOf([1081], end, ct);
         Assert.Equal(2m, holdings[1081]);
-        await repository.GetLatestByListingAsOf(1081, end, ct);
         await repository.GetHistoryByUser(1081, new(start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), 10), ct);
         await repository.GetHistoryPage(1081, 10, end, 100, start, end, cancellationToken: ct);
         await new AssetRepository(context).GetIncomplete(1, 10, null, DateTimeOffset.UtcNow, ct);

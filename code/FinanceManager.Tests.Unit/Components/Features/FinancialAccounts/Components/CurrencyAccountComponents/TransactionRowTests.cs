@@ -64,7 +64,7 @@ public class TransactionRowTests
     }
 
     [Fact]
-    public async Task RowWithoutAnAccount_OffersEditAndDelete_AndDeletesThroughTheOwnerRoute()
+    public async Task Row_OffersEditAndDelete_AndDeletesThroughTheOwnerRoute()
     {
         var handler = new RecordingHttpHandler();
         await using var context = CreateContext(handler);
@@ -86,24 +86,8 @@ public class TransactionRowTests
         Assert.Equal((HttpMethod.Delete, "/api/transactions/cash/7"), (request.Method, request.PathAndQuery));
     }
 
-    [Fact]
-    public async Task RowWithAnAccount_StillDeletesThroughTheAccountService()
-    {
-        var handler = new RecordingHttpHandler();
-        await using var context = CreateContext(handler);
-        var cut = RenderRow(context, initiallyExpanded: true);
-
-        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
-        // The confirm button is labelled like the row action that opened it; it renders after the row.
-        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
-
-        Mock.Get(context.Services.GetRequiredService<IFinancialAccountService>()).Verify(service => service.RemoveEntry(7, 1), Times.Once);
-        Assert.Empty(handler.Requests);
-    }
-
     private static IRenderedComponent<TransactionRow> RenderRow(BunitContext context, bool initiallyExpanded, string description = "Groceries")
     {
-        var account = new CurrencyAccount(1, 1, "Cash");
         var entry = new CurrencyAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 100m, -20m)
         {
             Description = description,
@@ -111,7 +95,6 @@ public class TransactionRowTests
         };
 
         return context.Render<TransactionRow>(p => p
-            .Add(x => x.Account, account)
             .Add(x => x.Entry, entry)
             .Add(x => x.Currency, "PLN")
             .Add(x => x.InitiallyExpanded, initiallyExpanded));
@@ -122,7 +105,6 @@ public class TransactionRowTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new AccountDataSynchronizationService());
         context.Services.AddSingleton(NullLogger<TransactionRow>.Instance);
         context.Services.AddSingleton(new CashTransactionsHttpClient((handler ?? new RecordingHttpHandler()).CreateClient()));

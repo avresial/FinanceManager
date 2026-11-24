@@ -44,7 +44,7 @@ public partial class DistributionCardView
     [Parameter] public bool ShowViewToggle { get; set; } = true;
     [Parameter] public string DetailViewLabel { get; set; } = "Breakdown";
 
-    private bool IsAccountView => _view == DistributionViewToggle.AccountView;
+    private bool IsDetailView => _view == DistributionViewToggle.DetailView;
 
     // A single category would render as a one-slice donut that carries no information, so the card shows only its summary row.
     private bool IsSingleCategory => _slices.Count == 1;
@@ -72,8 +72,8 @@ public partial class DistributionCardView
 
     private void BuildSlices()
     {
-        var data = IsAccountView ? AccountData : TypeData;
-        _mixedCurrencies = IsAccountView
+        var data = IsDetailView ? AccountData : TypeData;
+        _mixedCurrencies = IsDetailView
             && data.Where(x => x.Value > 0).Select(x => (x.CurrencyCode ?? CurrencyShortName).ToUpperInvariant()).Distinct().Skip(1).Any();
         _foreignCodes = [.. AccountData
             .Where(x => x.Value > 0 && !IsOwnCurrency(x.CurrencyCode))
@@ -126,8 +126,7 @@ public partial class DistributionCardView
     // Each holding links to its transactions: stocks and bonds by name, cash by currency.
     private string? LinkHref(DistributionSlice slice)
     {
-        if (!IsAccountView || slice.IsOther) return null;
-        if (slice.AccountId is int accountId) return $"/AccountDetails/{accountId}";
+        if (!IsDetailView || slice.IsOther) return null;
         if (slice.CurrencyCode is string code && slice.Kind is null or "Cash") return $"/Transactions?currency={Uri.EscapeDataString(code)}";
         if (slice.Kind is "Stock" or "Bond" && slice.SourceName is string name) return $"/Transactions?search={Uri.EscapeDataString(name)}";
         return null;

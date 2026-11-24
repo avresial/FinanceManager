@@ -1,17 +1,14 @@
+using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using FinanceManager.Components.Features.App.Components;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Components.Shared.Models;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Tests.Unit.Components.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MudBlazor.Services;
-using System.Net;
-using System.Net.Http.Json;
 using DashboardComponent = FinanceManager.Components.Features.Dashboard.Components.Dashboard;
 
 namespace FinanceManager.Tests.Unit.Components.Features.App.Components;
@@ -20,23 +17,22 @@ namespace FinanceManager.Tests.Unit.Components.Features.App.Components;
 public class HomeTests
 {
     [Fact]
-    public async Task GuestWithTransactionsButNoAccounts_OpensTheDashboard()
+    public async Task GuestWithTransactions_OpensTheDashboard()
     {
-        await using var context = CreateContext(accountCount: 0, transactionCount: 1, userId: -5, out var accounts, out var transactions);
+        var backend = new NavMenuTestBackend(transactionCount: 1);
+        await using var context = CreateContext(backend, userId: -5);
 
         var cut = context.Render<Home>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<Stub<DashboardComponent>>()));
         Assert.Empty(cut.FindComponents<Stub<WelcomePage>>());
-        accounts.Verify(service => service.GetAvailableAccounts(), Times.Once);
-        Assert.Equal(1, transactions.Requests);
-        Assert.Equal("api/TransactionLog/Get/-5?count=1", transactions.LastRequestPath);
+        Assert.Equal("api/TransactionLog/Get/-5?count=1", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
     }
 
     [Fact]
-    public async Task UserWithNoTransactionsAndNoAccounts_OpensTheWelcomePage()
+    public async Task UserWithNoTransactions_OpensTheWelcomePage()
     {
-        await using var context = CreateContext(accountCount: 0, transactionCount: 0, userId: 3, out _, out _);
+        await using var context = CreateContext(new NavMenuTestBackend(transactionCount: 0), userId: 3);
 
         var cut = context.Render<Home>();
 
@@ -45,17 +41,54 @@ public class HomeTests
     }
 
     [Fact]
-    public async Task UserWithAnAccountButNoTransactions_OpensTheDashboard_WithoutAskingTheTransactionLog()
+    public async Task CachedHasTransactions_OpensTheDashboardWithoutAnyRequest()
     {
-        await using var context = CreateContext(accountCount: 1, transactionCount: 0, userId: 3, out _, out var transactions);
+        var backend = new NavMenuTestBackend(transactionCount: 0);
+        CacheSnapshot(backend, new NavMenuCacheSnapshot { UserId = 3, FetchedAtUtc = DateTime.UtcNow, HasTransactions = true });
+        await using var context = CreateContext(backend, userId: 3);
 
         var cut = context.Render<Home>();
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<Stub<DashboardComponent>>()));
-        Assert.Equal(0, transactions.Requests);
+        Assert.Empty(backend.Requests);
     }
 
-    private static BunitContext CreateContext(int accountCount, int transactionCount, int userId, out Mock<IFinancialAccountService> accounts, out TransactionLogHandler handler)
+    [Fact]
+    public async Task CachedNoTransactions_IsCheckedAgain_SoTheFirstAddShowsTheDashboard()
+    {
+        var backend = new NavMenuTestBackend(transactionCount: 1);
+        CacheSnapshot(backend, new NavMenuCacheSnapshot { UserId = 3, FetchedAtUtc = DateTime.UtcNow, HasTransactions = false });
+        await using var context = CreateContext(backend, userId: 3);
+
+        var cut = context.Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<Stub<DashboardComponent>>()));
+        Assert.Equal(1, backend.TransactionRequests);
+    }
+
+    [Fact]
+    public async Task FailedCheck_ShowsARetryAlertThatReloads()
+    {
+        var backend = new NavMenuTestBackend(failTransactions: true);
+        await using var context = CreateContext(backend, userId: 3);
+
+        var cut = context.Render<Home>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Could not load your data", cut.Markup));
+        Assert.Empty(cut.FindComponents<Stub<DashboardComponent>>());
+        Assert.Empty(cut.FindComponents<Stub<WelcomePage>>());
+        Assert.Equal(1, backend.TransactionRequests);
+
+        cut.Find("button").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(2, backend.TransactionRequests));
+    }
+
+    private static void CacheSnapshot(NavMenuTestBackend backend, NavMenuCacheSnapshot snapshot) =>
+        backend.Storage.Setup(x => x.GetItemAsync<NavMenuCacheSnapshot>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(new ValueTask<NavMenuCacheSnapshot?>(snapshot));
+
+    private static BunitContext CreateContext(NavMenuTestBackend backend, int userId)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -66,32 +99,8 @@ public class HomeTests
         var login = new Mock<ILoginService>();
         login.Setup(service => service.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = userId, UserName = userId < 0 ? "guest" : "user", Password = string.Empty, UserRole = UserRole.User, Token = "t" });
         context.Services.AddSingleton(login.Object);
-
-        accounts = new Mock<IFinancialAccountService>();
-        accounts.Setup(service => service.GetAvailableAccounts()).ReturnsAsync(Enumerable.Range(1, accountCount).ToDictionary(id => id, _ => typeof(object)));
-        context.Services.AddSingleton(accounts.Object);
-
-        handler = new TransactionLogHandler(transactionCount);
-        context.Services.AddSingleton(new TransactionLogHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
+        context.Services.AddSingleton(backend.CreateService());
         context.Services.AddLogging();
         return context;
-    }
-
-    private static TransactionLogEntryDto Entry(int id) => new(TransactionKind.Cash, id + 1, new DateTime(2026, 1, 1), 10m, "Entry");
-
-    private sealed class TransactionLogHandler(int transactionCount) : HttpMessageHandler
-    {
-        public int Requests { get; private set; }
-        public string? LastRequestPath { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests++;
-            LastRequestPath = request.RequestUri!.PathAndQuery.TrimStart('/');
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(Enumerable.Range(0, transactionCount).Select(id => Entry(id)).ToList())
-            });
-        }
     }
 }

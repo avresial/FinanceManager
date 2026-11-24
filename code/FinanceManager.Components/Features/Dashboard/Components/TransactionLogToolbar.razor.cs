@@ -1,5 +1,4 @@
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.AspNetCore.Components;
@@ -10,8 +9,8 @@ namespace FinanceManager.Components.Features.Dashboard.Components;
 
 public partial class TransactionLogToolbar : ComponentBase
 {
-    /// <summary>Preset ranges offered by the dropdown: the same ones the account details pages use.</summary>
-    public static readonly string[] Ranges = AccountHistoryToolbar.Ranges;
+    /// <summary>Preset ranges offered by the date-range dropdown, in menu order.</summary>
+    public static readonly string[] Ranges = ["Month", "1M", "3M", "6M", "YTD"];
 
     private static readonly (TransactionKind Type, string Label)[] _typeOptions =
     [

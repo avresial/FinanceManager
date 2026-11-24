@@ -3,7 +3,6 @@ using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +18,6 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 [ApiController]
 [Tags("Investment Valuation")]
 public class InvestmentValuationController(
-    IInvestmentTransactionRepository transactionRepository,
     IInvestmentValuationService valuationService,
     IInvestmentBenchmarkService benchmarkService,
     IInvestmentCapitalSeriesService capitalSeriesService,
@@ -29,17 +27,6 @@ public class InvestmentValuationController(
 {
     /// <summary>The most trades one valuation request may name; the largest caller page is 100.</summary>
     public const int MaxTransactionValuationIds = 200;
-
-    [HttpGet("Holdings/{date:DateTime}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<long, decimal>))]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetHoldings(DateTime date, CancellationToken cancellationToken = default)
-    {
-        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
-
-        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(date), cancellationToken);
-        return Ok(holdings.ToDictionary(holding => holding.AssetListingId, holding => holding.Units));
-    }
 
     [HttpGet("Value/{currencyId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]

@@ -21,7 +21,7 @@ Opening the URL logs you in immediately and redirects to the dashboard, or to `{
 
 | Login | Backing data | Use when |
 |---|---|---|
-| `guest` | Fresh in-memory sandbox seeded with demo accounts (Cash 1, Loan 1, Investments, Bond 1) — no real database touched | Cloud/sandbox testing, or any time you just need a populated UI (`UseInMemoryDatabase=true` works fine) |
+| `guest` | Fresh in-memory sandbox seeded with a pooled demo: PLN cash, bond and ETF transactions, a loan repayment stream and a small USD card debt (no accounts) — no real database touched | Cloud/sandbox testing, or any time you just need a populated UI (`UseInMemoryDatabase=true` works fine) |
 | `testuser` | The seeded `testuser` account on the real develop database | Local testing with Aspire and a real database running |
 
 `testuser` requires the account to have been seeded, which happens automatically at startup when
@@ -35,7 +35,7 @@ Any in-app route, including ones with segments. Omit it to land on the dashboard
 ```
 http://localhost:5113/DevelopLogin/guest                    → dashboard
 http://localhost:5113/DevelopLogin/guest/Assets             → assets page
-http://localhost:5113/DevelopLogin/guest/AccountDetails/1   → account details for account 1
+http://localhost:5113/DevelopLogin/guest/Transactions?dialog=add-entry   → transactions page with the add dialog open
 http://localhost:5113/DevelopLogin/testuser/UserSettings    → settings, as testuser
 ```
 

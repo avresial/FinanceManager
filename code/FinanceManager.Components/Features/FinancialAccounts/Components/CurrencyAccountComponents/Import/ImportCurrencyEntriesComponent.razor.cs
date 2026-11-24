@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import;
 
 public partial class ImportCurrencyEntriesComponent :
-    ImportEntriesComponentBase<CurrencyAccount, ImportCurrencyEntriesComponent>,
+    ImportEntriesComponentBase<ImportCurrencyEntriesComponent>,
     IAsyncDisposable
 {
     private string? _selectedPostingDateHeader;
@@ -23,11 +23,9 @@ public partial class ImportCurrencyEntriesComponent :
     private string? _selectedContractorDetailsHeader;
     private string? _selectedDescriptionHeader;
     private List<(DateTime PostingDate, decimal ValueChange, string? ContractorDetails, string? Description)> _mappedPreview = [];
-    private ImportResult? _importResult;
     private List<Currency> _currencies = [];
     private Currency? _currency;
 
-    [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -42,11 +40,10 @@ public partial class ImportCurrencyEntriesComponent :
 
     protected override int MinimumHeaderCount => 2;
     protected override bool HasMappedPreview => _mappedPreview.Any();
-    protected override bool HasImportTarget => AccountId is not null || _currency is not null;
+    protected override bool HasImportTarget => _currency is not null;
     protected override bool CanSubmitConflicts => _resolverRef?.AllResolved == true;
     protected override bool HasUnresolvedConflicts =>
-        (ActiveImportJobId.HasValue && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch)) ||
-        (_importResult is not null && _importResult.Conflicts.Any());
+        ActiveImportJobId.HasValue && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch);
 
     private int UnresolvedConflictCount => Math.Max(0, (ActiveJobStatus?.ConflictCount ?? 0) - (ActiveJobStatus?.ResolvedConflictCount ?? 0));
     private double ImportProgressValue => ActiveJobStatus?.TotalEntries > 0
@@ -54,35 +51,27 @@ public partial class ImportCurrencyEntriesComponent :
         : 0d;
     private bool ShowImportProgress => ActiveJobStatus?.Status is AsyncImportJobState.Queued or AsyncImportJobState.Running;
     // A failed job also reports IsCompleted, so it must not count as a successful import.
-    private bool CanReturnToAccount => ActiveImportJobId.HasValue &&
+    private bool CanReturnToTransactions => ActiveImportJobId.HasValue &&
         (ActiveJobStatus?.IsCompleted ?? false) &&
         ActiveJobStatus?.Status != AsyncImportJobState.Failed &&
         string.IsNullOrWhiteSpace(JobError) &&
         UnresolvedConflictCount == 0 &&
         LiveConflicts.All(x => x.IsResolved || x.Conflict.IsExactMatch);
-    private bool ShowAsyncImportCompletedMessage => _stepIndex == 2 && CanReturnToAccount;
+    private bool ShowAsyncImportCompletedMessage => _stepIndex == 2 && CanReturnToTransactions;
     private bool ShowImportFailedActions => _stepIndex == 2 &&
         ActiveImportJobId.HasValue &&
         (ActiveJobStatus?.IsCompleted ?? false) &&
         (ActiveJobStatus?.Status == AsyncImportJobState.Failed || !string.IsNullOrWhiteSpace(JobError));
-    private bool ShowSynchronousImportCompletedMessage => _stepIndex == 2 &&
-        !ActiveImportJobId.HasValue &&
-        (ActiveJobStatus?.IsCompleted ?? true) &&
-        _step3Complete &&
-        _importResult is not null &&
-        !_importResult.Conflicts.Any();
 
-    protected override bool ShowImportCompletedMessage => ShowAsyncImportCompletedMessage || ShowSynchronousImportCompletedMessage;
+    protected override bool ShowImportCompletedMessage => ShowAsyncImportCompletedMessage;
 
     protected override async Task OnInitializedAsync()
     {
         JobTracker.Changed += OnTrackingChanged;
-        await LoadAccountName();
-        if (AccountId is null)
-            await LoadCurrenciesAsync();
+        await LoadCurrenciesAsync();
     }
 
-    // Owner mode imports into the pool of one currency, so the wizard asks for it, starting on the user's own.
+    // An import goes into the pool of one currency, so the wizard asks for it, starting on the user's own.
     private async Task LoadCurrenciesAsync()
     {
         try
@@ -104,7 +93,6 @@ public partial class ImportCurrencyEntriesComponent :
         // A parsed file only counts as a finished step 1 while a currency is selected: the stepper header can jump ahead otherwise.
         _step1Complete = HasImportTarget && _rawPreview.Count != 0;
         if (HasImportTarget) _erorrs.Clear();
-        AccountName = currency is null ? string.Empty : $"{currency.ShortName} cash";
     }
 
     private void OnTrackingChanged() => _ = InvokeAsync(StateHasChanged);
@@ -203,14 +191,10 @@ public partial class ImportCurrencyEntriesComponent :
                 .Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
                 .ToList();
 
-            if (AccountId is null && _currency is null)
+            if (_currency is null)
                 throw new InvalidOperationException("Select a currency before importing.");
 
-            var startResponse = AccountId is int accountId
-                ? await AccountImportHttpClient.StartAsyncCurrencyImportAsync(new(accountId, entries))
-                : await CashTransactionsHttpClient.StartImportAsync(_currency!.Id, entries);
-            if (startResponse is null)
-                throw new Exception("Async import could not be started.");
+            var startResponse = await CashTransactionsHttpClient.StartImportAsync(_currency.Id, entries);
 
             await JobTracker.StartAsync(startResponse.JobId);
         }
@@ -233,7 +217,6 @@ public partial class ImportCurrencyEntriesComponent :
     {
         await JobTracker.ResetAsync();
         await base.Clear();
-        _importResult = null;
     }
 
     protected override void ResetMappingState()

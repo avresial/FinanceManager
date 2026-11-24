@@ -78,7 +78,6 @@ public class BondTransactionRowTests
     {
         await using var context = CreateContext();
         var cut = context.Render<BondTransactionRow>(p => p
-            .Add(x => x.Account, new BondAccount(1, 1, "Bonds"))
             .Add(x => x.Entry, new BondAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 12m, 2m, 1))
             .Add(x => x.ShowPosition, showPosition));
         cut.Find("[role='button']").Click();
@@ -89,7 +88,7 @@ public class BondTransactionRowTests
     }
 
     [Fact]
-    public async Task RowWithoutAnAccount_OffersEditAndRemove_AndRemovesThroughTheOwnerRoute()
+    public async Task Row_OffersEditAndRemove_AndRemovesThroughTheOwnerRoute()
     {
         var handler = new RecordingHttpHandler();
         await using var context = CreateContext(handler);
@@ -113,7 +112,6 @@ public class BondTransactionRowTests
 
     private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile, DateTime? postingDate = null)
     {
-        var account = new BondAccount(1, 1, "Bonds");
         var entry = new BondAccountEntry(1, 7, postingDate ?? new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc),
             12m, 2m, 1);
         var details = new BondDetails
@@ -127,7 +125,6 @@ public class BondTransactionRowTests
         };
 
         return context.Render<BondTransactionRow>(p => p
-            .Add(x => x.Account, account)
             .Add(x => x.Entry, entry)
             .Add(x => x.BondDetails, details)
             .Add(x => x.IsMobile, isMobile));
@@ -138,7 +135,6 @@ public class BondTransactionRowTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new AccountDataSynchronizationService());
         context.Services.AddSingleton(NullLogger<BondTransactionRow>.Instance);
         var settings = new Mock<FinanceManager.Domain.Identity.Services.ISettingsService>();

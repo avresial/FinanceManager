@@ -14,7 +14,7 @@ and are not interchangeable. Pick by asking one question: **may the API request 
 | What is stored | The last *rendered* state of a UI surface | The last *fetched* data, with its validity window |
 | Why | The surface paints instantly instead of flashing a spinner | Fewer requests for data that does not change often |
 | Freshness | Refresh attempted on every visit — reconciled on a usable response; failed refresh retains stale content | Bounded by the entry's expiry rules |
-| Use for | Dashboard cards, transaction lists, charts | Nav menu state, investment rate/estimate lookups |
+| Use for | Dashboard cards, transaction lists, charts | Nav menu state (`nav-menu-cache-v2`: the Assets and Liabilities link flags and whether the user has any transaction, which gates Home between the Welcome page and the Dashboard), investment rate/estimate lookups |
 
 A UI snapshot is never a source of truth. It is what the user looks at during the few hundred
 milliseconds the real request takes.
@@ -119,8 +119,8 @@ on failure and reserve the empty list for a genuinely empty success.
 A snapshot stores rendered content only. When the API response carries more than that — pagination
 cursors, neighbouring-entry markers such as `NextOlderEntry` — apply the *fetched object itself* on
 refresh and use the model purely for equality and persistence. Rebuilding the response from the
-model would silently drop those fields; the account-details pages keep the fetched account in a
-local and hand it to their apply step for exactly this reason.
+model would silently drop those fields; the Transactions page keeps the fetched page object and its
+cursor in a local and hands it to its apply step for exactly this reason.
 
 ### Component structure
 
@@ -137,10 +137,10 @@ concurrently so each paints its own snapshot as soon as it is read). Splitting t
 split the request.
 
 The reverse case — several responses feeding **one** surface — takes one snapshot holding all of
-them, and the requests run concurrently inside a single `FetchAsync`. The investment account trade
-list does this: a row leads with its gain/loss once the server has priced it and with its cash
-impact until then, so painting the trades without their valuations would flip every amount on
-screen a moment later. Splitting the request must not split the snapshot either.
+them, and the requests run concurrently inside a single `FetchAsync`. The Assets Investments value
+card does this: the value, capital and benchmark series and the cost basis behind the gain chip feed one
+snapshot, so painting the chart without its cost basis would flip the readout a moment later.
+Splitting the request must not split the snapshot either.
 
 ## Where it is used
 
@@ -148,17 +148,23 @@ screen a moment later. Splitting the request must not split the snapshot either.
 |---|---|
 | Savings rate card (12 monthly salary/spending values, scoped to user, display currency and current month) | [SavingsRateCard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Cards/SavingsRateCard.razor.cs) |
 | Dashboard overview | [Dashboard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Dashboard.razor.cs) |
-| Account transaction lists (currency, bond) | [AccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/AccountDetailsSnapshotStore.cs) |
-| Investment account trade list | [InvestmentAccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentAccountDetailsSnapshotStore.cs) |
 | Assets portfolio value and holdings (scoped to the owner, with currency and benchmark in the value key and the selected dates in the snapshot) | [PortfolioCardBase.cs](../../../code/FinanceManager.Components/Features/Portfolio/Components/PortfolioCardBase.cs) |
 | Liabilities cards | [LiabilitiesSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/LiabilitiesSnapshotStore.cs) |
 | Dashboard insights / recurring / transaction-log cards (`financial-insights:v2:{user}:{count}`; alerts card `financial-alerts:v2:{user}`; Alerts page `alerts-page:v2:{user}`; the `v2` keys retire snapshots keyed per account) | [DashboardCardsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardsSnapshotStore.cs) |
 | Subscriptions page summary tiles and list | [SubscriptionsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Labels/Services/SubscriptionsSnapshotStore.cs) |
 
-`AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
+`SubscriptionsSnapshotStore` shows the recommended shape for a surface with several callers: a thin
 feature-level wrapper that owns the key shape and the snapshot↔model mapping, leaving the workflow
 to the coordinator. Follow-up card and chart migrations should add a similar wrapper rather than
 re-implementing the orchestration.
+
+## Retiring a stored shape
+
+Change a key's `:vN` segment when its stored model changes shape or meaning, as `nav-menu-cache-v2` did
+when the account list left the nav menu snapshot. Do **not** bump `SnapshotBase.CurrentSchemaVersion`
+for one surface: `DashboardCardVisibilityService` keeps users' hidden-card choices in the same store, so a
+global bump would reset them. Orphaned `ui-snapshot:account-*` keys of the removed account screens are
+left to the browser; they are small and never read again.
 
 ## Card visibility preferences
 

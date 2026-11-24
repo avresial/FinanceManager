@@ -1,14 +1,11 @@
-using Blazored.LocalStorage;
 using Bunit;
 using FinanceManager.Components;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Layout;
-using FinanceManager.Components.Shared.Services;
+using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
-using Microsoft.Extensions.Caching.Memory;
+using FinanceManager.Tests.Unit.Components.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
@@ -18,19 +15,24 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Layout;
 [Trait("Category", "Unit")]
 public class NavMenuTests
 {
-    [Fact]
-    public async Task TransactionsLink_PointsToTransactionsPage()
+    private static BunitContext CreateContext(NavMenuTestBackend backend)
     {
-        await using var context = new BunitContext();
+        var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddLogging();
         context.Services.AddMudServices();
-        context.Services.AddSingleton(Mock.Of<ILoginService>());
+        var login = new Mock<ILoginService>();
+        login.Setup(service => service.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = 5, UserName = "user", Password = string.Empty, UserRole = UserRole.User });
+        context.Services.AddSingleton(login.Object);
         context.Services.AddSingleton(new AccountDataSynchronizationService());
-        context.Services.AddSingleton(new NavMenuStateCacheService(
-            Mock.Of<ILocalStorageService>(), new MemoryCache(new MemoryCacheOptions()),
-            Mock.Of<IFinancialAccountService>(), new AssetsHttpClient(new HttpClient()),
-            new LiabilitiesHttpClient(new HttpClient()), NullLogger<NavMenuStateCacheService>.Instance));
+        context.Services.AddSingleton(backend.CreateService());
+        return context;
+    }
+
+    [Fact]
+    public async Task TransactionsLink_PointsToTransactionsPage()
+    {
+        await using var context = CreateContext(new NavMenuTestBackend());
 
         var cut = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, true));
 
@@ -39,21 +41,44 @@ public class NavMenuTests
         Assert.EndsWith("Transactions", link.GetAttribute("href"));
     }
 
+    [Fact]
+    public async Task Menu_HasNoAccountsSection()
+    {
+        await using var context = CreateContext(new NavMenuTestBackend(hasAssets: true, hasLiabilities: true, transactionCount: 1));
+
+        var cut = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, true));
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='nav-assets']")));
+        Assert.Empty(cut.FindAll("[data-testid='nav-add-account']"));
+        Assert.DoesNotContain("Accounts", cut.Markup);
+        Assert.DoesNotContain("AccountDetails", cut.Markup);
+        Assert.DoesNotContain("AddAccount", cut.Markup);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task AssetsAndLiabilitiesLinks_FollowTheirFlags(bool hasAssets, bool hasLiabilities)
+    {
+        await using var context = CreateContext(new NavMenuTestBackend(hasAssets, hasLiabilities, transactionCount: 1));
+
+        var cut = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, true));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(hasAssets, cut.FindAll("[data-testid='nav-assets']").Count == 1);
+            Assert.Equal(hasLiabilities, cut.FindAll("[data-testid='nav-liabilities']").Count == 1);
+        });
+    }
+
     [Theory]
     [InlineData(true, "FinanceManager")]
     [InlineData(false, "FM")]
     public async Task Branding_ExposesVersionOnlyThroughFocusableTooltip(bool drawerIsOpen, string brandText)
     {
-        await using var context = new BunitContext();
-        context.JSInterop.Mode = JSRuntimeMode.Loose;
-        context.Services.AddLogging();
-        context.Services.AddMudServices();
-        context.Services.AddSingleton(Mock.Of<ILoginService>());
-        context.Services.AddSingleton(new AccountDataSynchronizationService());
-        context.Services.AddSingleton(new NavMenuStateCacheService(
-            Mock.Of<ILocalStorageService>(), new MemoryCache(new MemoryCacheOptions()),
-            Mock.Of<IFinancialAccountService>(), new AssetsHttpClient(new HttpClient()),
-            new LiabilitiesHttpClient(new HttpClient()), NullLogger<NavMenuStateCacheService>.Instance));
+        await using var context = CreateContext(new NavMenuTestBackend());
 
         var cut = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, drawerIsOpen));
 

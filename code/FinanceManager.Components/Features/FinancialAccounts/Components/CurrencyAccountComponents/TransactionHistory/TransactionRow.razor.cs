@@ -18,8 +18,6 @@ public partial class TransactionRow
     private long? _loadedEntryId;
     private bool? _loadedInitiallyExpanded;
 
-    /// <summary>The account page this row belongs to. Null on the Transactions page, where entries are edited and deleted through the owner routes.</summary>
-    [Parameter] public CurrencyAccount? Account { get; set; }
     [Parameter] public required CurrencyAccountEntry Entry { get; set; }
     [Parameter] public required string Currency { get; set; }
     [Parameter] public bool ShowBalance { get; set; } = true;
@@ -30,7 +28,6 @@ public partial class TransactionRow
     [Parameter] public bool SiblingsShareSameTime { get; set; }
 
     [Inject] public required ISnackbar Snackbar { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<TransactionRow> Logger { get; set; }
@@ -106,10 +103,7 @@ public partial class TransactionRow
 
         try
         {
-            if (Account is null)
-                await CashTransactionsHttpClient.DeleteAsync(Entry.EntryId);
-            else
-                await FinancialAccountService.RemoveEntry(Entry.EntryId, Account.AccountId);
+            await CashTransactionsHttpClient.DeleteAsync(Entry.EntryId);
         }
         catch (Exception ex)
         {

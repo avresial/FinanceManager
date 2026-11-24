@@ -37,7 +37,7 @@
 </div>
 
 @* Hidden picker opened programmatically by the Custom range option; the Dialog variant matches
-   the custom-range picker on the account details pages. *@
+   the custom-range picker of the transaction toolbar. *@
 <div class="fm-dashboard-custom-range-picker">
     <MudDateRangePicker Variant="Variant.Outlined" @ref="_customDateRangePicker" DateRange="_customRange" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture"
                         DateRangeChanged="OnCustomDateRangeChanged" MaxDate="DateTime.UtcNow.Date" PickerVariant="PickerVariant.Dialog" />
