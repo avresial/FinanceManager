@@ -8,7 +8,7 @@ namespace FinanceManager.Components.Features.Transactions.Cash.Components.Import
 
 public partial class CurrencyEntryConflictResolver
 {
-    [Inject] public required CashTransactionsHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required CashTransactionsHttpClient CashTransactions { get; set; }
     [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
     [Parameter, EditorRequired] public IReadOnlyCollection<ImportJobConflict> JobConflicts { get; set; } = [];
@@ -110,7 +110,7 @@ public partial class CurrencyEntryConflictResolver
                 JobId = JobId,
                 Decisions = decisions
             };
-            await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
+            await CashTransactions.ResolveAsyncCurrencyImportConflictsAsync(request);
             await OnConflictsResolved.InvokeAsync(resolvedConflictIds);
             _dayChoices.Clear();
         }

@@ -23,7 +23,7 @@ public partial class InvestmentTransactionFormBody : ComponentBase
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    [Inject] public required InstrumentSearchHttpClient TransactionHttpClient { get; set; }
+    [Inject] public required InstrumentSearchHttpClient InstrumentSearch { get; set; }
     [Inject] public required InvestmentTradesHttpClient TradesHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
@@ -122,7 +122,7 @@ public partial class InvestmentTransactionFormBody : ComponentBase
         {
             try
             {
-                var listing = await TransactionHttpClient.GetListingAsync(Transaction.AssetListingId);
+                var listing = await InstrumentSearch.GetListingAsync(Transaction.AssetListingId);
                 if (listing is not null)
                     listingTradingCurrency = listing.Currency;
             }
@@ -252,7 +252,7 @@ public partial class InvestmentTransactionFormBody : ComponentBase
         _isPriceLoading = true;
         try
         {
-            var priceInfo = await TransactionHttpClient.GetListingPriceAsync(listingId, DateOnly.FromDateTime(tradeDate));
+            var priceInfo = await InstrumentSearch.GetListingPriceAsync(listingId, DateOnly.FromDateTime(tradeDate));
             if (version != _priceRequestVersion) return;
 
             if (priceInfo?.LatestPrice is decimal price)
@@ -290,7 +290,7 @@ public partial class InvestmentTransactionFormBody : ComponentBase
         var trimmed = value.Trim();
         try
         {
-            var results = await TransactionHttpClient.SearchInstrumentsAsync(trimmed, cancellationToken: cancellationToken);
+            var results = await InstrumentSearch.SearchInstrumentsAsync(trimmed, cancellationToken: cancellationToken);
             var filtered = (_editingId is null
                 ? results
                 : results.Where(x => x.Source == InstrumentOptionSource.Existing)).ToList();

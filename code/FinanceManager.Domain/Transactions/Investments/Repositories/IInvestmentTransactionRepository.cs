@@ -12,7 +12,7 @@ public interface IInvestmentTransactionRepository
     /// <summary>Distinct currency codes of the user's trades.</summary>
     Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default);
 
-    /// <summary>Whether the user has at least one trade, linked to an account or not. Short-circuits in the database.</summary>
+    /// <summary>Whether the user has at least one trade. Short-circuits in the database.</summary>
     Task<bool> HasAnyByUser(long userId, CancellationToken ct = default);
 
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
@@ -22,7 +22,7 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The number of trades per user in one grouped query, linked to an account or not. Users without trades are omitted,
+    /// The number of trades per user in one grouped query. Users without trades are omitted,
     /// so callers should treat a missing key as zero. Id 0 is never a user and is ignored.
     /// </summary>
     Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
@@ -42,7 +42,7 @@ public interface IInvestmentTransactionRepository
     public sealed record ListingTradePrice(long AssetListingId, string Currency, decimal UnitPrice);
 
     /// <summary>
-    /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.
+    /// Gets only the requested transactions of <paramref name="userId"/>, ordered by posting date then id.
     /// The owner predicate is applied before materialisation, so ids of other users are never returned.
     /// </summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
@@ -52,7 +52,7 @@ public interface IInvestmentTransactionRepository
 
     /// <summary>
     /// Bounded historical capital reconstruction inputs: every trade of <paramref name="userId"/> on or before <paramref name="toDate"/>,
-    /// linked to an account or not, ordered by posting date then id. The projection includes the stable transaction/listing identity so
+    /// ordered by posting date then id. The projection includes the stable transaction/listing identity so
     /// the application can replay same-day history deterministically without loading entity graphs.
     /// </summary>
     Task<IReadOnlyList<UserCapitalFlowInput>> GetCapitalFlowInputsByUser(long userId, DateOnly toDate, CancellationToken cancellationToken = default);
@@ -65,7 +65,7 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Pages the trades of <paramref name="userId"/>, linked to an account or not, with the same ordering, cursor and filters plus an optional listing.
+    /// Pages the trades of <paramref name="userId"/>, with the same ordering, cursor and filters plus an optional listing.
     /// </summary>
     Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPageByUser(
         long userId,
@@ -80,14 +80,14 @@ public interface IInvestmentTransactionRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Non-zero signed units per listing as of a date, pooled across all of the owner's trades regardless of price or account,
+    /// Non-zero signed units per listing as of a date, pooled across all of the owner's trades regardless of price,
     /// summed in the database and ordered by listing id. Oversold positions stay negative.
     /// </summary>
     Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within [<paramref name="startDate"/>,
-    /// <paramref name="endDate"/>], pooled per listing across all of the owner's trades (linked to an account or not). Positions and days
+    /// <paramref name="endDate"/>], pooled per listing across all of the owner's trades. Positions and days
     /// that net to zero are omitted.
     /// </summary>
     Task<UserValuationInputs> GetValuationInputsByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);

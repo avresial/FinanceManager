@@ -2,9 +2,6 @@ using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.Shared;
 using FinanceManager.Domain.Transactions.Shared;
 using FinanceManager.Domain.Transactions.Shared.Repositories;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Hybrid;
-using System.Runtime.CompilerServices;
 
 namespace FinanceManager.Infrastructure.Features.Transactions.Shared.Repositories;
 

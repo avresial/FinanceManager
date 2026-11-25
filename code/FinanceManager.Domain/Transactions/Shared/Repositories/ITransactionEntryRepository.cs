@@ -2,14 +2,14 @@ namespace FinanceManager.Domain.Transactions.Shared.Repositories;
 
 public interface ITransactionEntryRepository<T>
 {
-    /// <summary>The owner's entries with exactly these ids (linked or not), with their labels. Ids that are missing or belong to someone else are skipped; a zero owner id returns nothing.</summary>
+    /// <summary>The owner's entries with exactly these ids, with their labels. Ids that are missing or belong to someone else are skipped; a zero owner id returns nothing.</summary>
     Task<IReadOnlyList<T>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Counts entries of this type for each of the supplied users in a single grouped query on the entry's
-    /// own <c>UserId</c>, so account-linked and unlinked entries are counted alike. Users with no entries of
+    /// own <c>UserId</c>. Users with no entries of
     /// this type are omitted from the result, so callers should treat a missing key as a count of zero.
     /// Used for plan record-capacity calculations.
     /// </summary>
@@ -18,17 +18,17 @@ public interface ITransactionEntryRepository<T>
     Task<bool> Add(T entry, CancellationToken cancellationToken = default);
     Task<bool> Add(IEnumerable<T> entries, CancellationToken cancellationToken = default);
 
-    /// <summary>Attaches labels to the owner's entries (linked or not) and returns how many were newly attached. Assignments for missing or foreign entries are ignored.</summary>
+    /// <summary>Attaches labels to the owner's entries and returns how many were newly attached. Assignments for missing or foreign entries are ignored.</summary>
     Task<int> AddLabels(int userId, IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
 
     // ----- Owner-scoped access: the entry's own UserId is the only ownership check -----
 
-    /// <summary>One entry of the owner, linked to an account or not, with its labels; null when it is missing or belongs to someone else.</summary>
+    /// <summary>One entry of the owner with its labels; null when it is missing or belongs to someone else.</summary>
     Task<T?> GetByOwner(int userId, long entryId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The owner's entries of one partition (currency or bond definition) between two timestamps (both inclusive),
-    /// linked or not, oldest first, without labels. Streams from the database.
+    /// oldest first, without labels. Streams from the database.
     /// </summary>
     IAsyncEnumerable<T> GetByOwner(int userId, int partitionId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
 
