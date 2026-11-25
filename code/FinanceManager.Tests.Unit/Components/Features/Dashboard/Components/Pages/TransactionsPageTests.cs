@@ -9,14 +9,10 @@ using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Bond;
 using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
-using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -44,43 +40,42 @@ public sealed class TransactionsPageTests
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
         [
-            Entry(1, _oct15, AccountType.Currency, accountId: 10),
-            Entry(2, _oct15, AccountType.Bond, accountId: 20),
-            Entry(3, _oct15, AccountType.Stock, accountId: 30),
+            Entry(1, _oct15, TransactionKind.Cash, accountId: 10),
+            Entry(2, _oct15, TransactionKind.Bond, accountId: 20),
+            Entry(3, _oct15, TransactionKind.Investment, accountId: 30),
         ], null)));
         await using var context = CreateContext(handler);
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Equal(["Currency", "Bond", "Stock"],
+        cut.WaitForAssertion(() => Assert.Equal(["Cash", "Bond", "Investment"],
             cut.FindAll("[data-testid='transaction-history-row']").Select(row => row.GetAttribute("data-kind"))));
         Assert.Single(cut.FindComponents<TransactionRow>());
         Assert.Single(cut.FindComponents<BondTransactionRow>());
         var investment = Assert.Single(cut.FindComponents<InvestmentTransactionRow>());
         Assert.Equal(3, investment.Instance.Transaction.Id);
-        Assert.Equal(["Everyday account", "Everyday account", "Everyday account"],
-            cut.FindAll("a.fm-txhist-account").Select(link => link.TextContent.Trim()));
+        Assert.Empty(cut.FindAll("a[href*=AccountDetails]"));
     }
 
     [Fact]
     public async Task SearchChangeResetsCursorAndKeepsAccountFilters()
     {
-        using var handler = new PageHandler((count, _) => Respond(Page([Entry(count == 3 ? 4 : 5, _oct15)], new(_oct15, AccountType.Currency, 5))));
+        using var handler = new PageHandler((count, _) => Respond(Page([Entry(count == 3 ? 4 : 5, _oct15)], new(_oct15, TransactionKind.Cash, 5))));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
         Assert.Null(toolbar.Instance.SearchText);
-        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([AccountType.Currency], [10])));
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Cash], ["PLN"])));
         cut.Find("[data-testid='transactions-load-more']").Click();
         cut.WaitForAssertion(() => Assert.True(QueryHelpers.ParseQuery(handler.Requests.Last().Query).ContainsKey("cursorDate")));
         await cut.InvokeAsync(() => toolbar.Instance.SearchTextChanged.InvokeAsync("mixed"));
         var query = QueryHelpers.ParseQuery(handler.Requests.Last().Query);
         Assert.Equal("mixed", query["search"].ToString());
-        Assert.Equal("Currency", query["accountTypes"].ToString());
-        Assert.Equal("10", query["accountIds"].ToString());
+        Assert.Equal("Cash", query["kinds"].ToString());
+        Assert.Equal("PLN", query["currencies"].ToString());
         Assert.False(query.ContainsKey("cursorDate"));
-        Assert.Single(cut.FindAll("a.fm-txhist-account"));
+        Assert.Single(cut.FindAll("[data-testid='transaction-history-row']"));
     }
 
     [Fact]
@@ -92,7 +87,7 @@ public sealed class TransactionsPageTests
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
         var query = QueryHelpers.ParseQuery(Assert.Single(handler.Requests).Query);
         Assert.Equal("netflix", query["search"].ToString());
         var start = ParseDate(query["start"]!);
@@ -111,7 +106,7 @@ public sealed class TransactionsPageTests
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
         Assert.Equal("3M", cut.FindComponent<TransactionLogToolbar>().Instance.SelectedRange);
     }
 
@@ -119,7 +114,7 @@ public sealed class TransactionsPageTests
     public async Task FirstPage_RendersRowsGroupedByDay_NewestFirst()
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
-            [Entry(5, _oct15), Entry(4, _oct15), Entry(3, _oct14, AccountType.Bond)], null)));
+            [Entry(5, _oct15), Entry(4, _oct15), Entry(3, _oct14, TransactionKind.Bond)], null)));
         await using var context = CreateContext(handler);
 
         var cut = context.Render<TransactionsPage>();
@@ -129,9 +124,9 @@ public sealed class TransactionsPageTests
             var days = cut.FindAll("[data-testid='transactions-day']");
             Assert.Equal(2, days.Count);
             Assert.Contains("15 Oct", days[0].QuerySelector(".mud-card-header")!.TextContent);
-            Assert.Equal(2, days[0].QuerySelectorAll("a.fm-txhist-account").Length);
+            Assert.Equal(2, days[0].QuerySelectorAll("[data-testid='transaction-history-row']").Length);
             Assert.Contains("14 Oct", days[1].QuerySelector(".mud-card-header")!.TextContent);
-            Assert.Single(days[1].QuerySelectorAll("a.fm-txhist-account"));
+            Assert.Single(days[1].QuerySelectorAll("[data-testid='transaction-history-row']"));
         });
         var request = Assert.Single(handler.Requests);
         var query = QueryHelpers.ParseQuery(request.Query);
@@ -143,46 +138,46 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
-    public async Task Rows_LinkToOwningAccount_CurrencyRowsCarryTheEntryId()
+    public async Task Rows_KeepTheirEntryIds()
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
-            [Entry(5, _oct15, AccountType.Currency, accountId: 11), Entry(4, _oct15, AccountType.Stock, accountId: 12)], null)));
+            [Entry(5, _oct15, TransactionKind.Cash, accountId: 11), Entry(4, _oct15, TransactionKind.Investment, accountId: 12)], null)));
         await using var context = CreateContext(handler);
 
         var cut = context.Render<TransactionsPage>();
 
         cut.WaitForAssertion(() =>
         {
-            var hrefs = cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")).ToList();
-            Assert.Equal(["/AccountDetails/11?entryId=5", "/AccountDetails/12"], hrefs);
+            var entryIds = cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId).ToList();
+            Assert.Equal([5L, 4L], entryIds);
         });
     }
 
     [Fact]
     public async Task LoadMore_AppendsNextPageUsingCursor_WithoutDuplicates()
     {
-        var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
+        var cursor = new TransactionLogCursor(_oct14, TransactionKind.Cash, 3);
         using var handler = new PageHandler((count, _) => Respond(count == 1
             ? Page([Entry(5, _oct15), Entry(4, _oct15), Entry(3, _oct14)], cursor)
             : Page([Entry(2, _oct14), Entry(1, _oct13)], null)));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("[data-testid='transaction-history-row']").Count));
 
         cut.Find("[data-testid='transactions-load-more']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            var hrefs = cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")).ToList();
-            Assert.Equal(5, hrefs.Count);
-            Assert.Equal(hrefs.Count, hrefs.Distinct().Count());
+            var entryIds = cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId).ToList();
+            Assert.Equal(5, entryIds.Count);
+            Assert.Equal(entryIds.Count, entryIds.Distinct().Count());
             // Oct 14 continues across the page boundary: still a single day group.
             Assert.Equal(3, cut.FindAll("[data-testid='transactions-day']").Count);
             Assert.Empty(cut.FindAll("[data-testid='transactions-load-more']"));
         });
         var query = QueryHelpers.ParseQuery(handler.Requests[1].Query);
         Assert.Equal(cursor.Date, ParseDate(query["cursorDate"]!));
-        Assert.Equal("Currency", query["cursorAccountType"].ToString());
+        Assert.Equal("Cash", query["cursorKind"].ToString());
         Assert.Equal("3", query["cursorEntryId"].ToString());
         Assert.Equal(handler.Requests[0].Query.Split('&')[0], handler.Requests[1].Query.Split('&')[0]);
     }
@@ -190,7 +185,7 @@ public sealed class TransactionsPageTests
     [Fact]
     public async Task ChangingRange_ResetsPagingAndRequestsFromTheStart()
     {
-        var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
+        var cursor = new TransactionLogCursor(_oct14, TransactionKind.Cash, 3);
         using var handler = new PageHandler((count, _) => Respond(count switch
         {
             1 => Page([Entry(5, _oct15), Entry(3, _oct14)], cursor),
@@ -199,17 +194,17 @@ public sealed class TransactionsPageTests
         }));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='transaction-history-row']").Count));
         cut.Find("[data-testid='transactions-load-more']").Click();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("[data-testid='transaction-history-row']").Count));
 
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
         await cut.InvokeAsync(() => toolbar.Instance.SelectedRangeChanged.InvokeAsync("1M"));
 
         cut.WaitForAssertion(() =>
         {
-            var hrefs = cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")).ToList();
-            Assert.Equal(["/AccountDetails/10?entryId=9"], hrefs);
+            var entryIds = cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId).ToList();
+            Assert.Equal([9L], entryIds);
         });
         Assert.Equal(3, handler.Requests.Count);
         var first = QueryHelpers.ParseQuery(handler.Requests[0].Query);
@@ -250,13 +245,13 @@ public sealed class TransactionsPageTests
 
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
         await cut.InvokeAsync(() => toolbar.Instance.SelectedRangeChanged.InvokeAsync("1M"));
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
 
         firstResponse.SetResult(JsonResponse(Page([Entry(1, _oct15), Entry(2, _oct15)], null)));
         await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
 
-        var hrefs = cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")).ToList();
-        Assert.Equal(["/AccountDetails/10?entryId=9"], hrefs);
+        var entryIds = cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId).ToList();
+        Assert.Equal([9L], entryIds);
     }
 
     [Fact]
@@ -272,7 +267,7 @@ public sealed class TransactionsPageTests
         {
             Assert.NotEmpty(cut.FindAll("[data-testid='transactions-loading']"));
             Assert.NotEmpty(cut.FindAll(".mud-skeleton"));
-            Assert.Empty(cut.FindAll("a.fm-txhist-account"));
+            Assert.Empty(cut.FindAll("[data-testid='transaction-history-row']"));
         });
         pending.SetResult(JsonResponse(Page([Entry(1, _oct15)], null)));
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid='transactions-loading']")));
@@ -309,7 +304,7 @@ public sealed class TransactionsPageTests
         cut.WaitForAssertion(() =>
         {
             Assert.Empty(cut.FindAll("[data-testid='transactions-error']"));
-            Assert.Single(cut.FindAll("a.fm-txhist-account"));
+            Assert.Single(cut.FindAll("[data-testid='transaction-history-row']"));
         });
         Assert.Equal(2, handler.Requests.Count);
     }
@@ -328,7 +323,7 @@ public sealed class TransactionsPageTests
     [Fact]
     public async Task FailedLoadMore_KeepsShownRows_AndRetriesTheSamePage()
     {
-        var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
+        var cursor = new TransactionLogCursor(_oct14, TransactionKind.Cash, 3);
         using var handler = new PageHandler((count, _) => count switch
         {
             1 => Respond(Page([Entry(5, _oct15), Entry(3, _oct14)], cursor)),
@@ -337,69 +332,71 @@ public sealed class TransactionsPageTests
         });
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='transaction-history-row']").Count));
 
         cut.Find("[data-testid='transactions-load-more']").Click();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-load-more-error']")));
-        Assert.Equal(2, cut.FindAll("a.fm-txhist-account").Count);
+        Assert.Equal(2, cut.FindAll("[data-testid='transaction-history-row']").Count);
 
         cut.Find("[data-testid='transactions-load-more']").Click();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("[data-testid='transaction-history-row']").Count));
         Assert.Equal(handler.Requests[1].Query, handler.Requests[2].Query);
     }
 
     [Fact]
-    public async Task LoadsTheAccountOptionsOnce_MappingAccountKindsToTypes()
+    public async Task OffersTheCurrenciesOfTheUsersOwnTransactions()
     {
-        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
-        await using var context = CreateContext(handler, out var accountService);
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)), currencies: ["PLN", "USD"]);
+        await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindComponent<TransactionLogToolbar>().Instance.Accounts.Count));
+        cut.WaitForAssertion(() => Assert.Equal(["PLN", "USD"], cut.FindComponent<TransactionLogToolbar>().Instance.Currencies));
+        Assert.Equal("/api/TransactionLog/Currencies/7", Assert.Single(handler.CurrencyRequests).AbsolutePath);
+        Assert.DoesNotContain(handler.Requests, request => request.AbsolutePath.Contains("Currencies"));
+    }
 
-        var toolbar = cut.FindComponent<TransactionLogToolbar>();
-        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([AccountType.Bond], [])));
-        await cut.InvokeAsync(() => toolbar.Instance.SelectedRangeChanged.InvokeAsync("1M"));
-        cut.WaitForAssertion(() => Assert.Equal(3, handler.Requests.Count));
-
-        Assert.Equal(
-            [(10, "Everyday", AccountType.Currency), (20, "Treasury bonds", AccountType.Bond), (30, "Broker", AccountType.Stock)],
-            toolbar.Instance.Accounts.OrderBy(a => a.AccountId).Select(a => (a.AccountId, a.AccountName, a.AccountType)));
-        accountService.Verify(service => service.GetAvailableAccounts(), Times.Once);
-        accountService.Verify(service => service.GetAvailableAccountNames(), Times.Once);
+    [Fact]
+    public async Task HidesTheCurrencyFilter_WhenTheUserHasOneCurrencyOnly()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)), currencies: ["PLN"]);
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        cut.WaitForAssertion(() => Assert.Equal(["PLN"], cut.FindComponent<TransactionLogToolbar>().Instance.Currencies));
+        Assert.Empty(cut.FindAll("[data-testid='transactions-currency-filter']"));
     }
 
     [Fact]
     public async Task ChangingTheFilter_ResetsPagingAndSendsTheFilters()
     {
-        var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
+        var cursor = new TransactionLogCursor(_oct14, TransactionKind.Cash, 3);
         using var handler = new PageHandler((count, _) => Respond(count switch
         {
             1 => Page([Entry(5, _oct15), Entry(3, _oct14)], cursor),
             2 => Page([Entry(2, _oct14)], cursor),
-            _ => Page([Entry(9, _oct13, AccountType.Bond, accountId: 20)], null),
+            _ => Page([Entry(9, _oct13, TransactionKind.Bond, accountId: 20)], null),
         }));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='transaction-history-row']").Count));
         cut.Find("[data-testid='transactions-load-more']").Click();
-        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("[data-testid='transaction-history-row']").Count));
         var firstQuery = QueryHelpers.ParseQuery(handler.Requests[0].Query);
-        Assert.False(firstQuery.ContainsKey("accountTypes"));
-        Assert.False(firstQuery.ContainsKey("accountIds"));
+        Assert.False(firstQuery.ContainsKey("kinds"));
+        Assert.False(firstQuery.ContainsKey("currencies"));
 
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
-        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([AccountType.Bond], [20])));
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Bond], ["USD"])));
 
         cut.WaitForAssertion(() =>
         {
-            var hrefs = cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")).ToList();
-            Assert.Equal(["/AccountDetails/20"], hrefs);
+            var entryIds = cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId).ToList();
+            Assert.Equal([9L], entryIds);
         });
         Assert.Equal(3, handler.Requests.Count);
         var filtered = QueryHelpers.ParseQuery(handler.Requests[2].Query);
         Assert.False(filtered.ContainsKey("cursorDate"));
-        Assert.Equal(["Bond"], filtered["accountTypes"].ToArray());
-        Assert.Equal(["20"], filtered["accountIds"].ToArray());
+        Assert.Equal(["Bond"], filtered["kinds"].ToArray());
+        Assert.Equal(["USD"], filtered["currencies"].ToArray());
         Assert.Equal(firstQuery["start"], filtered["start"]);
     }
 
@@ -414,7 +411,7 @@ public sealed class TransactionsPageTests
         cut.FindAll(".fm-txlog-type-chip").Single(chip => chip.TextContent.Contains("Investments")).Click();
 
         cut.WaitForAssertion(() => Assert.Equal(2, handler.Requests.Count));
-        Assert.Equal(["Stock"], QueryHelpers.ParseQuery(handler.Requests[1].Query)["accountTypes"].ToArray());
+        Assert.Equal(["Investment"], QueryHelpers.ParseQuery(handler.Requests[1].Query)["kinds"].ToArray());
     }
 
     [Fact]
@@ -423,18 +420,18 @@ public sealed class TransactionsPageTests
         var firstResponse = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var handler = new PageHandler((count, _) => count == 1
             ? firstResponse.Task
-            : Respond(Page([Entry(9, _oct13, AccountType.Bond, accountId: 20)], null)));
+            : Respond(Page([Entry(9, _oct13, TransactionKind.Bond, accountId: 20)], null)));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(handler.Requests));
 
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
-        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([AccountType.Bond], [])));
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Bond], [])));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
         firstResponse.SetResult(JsonResponse(Page([Entry(1, _oct15), Entry(2, _oct15)], null)));
         await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
 
-        Assert.Equal(["/AccountDetails/20"], cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href")));
+        Assert.Equal([9L], cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId));
     }
 
     [Fact]
@@ -447,44 +444,43 @@ public sealed class TransactionsPageTests
         Assert.DoesNotContain("filters", cut.Find("[data-testid='transactions-empty']").TextContent);
 
         var toolbar = cut.FindComponent<TransactionLogToolbar>();
-        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([], [10])));
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([], ["PLN"])));
 
         cut.WaitForAssertion(() => Assert.Contains("No transactions match the selected filters",
             cut.Find("[data-testid='transactions-empty']").TextContent));
     }
 
     [Fact]
-    public async Task FailingToLoadAccounts_StillLoadsTheTransactions()
+    public async Task FailingToLoadCurrencies_StillLoadsTheTransactions()
     {
         using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
-        await using var context = CreateContext(handler, out var accountService);
-        accountService.Setup(service => service.GetAvailableAccounts()).ThrowsAsync(new HttpRequestException("boom"));
+        await using var context = CreateContext(handler);
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a.fm-txhist-account")));
-        Assert.Empty(cut.FindComponent<TransactionLogToolbar>().Instance.Accounts);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        Assert.Empty(cut.FindComponent<TransactionLogToolbar>().Instance.Currencies);
         Assert.Empty(cut.FindAll("[data-testid='transactions-error']"));
     }
 
     [Fact]
     public async Task SuccessfulAccountEdit_ReloadsFromTheFirstPage_KeepingTheFilters()
     {
-        var cursor = new TransactionLogCursor(_oct14, AccountType.Currency, 3);
+        var cursor = new TransactionLogCursor(_oct14, TransactionKind.Cash, 3);
         using var handler = new PageHandler((count, _) => Respond(count == 3
             ? Page([Entry(8, _oct15)], null)
             : Page([Entry(5, _oct15), Entry(3, _oct14)], cursor)));
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionsPage>();
-        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("a.fm-txhist-account").Count));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("[data-testid='transaction-history-row']").Count));
         await cut.InvokeAsync(() => cut.FindComponent<TransactionLogToolbar>().Instance.SearchTextChanged.InvokeAsync("rent"));
         cut.WaitForAssertion(() => Assert.Equal(2, handler.Requests.Count));
 
         // What a cash or bond row publishes after a successful save or delete.
         await context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountChanged();
 
-        cut.WaitForAssertion(() => Assert.Equal(["/AccountDetails/10?entryId=8"],
-            cut.FindAll("a.fm-txhist-account").Select(link => link.GetAttribute("href"))));
+        cut.WaitForAssertion(() => Assert.Equal([8L],
+            cut.FindComponents<TransactionHistoryRow>().Select(row => row.Instance.Item.EntryId)));
         var reload = QueryHelpers.ParseQuery(handler.Requests[2].Query);
         Assert.False(reload.ContainsKey("cursorDate"));
         Assert.Equal("rent", reload["search"].ToString());
@@ -508,7 +504,7 @@ public sealed class TransactionsPageTests
     public async Task InvestmentRows_GetTheirValuation_RequestedPerAccountForPurchases()
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
-            [Entry(3, _oct15, AccountType.Stock, accountId: 30), Entry(4, _oct15, AccountType.Stock, accountId: 31)], null)));
+            [Entry(3, _oct15, TransactionKind.Investment, accountId: 30), Entry(4, _oct15, TransactionKind.Investment, accountId: 31)], null)));
         // Account 31's valuation request times out; account 30's valuation must still reach its row.
         using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/31/")
             ? Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout"))
@@ -519,7 +515,7 @@ public sealed class TransactionsPageTests
                         [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true)])
                 }
                 : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
 
         var cut = context.Render<TransactionsPage>();
 
@@ -535,11 +531,11 @@ public sealed class TransactionsPageTests
     public async Task DeletingAnInvestmentRow_UsesItsOwnAccount_AndReloads()
     {
         using var handler = new PageHandler((count, _) => Respond(count == 1
-            ? Page([Entry(3, _oct15, AccountType.Stock, accountId: 30)], null)
+            ? Page([Entry(3, _oct15, TransactionKind.Investment, accountId: 30)], null)
             : Page([], null)));
         using var services = new PageHandler((_, uri) => Task.FromResult(new HttpResponseMessage(
             uri.AbsolutePath.Contains("/Delete/") ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
 
@@ -554,12 +550,12 @@ public sealed class TransactionsPageTests
     [Fact]
     public async Task DeleteFinishingAfterLeavingThePage_DoesNotReloadOrFail()
     {
-        using var handler = new PageHandler((_, _) => Respond(Page([Entry(3, _oct15, AccountType.Stock, accountId: 30)], null)));
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(3, _oct15, TransactionKind.Investment, accountId: 30)], null)));
         var deleted = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/Delete/")
             ? deleted.Task
             : Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
-        await using var context = CreateContext(handler, out _, services);
+        await using var context = CreateContext(handler, services);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
         var row = cut.FindComponent<InvestmentTransactionRow>();
@@ -575,37 +571,37 @@ public sealed class TransactionsPageTests
         Assert.Single(handler.Requests);
     }
 
-    private static TransactionLogItemDto Entry(long id, DateTime date, AccountType type = AccountType.Currency, int accountId = 10)
+    [Fact]
+    public async Task UnlinkedRowsExpandWithoutAccountCommandsOrRunningValues()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([
+            Entry(1, _oct15, accountId: null), Entry(2, _oct15, TransactionKind.Bond, null),
+            Entry(3, _oct15, TransactionKind.Investment, null)], null)));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Equal(3, cut.FindComponents<TransactionHistoryRow>().Count));
+        foreach (var row in cut.FindAll("[data-testid='transaction-history-row'] [role=button][tabindex='0']"))
+            row.Click();
+        Assert.Contains("Units change", cut.Markup);
+        Assert.DoesNotContain("Running balance", cut.Markup);
+        Assert.DoesNotContain("position ", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(cut.FindAll("button"), button => button.TextContent.Trim() is "Edit" or "Remove" or "Delete");
+    }
+
+    private static TransactionLogItemDto Entry(long id, DateTime date, TransactionKind type = TransactionKind.Cash, int? accountId = 10)
     {
         var valueChange = id % 2 == 0 ? 25m : -12.5m;
         return type switch
         {
-            AccountType.Bond => new BondTransactionLogItemDto(accountId, "Everyday account", new BondAccountEntryDto
-            {
-                AccountId = accountId,
-                EntryId = id,
-                PostingDate = date,
-                Value = 10m,
-                ValueChange = valueChange,
-                BondDetailsId = 1,
-                Description = $"Row {id}"
-            }),
-            AccountType.Stock => new InvestmentTransactionLogItemDto(accountId, "Everyday account", new InvestmentTransactionDto(
+            TransactionKind.Bond => new BondTransactionLogItemDto(accountId, id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
+            TransactionKind.Investment => new InvestmentTransactionLogItemDto(accountId, new InvestmentTransactionDto(
                 id, 7, accountId, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", DateOnly.FromDateTime(date), null, $"Row {id}", "TCK")),
-            _ => new CurrencyTransactionLogItemDto(accountId, "Everyday account", 1, "PLN", new CurrencyAccountEntryDto
-            {
-                AccountId = accountId,
-                EntryId = id,
-                PostingDate = date,
-                Value = 100m,
-                ValueChange = valueChange,
-                Description = $"Row {id}"
-            }),
+            _ => new CurrencyTransactionLogItemDto(accountId, id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
         };
     }
 
     private static TransactionLogItemsPageDto Page(IReadOnlyList<TransactionLogItemDto> items, TransactionLogCursor? cursor) =>
-        new(items, cursor is null ? null : new(cursor.Date, (AccountTypeDto)cursor.AccountType, cursor.EntryId));
+        new(items, cursor is null ? null : new(cursor.Date, (TransactionKindDto)cursor.Kind, cursor.EntryId));
 
     private static DateTime ParseDate(string value) =>
         DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
@@ -615,10 +611,7 @@ public sealed class TransactionsPageTests
 
     private static Task<HttpResponseMessage> Respond(TransactionLogItemsPageDto page) => Task.FromResult(JsonResponse(page));
 
-    private static BunitContext CreateContext(HttpMessageHandler handler) => CreateContext(handler, out _);
-
-    private static BunitContext CreateContext(HttpMessageHandler handler, out Mock<IFinancialAccountService> accountService,
-        HttpMessageHandler? services = null)
+    private static BunitContext CreateContext(HttpMessageHandler handler, HttpMessageHandler? services = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -633,20 +626,7 @@ public sealed class TransactionsPageTests
             UserRole = UserRole.User
         });
         context.Services.AddSingleton(login.Object);
-        accountService = new Mock<IFinancialAccountService>();
-        accountService.Setup(service => service.GetAvailableAccounts()).ReturnsAsync(new Dictionary<int, Type>
-        {
-            [10] = typeof(CurrencyAccount),
-            [20] = typeof(BondAccount),
-            [30] = typeof(InvestmentAccount),
-        });
-        accountService.Setup(service => service.GetAvailableAccountNames()).ReturnsAsync(new Dictionary<int, string>
-        {
-            [10] = "Everyday",
-            [20] = "Treasury bonds",
-            [30] = "Broker",
-        });
-        context.Services.AddSingleton(accountService.Object);
+        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new TransactionLogHttpClient(
             new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }));
 
@@ -670,9 +650,21 @@ public sealed class TransactionsPageTests
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
     }
 
-    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond) : HttpMessageHandler
+    // Feed requests go to `respond`; the currency-options request is answered from `currencies` (unavailable when null)
+    // and recorded apart, so request counts and indexes only ever describe the feed.
+    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond, IReadOnlyList<string>? currencies = null) : HttpMessageHandler
     {
         private readonly List<Uri> _requests = [];
+        private readonly List<Uri> _currencyRequests = [];
+
+        public IReadOnlyList<Uri> CurrencyRequests
+        {
+            get
+            {
+                lock (_requests)
+                    return [.. _currencyRequests];
+            }
+        }
 
         public IReadOnlyList<Uri> Requests
         {
@@ -688,6 +680,13 @@ public sealed class TransactionsPageTests
             int count;
             lock (_requests)
             {
+                if (request.RequestUri!.AbsolutePath.Contains("/Currencies/", StringComparison.Ordinal))
+                {
+                    _currencyRequests.Add(request.RequestUri);
+                    return Task.FromResult(currencies is null
+                        ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                        : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(currencies) });
+                }
                 _requests.Add(request.RequestUri!);
                 count = _requests.Count;
             }

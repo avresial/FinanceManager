@@ -11,10 +11,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Reposito
 
 public class BondEntryRepository(AppDbContext context) : IBondAccountEntryRepository<BondAccountEntry>
 {
-    // SQL Server permits at most 2,100 parameters per command. Keep room for the Take parameter and
-    // future predicates when a user has an unusually large number of accounts.
-    private const int _maxAccountIdsPerQuery = 2_000;
-
     private readonly BondEntryValueCalculator _valueCalculator = new(context);
     private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
         typeof(BondAccountEntry).GetProperty(nameof(BondAccountEntry.EntryId));
@@ -504,80 +500,6 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .AsNoTracking()
             .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
             .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<BondAccountEntry>> GetHistoryPage(
-        IReadOnlyCollection<int> accountIds,
-        DateTime startDate,
-        DateTime endDate,
-        int take,
-        DateTime? cursorPostingDate = null,
-        long? cursorId = null,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        IReadOnlyCollection<int>? searchAccountIds = null)
-    {
-        if (cursorPostingDate.HasValue != cursorId.HasValue)
-            throw new ArgumentException("Both cursor posting date and entry id must be supplied together.");
-        if (startDate > endDate)
-            throw new ArgumentException("Start date must be on or before end date.", nameof(startDate));
-        if (accountIds.Count == 0 || take <= 0) return [];
-
-        var query = context.BondEntries.AsNoTracking()
-            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate >= startDate && e.PostingDate <= endDate);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToUpperInvariant();
-            var matchedAccounts = searchAccountIds ?? [];
-            query = from entry in query
-                    join details in context.Bonds on entry.BondDetailsId equals details.Id into bonds
-                    from details in bonds.DefaultIfEmpty()
-                    where entry.AccountId.HasValue && matchedAccounts.Contains(entry.AccountId.Value) ||
-                        entry.Description.ToUpper().Contains(term) ||
-                        (details != null && details.Name != null && details.Name.ToUpper().Contains(term))
-                    select entry;
-        }
-
-        if (cursorPostingDate is DateTime date && cursorId is long id)
-            query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));
-
-        return await query
-            .Include(e => e.Labels)
-            .ThenInclude(l => l.Classifications)
-            .OrderByDescending(e => e.PostingDate)
-            .ThenByDescending(e => e.EntryId)
-            .Take(take)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<BondAccountEntry>> GetMostRecentByAccounts(
-        IReadOnlyCollection<int> accountIds,
-        int count,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0 || count <= 0)
-            return [];
-
-        List<BondAccountEntry> results = [];
-        foreach (var accountIdChunk in accountIds.Distinct().Chunk(_maxAccountIdsPerQuery))
-        {
-            results.AddRange(await context.BondEntries
-                .AsNoTracking()
-                .Where(e => e.AccountId.HasValue && accountIdChunk.Contains(e.AccountId.Value))
-                .OrderByDescending(e => e.PostingDate)
-                .ThenByDescending(e => e.EntryId)
-                // The dashboard only needs account, ordering, value-change, bond id and description fields.
-                .Select(e => new BondAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId) { Description = e.Description })
-                .Take(count)
-                .ToListAsync(cancellationToken));
-        }
-
-        return results
-            .OrderByDescending(e => e.PostingDate)
-            .ThenByDescending(e => e.EntryId)
-            .Take(count)
-            .ToList();
     }
 
     public Task<IReadOnlyList<BondAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) =>

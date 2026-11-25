@@ -46,7 +46,7 @@ public class InvestmentPostingDateQueryTests
         context.ChangeTracker.Clear();
         Assert.Equal(3, (await repository.GetByAccount(1081, ct)).Count);
         await repository.GetByAccountAndIds(1081, [1081], ct);
-        await repository.GetMostRecentByAccounts([1081], 10, ct);
+        await repository.GetHistoryByUser(1081, new(null, null, 10, IncludeDetails: false), ct);
         await repository.GetByUser(1081, start, end, ct);
         await repository.GetHoldingsAsOf([1081], end, ct);
         await repository.GetHoldingsByAccountAsOf([1081], end, ct);
@@ -56,7 +56,7 @@ public class InvestmentPostingDateQueryTests
         var holdings = await repository.GetHoldingsAsOf([1081], end, ct);
         Assert.Equal(2m, holdings[1081]);
         await repository.GetLatestByListingAsOf(1081, end, ct);
-        await repository.GetHistoryPage([1081], start, end, 10, end, 100, ct);
+        await repository.GetHistoryByUser(1081, new(start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), 10), ct);
         await repository.GetHistoryPage(1081, 10, end, 100, start, end, cancellationToken: ct);
         await new AssetRepository(context).GetIncomplete(1, 10, null, DateTimeOffset.UtcNow, ct);
     }

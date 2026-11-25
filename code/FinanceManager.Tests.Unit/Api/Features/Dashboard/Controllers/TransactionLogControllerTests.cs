@@ -1,12 +1,9 @@
 using FinanceManager.Api.Features.Dashboard.Controllers;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -38,14 +35,14 @@ public class TransactionLogControllerTests
     public async Task Page_PassesSearchAlongsideExistingFilters()
     {
         var day = new DateTime(2026, 10, 20);
-        var query = new TransactionLogQuery(day, day, AccountTypes: [AccountType.Currency], AccountIds: [10], Search: "Café & bond");
-        var page = new TransactionLogPage([], null);
-        _transactionLogService.Setup(x => x.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
-            q.Search == query.Search && q.AccountTypes!.Contains(AccountType.Currency) && q.AccountIds!.Contains(10)),
+        var query = new TransactionLogQuery(day, day, Kinds: [TransactionKind.Cash], Currencies: ["USD"], Search: "Café & bond");
+        var page = new TransactionLogItemsPage([], null);
+        _transactionLogService.Setup(x => x.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+            q.Search == query.Search && q.Kinds!.Contains(TransactionKind.Cash) && q.Currencies!.Contains("USD")),
             TestContext.Current.CancellationToken)).ReturnsAsync(page);
-        var result = await _controller.Page(_testUserId, day, day, accountTypes: [AccountType.Currency], accountIds: [10],
+        var result = await _controller.ItemsPage(_testUserId, day, day, kinds: [TransactionKind.Cash], currencies: ["usd"],
             search: query.Search, cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
         _transactionLogService.VerifyAll();
     }
 
@@ -53,13 +50,13 @@ public class TransactionLogControllerTests
     public async Task ItemsPage_MapsEachItemKindAndTheCursor_ToTheWireContract()
     {
         var day = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc);
-        var cursor = new TransactionLogCursor(day, AccountType.Bond, 2);
+        var cursor = new TransactionLogCursor(day, TransactionKind.Bond, 2);
         _transactionLogService.Setup(x => x.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q => q.Search == "x" && q.PageSize == 3),
             TestContext.Current.CancellationToken)).ReturnsAsync(new TransactionLogItemsPage(
         [
-            new CurrencyTransactionLogItem(10, "Bank", 3, "EUR", new CurrencyAccountEntry(10, 1, day, 90, -10) { Description = "Lunch" }),
-            new BondTransactionLogItem(20, "Bonds", new BondAccountEntry(20, 2, day, 5, 5, 7)),
-            new InvestmentTransactionLogItem(30, "Broker", new InvestmentTransaction
+            new CurrencyTransactionLogItem(new(null, 1, day, -10, "Lunch", 3, "EUR", null, [])),
+            new BondTransactionLogItem(new(20, 2, day, 5, "Bond", 7, "USD", null, [])),
+            new InvestmentTransactionLogItem(new InvestmentTransaction
             {
                 EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2, Currency = "USD"
             }),
@@ -69,11 +66,11 @@ public class TransactionLogControllerTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         var page = Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
-        Assert.Equal(new TransactionLogCursorDto(day, AccountTypeDto.Bond, 2), page.NextCursor);
+        Assert.Equal(new TransactionLogCursorDto(day, TransactionKindDto.Bond, 2), page.NextCursor);
         var cash = Assert.IsType<CurrencyTransactionLogItemDto>(page.Items[0]);
-        Assert.Equal((10, "Bank", 3, "EUR", 1L, "Lunch"), (cash.AccountId, cash.AccountName, cash.CurrencyId, cash.Currency, cash.Entry.EntryId, cash.Entry.Description));
-        Assert.Equal(7, Assert.IsType<BondTransactionLogItemDto>(page.Items[1]).Entry.BondDetailsId);
-        Assert.Equal((3L, 30), (Assert.IsType<InvestmentTransactionLogItemDto>(page.Items[2]).Transaction.Id, page.Items[2].AccountId));
+        Assert.Equal(((int?)null, 3, "EUR", 1L, "Lunch"), (cash.LegacyAccountId, cash.CurrencyId, cash.Currency, cash.EntryId, cash.Description));
+        Assert.Equal(7, Assert.IsType<BondTransactionLogItemDto>(page.Items[1]).BondDetailsId);
+        Assert.Equal((3L, 30), (Assert.IsType<InvestmentTransactionLogItemDto>(page.Items[2]).Transaction.Id, page.Items[2].LegacyAccountId));
     }
 
     [Fact]
@@ -100,7 +97,7 @@ public class TransactionLogControllerTests
         // Arrange
         List<TransactionLogEntryDto> transactions =
         [
-            new(10, "Bank", AccountType.Currency, 1, new DateTime(2024, 3, 5), -50, "Groceries"),
+            new(TransactionKind.Cash, 1, new DateTime(2024, 3, 5), -50, "Groceries"),
         ];
         _transactionLogService.Setup(s => s.GetLastTransactions(_testUserId, 10, It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
@@ -128,33 +125,33 @@ public class TransactionLogControllerTests
     public async Task Page_ForOwner_PassesRangeCursorAndCancellation()
     {
         var day = new DateTime(2024, 3, 5);
-        var cursor = new TransactionLogCursor(day, AccountType.Bond, 12);
+        var cursor = new TransactionLogCursor(day, TransactionKind.Bond, 12);
         var query = new TransactionLogQuery(day.AddDays(-1), day, 2, cursor);
-        var page = new TransactionLogPage([], null);
-        _transactionLogService.Setup(s => s.GetPage(_testUserId, query, TestContext.Current.CancellationToken)).ReturnsAsync(page);
+        var page = new TransactionLogItemsPage([], null);
+        _transactionLogService.Setup(s => s.GetItemsPage(_testUserId, query, TestContext.Current.CancellationToken)).ReturnsAsync(page);
 
-        var result = await _controller.Page(_testUserId, query.Start, query.End, 2,
-            cursor.Date, cursor.AccountType, cursor.EntryId, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, query.Start, query.End, 2,
+            cursor.Date, cursor.Kind, cursor.EntryId, cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
         _transactionLogService.VerifyAll();
     }
 
     [Fact]
-    public async Task Page_WithFilters_PassesAccountTypesAndIdsToTheQuery()
+    public async Task Page_WithFilters_PassesKindsAndCurrenciesToTheQuery()
     {
         var day = new DateTime(2024, 3, 5);
-        var page = new TransactionLogPage([], null);
-        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
-                q.AccountTypes!.SequenceEqual(new[] { AccountType.Bond, AccountType.Stock }) &&
-                q.AccountIds!.SequenceEqual(new[] { 4, 9 })), TestContext.Current.CancellationToken))
+        var page = new TransactionLogItemsPage([], null);
+        _transactionLogService.Setup(s => s.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+                q.Kinds!.SequenceEqual(new[] { TransactionKind.Bond, TransactionKind.Investment }) &&
+                q.Currencies!.SequenceEqual(new[] { "USD", "EUR" })), TestContext.Current.CancellationToken))
             .ReturnsAsync(page);
 
-        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
-            accountTypes: [AccountType.Bond, AccountType.Stock], accountIds: [4, 9],
+        var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
+            kinds: [TransactionKind.Bond, TransactionKind.Investment], currencies: ["usd", " EUR ", "USD"],
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Same(page, Assert.IsType<OkObjectResult>(result).Value);
+        Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
         _transactionLogService.VerifyAll();
     }
 
@@ -162,24 +159,24 @@ public class TransactionLogControllerTests
     public async Task Page_WithoutFilters_PassesNoFilterToTheQuery()
     {
         var day = new DateTime(2024, 3, 5);
-        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.Is<TransactionLogQuery>(q =>
-                q.AccountTypes == null && q.AccountIds == null), TestContext.Current.CancellationToken))
-            .ReturnsAsync(new TransactionLogPage([], null));
+        _transactionLogService.Setup(s => s.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q =>
+                q.Kinds == null && q.Currencies == null), TestContext.Current.CancellationToken))
+            .ReturnsAsync(new TransactionLogItemsPage([], null));
 
-        await _controller.Page(_testUserId, day.AddDays(-1), day, cancellationToken: TestContext.Current.CancellationToken);
+        await _controller.ItemsPage(_testUserId, day.AddDays(-1), day, cancellationToken: TestContext.Current.CancellationToken);
 
         _transactionLogService.VerifyAll();
     }
 
     [Fact]
-    public async Task Page_WithMaximumNumberOfAccountIds_IsAccepted()
+    public async Task Page_WithMaximumNumberOfCurrencies_IsAccepted()
     {
         var day = new DateTime(2024, 3, 5);
-        _transactionLogService.Setup(s => s.GetPage(_testUserId, It.IsAny<TransactionLogQuery>(), TestContext.Current.CancellationToken))
-            .ReturnsAsync(new TransactionLogPage([], null));
+        _transactionLogService.Setup(s => s.GetItemsPage(_testUserId, It.IsAny<TransactionLogQuery>(), TestContext.Current.CancellationToken))
+            .ReturnsAsync(new TransactionLogItemsPage([], null));
 
-        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
-            accountIds: [.. Enumerable.Range(1, 100)], cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
+            currencies: [.. Enumerable.Repeat("USD", 100)], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.IsType<OkObjectResult>(result);
     }
@@ -189,8 +186,8 @@ public class TransactionLogControllerTests
     {
         var day = new DateTime(2024, 3, 5);
 
-        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
-            accountTypes: [AccountType.Currency, (AccountType)99], cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
+            kinds: [TransactionKind.Cash, (TransactionKind)99], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
         _transactionLogService.VerifyNoOtherCalls();
@@ -199,33 +196,50 @@ public class TransactionLogControllerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-3)]
-    public async Task Page_WithNonPositiveAccountId_ReturnsValidationProblem(int accountId)
+    public async Task Page_WithMalformedCurrencyCode_ReturnsValidationProblem(int code)
     {
         var day = new DateTime(2024, 3, 5);
 
-        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
-            accountIds: [5, accountId], cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
+            currencies: ["USD", code.ToString()], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
         _transactionLogService.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task Page_WithTooManyAccountIds_ReturnsValidationProblem()
+    public async Task Page_WithTooManyCurrencies_ReturnsValidationProblem()
     {
         var day = new DateTime(2024, 3, 5);
 
-        var result = await _controller.Page(_testUserId, day.AddDays(-1), day,
-            accountIds: [.. Enumerable.Range(1, 101)], cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, day.AddDays(-1), day,
+            currencies: [.. Enumerable.Repeat("USD", 101)], cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        _transactionLogService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Currencies_ReturnsTheOwnersCurrencies()
+    {
+        _transactionLogService.Setup(x => x.GetCurrencies(_testUserId, TestContext.Current.CancellationToken)).ReturnsAsync(["PLN", "USD"]);
+
+        var result = await _controller.Currencies(_testUserId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["PLN", "USD"], Assert.IsType<List<string>>(Assert.IsType<OkObjectResult>(result).Value));
+    }
+
+    [Fact]
+    public async Task Currencies_ForOtherUser_DoesNotCallService()
+    {
+        Assert.IsType<ForbidResult>(await _controller.Currencies(_testUserId + 1, TestContext.Current.CancellationToken));
         _transactionLogService.VerifyNoOtherCalls();
     }
 
     [Fact]
     public async Task Page_ForOtherUser_DoesNotCallService()
     {
-        Assert.IsType<ForbidResult>(await _controller.Page(_testUserId + 1, DateTime.MinValue, DateTime.MaxValue, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.IsType<ForbidResult>(await _controller.ItemsPage(_testUserId + 1, DateTime.MinValue, DateTime.MaxValue, cancellationToken: TestContext.Current.CancellationToken));
         _transactionLogService.VerifyNoOtherCalls();
     }
 
@@ -239,8 +253,8 @@ public class TransactionLogControllerTests
     public async Task Page_InvalidQuery_ReturnsValidationProblem(int size, bool reversed, bool date, bool type, bool id)
     {
         var day = new DateTime(2024, 3, 5);
-        var result = await _controller.Page(_testUserId, day, reversed ? day.AddDays(-1) : day, size,
-            date ? day : null, type ? AccountType.Currency : null, id ? 1 : null, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await _controller.ItemsPage(_testUserId, day, reversed ? day.AddDays(-1) : day, size,
+            date ? day : null, type ? TransactionKind.Cash : null, id ? 1 : null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
         _transactionLogService.VerifyNoOtherCalls();

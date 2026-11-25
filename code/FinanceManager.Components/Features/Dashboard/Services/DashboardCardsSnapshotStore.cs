@@ -159,5 +159,5 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
 
     private static string BuildRecurringTransactionsKey(int userId) => $"recurring-transactions:{userId}";
 
-    private static string BuildTransactionLogKey(int userId, int count) => $"transaction-log:{userId}:{count}";
+    private static string BuildTransactionLogKey(int userId, int count) => $"transaction-log:v2:{userId}:{count}";
 }

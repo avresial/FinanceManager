@@ -4,9 +4,11 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -55,10 +57,10 @@ public class MultiAccountHistoryPageTests
             Entry(bonds, 1, 2, _start),
             Entry(bonds, 2, 3, _start.AddDays(1)),
             Entry(bonds, 1, 4, _end),
-            Entry(bonds, 2, 5, _end),
+            Entry(bonds, null, 5, _end),
             Entry(bonds, 1, 6, _end.AddTicks(1)),
             Entry(bonds, 3, 7, _end),
-            Entry(bonds, null, 8, _end)
+            Entry(bonds, 3, 8, _end)
         ];
         Labels(entries[3]).Add(new FinancialLabel { Name = "History label" });
         context.AddRange(entries);
@@ -66,13 +68,13 @@ public class MultiAccountHistoryPageTests
         context.ChangeTracker.Clear();
 
         // A caller requesting pageSize + 1 gets its lookahead row without repository-side trimming.
-        var lookahead = await EntryPage(context, bonds, [1, 2, 1], 3);
+        var lookahead = await EntryPage(context, bonds, 3);
         Assert.Equal([5, 4, 3], lookahead.Select(e => e.EntryId));
-        Assert.Equal("History label", Assert.Single(Labels(lookahead[1])).Name);
-        var first = await EntryPage(context, bonds, [1, 2], 1);
-        var second = await EntryPage(context, bonds, [1, 2], 2, first[^1].PostingDate, first[^1].EntryId);
-        var third = await EntryPage(context, bonds, [1, 2], 2, second[^1].PostingDate, second[^1].EntryId);
-        var exhausted = await EntryPage(context, bonds, [1, 2], 2, third[^1].PostingDate, third[^1].EntryId);
+        Assert.Equal("History label", Assert.Single(lookahead[1].Labels).Name);
+        var first = await EntryPage(context, bonds, 1);
+        var second = await EntryPage(context, bonds, 2, first[^1].PostingDate, first[^1].EntryId);
+        var third = await EntryPage(context, bonds, 2, second[^1].PostingDate, second[^1].EntryId);
+        var exhausted = await EntryPage(context, bonds, 2, third[^1].PostingDate, third[^1].EntryId);
 
         Assert.Equal([5, 4, 3, 2], first.Concat(second).Concat(third).Select(e => e.EntryId));
         Assert.Empty(exhausted);
@@ -99,19 +101,19 @@ public class MultiAccountHistoryPageTests
         context.AssetListings.Add(listing);
         context.InvestmentTransactions.AddRange(
             Trade(1, 1, start.AddDays(-1)), Trade(2, 1, start), Trade(3, 2, start.AddDays(1)),
-            Trade(4, 1, end), Trade(5, 2, end), Trade(6, 1, end.AddDays(1)), Trade(7, 3, end), Trade(8, null, end));
+            Trade(4, 1, end), Trade(5, null, end), Trade(6, 1, end.AddDays(1)), Trade(7, 3, end), Trade(8, 3, end));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
         var repository = new InvestmentTransactionRepository(context);
         var ct = TestContext.Current.CancellationToken;
 
-        var lookahead = await repository.GetHistoryPage([1, 2, 1], start, end, 3, cancellationToken: ct);
+        var lookahead = await repository.GetHistoryByUser(-1, new(_start.Date, _end.Date, 3), ct);
         Assert.Equal([5L, 4L, 3L], lookahead.Select(t => t.EntryId));
         Assert.Equal("History asset", lookahead[0].AssetListing.Asset.Name);
-        var first = await repository.GetHistoryPage([1, 2], start, end, 1, cancellationToken: ct);
-        var second = await repository.GetHistoryPage([1, 2], start, end, 2, first[^1].TradeDate, first[^1].EntryId, ct);
-        var third = await repository.GetHistoryPage([1, 2], start, end, 2, second[^1].TradeDate, second[^1].EntryId, ct);
-        var exhausted = await repository.GetHistoryPage([1, 2], start, end, 2, third[^1].TradeDate, third[^1].EntryId, ct);
+        var first = await repository.GetHistoryByUser(-1, new(_start.Date, _end.Date, 1), ct);
+        var second = await repository.GetHistoryByUser(-1, new(_start.Date, _end.Date, 2, new(first[^1].PostingDate, first[^1].EntryId, false)), ct);
+        var third = await repository.GetHistoryByUser(-1, new(_start.Date, _end.Date, 2, new(second[^1].PostingDate, second[^1].EntryId, false)), ct);
+        var exhausted = await repository.GetHistoryByUser(-1, new(_start.Date, _end.Date, 2, new(third[^1].PostingDate, third[^1].EntryId, false)), ct);
 
         Assert.Equal([5L, 4L, 3L, 2L], first.Concat(second).Concat(third).Select(t => t.EntryId));
         Assert.Empty(exhausted);
@@ -121,63 +123,205 @@ public class MultiAccountHistoryPageTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Entries_EmptyAccountsAndNonpositiveTake_DoNotAccessContext(bool bonds)
+    public async Task Cash_SkipsEntriesWithoutOwnerOrCurrency_AndKeepsUnknownCurrenciesVisible(bool sqlite)
     {
-        var context = CreateContext(false);
-        await context.DisposeAsync();
-
-        Assert.Empty(await EntryPage(context, bonds, [], 2));
-        Assert.Empty(await EntryPage(context, bonds, [1], 0));
-        Assert.Empty(await EntryPage(context, bonds, [1], -1));
-    }
-
-    [Fact]
-    public async Task Investments_EmptyAccountsAndNonpositiveTake_DoNotAccessContext()
-    {
-        var context = CreateContext(false);
-        await context.DisposeAsync();
-        var repository = new InvestmentTransactionRepository(context);
-        var start = DateOnly.FromDateTime(_start);
-        var end = DateOnly.FromDateTime(_end);
+        await using var context = CreateContext(sqlite);
+        context.Currencies.Add(DefaultCurrency.PLN);
+        context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 0 },
+            new CurrencyAccountEntry(1, 2, _start, 100m, 1m) { UserId = null, CurrencyId = 0 },
+            new CurrencyAccountEntry(1, 3, _start, 100m, 1m) { UserId = -1, CurrencyId = null },
+            new CurrencyAccountEntry(1, 4, _start, 100m, 1m) { UserId = -1, CurrencyId = 999 });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+        var repository = new CashTransactionRepository(context);
         var ct = TestContext.Current.CancellationToken;
 
-        Assert.Empty(await repository.GetHistoryPage([], start, end, 2, cancellationToken: ct));
-        Assert.Empty(await repository.GetHistoryPage([1], start, end, 0, cancellationToken: ct));
-        Assert.Empty(await repository.GetHistoryPage([1], start, end, -1, cancellationToken: ct));
+        var unfiltered = await repository.GetHistory(-1, new(_start, _end, 10), ct);
+        var pln = await repository.GetHistory(-1, new(_start, _end, 10, Currencies: ["PLN"]), ct);
+
+        // The entry whose currency row is missing stays listed, without a currency; it never matches a currency filter.
+        Assert.Equal([(4L, (string?)null), (1L, "PLN")], unfiltered.Select(e => (e.EntryId, e.Currency)));
+        Assert.Equal([1L], pln.Select(e => e.EntryId));
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Entries_RejectPartialCursorsAndReversedRange(bool bonds)
+    public async Task Bonds_SkipEntriesWithoutOwner_AndKeepMissingBondDefinitionsVisible(bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        context.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(_start), DateOnly.FromDateTime(_end), []) { Id = 7 });
+        context.BondEntries.AddRange(
+            new BondAccountEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 },
+            new BondAccountEntry(1, 2, _start, 100m, 1m, 7) { UserId = null },
+            new BondAccountEntry(1, 3, _start, 100m, 1m, 999) { UserId = -1 });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+        var repository = new BondTransactionRepository(context);
+        var ct = TestContext.Current.CancellationToken;
+
+        var unfiltered = await repository.GetHistory(-1, new(_start, _end, 10), ct);
+        var pln = await repository.GetHistory(-1, new(_start, _end, 10, Currencies: [" pln "]), ct);
+        var named = await repository.GetHistory(-1, new(_start, _end, 10, Search: "bond NAME"), ct);
+
+        Assert.Equal([(3L, (string?)null, (string?)null), (1L, "Bond name", "PLN")], unfiltered.Select(e => (e.EntryId, e.BondName, e.Currency)));
+        Assert.Equal([1L], pln.Select(e => e.EntryId));
+        Assert.Equal([1L], named.Select(e => e.EntryId));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Entries_WithSeveralLabels_UseOneSlotOfThePage(bool bonds, bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        ILedgerEntry[] entries = [Entry(bonds, 1, 1, _start), Entry(bonds, 1, 2, _start.AddHours(1)), Entry(bonds, 1, 3, _start.AddHours(2))];
+        foreach (var entry in entries.Skip(1))
+        {
+            Labels(entry).Add(new FinancialLabel { Name = $"First {entry.EntryId}" });
+            Labels(entry).Add(new FinancialLabel { Name = $"Second {entry.EntryId}" });
+        }
+        context.AddRange(entries);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+
+        var page = await EntryPage(context, bonds, 2);
+
+        Assert.Equal([3L, 2L], page.Select(e => e.EntryId));
+        Assert.All(page, e => Assert.Equal(2, e.Labels.Count));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Entries_InclusiveBoundary_KeepsTheEntryOfTheCursor(bool bonds, bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        context.AddRange(Entry(bonds, 1, 1, _start), Entry(bonds, 1, 2, _start), Entry(bonds, 1, 3, _start));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+        var ct = TestContext.Current.CancellationToken;
+
+        async Task<long[]> Ids(bool includeEqualId)
+        {
+            var query = new OwnerHistoryQuery(_start, _end, 10, new(_start, 2, includeEqualId));
+            return bonds
+                ? [.. (await new BondTransactionRepository(context).GetHistory(-1, query, ct)).Select(e => e.EntryId)]
+                : [.. (await new CashTransactionRepository(context).GetHistory(-1, query, ct)).Select(e => e.EntryId)];
+        }
+
+        Assert.Equal(new long[] { 2, 1 }, await Ids(true));
+        Assert.Equal(new long[] { 1 }, await Ids(false));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Investments_HonourIntradayStart_InclusiveBoundary_Currencies_AndEmptyTake(bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        context.AssetListings.Add(new AssetListing
+        {
+            Id = 1,
+            Asset = new Asset { Id = 1, Name = "History asset" },
+            Ticker = "HIST",
+            ExchangeMic = "XWAR",
+            ExchangeName = "Warsaw",
+            TradingCurrency = "PLN"
+        });
+        var day = DateOnly.FromDateTime(_start);
+        context.InvestmentTransactions.AddRange(Trade(1, 1, day), Trade(2, 1, day), Trade(3, 1, day));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+        var repository = new InvestmentTransactionRepository(context);
+        var ct = TestContext.Current.CancellationToken;
+
+        // Trades are stamped at midnight, so a start at noon excludes them and the start of the day keeps them.
+        Assert.Empty(await repository.GetHistoryByUser(-1, new(_start, _end, 10), ct));
+        Assert.Equal([3L, 2L, 1L], (await repository.GetHistoryByUser(-1, new(_start.Date, _end, 10), ct)).Select(t => t.EntryId));
+        Assert.Equal([2L, 1L], (await repository.GetHistoryByUser(-1, new(_start.Date, _end, 10, new(_start.Date, 2, true)), ct)).Select(t => t.EntryId));
+        Assert.Equal([1L], (await repository.GetHistoryByUser(-1, new(_start.Date, _end, 10, new(_start.Date, 2, false)), ct)).Select(t => t.EntryId));
+        Assert.Equal(3, (await repository.GetHistoryByUser(-1, new(_start.Date, _end, 10, Currencies: [" pln "]), ct)).Count);
+        Assert.Empty(await repository.GetHistoryByUser(-1, new(_start.Date, _end, 10, Currencies: ["usd"]), ct));
+        Assert.Empty(await repository.GetHistoryByUser(-1, new(_start.Date, _end, 0), ct));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task NonPositiveTake_ReturnsNothing(int take)
     {
         await using var context = CreateContext(false);
-        await Assert.ThrowsAsync<ArgumentException>(() => EntryPage(context, bonds, [1], 2, _end));
-        await Assert.ThrowsAsync<ArgumentException>(() => EntryPage(context, bonds, [1], 2, cursorId: 5));
-        await Assert.ThrowsAsync<ArgumentException>(() => EntryPage(context, bonds, [1], 2, start: _end, end: _start));
+        context.AddRange(Entry(false, 1, 1, _start), Entry(true, 1, 2, _start));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var ct = TestContext.Current.CancellationToken;
+        var query = new OwnerHistoryQuery(_start, _end, take);
+
+        Assert.Empty(await new CashTransactionRepository(context).GetHistory(-1, query, ct));
+        Assert.Empty(await new BondTransactionRepository(context).GetHistory(-1, query, ct));
+        Assert.Empty(await new InvestmentTransactionRepository(context).GetHistoryByUser(-1, query, ct));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Currencies_AreListedForTheOwnerOnly(bool sqlite)
+    {
+        await using var context = CreateContext(sqlite);
+        context.Currencies.Add(DefaultCurrency.USD);
+        // The bond definition brings its own default (PLN) currency along.
+        context.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(_start), DateOnly.FromDateTime(_end), []) { Id = 7 });
+        context.AssetListings.Add(new AssetListing
+        {
+            Id = 1,
+            Asset = new Asset { Id = 1, Name = "History asset" },
+            Ticker = "HIST",
+            ExchangeMic = "XWAR",
+            ExchangeName = "Warsaw",
+            TradingCurrency = "PLN"
+        });
+        context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
+            new CurrencyAccountEntry(1, 2, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
+            new CurrencyAccountEntry(1, 3, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 },
+            new CurrencyAccountEntry(1, 4, _start, 100m, 1m) { UserId = -1, CurrencyId = null });
+        context.BondEntries.AddRange(new BondAccountEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 }, new BondAccountEntry(1, 2, _start, 100m, 1m, 7) { UserId = 2 });
+        context.InvestmentTransactions.AddRange(Trade(1, 1, DateOnly.FromDateTime(_start)), Trade(2, 3, DateOnly.FromDateTime(_start)));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.ChangeTracker.Clear();
+        var ct = TestContext.Current.CancellationToken;
+
+        Assert.Equal(["USD"], await new CashTransactionRepository(context).GetCurrencies(-1, ct));
+        Assert.Equal(["PLN"], await new BondTransactionRepository(context).GetCurrencies(-1, ct));
+        Assert.Equal(["PLN"], await new InvestmentTransactionRepository(context).GetCurrenciesByUser(-1, ct));
+        Assert.Empty(await new CashTransactionRepository(context).GetCurrencies(5, ct));
     }
 
     [Fact]
-    public async Task Investments_RejectPartialCursorsAndReversedRange()
+    public async Task ZeroOwnerIsRejectedBeforeAccessingContext()
     {
-        await using var context = CreateContext(false);
-        var repository = new InvestmentTransactionRepository(context);
-        var start = DateOnly.FromDateTime(_start);
-        var end = DateOnly.FromDateTime(_end);
+        var context = CreateContext(false);
+        await context.DisposeAsync();
         var ct = TestContext.Current.CancellationToken;
-
-        await Assert.ThrowsAsync<ArgumentException>(() => repository.GetHistoryPage([1], start, end, 2, end, cancellationToken: ct));
-        await Assert.ThrowsAsync<ArgumentException>(() => repository.GetHistoryPage([1], start, end, 2, cursorId: 5, cancellationToken: ct));
-        await Assert.ThrowsAsync<ArgumentException>(() => repository.GetHistoryPage([1], end, start, 2, cancellationToken: ct));
+        var query = new OwnerHistoryQuery(null, null, 1);
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => new CashTransactionRepository(context).GetHistory(0, query, ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => new BondTransactionRepository(context).GetHistory(0, query, ct));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => new InvestmentTransactionRepository(context).GetHistoryByUser(0, query, ct));
     }
 
     [Fact]
     public void Model_HasPagingIndexesForEveryStream()
     {
         using var context = CreateContext(false);
-        AssertIndex<CurrencyAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
-        AssertIndex<BondAccountEntry>(context, "AccountId", "PostingDate", "EntryId");
+        AssertIndex<CurrencyAccountEntry>(context, "UserId", "PostingDate", "EntryId");
+        AssertIndex<BondAccountEntry>(context, "UserId", "PostingDate", "EntryId");
         AssertIndex<InvestmentTransaction>(context, "AccountId", "PostingDate", "EntryId");
+        AssertIndex<InvestmentTransaction>(context, "UserId", "PostingDate");
     }
 
     private static void AssertIndex<T>(AppDbContext context, params string[] properties) =>
@@ -205,14 +349,14 @@ public class MultiAccountHistoryPageTests
     };
 
     private static ILedgerEntry Entry(bool bonds, int? accountId, int id, DateTime date) => bonds
-        ? new BondAccountEntry(accountId, id, date, 100m, 1m, 1)
-        : new CurrencyAccountEntry(accountId, id, date, 100m, 1m);
+        ? new BondAccountEntry(accountId, id, date, 100m, 1m, 1) { UserId = accountId == 3 ? 2 : -1 }
+        : new CurrencyAccountEntry(accountId, id, date, 100m, 1m) { UserId = accountId == 3 ? 2 : -1, CurrencyId = 0 };
 
     private static InvestmentTransaction Trade(long id, int? accountId, DateOnly date) => new()
     {
         EntryId = id,
         AccountId = accountId,
-        UserId = 1,
+        UserId = accountId == 3 ? 2 : -1,
         AssetListingId = 1,
         TradeDate = date,
         Type = InvestmentTransactionType.Buy,
@@ -221,13 +365,13 @@ public class MultiAccountHistoryPageTests
         Currency = "PLN"
     };
 
-    private static async Task<IReadOnlyList<ILedgerEntry>> EntryPage(
-        AppDbContext context, bool bonds, IReadOnlyCollection<int> accountIds, int take,
-        DateTime? cursorDate = null, long? cursorId = null, DateTime? start = null, DateTime? end = null)
+    private static async Task<IReadOnlyList<(long EntryId, DateTime PostingDate, IReadOnlyList<FinancialLabel> Labels)>> EntryPage(
+        AppDbContext context, bool bonds, int take, DateTime? cursorDate = null, long? cursorId = null)
     {
         var ct = TestContext.Current.CancellationToken;
+        var query = new OwnerHistoryQuery(_start, _end, take, cursorDate.HasValue ? new(cursorDate.Value, cursorId!.Value, false) : null);
         return bonds
-            ? await new BondEntryRepository(context).GetHistoryPage(accountIds, start ?? _start, end ?? _end, take, cursorDate, cursorId, ct)
-            : await new CurrencyEntryRepository(context).GetHistoryPage(accountIds, start ?? _start, end ?? _end, take, cursorDate, cursorId, ct);
+            ? [.. (await new BondTransactionRepository(context).GetHistory(-1, query, ct)).Select(e => (e.EntryId, e.PostingDate, e.Labels))]
+            : [.. (await new CashTransactionRepository(context).GetHistory(-1, query, ct)).Select(e => (e.EntryId, e.PostingDate, e.Labels))];
     }
 }

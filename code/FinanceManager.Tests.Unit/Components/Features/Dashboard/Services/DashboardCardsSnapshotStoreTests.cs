@@ -3,7 +3,6 @@ using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -182,7 +181,7 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task TransactionLog_RejectsSnapshotStoredForAnotherRowCount()
     {
-        _snapshots.Setup(x => x.GetAsync<TransactionLogSnapshot>("transaction-log:1:10"))
+        _snapshots.Setup(x => x.GetAsync<TransactionLogSnapshot>("transaction-log:v2:1:10"))
             .ReturnsAsync(new TransactionLogSnapshot { UserId = 1, Count = 5, Data = [Transaction(1)] });
         var painted = false;
 
@@ -220,7 +219,7 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task TransactionLog_Unchanged_SkipsWrite()
     {
-        const string key = "transaction-log:1:10";
+        const string key = "transaction-log:v2:1:10";
         _snapshots.Setup(x => x.GetAsync<TransactionLogSnapshot>(key))
             .ReturnsAsync(new TransactionLogSnapshot { UserId = 1, Count = 10, Data = [Transaction(1)] });
 
@@ -267,5 +266,5 @@ public class DashboardCardsSnapshotStoreTests
     };
 
     private static TransactionLogEntryDto Transaction(long id) =>
-        new(1, "Cash", AccountType.Currency, id, new DateTime(2026, 1, 1), -10m, "Entry");
+        new(TransactionKind.Cash, id, new DateTime(2026, 1, 1), -10m, "Entry");
 }

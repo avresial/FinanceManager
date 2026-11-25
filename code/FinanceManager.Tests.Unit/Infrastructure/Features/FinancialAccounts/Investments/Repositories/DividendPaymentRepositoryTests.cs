@@ -14,7 +14,7 @@ namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.In
 public class DividendPaymentRepositoryTests
 {
     [Fact]
-    public async Task RelationalLedgerPagesStableTiesIsolatesOwnersAndDeletesOnlyLinkedDividends()
+    public async Task RelationalLedgerPagesStableTiesIsolatesOwnersAndDeletesOnlyLinkedTradesAndDividends()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -24,6 +24,9 @@ public class DividendPaymentRepositoryTests
         context.Accounts.AddRange(new FinancialAccountBaseDto { AccountId = 4, UserId = 1, AccountType = AccountType.Stock }, new FinancialAccountBaseDto { AccountId = 5, UserId = 2, AccountType = AccountType.Stock });
         context.Assets.Add(new Asset { Id = 1, Name = "Fund", Type = AssetType.ETF, Listings = [new() { Id = 8, Ticker = "FUND", ExchangeMic = "XNAS", TradingCurrency = "USD" }] });
         context.InvestmentTransactions.Add(new InvestmentTransaction { UserId = 1, AccountId = 4, AssetListingId = 8, Quantity = 1, Currency = "USD", TradeDate = new(2019, 1, 1) });
+        context.InvestmentTransactions.AddRange(
+            new InvestmentTransaction { UserId = 1, AccountId = null, AssetListingId = 8, Quantity = 1, Currency = "USD" },
+            new InvestmentTransaction { UserId = 2, AccountId = 5, AssetListingId = 8, Quantity = 1, Currency = "USD" });
         context.DividendPayments.AddRange(
             Payment(1, 1, 4, new(2020, 1, 1)), Payment(2, 1, 4, new(2020, 1, 1)),
             Payment(3, 1, 4, new(2019, 1, 1)), Payment(4, 2, 5, new(2021, 1, 1)), Payment(5, 1, null, new(2021, 1, 1)));
@@ -40,7 +43,7 @@ public class DividendPaymentRepositoryTests
         await Assert.ThrowsAsync<SqliteException>(() => context.Accounts.Where(x => x.AccountId == 4).ExecuteDeleteAsync(ct));
         Assert.True(await new InvestmentAccountRepository(context).Delete(4));
         Assert.Equal(new long[] { 4, 5 }, await context.DividendPayments.OrderBy(d => d.Id).Select(d => d.Id).ToListAsync(ct));
-        Assert.Single(await context.InvestmentTransactions.ToListAsync(ct));
+        Assert.Equal(new int?[] { null, 5 }, await context.InvestmentTransactions.OrderBy(t => t.AccountId).Select(t => t.AccountId).ToListAsync(ct));
     }
     private static DividendPayment Payment(long id, int user, int? account, DateOnly date) => new()
     { Id = id, UserId = user, AccountId = account, AssetListingId = 8, PaymentDate = date, Amount = 5, Currency = "USD" };

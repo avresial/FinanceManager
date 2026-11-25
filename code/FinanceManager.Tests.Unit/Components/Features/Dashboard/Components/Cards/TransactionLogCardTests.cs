@@ -4,7 +4,6 @@ using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,27 +34,50 @@ public sealed class TransactionLogCardTests
     }
 
     [Fact]
-    public async Task Rows_LinkToOwningAccount()
+    public async Task Rows_ShowKindAndSignedAmount()
     {
         var date = new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc);
         await using var context = CreateContext(
         [
-            new TransactionLogEntryDto(11, "Everyday", AccountType.Currency, 5, date, -12.5m, "Coffee", "USD"),
-            new TransactionLogEntryDto(12, "Brokerage", AccountType.Stock, 6, date, 100m, "", "GBX"),
-            new TransactionLogEntryDto(13, "Bonds", AccountType.Bond, 7, date, -2m, "Bond", "units"),
+            new TransactionLogEntryDto(TransactionKind.Cash, 5, date, -12.5m, "Coffee", "USD"),
+            new TransactionLogEntryDto(TransactionKind.Investment, 6, date, 100m, "", "GBX"),
+            new TransactionLogEntryDto(TransactionKind.Bond, 7, date, -2m, "Bond", "units"),
         ]);
 
         var cut = context.Render<TransactionLogCard>();
 
         cut.WaitForAssertion(() =>
         {
-            var rows = cut.FindAll("a.fm-txlog-link");
-            Assert.Equal(["/AccountDetails/11?entryId=5", "/AccountDetails/12", "/AccountDetails/13"], rows.Select(row => row.GetAttribute("href")));
+            var rows = cut.FindAll(".fm-txlog-card .fm-list-item");
+            Assert.Empty(cut.FindAll("a[href*=AccountDetails]"));
             Assert.Equal(["-12.50 USD", "+100.00 GBX", "-2.00 units"], rows.Select(row => row.QuerySelector(".fm-amount")!.TextContent.Trim()));
             Assert.Contains("Coffee", rows[0].TextContent);
             Assert.Contains("15 Oct 2026", rows[0].TextContent);
-            // A blank description falls back to the account name.
-            Assert.Contains("Brokerage", rows[1].QuerySelector(".fm-name")!.TextContent);
+            // A blank description with nothing else to show falls back to the kind.
+            Assert.Contains("Investment", rows[1].QuerySelector(".fm-name")!.TextContent);
+        });
+    }
+
+    [Fact]
+    public async Task Rows_CaptionTellsRowsApartInsteadOfRepeatingTheKind()
+    {
+        var date = new DateTime(2026, 10, 15, 9, 0, 0, DateTimeKind.Utc);
+        await using var context = CreateContext(
+        [
+            new TransactionLogEntryDto(TransactionKind.Cash, 1, date, -5m, "Coffee", "USD", "Dining out"),
+            new TransactionLogEntryDto(TransactionKind.Cash, 2, date, -6m, "", "USD", "Dining out"),
+            new TransactionLogEntryDto(TransactionKind.Bond, 3, date, 2m, "Coupon", "units", "Treasury 2030"),
+            new TransactionLogEntryDto(TransactionKind.Investment, 4, date, 9m, "Buy 1 ABC", "USD", "ABC"),
+            new TransactionLogEntryDto(TransactionKind.Cash, 5, date, -7m, "Rent", "USD"),
+        ]);
+
+        var cut = context.Render<TransactionLogCard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var captions = cut.FindAll(".fm-txlog-card .fm-list-item").Select(row => row.QuerySelector(".mud-typography-caption.fm-muted")!.TextContent.Trim()).ToList();
+            Assert.Equal(["Dining out", "", "Treasury 2030", "ABC", ""], captions);
+            Assert.DoesNotContain(cut.FindAll(".fm-txlog-card .fm-name"), name => name.TextContent.Trim() == "Cash");
         });
     }
 

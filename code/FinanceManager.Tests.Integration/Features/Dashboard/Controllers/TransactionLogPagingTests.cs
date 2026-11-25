@@ -14,6 +14,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using Xunit;
 
 namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
@@ -44,38 +45,12 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         var expected = (await client.GetLastTransactions(641, 100)).Where(e => e.Date >= day).ToList();
         Assert.Equal(7, expected.Count);
         var query = new TransactionLogQuery(DateTime.SpecifyKind(day, DateTimeKind.Unspecified), day.AddDays(1), pageSize);
-        var page = await client.GetPage(641, query, ct);
-        Assert.Equal(expected.Take(pageSize), page.Items);
-        List<TransactionLogEntryDto> actual = [];
-        for (var i = 0; ; i++)
-        {
-            Assert.True(i < 10, "Cursor did not advance.");
-            actual.AddRange(page.Items);
-            if (page.NextCursor is not TransactionLogCursor cursor)
-                break;
-            Assert.Equal(DateTimeKind.Utc, cursor.Date.Kind);
-            page = await client.GetPage(641, query with { Cursor = cursor }, ct);
-        }
-
-        Assert.Equal(expected, actual);
-        Assert.All(actual.Where(e => e.AccountId == 10), e => Assert.Equal("PLN", e.CurrencyOrUnit));
-        Assert.All(actual.Where(e => e.AccountId == 11), e => Assert.Equal("USD", e.CurrencyOrUnit));
-        Assert.All(actual.Where(e => e.AccountType == AccountType.Bond), e =>
-        {
-            Assert.Equal("units", e.CurrencyOrUnit);
-            Assert.Equal(e.EntryId, e.ValueChange);
-        });
-        Assert.All(actual.Where(e => e.AccountType == AccountType.Stock), e =>
-        {
-            // Listing metadata is PLN; historical trade amounts remain in their recorded GBX.
-            Assert.Equal("GBX", e.CurrencyOrUnit);
-            Assert.Equal(2m, e.ValueChange);
-        });
-        Assert.All(actual, e => Assert.Contains(e.AccountId, new[] { 10, 11, 20, 30 }));
-        Assert.Equal(actual.Count, actual.Select(e => (e.AccountType, e.EntryId)).Distinct().Count());
-        var intraday = await client.GetPage(641, new(day.AddHours(1), day.AddDays(1)), ct);
+        Assert.Equal(3, expected[0].EntryId);
+        Assert.All(expected.Where(e => e.Kind == TransactionKind.Bond), e => Assert.Equal("units", e.CurrencyOrUnit));
+        Assert.All(expected.Where(e => e.Kind == TransactionKind.Investment), e => Assert.Equal(("GBX", 2m), (e.CurrencyOrUnit, e.ValueChange)));
+        var intraday = await client.GetItemsPage(641, new(day.AddHours(1), day.AddDays(1)), ct);
         Assert.Equal(3, Assert.Single(intraday.Items).EntryId);
-        var empty = await client.GetPage(641, new(day.AddYears(1), day.AddYears(2)), ct);
+        var empty = await client.GetItemsPage(641, new(day.AddYears(1), day.AddYears(2)), ct);
         Assert.Empty(empty.Items);
         Assert.Null(empty.NextCursor);
     }
@@ -96,12 +71,12 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             new FinancialAccountBaseDto { AccountId = 97, UserId = 999, Name = "Other broker", AccountType = AccountType.Stock },
             new FinancialAccountBaseDto { AccountId = 99, UserId = 999, Name = "Other user", AccountType = AccountType.Currency });
         db.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(10, 1, day, 0, 1), new CurrencyAccountEntry(11, 2, day, 0, 2),
-            new CurrencyAccountEntry(10, 3, day.AddHours(1), 0, 3),
-            new CurrencyAccountEntry(10, 4, day.AddDays(-2), 0, 4),
-            new CurrencyAccountEntry(99, 99, day, 0, 99));
+            new CurrencyAccountEntry(10, 1, day, 0, 1) { UserId = 641, CurrencyId = 0 }, new CurrencyAccountEntry(11, 2, day, 0, 2) { UserId = 641, CurrencyId = 1 },
+            new CurrencyAccountEntry(null, 3, day.AddHours(1), 0, 3) { UserId = 641, CurrencyId = 0 },
+            new CurrencyAccountEntry(10, 4, day.AddDays(-2), 0, 4) { UserId = 641, CurrencyId = 0 },
+            new CurrencyAccountEntry(99, 99, day, 0, 99) { UserId = 999, CurrencyId = 0 });
         db.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(day), DateOnly.FromDateTime(day.AddYears(1)), []) { Id = 7 });
-        db.BondEntries.AddRange(new BondAccountEntry(20, 1, day, 0, 1, 7), new BondAccountEntry(20, 2, day, 0, 2, 7), new BondAccountEntry(98, 98, day, 0, 98, 7));
+        db.BondEntries.AddRange(new BondAccountEntry(20, 1, day, 0, 1, 7) { UserId = 641 }, new BondAccountEntry(20, 2, day, 0, 2, 7) { UserId = 641 }, new BondAccountEntry(98, 98, day, 0, 98, 7) { UserId = 999 });
         db.AssetListings.Add(new AssetListing
         {
             Id = 1,
@@ -112,90 +87,66 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             TradingCurrency = "PLN"
         });
         db.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { EntryId = 1, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
-            new InvestmentTransaction { EntryId = 97, AccountId = 97, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
-            new InvestmentTransaction { EntryId = 2, AccountId = 30, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
+            new InvestmentTransaction { EntryId = 1, AccountId = 30, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
+            new InvestmentTransaction { EntryId = 97, AccountId = 97, UserId = 999, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
+            new InvestmentTransaction { EntryId = 2, AccountId = 30, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         Authorize("owner", 641, UserRole.User);
         return day;
     }
 
-    [Fact]
-    public async Task Page_FilteredByAccountType_ReturnsOnlyThatTypesOfTheOwner()
+    [Theory]
+    [InlineData(TransactionKind.Cash, " pln ", 2)]
+    [InlineData(TransactionKind.Bond, "PLN", 2)]
+    [InlineData(TransactionKind.Investment, "gbx", 2)]
+    [InlineData(TransactionKind.Investment, "PLN", 0)]
+    [InlineData(TransactionKind.Cash, "XYZ", 0)]
+    public async Task KindAndCurrencyFiltersApplyTogether(TransactionKind kind, string code, int expected)
     {
         var ct = TestContext.Current.CancellationToken;
         var day = await SeedHistoryAsync(ct);
-        var client = new TransactionLogHttpClient(Client);
-        var query = new TransactionLogQuery(day, day.AddDays(1), 100);
-
-        var bonds = await client.GetPage(641, query with { AccountTypes = [AccountType.Bond] }, ct);
-        var cashAndStock = await client.GetPage(641, query with { AccountTypes = [AccountType.Currency, AccountType.Stock] }, ct);
-
-        Assert.Equal([(AccountType.Bond, 20), (AccountType.Bond, 20)], bonds.Items.Select(e => (e.AccountType, e.AccountId)));
-        Assert.Equal(5, cashAndStock.Items.Count);
-        Assert.DoesNotContain(cashAndStock.Items, e => e.AccountType == AccountType.Bond);
-        Assert.All(cashAndStock.Items, e => Assert.Contains(e.AccountId, new[] { 10, 11, 30 }));
-    }
-
-    [Fact]
-    public async Task Page_FilteredByAccountIds_ReturnsOwnAccountsOnly_AndIgnoresForeignIds()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var day = await SeedHistoryAsync(ct);
-        var client = new TransactionLogHttpClient(Client);
-        var query = new TransactionLogQuery(day, day.AddDays(1), 100);
-
-        var own = await client.GetPage(641, query with { AccountIds = [11, 30] }, ct);
-        var mixed = await client.GetPage(641, query with { AccountIds = [11, 99, 98, 97] }, ct);
-        var foreignOnly = await client.GetPage(641, query with { AccountIds = [99, 98, 97] }, ct);
-
-        Assert.Equal([11, 30, 30], own.Items.Select(e => e.AccountId).Order());
-        Assert.Equal(11, Assert.Single(mixed.Items).AccountId);
-        Assert.Empty(foreignOnly.Items);
-        Assert.Null(foreignOnly.NextCursor);
-    }
-
-    [Fact]
-    public async Task Page_TypeAndAccountIdFilters_AreCombinedWithAnd()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var day = await SeedHistoryAsync(ct);
-        var client = new TransactionLogHttpClient(Client);
-
-        // 20 is a bond account (type excluded), 10 a currency account (selected), 30 an investment account (type excluded).
-        var page = await client.GetPage(641, new(day, day.AddDays(1), 100, AccountTypes: [AccountType.Currency], AccountIds: [10, 20, 30]), ct);
-
-        Assert.All(page.Items, e => Assert.Equal((AccountType.Currency, 10), (e.AccountType, e.AccountId)));
-        Assert.Equal(2, page.Items.Count);
+        var page = await new TransactionLogHttpClient(Client).GetItemsPage(641, new(day, day.AddDays(1), Kinds: [kind], Currencies: [code]), ct);
+        Assert.Equal(expected, page.Items.Count);
+        Assert.All(page.Items, row => Assert.Equal(kind, row.Kind));
     }
 
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task Page_WithFilters_PagesWithoutGapsOrDuplicates(int pageSize)
+    public async Task FilteredPage_WalksEveryPageOfTheSelectionWithoutGapsOrDuplicates(int pageSize)
     {
         var ct = TestContext.Current.CancellationToken;
         var day = await SeedHistoryAsync(ct);
         var client = new TransactionLogHttpClient(Client);
-        var all = (await client.GetPage(641, new(day, day.AddDays(1), 100), ct)).Items;
-        var expected = all.Where(e => e.AccountType != AccountType.Bond && e.AccountId != 11).ToList();
-        Assert.Equal(4, expected.Count);
-        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize,
-            AccountTypes: [AccountType.Currency, AccountType.Stock], AccountIds: [10, 30, 99]);
+        var query = new TransactionLogQuery(day, day.AddDays(1), pageSize, Kinds: [TransactionKind.Cash, TransactionKind.Bond], Currencies: [" pln "]);
 
-        List<TransactionLogEntryDto> actual = [];
-        var page = await client.GetPage(641, query, ct);
+        List<(TransactionKind Kind, long EntryId)> walked = [];
+        TransactionLogCursor? cursor = null;
         for (var i = 0; ; i++)
         {
             Assert.True(i < 10, "Cursor did not advance.");
-            actual.AddRange(page.Items);
-            if (page.NextCursor is not TransactionLogCursor cursor)
+            var page = await client.GetItemsPage(641, query with { Cursor = cursor }, ct);
+            Assert.True(page.Items.Count <= pageSize);
+            walked.AddRange(page.Items.Select(item => (item.Kind, item.EntryId)));
+            if ((cursor = page.NextCursor) is null)
                 break;
-            page = await client.GetPage(641, query with { Cursor = cursor }, ct);
         }
 
-        Assert.Equal(expected, actual);
+        // Owner 641's PLN cash entries 3 and 1 and bond entries 1 and 2, newest first with ties broken by id, then kind;
+        // USD cash entry 2 and every GBX trade are filtered out.
+        Assert.Equal([(TransactionKind.Cash, 3L), (TransactionKind.Bond, 2L), (TransactionKind.Cash, 1L), (TransactionKind.Bond, 1L)], walked);
+    }
+
+    [Fact]
+    public async Task Currencies_ListsTheOwnersCurrenciesWithoutQuoteUnits()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedHistoryAsync(ct);
+
+        // Owner 641 holds PLN and USD cash, PLN bonds and GBX trades; the GBX quote unit is never offered.
+        Assert.Equal(["PLN", "USD"], await new TransactionLogHttpClient(Client).GetCurrencies(641, ct));
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client.GetAsync("api/TransactionLog/Currencies/999", ct)).StatusCode);
     }
 
     [Theory]
@@ -216,7 +167,7 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         var client = new TransactionLogHttpClient(Client);
         var query = new TransactionLogQuery(day, day.AddDays(1), pageSize);
 
-        var expected = (await client.GetPage(641, query with { PageSize = 100 }, ct)).Items.Select(e => (e.AccountType, e.EntryId)).ToList();
+        var expected = (await client.GetLastTransactions(641, 100)).Where(e => e.Date >= day).Select(e => (e.Kind, e.EntryId)).ToList();
         List<TransactionHistoryItem> actual = [];
         TransactionLogCursor? cursor = null;
         for (var i = 0; ; i++)
@@ -229,19 +180,19 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         }
 
         Assert.Equal(7, expected.Count);
-        Assert.Equal(expected, actual.Select(item => (item.AccountType, item.EntryId)));
-        var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.AccountId == 11));
-        Assert.Equal(("Savings", "USD", 1, "Long term"),
-            (savings.Account.Name, savings.Currency, savings.Account.CurrencyId, savings.Entry.Labels.Single().Name));
+        Assert.Equal(expected, actual.Select(item => (item.Kind, item.EntryId)));
+        var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.LegacyAccountId == 11));
+        Assert.Equal(("Cash USD", "USD", 1, "Long term"),
+            (savings.Account!.Name, savings.Currency, savings.Account.CurrencyId, savings.Entry.Labels.Single().Name));
         Assert.All(actual.OfType<BondTransactionHistoryItem>(), bond => Assert.Equal(7, bond.Entry.BondDetailsId));
         var trade = actual.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
         Assert.Equal(("HIST", "Long term"), (trade.Ticker, Assert.Single(trade.Labels!).Name));
 
         // Saving the trade as the edit form does (labels from the row's DTO) keeps its label.
         var investmentClient = new InvestmentTransactionHttpClient(Client);
-        Assert.True(await investmentClient.UpdateAsync(new UpdateInvestmentTransactionRequest(trade.Id, trade.AccountId, trade.AssetListingId,
+        Assert.True(await investmentClient.UpdateAsync(new UpdateInvestmentTransactionRequest(trade.Id, trade.AccountId!.Value, trade.AssetListingId,
             trade.Type, 3m, trade.UnitPrice, trade.Currency, trade.TradeDate, trade.Fee, trade.Notes, [.. trade.Labels!.Select(l => l.Id)])));
-        var reloaded = await client.GetItemsPage(641, query with { PageSize = 100, AccountTypes = [AccountType.Stock] }, ct);
+        var reloaded = await client.GetItemsPage(641, query with { PageSize = 100, Kinds = [TransactionKind.Investment] }, ct);
         var edited = reloaded.Items.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
         Assert.Equal((3m, "Long term"), (edited.Quantity, Assert.Single(edited.Labels!).Name));
     }

@@ -551,6 +551,9 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasIndex("AccountId", "PostingDate", "EntryId");
 
+                    b.HasIndex("UserId", "PostingDate", "EntryId")
+                        .HasDatabaseName("IX_BondEntries_OwnerDateId");
+
                     b.HasIndex("AccountId", "BondDetailsId", "PostingDate", "EntryId");
 
                     b.HasIndex("UserId", "BondDetailsId", "PostingDate", "EntryId")
@@ -694,6 +697,9 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("EntryId");
 
                     b.HasIndex("AccountId", "PostingDate", "EntryId");
+
+                    b.HasIndex("UserId", "PostingDate", "EntryId")
+                        .HasDatabaseName("IX_CurrencyEntries_OwnerDateId");
 
                     b.HasIndex("UserId", "CurrencyId", "PostingDate", "EntryId")
                         .HasDatabaseName("IX_CurrencyEntries_OwnerCurrencyDateId");

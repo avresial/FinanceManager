@@ -41,12 +41,32 @@ public class TransactionRowTests
         Assert.Contains("Running balance", cut.Markup);
     }
 
-    private static IRenderedComponent<TransactionRow> RenderRow(BunitContext context, bool initiallyExpanded)
+    [Fact]
+    public async Task ExpandedRow_DoesNotRepeatADescriptionTheTitleShowsInFull()
+    {
+        await using var context = CreateContext();
+        var cut = RenderRow(context, initiallyExpanded: true);
+
+        Assert.DoesNotContain("Description", cut.Markup);
+    }
+
+    [Fact]
+    public async Task ExpandedRow_ShowsTheFullDescription_WhenTheTitleCutItOff()
+    {
+        await using var context = CreateContext();
+        var description = new string('x', 100);
+        var cut = RenderRow(context, initiallyExpanded: true, description);
+
+        Assert.Contains("Description", cut.Markup);
+        Assert.Contains(description, cut.Markup);
+    }
+
+    private static IRenderedComponent<TransactionRow> RenderRow(BunitContext context, bool initiallyExpanded, string description = "Groceries")
     {
         var account = new CurrencyAccount(1, 1, "Cash");
         var entry = new CurrencyAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 100m, -20m)
         {
-            Description = "Groceries",
+            Description = description,
             ContractorDetails = "Corner shop",
         };
 

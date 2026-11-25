@@ -10,10 +10,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Re
 
 public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryRepository<CurrencyAccountEntry>
 {
-    // SQL Server permits at most 2,100 parameters per command. Keep room for the Take parameter and
-    // future predicates when a user has an unusually large number of accounts.
-    private const int _maxAccountIdsPerQuery = 2_000;
-
     private readonly CurrencyEntryValueCalculator _valueCalculator = new(context);
     private static readonly System.Reflection.PropertyInfo? _entryIdProperty =
         typeof(CurrencyAccountEntry).GetProperty(nameof(CurrencyAccountEntry.EntryId));
@@ -493,81 +489,6 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .Include(e => e.Labels)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetHistoryPage(
-        IReadOnlyCollection<int> accountIds,
-        DateTime startDate,
-        DateTime endDate,
-        int take,
-        DateTime? cursorPostingDate = null,
-        long? cursorId = null,
-        CancellationToken cancellationToken = default,
-        string? search = null,
-        IReadOnlyCollection<int>? searchAccountIds = null)
-    {
-        if (cursorPostingDate.HasValue != cursorId.HasValue)
-            throw new ArgumentException("Both cursor posting date and entry id must be supplied together.");
-        if (startDate > endDate)
-            throw new ArgumentException("Start date must be on or before end date.", nameof(startDate));
-        if (accountIds.Count == 0 || take <= 0) return [];
-
-        var query = context.CurrencyEntries.AsNoTracking()
-            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate >= startDate && e.PostingDate <= endDate);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToUpperInvariant();
-            var matchedAccounts = searchAccountIds ?? [];
-            query = query.Where(e => e.AccountId.HasValue && matchedAccounts.Contains(e.AccountId.Value) ||
-                (e.Description != null && e.Description.ToUpper().Contains(term)) ||
-                (e.ContractorDetails != null && e.ContractorDetails.ToUpper().Contains(term)));
-        }
-
-        if (cursorPostingDate is DateTime date && cursorId is long id)
-            query = query.Where(e => e.PostingDate < date || (e.PostingDate == date && e.EntryId < id));
-
-        return await query
-            .Include(e => e.Labels)
-            .ThenInclude(l => l.Classifications)
-            .OrderByDescending(e => e.PostingDate)
-            .ThenByDescending(e => e.EntryId)
-            .Take(take)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetMostRecentByAccounts(
-        IReadOnlyCollection<int> accountIds,
-        int count,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0 || count <= 0)
-            return [];
-
-        List<CurrencyAccountEntry> results = [];
-        foreach (var accountIdChunk in accountIds.Distinct().Chunk(_maxAccountIdsPerQuery))
-        {
-            results.AddRange(await context.CurrencyEntries
-                .AsNoTracking()
-                .Where(e => e.AccountId.HasValue && accountIdChunk.Contains(e.AccountId.Value))
-                .OrderByDescending(e => e.PostingDate)
-                .ThenByDescending(e => e.EntryId)
-                // The dashboard does not need Value or labels for this read. Materialise only the
-                // account, ordering, value-change, and description fields it projects into its DTO.
-                .Select(e => new CurrencyAccountEntry(e.AccountId, e.EntryId, e.PostingDate, 0, e.ValueChange)
-                {
-                    Description = e.Description,
-                    ContractorDetails = e.ContractorDetails,
-                })
-                .Take(count)
-                .ToListAsync(cancellationToken));
-        }
-
-        return results
-            .OrderByDescending(e => e.PostingDate)
-            .ThenByDescending(e => e.EntryId)
-            .Take(count)
-            .ToList();
     }
 
     public async Task<IReadOnlyList<CurrencyAccountEntry>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default)

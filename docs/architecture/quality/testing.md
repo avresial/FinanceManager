@@ -53,3 +53,9 @@ A green InMemory scenario is insufficient evidence for SQL translation, precisio
 ## Quality interpretation
 
 [Section 10](../10-quality-requirements.md) maps quality scenarios to existing test evidence and gaps. [Section 11](../11-risks-and-technical-debt.md) tracks unresolved verification debt. Test counts and passing status belong to a specific run and revision; this guide does not claim the current suite passed merely because tests exist.
+
+### Owner transaction queries
+
+[Search tests](../../../code/FinanceManager.Tests.Integration/Repositories/TransactionLogSearchTests.cs) exercise literal text matching, ownership, dates and cursor predicates on InMemory, SQLite and disposable PostgreSQL and SQL Server databases. Set `FM_SEARCH_POSTGRESQL_CONNECTION` and `FM_SEARCH_SQLSERVER_CONNECTION` to opt in to the server-provider cases. [Migration script tests](../../../code/FinanceManager.Tests.Unit/Api/Migrations/AddOwnerTransactionHistoryIndexesMigrationTests.cs) check both providers’ index DDL and the orphan cleanup predicate.
+
+For #1128, a synthetic dataset with 100,000 cash and 100,000 bond entries for one owner exercised the first 26 IDs and a continuation near entry 36,000. PostgreSQL 17 used backward index-only scans of the owner/date/ID indexes (0.020–0.030 ms execution time on the local fixture). SQL Server 2022 selected backward index seeks for the same key queries. This measurement covers ID/timestamp selection only. The typed endpoint also projects metadata and loads labels.

@@ -378,13 +378,13 @@ public partial class InvestmentTransactionForm : ComponentBase
         }
         catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
         {
-            Logger.LogWarning(ex, "Rejected investment transaction save for account {AccountId}", AccountId);
+            Logger.LogWarning(ex, "Rejected investment transaction save");
             _error = ex.Message;
             Snackbar.Add(_error, Severity.Error);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to save investment transaction for account {AccountId}", AccountId);
+            Logger.LogError(ex, "Failed to save investment transaction");
             _error = "Could not save the transaction. Please try again.";
             Snackbar.Add(_error, Severity.Error);
         }

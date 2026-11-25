@@ -100,20 +100,8 @@
     background-color: var(--mud-palette-action-default-hover);
 }
 
-/* The whole row is a link to the owning account: keep the text colours, drop the underline,
-   and give it the hover/focus feedback a list item has. */
-.fm-txlog-scope .fm-txlog-link {
-    display: block;
-    padding-left: 8px;
-    padding-right: 8px;
-    border-radius: var(--mud-default-borderradius);
-    color: inherit;
-    text-decoration: none;
-}
-
-.fm-txlog-scope .fm-txlog-link:hover,
-.fm-txlog-scope .fm-txlog-link:focus-visible {
-    background-color: var(--mud-palette-action-default-hover);
+.fm-txlog-card .fm-list-item {
+    padding-inline: 8px;
 }
 
 /* Day header on the Transactions page; sticks under the app bar while its day scrolls. */
@@ -141,19 +129,4 @@
     min-height: 40px;
     flex-wrap: wrap;
     row-gap: 8px;
-}
-
-/* Transactions page: the owning-account link above each account-page row. */
-.fm-txlog-scope .fm-txhist-account {
-    color: var(--mud-palette-text-secondary);
-    text-decoration: none;
-    min-width: 0;
-    width: fit-content;
-    max-width: 100%;
-}
-
-.fm-txlog-scope .fm-txhist-account:hover,
-.fm-txlog-scope .fm-txhist-account:focus-visible {
-    color: var(--mud-palette-primary);
-    text-decoration: underline;
 }

@@ -1,5 +1,3 @@
-using FinanceManager.Contracts.FinancialAccounts.Shared;
-
 namespace FinanceManager.Contracts.Dashboard;
 
-public record TransactionLogCursorDto(DateTime Date, AccountTypeDto AccountType, long EntryId);
+public record TransactionLogCursorDto(DateTime Date, TransactionKindDto Kind, long EntryId);

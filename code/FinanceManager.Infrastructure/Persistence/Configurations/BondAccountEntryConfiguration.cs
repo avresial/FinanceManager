@@ -23,6 +23,8 @@ public class BondAccountEntryConfiguration : IEntityTypeConfiguration<BondAccoun
 
         builder.HasIndex(x => new { x.UserId, x.BondDetailsId, x.PostingDate, x.EntryId })
             .HasDatabaseName("IX_BondEntries_OwnerBondDateId");
+        builder.HasIndex(x => new { x.UserId, x.PostingDate, x.EntryId })
+            .HasDatabaseName("IX_BondEntries_OwnerDateId");
         builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
         builder.HasIndex(e => new { e.AccountId, e.BondDetailsId, e.PostingDate, e.EntryId });
 

@@ -1,7 +1,7 @@
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components;
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
@@ -12,13 +12,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components;
 [Trait("Category", "Unit")]
 public sealed class TransactionLogToolbarTests
 {
-    private static readonly TransactionLogAccountOption[] _accounts =
-    [
-        new(1, "Everyday", AccountType.Currency),
-        new(2, "Savings", AccountType.Currency),
-        new(3, "Treasury bonds", AccountType.Bond),
-        new(4, "Broker", AccountType.Stock),
-    ];
+    private static readonly string[] _currencies = ["EUR", "PLN", "USD"];
 
     [Fact]
     public async Task Renders_CashBondsAndInvestmentsChips_NoneSelected()
@@ -37,7 +31,7 @@ public sealed class TransactionLogToolbarTests
     {
         await using var context = CreateContext();
 
-        var cut = RenderToolbar(context, new([AccountType.Bond], []), _ => { });
+        var cut = RenderToolbar(context, new([TransactionKind.Bond], []), _ => { });
 
         var selected = cut.FindAll(".fm-txlog-type-chip.mud-chip-selected").Select(chip => chip.TextContent.Trim());
         Assert.Equal(["Bonds"], selected);
@@ -53,8 +47,8 @@ public sealed class TransactionLogToolbarTests
         cut.FindAll(".fm-txlog-type-chip")[2].Click();
 
         Assert.NotNull(raised);
-        Assert.Equal([AccountType.Stock], raised.AccountTypes);
-        Assert.Empty(raised.AccountIds);
+        Assert.Equal([TransactionKind.Investment], raised.Kinds);
+        Assert.Empty(raised.Currencies);
     }
 
     [Fact]
@@ -62,27 +56,26 @@ public sealed class TransactionLogToolbarTests
     {
         await using var context = CreateContext();
         TransactionLogFilter? raised = null;
-        var cut = RenderToolbar(context, new([AccountType.Currency], []), filter => raised = filter);
+        var cut = RenderToolbar(context, new([TransactionKind.Cash], []), filter => raised = filter);
 
         cut.FindAll(".fm-txlog-type-chip")[1].Click();
 
         Assert.NotNull(raised);
-        Assert.Equal([AccountType.Currency, AccountType.Bond], raised.AccountTypes);
+        Assert.Equal([TransactionKind.Cash, TransactionKind.Bond], raised.Kinds);
     }
 
     [Fact]
-    public async Task DeselectingAType_PrunesSelectedAccountsThatBecomeHidden()
+    public async Task DeselectingAType_KeepsSelectedCurrencies()
     {
         await using var context = CreateContext();
         TransactionLogFilter? raised = null;
-        var cut = RenderToolbar(context, new([AccountType.Currency, AccountType.Bond], [1, 3]), filter => raised = filter);
+        var cut = RenderToolbar(context, new([TransactionKind.Cash, TransactionKind.Bond], ["EUR", "USD"]), filter => raised = filter);
 
-        // Deselect "Bonds": the bond account 3 is no longer offered, so it leaves the filter.
         cut.FindAll(".fm-txlog-type-chip")[1].Click();
 
         Assert.NotNull(raised);
-        Assert.Equal([AccountType.Currency], raised.AccountTypes);
-        Assert.Equal([1], raised.AccountIds);
+        Assert.Equal([TransactionKind.Cash], raised.Kinds);
+        Assert.Equal(["EUR", "USD"], raised.Currencies);
     }
 
     [Fact]
@@ -90,82 +83,83 @@ public sealed class TransactionLogToolbarTests
     {
         await using var context = CreateContext();
         TransactionLogFilter? raised = null;
-        var cut = RenderToolbar(context, new([AccountType.Bond], [3]), filter => raised = filter);
+        var cut = RenderToolbar(context, new([TransactionKind.Bond], ["USD"]), filter => raised = filter);
 
         cut.FindAll(".fm-txlog-type-chip")[1].Click();
 
         Assert.NotNull(raised);
-        Assert.Empty(raised.AccountTypes);
-        Assert.Equal([3], raised.AccountIds);
+        Assert.Empty(raised.Kinds);
+        Assert.Equal(["USD"], raised.Currencies);
     }
 
     [Fact]
-    public async Task AccountSelect_OffersAllAccounts_WhenNoTypeIsSelected()
+    public async Task CurrencySelect_OffersAllCurrencies_WhenNoKindIsSelected()
     {
         await using var context = CreateContext();
         var cut = RenderToolbar(context, TransactionLogFilter.None, _ => { });
 
-        OpenAccountSelect(cut);
+        OpenCurrencySelect(cut);
 
-        Assert.Equal(["Broker", "Everyday", "Savings", "Treasury bonds"], AccountOptionTexts(cut));
+        Assert.Equal(_currencies, CurrencyOptionTexts(cut));
     }
 
     [Fact]
-    public async Task AccountSelect_IsNarrowedToTheSelectedTypes()
+    public async Task CurrencySelect_OffersCurrenciesRegardlessOfKind()
     {
         await using var context = CreateContext();
-        var cut = RenderToolbar(context, new([AccountType.Currency, AccountType.Bond], []), _ => { });
+        var cut = RenderToolbar(context, new([TransactionKind.Cash, TransactionKind.Bond], []), _ => { });
 
-        OpenAccountSelect(cut);
+        OpenCurrencySelect(cut);
 
-        Assert.Equal(["Everyday", "Savings", "Treasury bonds"], AccountOptionTexts(cut));
+        Assert.Equal(_currencies, CurrencyOptionTexts(cut));
     }
 
     [Fact]
-    public async Task PickingAnAccount_RaisesFilterChangedWithItsId_AndKeepsTheTypes()
+    public async Task PickingACurrency_RaisesFilterChangedWithIt_AndKeepsTheKinds()
     {
         await using var context = CreateContext();
         TransactionLogFilter? raised = null;
-        var cut = RenderToolbar(context, new([AccountType.Currency], []), filter => raised = filter);
-        OpenAccountSelect(cut);
+        var cut = RenderToolbar(context, new([TransactionKind.Cash], []), filter => raised = filter);
+        OpenCurrencySelect(cut);
 
-        cut.FindAll(".mud-list-item").Single(item => item.TextContent.Contains("Savings")).Click();
+        cut.FindAll(".mud-list-item").Single(item => item.TextContent.Contains("PLN")).Click();
 
         Assert.NotNull(raised);
-        Assert.Equal([AccountType.Currency], raised.AccountTypes);
-        Assert.Equal([2], raised.AccountIds);
+        Assert.Equal([TransactionKind.Cash], raised.Kinds);
+        Assert.Equal(["PLN"], raised.Currencies);
     }
 
     [Fact]
-    public async Task AccountSelect_ShowsTheSelectedAccountName()
+    public async Task CurrencySelect_ShowsTheSelectedCurrency()
     {
         await using var context = CreateContext();
 
-        var cut = RenderToolbar(context, new([], [4]), _ => { });
+        var cut = RenderToolbar(context, new([], ["USD"]), _ => { });
 
-        Assert.Equal("Broker", cut.Find("input[data-testid='transactions-account-filter']").GetAttribute("value"));
-    }
-
-    [Theory]
-    [InlineData(new int[0], "")]
-    [InlineData(new[] { 1, 4 }, "2 accounts")]
-    public async Task AccountSelect_SummarisesTheSelection_AndStaysEmptyWithoutOne(int[] selectedIds, string expectedText)
-    {
-        await using var context = CreateContext();
-
-        var cut = RenderToolbar(context, new([], selectedIds), _ => { });
-
-        Assert.Equal(expectedText, cut.Find("input[data-testid='transactions-account-filter']").GetAttribute("value"));
+        Assert.Equal("USD", cut.Find("input[data-testid='transactions-currency-filter']").GetAttribute("value"));
     }
 
     [Fact]
-    public async Task AccountSelect_IsDisabled_WhenThereAreNoAccounts()
+    public async Task CurrencySelect_IsHidden_WhenTheUserHasOneCurrencyOrNone()
+    {
+        await using var noneContext = CreateContext();
+        await using var oneContext = CreateContext();
+
+        var none = RenderToolbar(noneContext, TransactionLogFilter.None, _ => { }, currencies: []);
+        var one = RenderToolbar(oneContext, TransactionLogFilter.None, _ => { }, currencies: ["PLN"]);
+
+        Assert.Empty(none.FindAll("input[data-testid='transactions-currency-filter']"));
+        Assert.Empty(one.FindAll("input[data-testid='transactions-currency-filter']"));
+    }
+
+    [Fact]
+    public async Task CurrencySelect_StaysVisible_WhileACurrencyIsSelected()
     {
         await using var context = CreateContext();
 
-        var cut = RenderToolbar(context, TransactionLogFilter.None, _ => { }, accounts: []);
+        var cut = RenderToolbar(context, new([], ["PLN"]), _ => { }, currencies: ["PLN"]);
 
-        Assert.NotNull(cut.Find("input[data-testid='transactions-account-filter']").GetAttribute("disabled"));
+        Assert.NotEmpty(cut.FindAll("input[data-testid='transactions-currency-filter']"));
     }
 
     [Fact]
@@ -195,23 +189,23 @@ public sealed class TransactionLogToolbarTests
         Assert.True(cut.FindComponent<MudCollapse>().Instance.Expanded);
     }
 
-    private static void OpenAccountSelect(IRenderedComponent<IComponent> cut) =>
-        cut.Find(".fm-txlog-account-select").MouseDown();
+    private static void OpenCurrencySelect(IRenderedComponent<IComponent> cut) =>
+        cut.Find(".fm-txlog-currency-select").MouseDown();
 
-    private static string[] AccountOptionTexts(IRenderedComponent<IComponent> cut) =>
+    private static string[] CurrencyOptionTexts(IRenderedComponent<IComponent> cut) =>
         [.. cut.FindAll(".mud-list-item").Select(item => item.TextContent.Trim())];
 
     private static IRenderedComponent<IComponent> RenderToolbar(
         BunitContext context,
         TransactionLogFilter filter,
         Action<TransactionLogFilter> onChanged,
-        IReadOnlyList<TransactionLogAccountOption>? accounts = null) =>
+        IReadOnlyList<string>? currencies = null) =>
         context.Render(builder =>
         {
             builder.OpenComponent<MudPopoverProvider>(0);
             builder.CloseComponent();
             builder.OpenComponent<TransactionLogToolbar>(1);
-            builder.AddComponentParameter(2, nameof(TransactionLogToolbar.Accounts), accounts ?? _accounts);
+            builder.AddComponentParameter(2, nameof(TransactionLogToolbar.Currencies), currencies ?? _currencies);
             builder.AddComponentParameter(3, nameof(TransactionLogToolbar.Filter), filter);
             builder.AddComponentParameter(4, nameof(TransactionLogToolbar.FilterChanged),
                 EventCallback.Factory.Create<TransactionLogFilter>(new object(), onChanged));

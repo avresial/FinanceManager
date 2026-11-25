@@ -2,9 +2,11 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -29,29 +31,29 @@ public class TransactionLogSearchTests
     [InlineData("SqlServer", "Currency")]
     [InlineData("SqlServer", "Bond")]
     [InlineData("SqlServer", "Investment")]
-    public async Task SearchCombinesStreamTextAndAccountMatchesWithRangeScopeAndCursorBeforeTake(string provider, string stream)
+    public async Task OwnerSearchAppliesRangeAndCursorBeforeTake(string provider, string stream)
     {
         await using var database = await SearchDatabase.Create(provider);
         var context = database.Context;
         if (stream == "Currency")
         {
             context.CurrencyEntries.AddRange(
-                new CurrencyAccountEntry(1, 1, _day, 1, 1) { ContractorDetails = null },
-                new CurrencyAccountEntry(2, 2, _day, 1, 1),
-                new CurrencyAccountEntry(1, 3, _day, 1, 1) { ContractorDetails = "MiXeD shop" },
-                new CurrencyAccountEntry(1, 4, _day, 1, 1) { Description = "MIXED purchase" },
-                new CurrencyAccountEntry(1, 5, _day, 1, 1) { Description = "other" },
-                new CurrencyAccountEntry(1, 6, _day.AddDays(1), 1, 1) { Description = "mixed" },
-                new CurrencyAccountEntry(999, 7, _day, 1, 1) { Description = "mixed" });
+                new CurrencyAccountEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = null },
+                new CurrencyAccountEntry(2, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0 },
+                new CurrencyAccountEntry(1, 3, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = "MiXeD shop" },
+                new CurrencyAccountEntry(1, 4, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "MIXED purchase" },
+                new CurrencyAccountEntry(1, 5, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "other" },
+                new CurrencyAccountEntry(1, 6, _day.AddDays(1), 1, 1) { UserId = 1, CurrencyId = 0, Description = "mixed" },
+                new CurrencyAccountEntry(999, 7, _day, 1, 1) { UserId = 999, CurrencyId = 0, Description = "mixed" });
         }
         else if (stream == "Bond")
         {
             context.Bonds.Add(new BondDetails("MiXeD Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
             context.BondEntries.AddRange(
-                new BondAccountEntry(1, 1, _day, 1, 1, 99), new BondAccountEntry(2, 2, _day, 1, 1, 99),
-                new BondAccountEntry(1, 3, _day, 1, 1, 1), new BondAccountEntry(1, 4, _day, 1, 1, 1),
-                new BondAccountEntry(1, 5, _day, 1, 1, 99), new BondAccountEntry(1, 6, _day.AddDays(1), 1, 1, 1),
-                new BondAccountEntry(999, 7, _day, 1, 1, 1));
+                new BondAccountEntry(1, 1, _day, 1, 1, 99) { UserId = 1 }, new BondAccountEntry(2, 2, _day, 1, 1, 99) { UserId = 1 },
+                new BondAccountEntry(1, 3, _day, 1, 1, 1) { UserId = 1 }, new BondAccountEntry(1, 4, _day, 1, 1, 1) { UserId = 1 },
+                new BondAccountEntry(1, 5, _day, 1, 1, 99) { UserId = 1 }, new BondAccountEntry(1, 6, _day.AddDays(1), 1, 1, 1) { UserId = 1 },
+                new BondAccountEntry(999, 7, _day, 1, 1, 1) { UserId = 999 });
         }
         else
         {
@@ -60,10 +62,10 @@ public class TransactionLogSearchTests
         }
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
-        Assert.Equal(new long[] { 4L, 3L }, await Page(context, stream, 2, null, " mIxEd ", [2, 999]));
-        Assert.Equal(new long[] { 2L }, await Page(context, stream, 2, 3, "mixed", [2, 999]));
-        Assert.Empty(await Page(context, stream, 2, null, "absent", []));
-        Assert.Equal(new long[] { 5L, 4L, 3L, 2L, 1L }, await Page(context, stream, 10, null, "  ", []));
+        Assert.Equal(new long[] { 4L, 3L }, await Page(context, stream, 2, null, " mIxEd "));
+        Assert.Empty(await Page(context, stream, 2, 3, "mixed"));
+        Assert.Empty(await Page(context, stream, 2, null, "absent"));
+        Assert.Equal(new long[] { 5L, 4L, 3L, 2L, 1L }, await Page(context, stream, 10, null, "  "));
         Assert.Empty(context.ChangeTracker.Entries());
     }
 
@@ -78,14 +80,14 @@ public class TransactionLogSearchTests
         var context = database.Context;
         context.Bonds.Add(new BondDetails("Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
         context.BondEntries.AddRange(
-            new BondAccountEntry(1, 1, _day, 1, 1, 1) { Description = "Quarterly Top-Up" },
-            new BondAccountEntry(1, 2, _day, 1, 1, 1),
-            new BondAccountEntry(1, 3, _day, 1, 1, 1) { Description = "something else" });
+            new BondAccountEntry(1, 1, _day, 1, 1, 1) { UserId = 1, Description = "Quarterly Top-Up" },
+            new BondAccountEntry(1, 2, _day, 1, 1, 1) { UserId = 1 },
+            new BondAccountEntry(1, 3, _day, 1, 1, 1) { UserId = 1, Description = "something else" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(new long[] { 1L }, await Page(context, "Bond", 10, null, " top-up ", []));
+        Assert.Equal(new long[] { 1L }, await Page(context, "Bond", 10, null, " top-up "));
         // The bond name still matches every entry of that bond.
-        Assert.Equal(new long[] { 3L, 2L, 1L }, await Page(context, "Bond", 10, null, "treasury", []));
+        Assert.Equal(new long[] { 3L, 2L, 1L }, await Page(context, "Bond", 10, null, "treasury"));
     }
 
     [Theory]
@@ -98,22 +100,22 @@ public class TransactionLogSearchTests
         await using var database = await SearchDatabase.Create(provider);
         var context = database.Context;
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 1, _day, 1, 1) { Description = "100%_sale[one]" },
-            new CurrencyAccountEntry(1, 2, _day, 1, 1) { Description = "100xxsaleo" });
+            new CurrencyAccountEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100%_sale[one]" },
+            new CurrencyAccountEntry(1, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100xxsaleo" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(new long[] { 1L }, await Page(context, "Currency", 10, null, "%_sale[one]", []));
+        Assert.Equal(new long[] { 1L }, await Page(context, "Currency", 10, null, "%_sale[one]"));
     }
 
-    private static async Task<long[]> Page(AppDbContext context, string stream, int take, long? cursor, string search, int[] matchedAccounts)
+    private static async Task<long[]> Page(AppDbContext context, string stream, int take, long? cursor, string search)
     {
         var ct = TestContext.Current.CancellationToken;
-        var date = cursor.HasValue ? _day : (DateTime?)null;
-        if (stream == "Currency")
-            return [.. (await new CurrencyEntryRepository(context).GetHistoryPage([1, 2], _day, _day, take, date, cursor, ct, search, matchedAccounts)).Select(e => (long)e.EntryId)];
-        if (stream == "Bond")
-            return [.. (await new BondEntryRepository(context).GetHistoryPage([1, 2], _day, _day, take, date, cursor, ct, search, matchedAccounts)).Select(e => (long)e.EntryId)];
-        var day = DateOnly.FromDateTime(_day);
-        return [.. (await new InvestmentTransactionRepository(context).GetHistoryPage([1, 2], day, day, take, cursor.HasValue ? day : null, cursor, ct, search, matchedAccounts)).Select(e => e.EntryId)];
+        var query = new OwnerHistoryQuery(_day, _day, take, cursor.HasValue ? new(_day, cursor.Value, false) : null, Search: search);
+        return stream switch
+        {
+            "Currency" => [.. (await new CashTransactionRepository(context).GetHistory(1, query, ct)).Select(e => e.EntryId)],
+            "Bond" => [.. (await new BondTransactionRepository(context).GetHistory(1, query, ct)).Select(e => e.EntryId)],
+            _ => [.. (await new InvestmentTransactionRepository(context).GetHistoryByUser(1, query, ct)).Select(e => e.EntryId)]
+        };
     }
 
     private static AssetListing Listing(long id, string ticker, string name) => new()
@@ -130,7 +132,7 @@ public class TransactionLogSearchTests
     {
         EntryId = id,
         AccountId = accountId,
-        UserId = 1,
+        UserId = accountId == 999 ? 999 : 1,
         AssetListingId = listingId,
         TradeDate = DateOnly.FromDateTime(_day).AddDays(offset),
         Type = InvestmentTransactionType.Buy,

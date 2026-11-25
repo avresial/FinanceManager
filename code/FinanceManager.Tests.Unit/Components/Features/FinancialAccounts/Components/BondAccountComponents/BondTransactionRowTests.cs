@@ -69,6 +69,23 @@ public class BondTransactionRowTests
         Assert.Contains("change +2 units, position 12 units", laterName);
     }
 
+    [Theory]
+    [InlineData(true, "mud-typography-caption")]
+    [InlineData(false, "mud-typography-body2")]
+    public async Task UnitsChange_UsesTheBodySize_WhenItIsTheOnlyValue(bool showPosition, string expectedClass)
+    {
+        await using var context = CreateContext();
+        var cut = context.Render<BondTransactionRow>(p => p
+            .Add(x => x.Account, new BondAccount(1, 1, "Bonds"))
+            .Add(x => x.Entry, new BondAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 12m, 2m, 1))
+            .Add(x => x.ShowPosition, showPosition));
+        cut.Find("[role='button']").Click();
+
+        var change = cut.FindAll(".mud-collapse-container .mud-typography.fm-tabular").Single(element => element.TextContent.Contains("+2"));
+
+        Assert.Contains(expectedClass, change.ClassName);
+    }
+
     private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile, DateTime? postingDate = null)
     {
         var account = new BondAccount(1, 1, "Bonds");
