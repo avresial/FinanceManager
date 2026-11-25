@@ -83,7 +83,7 @@ public sealed class BenchmarkEnvironment : IDisposable
     }
 
     /// <summary>
-    /// Deletes every entry the write benchmarks appended to <paramref name="accountId"/> after
+    /// Deletes every entry the write benchmarks appended for the scenario owner and currency after
     /// <paramref name="postedAfter"/>, and drops the owner's cached read models.
     /// </summary>
     /// <remarks>
@@ -92,13 +92,13 @@ public sealed class BenchmarkEnvironment : IDisposable
     /// MVC would take longer than the measurements. Invalidating the cache afterwards keeps the
     /// repository's cached ranges from outliving the rows they describe.
     /// </remarks>
-    public void ResetAppendedEntries(int accountId, DateTime postedAfter)
+    public void ResetAppendedEntries(DateTime postedAfter)
     {
         using var scope = _host.Services.CreateScope();
 
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         context.CurrencyEntries
-            .Where(entry => entry.AccountId == accountId && entry.PostingDate > postedAfter)
+            .Where(entry => entry.UserId == Scenario.UserId && entry.CurrencyId == Scenario.CurrencyId && entry.PostingDate >= postedAfter)
             .ExecuteDelete();
 
         scope.ServiceProvider.GetRequiredService<ICacheInvalidator>()
@@ -120,7 +120,7 @@ public sealed class BenchmarkEnvironment : IDisposable
 
         Authorize(host, client);
 
-        var scenario = await ResolveScenario(client);
+        var scenario = await ResolveScenario(host);
 
         return new BenchmarkEnvironment(database, host, client, scenario);
     }
@@ -172,46 +172,14 @@ public sealed class BenchmarkEnvironment : IDisposable
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
     }
 
-    private static async Task<BenchmarkScenario> ResolveScenario(HttpClient client)
+    private static async Task<BenchmarkScenario> ResolveScenario(BenchmarkApiHost host)
     {
-        var currencyAccountIds = await GetAccountIds(client, "api/CurrencyAccount");
-        var investmentAccountIds = await GetAccountIds(client, "api/InvestmentAccount");
-        var bondAccountIds = await GetAccountIds(client, "api/BondAccount");
-
-        if (currencyAccountIds.Count == 0)
-            throw new InvalidOperationException(
-                "The seeded dataset contains no currency accounts. Delete the template (or set FM_BENCH_RESEED=1) and try again.");
-
-        var (start, end) = await GetSeededWindow(client, currencyAccountIds[0]);
-
-        return new BenchmarkScenario(
-            BenchmarkOptions.UserId,
-            DefaultCurrency.PLN.Id,
-            start,
-            end,
-            currencyAccountIds,
-            investmentAccountIds,
-            bondAccountIds);
-    }
-
-    private static async Task<IReadOnlyList<int>> GetAccountIds(HttpClient client, string route)
-    {
-        var response = await client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
-
-        var accounts = await response.Content.ReadFromJsonAsync<List<AvailableAccount>>();
-        return accounts?.Select(x => x.AccountId).ToList() ?? [];
-    }
-
-    private static async Task<(DateTime Start, DateTime End)> GetSeededWindow(HttpClient client, int accountId)
-    {
-        var oldest = await client.GetFromJsonAsync<DateTime?>($"api/CurrencyEntry/Oldest/{accountId}");
-        var youngest = await client.GetFromJsonAsync<DateTime?>($"api/CurrencyEntry/Youngest/{accountId}");
-
-        if (oldest is not DateTime start || youngest is not DateTime end)
-            throw new InvalidOperationException(
-                $"Currency account {accountId} has no entries, so there is no date window to benchmark. Re-seed with FM_BENCH_RESEED=1.");
-
-        return (start.Date, end.Date);
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var window = await context.CurrencyEntries.Where(entry => entry.UserId == BenchmarkOptions.UserId && entry.CurrencyId == DefaultCurrency.PLN.Id)
+            .GroupBy(entry => entry.CurrencyId)
+            .Select(rows => new { Start = rows.Min(entry => entry.PostingDate), End = rows.Max(entry => entry.PostingDate) })
+            .SingleAsync();
+        return new BenchmarkScenario(BenchmarkOptions.UserId, DefaultCurrency.PLN.Id, window.Start.Date, window.End.Date);
     }
 }

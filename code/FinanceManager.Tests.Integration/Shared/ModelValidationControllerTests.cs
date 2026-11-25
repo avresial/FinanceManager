@@ -46,7 +46,7 @@ public class ModelValidationControllerTests(OptionsProvider optionsProvider) : C
         { "api/admin/service-keys/AlphaVantage", HttpMethod.Put, new UpdateServiceKeyRequest("not-a-url", null, true), UserRole.Admin },
         { "api/transactions/cash/import?currencyId=0", HttpMethod.Post, new[] { new CurrencyEntryImportRecordDto(DateTime.UtcNow.AddYears(2), 1) }, UserRole.User },
         { "api/transactions/bonds/import", HttpMethod.Post, new[] { new BondEntryImportRecordDto(DateTime.UtcNow, 1, 0) }, UserRole.User },
-        { "api/CurrencyAccountImport/ResolveAsyncImportConflicts", HttpMethod.Post, new CurrencyImportResolveConflictsRequestDto { JobId = Guid.NewGuid(), Decisions = [new CurrencyImportConflictResolutionDecisionDto("", true, true)] }, UserRole.User },
+        { "api/transactions/cash/import/jobs/00000000-0000-0000-0000-000000000001/resolve", HttpMethod.Post, new CurrencyImportResolveConflictsRequestDto { JobId = Guid.NewGuid(), Decisions = [new CurrencyImportConflictResolutionDecisionDto("", true, true)] }, UserRole.User },
         { "api/CsvHeaderMapping/SaveMappings", HttpMethod.Post, new SaveMappingRequestDto([new HeaderMappingRequestItemDto("", "")]), UserRole.User },
     };
 

@@ -2,6 +2,8 @@ using FinanceManager.Benchmarks.Hosting;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
@@ -30,33 +32,31 @@ internal static class LongBondFixtureValidator
             var environment = await BenchmarkEnvironment.GetOrCreate();
             var scenario = environment.Scenario;
             using var scope = environment.CreateHostScope();
-            var repository = scope.ServiceProvider.GetRequiredService<IFinancialAccountRepository>();
-            BondAccount? account = null;
-            await foreach (var item in repository.GetAccounts<BondAccount>(scenario.UserId, scenario.Start, scenario.End))
-                if (item.Name == "E01 synthetic long-held bond") account = item;
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var fixture = await (from entry in context.BondEntries.AsNoTracking()
+                                 join bond in context.Bonds on entry.BondDetailsId equals bond.Id
+                                 where entry.UserId == scenario.UserId && bond.Name == "E01 synthetic long-held bond"
+                                 select entry).SingleOrDefaultAsync();
 
             object? proof = null;
             if (mode == "control")
             {
-                if (account is not null) throw new InvalidOperationException("Control contains the synthetic account.");
+                if (fixture is not null) throw new InvalidOperationException("Control contains the synthetic bond.");
             }
             else
             {
-                if (account is null) throw new InvalidOperationException("Synthetic fixture account is absent.");
-                var bondId = account.GetStoredBondsIds().Single();
+                if (fixture is null) throw new InvalidOperationException("Synthetic fixture entry is absent.");
+                var bondId = fixture.BondDetailsId;
                 var details = (await scope.ServiceProvider.GetRequiredService<IBondDetailsRepository>().GetByIdsAsync([bondId])).Single();
-                long? entryId = null;
+                var entryId = fixture.EntryId;
                 var count = 0;
                 decimal startPrice = 0, endPrice = 0;
                 var prices = new Dictionary<DateTime, decimal>();
-                DateTime postingDate = default;
+                var postingDate = fixture.PostingDate;
+                var history = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), fixture.ValueChange, DateOnly.FromDateTime(scenario.End), details);
                 for (var date = scenario.Start.Date; date <= scenario.End.Date; date = date.AddDays(1))
                 {
-                    var selected = account.GetThisOrNextOlder(date, bondId);
-                    if (selected is null || (entryId.HasValue && selected.EntryId != entryId)) throw new InvalidOperationException($"Unexpected selection on {date:yyyy-MM-dd}.");
-                    entryId = selected.EntryId;
-                    postingDate = selected.PostingDate;
-                    var price = selected.GetPriceAt(DateOnly.FromDateTime(date), details);
+                    var price = history[DateOnly.FromDateTime(date)];
                     if (price <= 0) throw new InvalidOperationException($"Nonpositive price on {date:yyyy-MM-dd}.");
                     prices[date] = Math.Round(price, 2);
                     if (count++ == 0) startPrice = price;
@@ -64,7 +64,7 @@ internal static class LongBondFixtureValidator
                 }
                 var ageDays = (scenario.Start.Date - postingDate.Date).Days;
                 if (count == 0 || ageDays < 3650) throw new InvalidOperationException("Fixture posting age or window is invalid.");
-                proof = new { accountId = account.AccountId, bondId, entryId, postingDate, ageDays, selectedCount = count, startPrice, endPrice, prices };
+                proof = new { bondId, entryId, postingDate, ageDays, selectedCount = count, startPrice, endPrice, prices };
                 Console.WriteLine($"Selected {count} dates; start price {startPrice}, end price {endPrice}.");
             }
 

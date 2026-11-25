@@ -18,9 +18,7 @@ public class CurrencyImportJobStoreTests
         var store = new CurrencyImportJobStore();
         var jobId = store.CreateOwnerJob(userId: 1, currencyId: 10, totalEntries: 1);
         var date = DateTime.UtcNow.Date;
-        var conflict = new ImportConflict(
-            null,
-            new CurrencyEntryImport(date, 100m),
+        var conflict = new ImportConflict(new CurrencyEntryImport(date, 100m),
             new CurrencyAccountEntry(10, 5, date, 100m, 100m),
             "Exact match");
 
@@ -44,9 +42,7 @@ public class CurrencyImportJobStoreTests
         var store = new CurrencyImportJobStore();
         var jobId = store.CreateOwnerJob(userId: 1, currencyId: 10, totalEntries: 1);
         var date = DateTime.UtcNow.Date;
-        var conflict = new ImportConflict(
-            null,
-            new CurrencyEntryImport(date, 100m),
+        var conflict = new ImportConflict(new CurrencyEntryImport(date, 100m),
             null,
             "Import not found in existing");
 
@@ -76,9 +72,7 @@ public class CurrencyImportJobStoreTests
         var store = new CurrencyImportJobStore();
         var jobId = store.CreateOwnerJob(userId: 1, currencyId: 10, totalEntries: 1);
         var date = DateTime.UtcNow.Date;
-        var added = store.TryAddConflict(jobId, new ImportConflict(
-            null,
-            new CurrencyEntryImport(date, 100m),
+        var added = store.TryAddConflict(jobId, new ImportConflict(new CurrencyEntryImport(date, 100m),
             null,
             "Import not found in existing"));
 
@@ -101,9 +95,7 @@ public class CurrencyImportJobStoreTests
         var store = new CurrencyImportJobStore();
         var jobId = store.CreateOwnerJob(userId: 1, currencyId: 10, totalEntries: 1);
         var date = DateTime.UtcNow.Date;
-        var conflict = new ImportConflict(
-            null,
-            new CurrencyEntryImport(date, 100m),
+        var conflict = new ImportConflict(new CurrencyEntryImport(date, 100m),
             null,
             "Import not found in existing");
 
@@ -115,7 +107,7 @@ public class CurrencyImportJobStoreTests
             out _);
 
         // Act
-        store.TryMarkCompleted(jobId, new ImportResult(null, Imported: 0, Failed: 0, Errors: [], Conflicts: [conflict]));
+        store.TryMarkCompleted(jobId, new ImportResult(Imported: 0, Failed: 0, Errors: [], Conflicts: [conflict]));
         var found = store.TryGetStatus(jobId, userId: 1, out var status);
 
         // Assert
@@ -150,7 +142,7 @@ public class CurrencyImportJobStoreTests
         var store = new CurrencyImportJobStore();
         var job = store.CreateOwnerJob(userId: 1, currencyId: 3, totalEntries: 1);
         var otherJob = store.CreateOwnerJob(userId: 1, currencyId: 4, totalEntries: 1);
-        var conflict = new ImportConflict(null, new CurrencyEntryImport(DateTime.UtcNow.Date, 100m, "Shop", "Surplus"), null, "Import not found in existing");
+        var conflict = new ImportConflict(new CurrencyEntryImport(DateTime.UtcNow.Date, 100m, "Shop", "Surplus"), null, "Import not found in existing");
         var added = store.TryAddConflict(job, conflict);
 
         Assert.False(store.TryResolveConflict(otherJob, 1, new(added!.ConflictId, PickImported: true, PickExisting: false), out _));
@@ -167,7 +159,7 @@ public class CurrencyImportJobStoreTests
     {
         var store = new CurrencyImportJobStore();
         var job = store.CreateOwnerJob(userId: 1, currencyId: 3, totalEntries: 1);
-        var added = store.TryAddConflict(job, new ImportConflict(null, new CurrencyEntryImport(DateTime.UtcNow.Date, 1m), null, "Import not found in existing"));
+        var added = store.TryAddConflict(job, new ImportConflict(new CurrencyEntryImport(DateTime.UtcNow.Date, 1m), null, "Import not found in existing"));
         var decision = new CurrencyImportConflictResolutionDecisionDto(added!.ConflictId, PickImported: true, PickExisting: false);
         store.TryResolveConflict(job, 1, decision, out _);
 

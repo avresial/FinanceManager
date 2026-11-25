@@ -1,5 +1,6 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
@@ -28,7 +29,7 @@ public class ImportStepCaptionTests
         context.Services.AddMudServices();
         context.Services.AddSingleton(Moq.Mock.Of<FinanceManager.Domain.Identity.Services.ILoginService>());
         context.Services.AddSingleton(new HttpClient { BaseAddress = new Uri("http://localhost/") });
-        context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyAccountImportHttpClient>();
+        context.Services.AddTransient<FinanceManager.Components.Features.Transactions.Cash.HttpClients.CashTransactionsHttpClient>();
         context.Services.AddTransient<FinanceManager.Components.Features.Transactions.Cash.HttpClients.CashTransactionsHttpClient>();
         context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CurrencyHttpClient>();
         context.Services.AddSingleton(Moq.Mock.Of<FinanceManager.Domain.Identity.Services.ISettingsService>());

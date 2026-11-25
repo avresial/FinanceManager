@@ -131,9 +131,9 @@ public class OwnerEntryFormTests
         Assert.Equal((3, 2m), (body.BondDetailsId, body.ValueChange));
     }
 
-    private static CurrencyTransactionLogItemDto CashItem() => new(null, 1, DateTime.UtcNow, -1m, "x", 0, "PLN", null, []);
+    private static CurrencyTransactionLogItemDto CashItem() => new(1, DateTime.UtcNow, -1m, "x", 0, "PLN", null, []);
 
-    private static BondTransactionLogItemDto BondItem() => new(null, 1, DateTime.UtcNow, 1m, "x", 3, "PLN", "EDO1234", []);
+    private static BondTransactionLogItemDto BondItem() => new(1, DateTime.UtcNow, 1m, "x", 3, "PLN", "EDO1234", []);
 
     private static BunitContext CreateContext(RecordingHttpHandler handler)
     {

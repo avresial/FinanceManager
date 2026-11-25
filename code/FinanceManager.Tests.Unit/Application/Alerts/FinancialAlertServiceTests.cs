@@ -513,5 +513,5 @@ public class FinancialAlertServiceTests
     }
 
     private static CashLogEntry Entry(long id, DateTime postingDate) =>
-        new(null, id, postingDate, -50m, "Shop", 0, "PLN", null, Array.Empty<FinancialLabel>());
+        new(id, postingDate, -50m, "Shop", 0, "PLN", null, Array.Empty<FinancialLabel>());
 }

@@ -494,5 +494,5 @@ public class FinancialAlertEvaluatorTests
 
     private static CashLogEntry Cash(long id, DateTime postingDate, decimal change, int currencyId = _pln,
         string description = "", string? contractor = null, IReadOnlyList<FinancialLabel>? labels = null) =>
-        new(null, id, postingDate, change, description, currencyId, null, contractor, labels ?? []);
+        new(id, postingDate, change, description, currencyId, null, contractor, labels ?? []);
 }

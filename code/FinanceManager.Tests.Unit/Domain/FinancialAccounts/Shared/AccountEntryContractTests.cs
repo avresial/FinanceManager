@@ -62,7 +62,7 @@ public class AccountEntryContractTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"description":"d","contractorDetails":"c","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            """{"description":"d","contractorDetails":"c","entryId":2,"postingDate":"2026-05-17T00:00:00Z","valueChange":1,"labels":[]}""",
             json);
     }
 
@@ -74,7 +74,7 @@ public class AccountEntryContractTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"bondDetailsId":3,"description":"Quarterly top-up","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            """{"bondDetailsId":3,"description":"Quarterly top-up","entryId":2,"postingDate":"2026-05-17T00:00:00Z","valueChange":1,"labels":[]}""",
             json);
     }
 
@@ -94,7 +94,7 @@ public class AccountEntryContractTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"bondDetailsId":3,"description":"","entryId":2,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":1,"labels":[]}""",
+            """{"bondDetailsId":3,"description":"","entryId":2,"postingDate":"2026-05-17T00:00:00Z","valueChange":1,"labels":[]}""",
             json);
     }
 
@@ -145,7 +145,7 @@ public class AccountEntryContractTests
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(
-            """{"description":"","userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"accountId":1,"postingDate":"2026-05-17T00:00:00Z","labels":[]}""",
+            """{"description":"","userId":2,"assetListingId":3,"assetListing":null,"type":1,"quantity":2.5,"unitPrice":10,"currency":"USD","fee":null,"createdAt":"0001-01-01T00:00:00+00:00","updatedAt":"0001-01-01T00:00:00+00:00","signedQuantity":-2.5,"entryId":0,"postingDate":"2026-05-17T00:00:00Z","labels":[]}""",
             json);
     }
 
@@ -231,11 +231,11 @@ public class AccountEntryContractTests
         var roundTripped = JsonSerializer.Deserialize<InvestmentTransaction>(JsonSerializer.Serialize(transaction));
 
         Assert.Equal(entryId, roundTripped!.EntryId);
-        Assert.Equal(3, roundTripped.AccountId);
+        Assert.Null(roundTripped.AccountId);
     }
 
     [Fact]
-    public void Update_LinkedEntry_KeepsTheRunningValueInStepWithTheChange()
+    public void Update_HistoricalEntry_LeavesTheDormantBalanceUntouched()
     {
         var cash = new CurrencyAccountEntry(1, 2, _postingDate, 100m, 10m);
         var bond = new BondAccountEntry(1, 2, _postingDate, 100m, 10m, 3);
@@ -243,8 +243,8 @@ public class AccountEntryContractTests
         cash.Update(new CurrencyAccountEntry(1, 2, _postingDate, 0m, 25m));
         bond.Update(new BondAccountEntry(1, 2, _postingDate, 0m, 25m, 3));
 
-        Assert.Equal(115m, cash.Value);
-        Assert.Equal(115m, bond.Value);
+        Assert.Equal(100m, cash.Value);
+        Assert.Equal(100m, bond.Value);
     }
 
     [Fact]

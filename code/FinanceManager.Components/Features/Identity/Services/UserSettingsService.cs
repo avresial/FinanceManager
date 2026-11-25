@@ -14,7 +14,7 @@ public class UserSettingsService(
     ILoginService loginService,
     IUserService userService,
     CurrencyHttpClient currencyHttpClient,
-    InvestmentTransactionHttpClient investmentTransactionHttpClient,
+    InstrumentSearchHttpClient instrumentSearchHttpClient,
     ILogger<UserSettingsService> logger) : ISettingsService
 {
     private Currency? _cachedCurrency;
@@ -75,7 +75,7 @@ public class UserSettingsService(
             var loggedUser = await loginService.GetLoggedUser();
             var user = loggedUser is null ? null : await userService.GetUser(loggedUser.UserId);
             if (user?.PreferredBenchmarkListingId is long listingId)
-                _cachedBenchmark = await investmentTransactionHttpClient.GetListingAsync(listingId);
+                _cachedBenchmark = await instrumentSearchHttpClient.GetListingAsync(listingId);
         }
         catch (Exception ex)
         {

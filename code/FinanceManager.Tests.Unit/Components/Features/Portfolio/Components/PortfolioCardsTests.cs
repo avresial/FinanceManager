@@ -131,7 +131,7 @@ public class PortfolioCardsTests
         bool fail = true;
         using var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
         {
-            var path when path.Contains("/GetInvestmentGainLoss/") => Json(new UnrealizedGainLossAccountResult(null, "Investments", 100, 125, 25, 25, _end, 0)),
+            var path when path.Contains("/GetInvestmentGainLoss/") => Json(new UnrealizedGainLossAccountResult("Investments", 100, 125, 25, 25, _end, 0)),
             var path when path.EndsWith("/holdings") => Json(new InvestmentHoldingDto[] { new(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m) }),
             var path when path.Contains("/CapitalSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-2)] = 100 }),
             var path when path.Contains("/BenchmarkSeries/") => Json(new Dictionary<DateTime, decimal> { [_end] = 110 }),
@@ -164,7 +164,7 @@ public class PortfolioCardsTests
     public async Task Value_WithAnUnpricedHolding_KeepsTheHoldingVisibleAndHidesTheGainChip()
     {
         // The server keeps an unpriced holding in the result but leaves it out of both totals.
-        var cut = RenderValue(new UnrealizedGainLossAccountResult(null, "Investments", 0, 0, 0, 0, _end, 1),
+        var cut = RenderValue(new UnrealizedGainLossAccountResult("Investments", 0, 0, 0, 0, _end, 1),
             new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 0m), out var context);
         await using var _ = context;
 
@@ -177,7 +177,7 @@ public class PortfolioCardsTests
     [Fact]
     public async Task Value_WithAnFxExcludedHolding_KeepsTheChipForThePricedOnesAndNamesTheExcludedCount()
     {
-        var cut = RenderValue(new UnrealizedGainLossAccountResult(null, "Investments", 100, 125, 25, 25, _end, 1),
+        var cut = RenderValue(new UnrealizedGainLossAccountResult("Investments", 100, 125, 25, 25, _end, 1),
             new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m), out var context,
             new InvestmentHoldingDto(4, "NOFX", "Tokyo", AssetTypeDto.Stock, 5, "JPY", 9m));
         await using var _ = context;
@@ -242,7 +242,7 @@ public class PortfolioCardsTests
         context.Services.AddSingleton(login.Object);
         context.Services.AddSingleton<ISnapshotRefreshCoordinator>(new SnapshotRefreshCoordinator(_snapshots.Object, NullLogger<SnapshotRefreshCoordinator>.Instance));
         var http = handler.CreateClient();
-        var settings = new UserSettingsService(login.Object, Mock.Of<IUserService>(), new CurrencyHttpClient(http), new InvestmentTransactionHttpClient(http), NullLogger<UserSettingsService>.Instance);
+        var settings = new UserSettingsService(login.Object, Mock.Of<IUserService>(), new CurrencyHttpClient(http), new InstrumentSearchHttpClient(http), NullLogger<UserSettingsService>.Instance);
         settings.SetCurrency(DefaultCurrency.PLN);
         settings.SetBenchmark(null);
         context.Services.AddSingleton(settings);

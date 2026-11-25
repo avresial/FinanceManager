@@ -72,7 +72,7 @@ public class ImportCommitNotificationTests
     {
         var existing = new BondAccountEntry(null, 1, new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 0, 50, 1) { UserId = 5 };
         var incoming = new BondEntryImport(new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 100, 1, string.Empty);
-        await using var context = CreateContext(BondRoutes(imported: 0, conflicts: [new BondImportConflict(null, incoming, existing, "Same day")]));
+        await using var context = CreateContext(BondRoutes(imported: 0, conflicts: [new BondImportConflict(incoming, existing, "Same day")]));
         var published = Count(context);
         var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, "bond"));
         await BeginBondImport(cut);
@@ -134,7 +134,7 @@ public class ImportCommitNotificationTests
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<ImportCurrencyEntriesComponent>()));
         var jobId = Guid.NewGuid();
         tracker.JobId = jobId;
-        var conflict = new ImportJobConflict("c1", new ImportConflict(1, null, null, "Same day"));
+        var conflict = new ImportJobConflict("c1", new ImportConflict(null, null, "Same day"));
         await cut.InvokeAsync(() => tracker.Receive(Status(jobId, AsyncImportJobState.Running, processed: 1, imported: 0, completed: false, conflict)));
 
         // What the resolver reports to the wizard once the server has accepted the decisions.
@@ -179,8 +179,8 @@ public class ImportCommitNotificationTests
             {
                 new("Date", "PostingDate"), new("Amount", "ValueChange"), new("Bond", "Bond"),
             }),
-            "/api/transactions/bonds/import" => Json(new BondImportResult(null, imported, 0, [], conflicts)),
-            "/api/transactions/bonds/import/resolve" => Json(new BondImportResult(null, 1, 0, [], [])),
+            "/api/transactions/bonds/import" => Json(new BondImportResult(imported, 0, [], conflicts)),
+            "/api/transactions/bonds/import/resolve" => Json(new BondImportResult(1, 0, [], [])),
             _ => new HttpResponseMessage(HttpStatusCode.NoContent),
         };
     };
@@ -202,7 +202,6 @@ public class ImportCommitNotificationTests
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new CashTransactionsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
-        context.Services.AddTransient<CurrencyAccountImportHttpClient>();
         context.Services.AddTransient<CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<CurrencyImportJobTracker>();
         context.Services.AddSingleton<AccountDataSynchronizationService>();

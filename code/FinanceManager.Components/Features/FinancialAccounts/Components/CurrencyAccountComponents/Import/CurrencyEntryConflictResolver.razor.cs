@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
@@ -9,7 +10,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Curren
 
 public partial class CurrencyEntryConflictResolver
 {
-    [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required CashTransactionsHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
     [Parameter, EditorRequired] public IReadOnlyCollection<ImportJobConflict> JobConflicts { get; set; } = [];
@@ -45,7 +46,6 @@ public partial class CurrencyEntryConflictResolver
                 .OrderBy(g => g.Key)
                 .Select(g => new DayGroup(g.Key, g.ToList()))
                 .ToList();
-
 
             // Prune day choices for days that disappeared between renders.
             var presentDays = new HashSet<DateTime>(_dayGroups.Select(g => g.Date));

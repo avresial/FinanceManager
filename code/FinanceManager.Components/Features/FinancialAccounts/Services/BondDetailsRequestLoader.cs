@@ -5,7 +5,7 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 
 /// <summary>
 /// Coalesces concurrent requests for the same bond definition while keeping successful results for
-/// the lifetime of the account-details component.
+/// the lifetime of the transaction history page.
 /// </summary>
 public sealed class BondDetailsRequestLoader(Func<int, Task<BondDetails?>> fetch)
 {

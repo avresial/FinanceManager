@@ -7,36 +7,30 @@ namespace FinanceManager.Components.Features.MoneyFlow.HttpClients;
 
 public class MoneyFlowHttpClient(HttpClient httpClient)
 {
-    public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
-        GetClosingBalance(userId, currency, start, end, []);
-
-    public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    public async Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetClosingBalance/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetClosingBalance/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? throw new JsonException("The closing-balance response body was null.");
     }
 
-    public async Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    public async Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetInflow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetInflow/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? [];
     }
 
-    public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end) =>
-        GetNetCashFlow(userId, currency, start, end, []);
-
-    public async Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    public async Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetNetCashFlow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetNetCashFlow/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? throw new JsonException("The net-cash-flow response body was null.");
     }
 
-    public async Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    public async Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetCapital/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetCapital/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? [];
     }
@@ -47,9 +41,9 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
-    public async Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds)
+    public async Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end)
     {
-        string endpoint = AppendAccountIdsQuery($"{httpClient.BaseAddress}api/MoneyFlow/GetOutflow/{userId}/{currency.Id}/{start:O}/{end:O}", accountIds);
+        string endpoint = $"{httpClient.BaseAddress}api/MoneyFlow/GetOutflow/{userId}/{currency.Id}/{start:O}/{end:O}";
         var result = await httpClient.GetFromJsonAsync<List<TimeSeriesModel>>(endpoint);
         return result ?? [];
     }
@@ -80,13 +74,5 @@ public class MoneyFlowHttpClient(HttpClient httpClient)
         var results = await httpClient.GetFromJsonAsync<List<SavingsRate>>($"{httpClient.BaseAddress}api/MoneyFlow/GetSavingsRate?userId={userId}&currencyId={currency.Id}&start={start:O}&end={end:O}");
         if (results is null) throw new JsonException("The savings-rate response body was null.");
         foreach (var rate in results) yield return rate;
-    }
-
-    private static string AppendAccountIdsQuery(string endpoint, IReadOnlyCollection<int> accountIds)
-    {
-        if (accountIds.Count == 0) return endpoint;
-
-        var query = string.Join("&", accountIds.Select(accountId => $"accountIds={accountId}"));
-        return endpoint.Contains('?') ? $"{endpoint}&{query}" : $"{endpoint}?{query}";
     }
 }

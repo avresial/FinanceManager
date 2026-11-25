@@ -45,10 +45,6 @@
                          Style="white-space: nowrap;">
                     @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
                 </MudText>
-                @if (ShowBalance)
-                {
-                    <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
-                }
             </MudStack>
         }
         else
@@ -59,12 +55,6 @@
                 @MoneyFormatter.FormatSigned(Entry.ValueChange, Currency)
             </MudText>
 
-            @if (ShowBalance)
-            {
-                <MudStack Spacing="0" AlignItems="AlignItems.End" Style="min-width: 110px; flex-shrink: 0;">
-                    <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap;">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
-                </MudStack>
-            }
         }
     </MudStack>
 </div>
@@ -80,13 +70,6 @@
                     <MudText Typo="Typo.overline" Color="Color.Default">Posting date</MudText>
                     <MudText Typo="Typo.body2" Class="fm-tabular">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
                 </MudItem>
-                @if (ShowBalance)
-                {
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.overline" Color="Color.Default">Running balance</MudText>
-                        <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(Entry.Value, Currency)</MudText>
-                    </MudItem>
-                }
                 @* The row title already shows a short description in full; repeat it only when the title cut it off. *@
                 @if (!string.IsNullOrWhiteSpace(Entry.Description) && GetTitle() != Entry.Description)
                 {

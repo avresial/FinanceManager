@@ -154,7 +154,7 @@ public sealed class RecurringTransactionDetectorCardViewTests
         var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
             .Add(x => x.Currency, "PLN")
             .Add(x => x.SelectedItem, selected)
-            .Add(x => x.DetailEntries, [new CurrencyTransactionLogItemDto(null, 1, new DateTime(2026, 1, 1), -200m, "Rent", 1, "PLN", null, [])])
+            .Add(x => x.DetailEntries, [new CurrencyTransactionLogItemDto(1, new DateTime(2026, 1, 1), -200m, "Rent", 1, "PLN", null, [])])
             .Add(x => x.OnBack, () => backInvoked = true));
 
         Assert.Contains(amount, cut.Markup);

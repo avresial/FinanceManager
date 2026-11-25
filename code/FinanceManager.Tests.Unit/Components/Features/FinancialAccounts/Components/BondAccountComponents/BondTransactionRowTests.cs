@@ -26,14 +26,14 @@ public class BondTransactionRowTests
 
         Assert.Equal("false", row.GetAttribute("aria-expanded"));
         Assert.StartsWith("Poland Bond,", row.GetAttribute("aria-label"));
-        Assert.Contains("change +2 units, position 12 units", row.GetAttribute("aria-label"));
+        Assert.Contains("change +2 units", row.GetAttribute("aria-label"));
 
         row.Click();
 
         Assert.Equal("true", cut.Find("[role='button']").GetAttribute("aria-expanded"));
         Assert.Contains("Issuer name", cut.Markup);
         Assert.Contains("Unit value", cut.Markup);
-        Assert.Contains("12 units", cut.Markup);
+        Assert.Contains("+2 units", cut.Markup);
         Assert.Contains("Edit", cut.Markup);
         Assert.Contains("Delete", cut.Markup);
 
@@ -54,7 +54,7 @@ public class BondTransactionRowTests
         Assert.Equal("true", cut.Find("[role='button']").GetAttribute("aria-expanded"));
         Assert.Contains("Issuer name", cut.Markup);
         Assert.Contains("Units", cut.Markup);
-        Assert.Contains("12 units", cut.Markup);
+        Assert.Contains("+2 units", cut.Markup);
     }
 
     [Fact]
@@ -67,24 +67,21 @@ public class BondTransactionRowTests
         var laterName = later.Find("[role='button']").GetAttribute("aria-label");
 
         Assert.NotEqual(firstName, laterName);
-        Assert.Contains("change +2 units, position 12 units", firstName);
-        Assert.Contains("change +2 units, position 12 units", laterName);
+        Assert.Contains("change +2 units", firstName);
+        Assert.Contains("change +2 units", laterName);
     }
 
-    [Theory]
-    [InlineData(true, "mud-typography-caption")]
-    [InlineData(false, "mud-typography-body2")]
-    public async Task UnitsChange_UsesTheBodySize_WhenItIsTheOnlyValue(bool showPosition, string expectedClass)
+    [Fact]
+    public async Task UnitsChange_UsesTheBodySize_WhenItIsTheOnlyValue()
     {
         await using var context = CreateContext();
         var cut = context.Render<BondTransactionRow>(p => p
-            .Add(x => x.Entry, new BondAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 12m, 2m, 1))
-            .Add(x => x.ShowPosition, showPosition));
+            .Add(x => x.Entry, new BondAccountEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 12m, 2m, 1)));
         cut.Find("[role='button']").Click();
 
         var change = cut.FindAll(".mud-collapse-container .mud-typography.fm-tabular").Single(element => element.TextContent.Contains("+2"));
 
-        Assert.Contains(expectedClass, change.ClassName);
+        Assert.Contains("mud-typography-body2", change.ClassName);
     }
 
     [Fact]
@@ -94,8 +91,7 @@ public class BondTransactionRowTests
         await using var context = CreateContext(handler);
         var cut = context.Render<BondTransactionRow>(p => p
             .Add(x => x.Entry, new BondAccountEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, 2m, 1))
-            .Add(x => x.BondName, "Poland Bond")
-            .Add(x => x.ShowPosition, false));
+            .Add(x => x.BondName, "Poland Bond"));
         cut.Find("[role='button']").Click();
         var published = 0;
         context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;

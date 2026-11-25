@@ -158,17 +158,6 @@ public class FinancialAlertTests
     }
 
     [Fact]
-    public void UpdateFrom_ClearsTheLegacyAccountScope()
-    {
-        var alert = new FinancialAlert(1, "Old", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m) { AccountId = 9 };
-
-        alert.UpdateFrom(new UpdateFinancialAlert("New", AlertType.AccountBalance, true, AlertComparisonOperator.LessThan, 1000m, CurrencyId: 0));
-
-        Assert.Null(alert.AccountId);
-        Assert.Equal(0, alert.CurrencyId);
-    }
-
-    [Fact]
     public void FromCommand_CopiesCurrencyAndLeavesTheLegacyAccountEmpty()
     {
         var alert = FinancialAlert.FromCommand(-2, new CreateFinancialAlert("Guest", AlertType.LargeTransaction, AlertComparisonOperator.GreaterThan, 10m, CurrencyId: 0));

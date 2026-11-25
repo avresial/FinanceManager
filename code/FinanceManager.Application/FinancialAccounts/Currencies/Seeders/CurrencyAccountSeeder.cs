@@ -147,8 +147,7 @@ public class CurrencyAccountSeeder(
 
         AddForeignCardDebt(entries, userId, start, end, LabelsFor(labelByName, "Travel"));
 
-        // Unlinked entries carry no running value, so there is nothing to recalculate.
-        await currencyEntryRepository.Add(entries, false, cancellationToken);
+        await currencyEntryRepository.Add(entries, cancellationToken);
     }
 
     // A small card balance in a second currency that is never paid back inside the window, so the demo's pooled USD balance

@@ -57,8 +57,8 @@ public class CurrencyAccountSeederTests
             .Returns(_seededLabels.ToAsyncEnumerable());
 
         _entryRepository
-            .Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((entries, _, _) => _savedEntries.AddRange(entries))
+            .Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, CancellationToken>((entries, _) => _savedEntries.AddRange(entries))
             .ReturnsAsync(true);
 
         _seeder = new CurrencyAccountSeeder(
@@ -223,7 +223,7 @@ public class CurrencyAccountSeederTests
             Assert.Equal(0m, e.Value);
         });
         Assert.Contains(_savedEntries, e => e.CurrencyId == DefaultCurrency.PLN.Id);
-        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()), Times.Once);
+        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]

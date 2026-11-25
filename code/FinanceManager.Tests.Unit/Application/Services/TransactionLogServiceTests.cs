@@ -64,9 +64,9 @@ public class TransactionLogServiceTests
         var sequence = new MockSequence();
         // The summary captions a cash entry with its first label, so only the cash stream loads details.
         _cash.InSequence(sequence).Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && q.IncludeDetails), ct))
-            .ReturnsAsync([new(null, 1, _day, -11m, "", 0, "PLN", "Bakery", [new FinancialLabel { Name = "Groceries" }, new FinancialLabel { Name = "Other" }])]);
+            .ReturnsAsync([new(1, _day, -11m, "", 0, "PLN", "Bakery", [new FinancialLabel { Name = "Groceries" }, new FinancialLabel { Name = "Other" }])]);
         _bonds.InSequence(sequence).Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
-            .ReturnsAsync([new(null, 1, _day, 2m, "", 1, "PLN", "Treasury", [])]);
+            .ReturnsAsync([new(1, _day, 2m, "", 1, "PLN", "Treasury", [])]);
         _trades.InSequence(sequence).Setup(r => r.GetHistoryByUser(_guestId, It.Is<OwnerHistoryQuery>(q => q.Take == 3 && !q.IncludeDetails), ct))
             .ReturnsAsync([new InvestmentTransaction(1) { Type = InvestmentTransactionType.Sell, Quantity = 3, UnitPrice = 5,
                 Currency = "GBX", PostingDate = _day, AssetListing = new() { Ticker = "ABC" } }]);
@@ -87,7 +87,7 @@ public class TransactionLogServiceTests
         _cash.Setup(r => r.GetHistory(_guestId, It.IsAny<OwnerHistoryQuery>(), ct)).ReturnsAsync([]);
         _trades.Setup(r => r.GetHistoryByUser(_guestId, It.IsAny<OwnerHistoryQuery>(), ct)).ReturnsAsync([]);
         _bonds.Setup(r => r.GetHistory(_guestId, It.IsAny<OwnerHistoryQuery>(), ct))
-            .ReturnsAsync([new(null, 1, _day, 2m, " ", 1, "PLN", bondName, [])]);
+            .ReturnsAsync([new(1, _day, 2m, " ", 1, "PLN", bondName, [])]);
 
         var row = Assert.Single(await Service.GetLastTransactions(_guestId, 1, ct));
 
@@ -103,10 +103,10 @@ public class TransactionLogServiceTests
             && q.Start == _day && q.End == _day && q.Take == 2 && q.IncludeDetails), ct)).ReturnsAsync([]);
         _bonds.Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Boundary == new OwnerHistoryBoundary(_day, long.MaxValue, true)
             && q.Currencies!.Contains("PLN") && q.Search == "sale"), ct)).ReturnsAsync([
-                new(null, long.MaxValue, _day, 1, "sale", 1, "PLN", null, []), new(9, 2, _day, 1, "sale", 1, "PLN", null, [])]);
+                new(long.MaxValue, _day, 1, "sale", 1, "PLN", null, []), new(2, _day, 1, "sale", 1, "PLN", null, [])]);
         var page = await Service.GetItemsPage(_guestId, new(_day, _day.AddDays(1), 1, cursor,
             [TransactionKind.Cash, TransactionKind.Bond], ["PLN"], "sale"), ct);
-        Assert.Null(Assert.Single(page.Items).LegacyAccountId);
+        Assert.Single(page.Items);
         Assert.Equal(new(_day, TransactionKind.Bond, long.MaxValue), page.NextCursor);
         _trades.VerifyNoOtherCalls();
     }
@@ -147,14 +147,14 @@ public class TransactionLogServiceTests
         // First page: pageSize + 1 rows are requested with the filters; the extra row only yields the next cursor.
         _cash.Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Boundary == null && q.Take == 3 && q.End == _day.AddDays(1)
             && q.Currencies!.Contains("PLN") && q.Search == "shop"), ct))
-            .ReturnsAsync([new(null, 5, noon, 1, "shop", 0, "PLN", null, []), new(null, 4, noon, 1, "shop", 0, "PLN", null, []), new(null, 3, _day, 1, "shop", 0, "PLN", null, [])]);
+            .ReturnsAsync([new(5, noon, 1, "shop", 0, "PLN", null, []), new(4, noon, 1, "shop", 0, "PLN", null, []), new(3, _day, 1, "shop", 0, "PLN", null, [])]);
         var first = await Service.GetItemsPage(_guestId, query, ct);
         Assert.Equal([5L, 4L], first.Items.Cast<CurrencyTransactionLogItem>().Select(item => item.Entry.EntryId));
         Assert.Equal(new(noon, TransactionKind.Cash, 4), first.NextCursor);
 
         // Second page resumes strictly after the cursor row (same kind, so the id is exclusive) and ends the walk.
         _cash.Setup(r => r.GetHistory(_guestId, It.Is<OwnerHistoryQuery>(q => q.Boundary == new OwnerHistoryBoundary(noon, 4, false) && q.End == noon && q.Take == 3), ct))
-            .ReturnsAsync([new(null, 3, _day, 1, "shop", 0, "PLN", null, [])]);
+            .ReturnsAsync([new(3, _day, 1, "shop", 0, "PLN", null, [])]);
         var second = await Service.GetItemsPage(_guestId, query with { Cursor = first.NextCursor }, ct);
         Assert.Equal([3L], second.Items.Cast<CurrencyTransactionLogItem>().Select(item => item.Entry.EntryId));
         Assert.Null(second.NextCursor);

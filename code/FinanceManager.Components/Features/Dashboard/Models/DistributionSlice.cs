@@ -11,7 +11,6 @@ public sealed record DistributionSlice(
     decimal Value,
     decimal Percent,
     string Color,
-    int? AccountId,
     IReadOnlyList<NameValueResult> Members,
     string? CurrencyCode = null,
     string? Kind = null,

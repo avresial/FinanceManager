@@ -36,7 +36,7 @@ public class TransactionLogHttpClient(HttpClient httpClient)
         var items = page.Items.Select<TransactionLogItemDto, TransactionHistoryItem>(item => item switch
         {
             CurrencyTransactionLogItemDto e => new CurrencyTransactionHistoryItem(
-                e.Currency ?? string.Empty, new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange)
+                e.Currency ?? string.Empty, new(null, e.EntryId, e.PostingDate, 0, e.ValueChange)
                 {
                     Description = e.Description,
                     ContractorDetails = e.ContractorDetails,
@@ -44,7 +44,7 @@ public class TransactionLogHttpClient(HttpClient httpClient)
                     Labels = [.. e.Labels.Select(FinancialLabelMapping.ToDomain)]
                 }),
             BondTransactionLogItemDto e => new BondTransactionHistoryItem(
-                new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId)
+                new(null, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId)
                 {
                     Description = e.Description,
                     Labels = [.. e.Labels.Select(FinancialLabelMapping.ToDomain)]

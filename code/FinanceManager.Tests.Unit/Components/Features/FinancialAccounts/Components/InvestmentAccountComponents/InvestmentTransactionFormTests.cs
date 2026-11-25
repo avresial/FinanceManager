@@ -77,7 +77,6 @@ public class InvestmentTransactionFormTests
                 return JsonResponse(new InvestmentTransactionDto(
                     Id: 501,
                     UserId: 1,
-                    AccountId: null,
                     AssetListingId: 77,
                     Type: InvestmentTransactionTypeDto.Buy,
                     Quantity: 2m,
@@ -156,7 +155,7 @@ public class InvestmentTransactionFormTests
         };
 
         var handler = new StubHttpHandler(request => Task.FromResult(
-            request.RequestUri!.AbsolutePath.EndsWith("/ListingPrice/1", StringComparison.Ordinal)
+            request.RequestUri!.AbsolutePath.EndsWith("/listings/1/price", StringComparison.Ordinal)
                 ? JsonResponse(new ListingPriceDto(321.45m, "USD"))
                 : JsonResponse(Array.Empty<InvestmentInstrumentOptionDto>())));
 
@@ -226,7 +225,7 @@ public class InvestmentTransactionFormTests
         });
         await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<Currency>()))),
             labelHandler: labelHandler);
-        var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+        var trade = new InvestmentTransactionDto(5, 1, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
             DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
         var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
         cut.WaitForAssertion(() => Assert.Equal(1, Volatile.Read(ref labelRequests)));
@@ -250,7 +249,7 @@ public class InvestmentTransactionFormTests
         });
         await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<Currency>()))),
             labelHandler: labelHandler);
-        var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+        var trade = new InvestmentTransactionDto(5, 1, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
             DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
 
         var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
@@ -297,12 +296,12 @@ public class InvestmentTransactionFormTests
                 return new HttpResponseMessage(HttpStatusCode.Created)
                 {
                     Content = new StringContent(JsonSerializer.Serialize(new InvestmentTransactionDto(
-                        9, 1, null, 1, InvestmentTransactionTypeDto.Buy, 1m, 5m, "USD", captured!.TradeDate, null, null, "CSPX")),
+                        9, 1, 1, InvestmentTransactionTypeDto.Buy, 1m, 5m, "USD", captured!.TradeDate, null, null, "CSPX")),
                         System.Text.Encoding.UTF8, "application/json")
                 };
             }
 
-            return request.RequestUri!.AbsolutePath.Contains("/ListingPrice/") ? JsonResponse(new ListingPriceDto(5m, "USD")) : JsonResponse(Array.Empty<Currency>());
+            return request.RequestUri!.AbsolutePath.EndsWith("/price", StringComparison.Ordinal) ? JsonResponse(new ListingPriceDto(5m, "USD")) : JsonResponse(Array.Empty<Currency>());
         });
         await using var context = CreateBunitContext(handler);
         context.Render<MudPopoverProvider>();
@@ -338,7 +337,7 @@ public class InvestmentTransactionFormTests
             return JsonResponse(Array.Empty<Currency>());
         });
         await using var context = CreateBunitContext(handler);
-        var trade = new InvestmentTransactionDto(5, 1, null, 3, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
+        var trade = new InvestmentTransactionDto(5, 1, 3, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
             DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
         var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
         cut.WaitForAssertion(() => Assert.False(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save").HasAttribute("disabled")));
@@ -356,7 +355,7 @@ public class InvestmentTransactionFormTests
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://localhost/") };
-        context.Services.AddSingleton(new InvestmentTransactionHttpClient(httpClient));
+        context.Services.AddSingleton(new InstrumentSearchHttpClient(httpClient));
         context.Services.AddSingleton(new CurrencyHttpClient(httpClient));
         context.Services.AddSingleton(new InvestmentTradesHttpClient(httpClient));
         context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(new HttpClient(labelHandler ?? new StubHttpHandler(_ => Task.FromResult(JsonResponse(labels ?? [])))) { BaseAddress = new Uri("https://localhost/") }));

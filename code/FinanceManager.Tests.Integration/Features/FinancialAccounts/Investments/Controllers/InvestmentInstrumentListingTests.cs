@@ -27,7 +27,7 @@ using Xunit;
 namespace FinanceManager.Tests.Integration.Features.FinancialAccounts.Investments.Controllers;
 
 [Trait("Category", "Integration")]
-public class InvestmentTransactionControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
+public class InvestmentInstrumentListingTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 91;
     private const int _testAccountId = 791;
@@ -150,7 +150,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         await SeedListing();
         Authorize("owner", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InstrumentSearchHttpClient(Client);
         Assert.Equal(_listingId, Assert.Single(await client.SearchListingsAsync("CSPX", cancellationToken: TestContext.Current.CancellationToken)).ListingId);
         Assert.Equal(_listingId, (await client.GetListingAsync(_listingId))!.ListingId);
     }
@@ -164,7 +164,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentPriceResult.Success(321.45m));
 
-        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
+        var result = await new InstrumentSearchHttpClient(Client).GetListingPriceAsync(_listingId);
 
         Assert.NotNull(result);
         Assert.Equal(321.45m, result.LatestPrice);
@@ -182,7 +182,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentPriceResult.Success(300m));
 
-        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
+        var result = await new InstrumentSearchHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
 
         Assert.NotNull(result);
         Assert.Equal(300m, result.LatestPrice);
@@ -205,7 +205,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(pending);
 
-        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
+        var result = await new InstrumentSearchHttpClient(Client).GetListingPriceAsync(_listingId);
 
         Assert.NotNull(result);
         Assert.Null(result.LatestPrice);
@@ -220,7 +220,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
 
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
-            "api/InvestmentTransaction/SearchInstruments?q=CSPX",
+            "api/investments/instruments/options?q=CSPX",
             TestContext.Current.CancellationToken);
         var option = Assert.Single(options!);
         Assert.Equal(InstrumentOptionSource.External, option.Source);
@@ -241,7 +241,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         Assert.NotNull(transaction);
         Assert.True(transaction!.AssetListingId > 0);
-        Assert.Null(transaction.AccountId);
         Assert.True(transaction.AutomaticPricesAvailable);
         Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
@@ -268,7 +267,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         _twelveDataResolver.Setup(x => x.ValidateAsync(It.IsAny<MarketDataSymbolResolution>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         Authorize("testuser", _testUserId, UserRole.User);
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
-            "api/InvestmentTransaction/SearchInstruments?q=CSPX", TestContext.Current.CancellationToken);
+            "api/investments/instruments/options?q=CSPX", TestContext.Current.CancellationToken);
         var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy,
             2m, 100m, "USD", new DateOnly(2026, 1, 1), ExternalInstrumentResultId: Assert.Single(options!).ResultId);
         var response = await Client.PostAsJsonAsync("api/transactions/investment", request, TestContext.Current.CancellationToken);
@@ -316,7 +315,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
 
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
-            "api/InvestmentTransaction/SearchInstruments?q=CSPX",
+            "api/investments/instruments/options?q=CSPX",
             TestContext.Current.CancellationToken);
         var request = new CreateInvestmentTradeRequest(null,
             InvestmentTransactionTypeDto.Buy,
@@ -366,7 +365,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
 
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
-            "api/InvestmentTransaction/SearchInstruments?q=VWCE",
+            "api/investments/instruments/options?q=VWCE",
             TestContext.Current.CancellationToken);
         var option = Assert.Single(options!);
         Assert.Equal(InstrumentOptionSource.External, option.Source);
@@ -404,14 +403,14 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         // Subsequent search surfaces the saved catalog listing as Existing with gap warnings
         var repeatOptions = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
-            "api/InvestmentTransaction/SearchInstruments?q=VWCE",
+            "api/investments/instruments/options?q=VWCE",
             TestContext.Current.CancellationToken);
         var existingOption = Assert.Single(repeatOptions!);
         Assert.Equal(InstrumentOptionSource.Existing, existingOption.Source);
         Assert.Equal(listing.Id, existingOption.AssetListingId);
 
         // ListingPrice endpoint safely returns null LatestPrice when TradingCurrency is unknown
-        var listingPrice = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(listing.Id);
+        var listingPrice = await new InstrumentSearchHttpClient(Client).GetListingPriceAsync(listing.Id);
         Assert.NotNull(listingPrice);
         Assert.Null(listingPrice!.LatestPrice);
         Assert.Equal(string.Empty, listingPrice.Currency);
@@ -453,305 +452,20 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(transactionsBefore, await context.InvestmentTransactions.CountAsync(ct));
     }
 
-    [Fact]
-    public async Task GetByAccount_ReturnsTransactions()
-    {
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        await SeedTransaction(InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 2, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
 
-        var transactions = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!;
 
-        Assert.Equal(2, transactions.Count);
-    }
 
-    [Fact]
-    public async Task GetByAccount_ReturnsAssetType()
-    {
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
 
-        var transaction = Assert.Single((await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!);
 
-        Assert.Equal(FinanceManager.Contracts.Assets.AssetTypeDto.ETF, transaction.AssetType);
-    }
 
-    [Fact]
-    public async Task GetByAccount_RecoversAllMissingPrices()
-    {
-        var tradeDate = new DateOnly(2024, 1, 10);
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
-        await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
-        Authorize("testuser", _testUserId, UserRole.User);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(321.45m);
 
-        var transactions = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", TestContext.Current.CancellationToken))!;
 
-        Assert.Equal(2, transactions.Count);
-        Assert.All(transactions, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
-        Assert.All(await _testDatabase!.Context.InvestmentTransactions.ToListAsync(TestContext.Current.CancellationToken), transaction => Assert.Equal(321.45m, transaction.UnitPrice));
-        _priceProvider.Verify(
-            x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
 
-    [Fact]
-    public async Task GetByAccount_RecoversPricesInRecordedCurrencyAfterListingCurrencyEnrichment()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var tradeDate = new DateOnly(2024, 1, 10);
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
-        var context = _testDatabase!.Context;
-        var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, ct);
-        listing.TradingCurrency = null;
-        await context.SaveChangesAsync(ct);
-        Authorize("testuser", _testUserId, UserRole.User);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "USD"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(321.45m);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(300m);
 
-        var before = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
-        Assert.Equal(321.45m, Assert.Single(before).UnitPrice);
 
-        listing.TradingCurrency = "EUR";
-        await context.SaveChangesAsync(ct);
-        await SeedTransaction(InvestmentTransactionType.Sell, 2m, tradeDate, unitPrice: 0m);
-        var after = (await Client.GetFromJsonAsync<List<InvestmentTransactionDto>>($"api/InvestmentTransaction/GetByAccount/{_testAccountId}", ct))!;
 
-        Assert.Equal(2, after.Count);
-        Assert.All(after, transaction => Assert.Equal(321.45m, transaction.UnitPrice));
-        Assert.All(await context.InvestmentTransactions.ToListAsync(ct), transaction =>
-        {
-            Assert.Equal("USD", transaction.Currency);
-            Assert.Equal(321.45m, transaction.UnitPrice);
-        });
-        _priceProvider.Verify(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "EUR"), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
 
-    [Fact]
-    public async Task Get_ReturnsTransaction()
-    {
-        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
 
-        var result = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{id}", TestContext.Current.CancellationToken);
-
-        Assert.NotNull(result);
-        Assert.Equal(id, result!.Id);
-        Assert.Equal(_testAccountId, result.AccountId);
-    }
-
-    [Fact]
-    public async Task Get_ForUnlinkedTrade_ReturnsNotFound()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        var context = _testDatabase!.Context;
-        var trade = await context.InvestmentTransactions.SingleAsync(x => x.EntryId == id, ct);
-        trade.AccountId = null;
-        await context.SaveChangesAsync(ct);
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        using var response = await Client.GetAsync($"api/InvestmentTransaction/Get/{id}", ct);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_ReturnsBoundedPage_WithDeterministicOrder_AndNextCursor()
-    {
-        var id1 = await SeedTransaction(InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 10));
-        var id2 = await SeedTransaction(InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 2, 10));
-        var id3 = await SeedTransaction(InvestmentTransactionType.Sell, 3m, new DateOnly(2024, 2, 10));
-        var id4 = await SeedTransaction(InvestmentTransactionType.Buy, 4m, new DateOnly(2024, 3, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var page1 = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?pageSize=2",
-            TestContext.Current.CancellationToken);
-
-        Assert.NotNull(page1);
-        Assert.True(page1!.HasMore);
-        Assert.NotNull(page1.NextCursor);
-        Assert.Equal(2, page1.Items.Count);
-        Assert.Equal(id4, page1.Items[0].Id);
-        Assert.Equal(id3, page1.Items[1].Id);
-
-        // Continuation via cursor
-        var page2 = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?pageSize=2&cursor={Uri.EscapeDataString(page1.NextCursor)}",
-            TestContext.Current.CancellationToken);
-
-        Assert.NotNull(page2);
-        Assert.False(page2!.HasMore);
-        Assert.Null(page2.NextCursor);
-        Assert.Equal(2, page2.Items.Count);
-        Assert.Equal(id2, page2.Items[0].Id);
-        Assert.Equal(id1, page2.Items[1].Id);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_SupportsExplicitCursorParameters()
-    {
-        var id1 = await SeedTransaction(InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 1, 10));
-        var id2 = await SeedTransaction(InvestmentTransactionType.Buy, 2m, new DateOnly(2024, 2, 10));
-        var id3 = await SeedTransaction(InvestmentTransactionType.Sell, 3m, new DateOnly(2024, 2, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var response = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?pageSize=10&cursorTradeDate=2024-02-10&cursorId={id3}",
-            TestContext.Current.CancellationToken);
-
-        Assert.NotNull(response);
-        Assert.Equal(2, response!.Items.Count);
-        Assert.Equal(id2, response.Items[0].Id);
-        Assert.Equal(id1, response.Items[1].Id);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_AppliesFilters_Search_Type_DateRange()
-    {
-        await SeedAccount();
-        await SeedListing();
-        var ct = TestContext.Current.CancellationToken;
-
-        _testDatabase!.Context.InvestmentTransactions.AddRange(
-            new InvestmentTransaction
-            {
-                UserId = _testUserId,
-                AccountId = _testAccountId,
-                AssetListingId = _listingId,
-                Type = InvestmentTransactionType.Buy,
-                Quantity = 5m,
-                UnitPrice = 100m,
-                Currency = "USD",
-                TradeDate = new DateOnly(2024, 1, 15),
-                Description = "Dividend reinvestment"
-            },
-            new InvestmentTransaction
-            {
-                UserId = _testUserId,
-                AccountId = _testAccountId,
-                AssetListingId = _listingId,
-                Type = InvestmentTransactionType.Sell,
-                Quantity = 2m,
-                UnitPrice = 110m,
-                Currency = "USD",
-                TradeDate = new DateOnly(2024, 2, 15),
-                Description = "Rebalancing"
-            });
-        await _testDatabase.Context.SaveChangesAsync(ct);
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        // Date range filter
-        var dateFiltered = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?startDate=2024-02-01&endDate=2024-02-28",
-            ct);
-        Assert.Single(dateFiltered!.Items);
-        Assert.Equal(InvestmentTransactionTypeDto.Sell, dateFiltered.Items[0].Type);
-
-        // Type filter
-        var typeFiltered = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?type=Buy",
-            ct);
-        Assert.Single(typeFiltered!.Items);
-        Assert.Equal(InvestmentTransactionTypeDto.Buy, typeFiltered.Items[0].Type);
-
-        // Search filter
-        var searchFiltered = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?search=reinvestment",
-            ct);
-        Assert.Single(searchFiltered!.Items);
-        Assert.Equal("Dividend reinvestment", searchFiltered.Items[0].Notes);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_RecoversMissingPrices_ForReturnedPage()
-    {
-        var tradeDate = new DateOnly(2024, 1, 10);
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
-        Authorize("testuser", _testUserId, UserRole.User);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.IsAny<Currency>(), It.Is<DateTime>(d => d.Date == tradeDate.ToDateTime(TimeOnly.MinValue).Date), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(321.45m);
-
-        var page = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}",
-            TestContext.Current.CancellationToken);
-
-        Assert.NotNull(page);
-        var item = Assert.Single(page!.Items);
-        Assert.Equal(321.45m, item.UnitPrice);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_ForOtherUsersAccount_ReturnsForbidden()
-    {
-        await SeedAccount();
-        Authorize("otheruser", _testUserId + 1, UserRole.User);
-
-        var response = await Client.GetAsync(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}",
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_ForNonExistentAccount_ReturnsNotFound()
-    {
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var response = await Client.GetAsync(
-            "api/InvestmentTransaction/GetHistoryPage/99999",
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_InvalidPageSize_ReturnsBadRequest()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var response = await Client.GetAsync(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?pageSize=0",
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_InvalidCursor_ReturnsBadRequest()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var response = await Client.GetAsync(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?cursor=not-a-valid-cursor",
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetHistoryPage_PartialExplicitCursor_ReturnsBadRequest()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var response = await Client.GetAsync(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}?cursorTradeDate=2024-02-10",
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
 
     private void SetupExternalInstrument()
     {

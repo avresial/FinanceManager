@@ -40,7 +40,6 @@ internal class BondUnrealizedGainLossCalculator(ICurrencyExchangeService currenc
         var gainLoss = new GainLoss(costBasis, currentValue);
 
         return new UnrealizedGainLossInstrumentResult(
-            null,
             _bondsGroupName,
             position.PartitionId.ToString(),
             details.Name,
@@ -56,5 +55,5 @@ internal class BondUnrealizedGainLossCalculator(ICurrencyExchangeService currenc
     }
 
     private static UnrealizedGainLossInstrumentResult Excluded(OwnerLedgerPosition position, string name, DateTime asOfDate, string warning) =>
-        new(null, _bondsGroupName, position.PartitionId.ToString(), name, position.Value, 0, 0, 0, 0, asOfDate, true, warning);
+        new(_bondsGroupName, position.PartitionId.ToString(), name, position.Value, 0, 0, 0, 0, asOfDate, true, warning);
 }

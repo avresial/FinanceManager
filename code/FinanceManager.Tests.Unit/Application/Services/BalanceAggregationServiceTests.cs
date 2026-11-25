@@ -25,15 +25,10 @@ public class BalanceAggregationServiceTests
     private static void SetupDefaults(Mock<IBalanceServiceTyped> mock)
     {
         mock.Setup(x => x.GetInflow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
-        mock.Setup(x => x.GetInflow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetOutflow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
-        mock.Setup(x => x.GetOutflow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetNetCashFlow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
-        mock.Setup(x => x.GetNetCashFlow(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
-        mock.Setup(x => x.GetCapital(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
         mock.Setup(x => x.GetClosingBalance(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
-        mock.Setup(x => x.GetClosingBalance(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<IReadOnlyCollection<int>>())).ReturnsAsync([]);
     }
 
     [Fact]

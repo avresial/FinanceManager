@@ -23,7 +23,7 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        _testDatabase = new TestDatabase(stampOwnerKeys: true);
+        _testDatabase = new TestDatabase();
 
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
@@ -85,29 +85,25 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
 
         _testDatabase!.Context.FinancialLabels.AddRange(essentialLabel, essentialLabel2, wantLabel);
 
-        var account = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 1,
-            Name = "Household",
-            AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Currency
-        };
-
-        _testDatabase.Context.Accounts.Add(account);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 1, _nowUtc.AddDays(-1), 950m, -50m)
+            new CurrencyAccountEntry(null, 1, _nowUtc.AddDays(-1), 950m, -50m)
             {
+                UserId = 1,
+                CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [essentialLabel]
             },
-            new CurrencyAccountEntry(1, 2, _nowUtc, 930m, -20m)
+            new CurrencyAccountEntry(null, 2, _nowUtc, 930m, -20m)
             {
+                UserId = 1,
+                CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [essentialLabel, wantLabel, essentialLabel2]
             },
-            new CurrencyAccountEntry(1, 3, _nowUtc, 920m, -10m)
+            new CurrencyAccountEntry(null, 3, _nowUtc, 920m, -10m)
             {
+                UserId = 1,
+                CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [essentialLabel, wantLabel]
             });
 

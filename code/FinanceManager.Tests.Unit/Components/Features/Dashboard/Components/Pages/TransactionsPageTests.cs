@@ -14,7 +14,6 @@ using FinanceManager.Components.Features.Transactions.Components;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Components.Shared.Layout;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -860,10 +859,10 @@ public sealed class TransactionsPageTests
         var valueChange = id % 2 == 0 ? 25m : -12.5m;
         return type switch
         {
-            TransactionKind.Bond => new BondTransactionLogItemDto(accountId, id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
-            TransactionKind.Investment => new InvestmentTransactionLogItemDto(accountId, new InvestmentTransactionDto(
-                id, 7, accountId, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", DateOnly.FromDateTime(date), null, $"Row {id}", "TCK")),
-            _ => new CurrencyTransactionLogItemDto(accountId, id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
+            TransactionKind.Bond => new BondTransactionLogItemDto(id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
+            TransactionKind.Investment => new InvestmentTransactionLogItemDto(new InvestmentTransactionDto(
+                id, 7, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", DateOnly.FromDateTime(date), null, $"Row {id}", "TCK")),
+            _ => new CurrencyTransactionLogItemDto(id, date, valueChange, $"Row {id}", 1, "PLN", null, []),
         };
     }
 
@@ -900,7 +899,7 @@ public sealed class TransactionsPageTests
         // which the page tolerates, so the paged-feed handler only ever sees feed requests.
         var unavailable = new HttpClient(services ?? new UnavailableHandler()) { BaseAddress = new Uri("http://localhost/") };
         context.Services.AddSingleton(new InvestmentValuationHttpClient(unavailable));
-        context.Services.AddSingleton(new InvestmentTransactionHttpClient(unavailable));
+        context.Services.AddSingleton(new InstrumentSearchHttpClient(unavailable));
         context.Services.AddSingleton(new InvestmentTradesHttpClient(unavailable));
         context.Services.AddSingleton(new CashTransactionsHttpClient(unavailable));
         context.Services.AddSingleton(new BondTransactionsHttpClient(unavailable));

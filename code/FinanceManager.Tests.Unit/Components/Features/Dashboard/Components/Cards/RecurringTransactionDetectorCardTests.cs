@@ -112,7 +112,7 @@ public class RecurringTransactionDetectorCardTests
 
     // An owner entry that is not linked to any account.
     private static CurrencyTransactionLogItemDto Entry(long id, DateTime postedAt, decimal change) =>
-        new(null, id, postedAt, change, "Subscription", 2, "EUR", "Merchant", []);
+        new(id, postedAt, change, "Subscription", 2, "EUR", "Merchant", []);
 
     private static BunitContext CreateContext(DrillDownHandler handler)
     {

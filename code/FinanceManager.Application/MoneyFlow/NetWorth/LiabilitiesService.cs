@@ -30,7 +30,6 @@ public class LiabilitiesService(ICashTransactionReader cashTransactionReader, IC
             {
                 Name = names.GetValueOrDefault(liability.PartitionId) ?? $"Currency {liability.PartitionId}",
                 Value = liability.Value,
-                AccountId = null,
                 // The balance is in its own currency, not converted to the display currency.
                 CurrencyCode = names.GetValueOrDefault(liability.PartitionId),
             };
@@ -45,7 +44,7 @@ public class LiabilitiesService(ICashTransactionReader cashTransactionReader, IC
         // posing as the display currency; a mix stays unlabelled and the card notes that it is not converted.
         var currencyIds = liabilities.Select(p => p.PartitionId).Distinct().ToList();
         var code = currencyIds.Count == 1 ? (await GetCurrencyNames()).GetValueOrDefault(currencyIds[0]) : null;
-        yield return new NameValueResult() { Name = "Cash", Value = liabilities.Sum(p => p.Value), AccountId = null, CurrencyCode = code };
+        yield return new NameValueResult() { Name = "Cash", Value = liabilities.Sum(p => p.Value), CurrencyCode = code };
     }
 
     public async IAsyncEnumerable<TimeSeriesModel> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)

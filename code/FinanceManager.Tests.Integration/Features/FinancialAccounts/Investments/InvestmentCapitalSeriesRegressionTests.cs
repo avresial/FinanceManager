@@ -244,8 +244,8 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var start = new DateTime(2026, 1, 1);
         var end = new DateTime(2026, 1, 31);
 
-        var usd = await client.GetCapital(_userId, DefaultCurrency.USD, start, end, [_accountId]);
-        var pln = await client.GetCapital(_userId, DefaultCurrency.PLN, start, end, [_accountId]);
+        var usd = await client.GetCapital(_userId, DefaultCurrency.USD, start, end);
+        var pln = await client.GetCapital(_userId, DefaultCurrency.PLN, start, end);
 
         AssertDailyCapitalInvariant(
             usd,
@@ -266,7 +266,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var start = new DateTime(2026, 3, 1);
         var end = new DateTime(2026, 3, 31);
 
-        var series = await client.GetCapital(_userId, DefaultCurrency.USD, start, end, [_accountId]);
+        var series = await client.GetCapital(_userId, DefaultCurrency.USD, start, end);
         var values = series.ToDictionary(x => x.DateTime.Date, x => x.Value);
 
         Assert.Equal(1254.753726m, values[new DateTime(2026, 3, 2)]);
@@ -281,8 +281,8 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         Authorize("testuser", _userId, UserRole.User);
         var client = new MoneyFlowHttpClient(Client);
 
-        var january = await client.GetCapital(_userId, DefaultCurrency.USD, new DateTime(2026, 1, 1), new DateTime(2026, 1, 31), [_accountId]);
-        var february = await client.GetCapital(_userId, DefaultCurrency.USD, new DateTime(2026, 2, 1), new DateTime(2026, 2, 28), [_accountId]);
+        var january = await client.GetCapital(_userId, DefaultCurrency.USD, new DateTime(2026, 1, 1), new DateTime(2026, 1, 31));
+        var february = await client.GetCapital(_userId, DefaultCurrency.USD, new DateTime(2026, 2, 1), new DateTime(2026, 2, 28));
 
         Assert.Equal(135.387372m, january[0].Value);
         Assert.Equal(429.294720m, january[^1].Value);
@@ -322,8 +322,8 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         var start = _fixtureStart.ToDateTime(TimeOnly.MinValue);
         var end = _fixtureEnd.ToDateTime(TimeOnly.MinValue);
 
-        var usd = await client.GetCapital(_userId, DefaultCurrency.USD, start, end, [_accountId]);
-        var pln = await client.GetCapital(_userId, DefaultCurrency.PLN, start, end, [_accountId]);
+        var usd = await client.GetCapital(_userId, DefaultCurrency.USD, start, end);
+        var pln = await client.GetCapital(_userId, DefaultCurrency.PLN, start, end);
         decimal[] expectedMonthlyUsd =
         [
             135.387372m,
@@ -399,7 +399,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
 
         var day = new DateTime(2026, 1, 12);
         var series = await new MoneyFlowHttpClient(Client)
-            .GetCapital(_userId, DefaultCurrency.PLN, day, day, [_accountId]);
+            .GetCapital(_userId, DefaultCurrency.PLN, day, day);
 
         // (2 * $10 + $5 fee) * 4 PLN/USD + (2 * 100 GBX * 0.01) * 5 PLN/GBP.
         Assert.Equal(110m, Assert.Single(series).Value);

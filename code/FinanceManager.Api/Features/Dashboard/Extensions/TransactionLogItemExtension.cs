@@ -1,5 +1,3 @@
-using FinanceManager.Api.Features.FinancialAccounts.Bond.Extensions;
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Extensions;
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Dashboard.Dtos;
@@ -20,23 +18,23 @@ public static class TransactionLogItemExtension
     {
         CurrencyTransactionLogItem { Entry: var e } => e.ToLogItemDto(),
         BondTransactionLogItem { Entry: var e } => new BondTransactionLogItemDto(
-            e.LegacyAccountId, e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId, e.Currency, e.BondName, [.. e.Labels.Select(label => label.ToLabelDto())]),
-        InvestmentTransactionLogItem investment => new InvestmentTransactionLogItemDto(investment.LegacyAccountId, investment.Transaction.ToDto()),
+            e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId, e.Currency, e.BondName, [.. e.Labels.Select(label => label.ToLabelDto())]),
+        InvestmentTransactionLogItem investment => new InvestmentTransactionLogItemDto(investment.Transaction.ToDto()),
         _ => throw new NotSupportedException($"Transaction log item {item.GetType().Name} is not supported."),
     };
 
     /// <summary>The log item for a cash history row.</summary>
     public static CurrencyTransactionLogItemDto ToLogItemDto(this CashLogEntry entry) => new(
-        entry.LegacyAccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, entry.Currency, entry.ContractorDetails,
+        entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, entry.Currency, entry.ContractorDetails,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted cash entry (labels loaded) and its currency code.</summary>
     public static CurrencyTransactionLogItemDto ToLogItemDto(this CurrencyAccountEntry entry, string? currency) => new(
-        entry.AccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, currency, entry.ContractorDetails,
+        entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, currency, entry.ContractorDetails,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted bond entry (labels loaded) and its definition's currency code and name.</summary>
     public static BondTransactionLogItemDto ToLogItemDto(this BondAccountEntry entry, string? currency, string? bondName) => new(
-        entry.AccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.BondDetailsId, currency, bondName,
+        entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.BondDetailsId, currency, bondName,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 }

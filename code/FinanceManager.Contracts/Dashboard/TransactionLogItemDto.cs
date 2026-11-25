@@ -7,4 +7,4 @@ namespace FinanceManager.Contracts.Dashboard;
 [JsonDerivedType(typeof(CurrencyTransactionLogItemDto), "currency")]
 [JsonDerivedType(typeof(BondTransactionLogItemDto), "bond")]
 [JsonDerivedType(typeof(InvestmentTransactionLogItemDto), "investment")]
-public abstract record TransactionLogItemDto(int? LegacyAccountId);
+public abstract record TransactionLogItemDto;

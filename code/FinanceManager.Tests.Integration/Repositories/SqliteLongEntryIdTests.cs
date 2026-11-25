@@ -40,9 +40,9 @@ public sealed class SqliteLongEntryIdTests : IDisposable
         _context.ChangeTracker.Clear();
         var repository = new CurrencyEntryRepository(_context);
 
-        var entry = await repository.Get(1, _beyondIntId);
+        var entry = await repository.GetByOwner(1, _beyondIntId, ct);
         var page = await new CashTransactionRepository(_context).GetHistory(1, new(_postingDate, _postingDate, 10, new(_postingDate, _beyondIntId + 1, false)), ct);
-        var deleted = await repository.Delete(1, _beyondIntId, ct);
+        var deleted = await repository.DeleteByOwner(1, _beyondIntId, ct);
 
         Assert.Equal(_beyondIntId, entry?.EntryId);
         Assert.Equal(_beyondIntId, Assert.Single(page).EntryId);
@@ -53,13 +53,13 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     public async Task BondEntry_BeyondIntId_CanBeReadAndDeleted()
     {
         var ct = TestContext.Current.CancellationToken;
-        _context.BondEntries.Add(new BondAccountEntry(1, _beyondIntId, _postingDate, 100, 1, 1));
+        _context.BondEntries.Add(new BondAccountEntry(1, _beyondIntId, _postingDate, 100, 1, 1) { UserId = 1 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
         var repository = new BondEntryRepository(_context);
 
-        var entry = await repository.Get(1, _beyondIntId);
-        var deleted = await repository.Delete(1, _beyondIntId, ct);
+        var entry = await repository.GetByOwner(1, _beyondIntId, ct);
+        var deleted = await repository.DeleteByOwner(1, _beyondIntId, ct);
 
         Assert.Equal(_beyondIntId, entry?.EntryId);
         Assert.True(deleted);

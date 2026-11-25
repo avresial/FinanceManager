@@ -45,9 +45,9 @@ public class DividendPaymentHistoryTests
     [Fact]
     public async Task RenderedHistory_ShowsLatestFirstWithCashReceivedAndAccessibleActions()
     {
-        var later = new DividendPaymentDto(101, 10, 42, "iShares Core S&P 500", "CSPX",
+        var later = new DividendPaymentDto(101, 42, "iShares Core S&P 500", "CSPX",
             DateOnly.FromDateTime(new DateTime(2026, 8, 1)), 120m, "USD", null);
-        var earlier = new DividendPaymentDto(92, 10, 42, "iShares Core S&P 500", "CSPX",
+        var earlier = new DividendPaymentDto(92, 42, "iShares Core S&P 500", "CSPX",
             DateOnly.FromDateTime(new DateTime(2026, 5, 1)), 85m, "USD", "Quarterly.");
 
         var handler = new StubHttpHandler(request => Task.FromResult(
@@ -89,7 +89,7 @@ public class DividendPaymentHistoryTests
                 var items = new List<DividendPaymentDto>();
                 if (capturedRequest is not null)
                 {
-                    items.Add(new DividendPaymentDto(701, 10, capturedRequest.AssetListingId, "VWCE", "VWCE",
+                    items.Add(new DividendPaymentDto(701, capturedRequest.AssetListingId, "VWCE", "VWCE",
                         capturedRequest.PaymentDate, capturedRequest.Amount,
                         capturedRequest.Currency, capturedRequest.Notes));
                 }
@@ -177,7 +177,6 @@ public class DividendPaymentHistoryTests
         await cut.InvokeAsync(() => notesField.ValueChanged.InvokeAsync("Rejected note"));
         await cut.InvokeAsync(() => cut.FindComponent<MudDatePicker>().Instance.DateChanged.InvokeAsync(new DateTime(2026, 9, 1)));
 
-
         var saveButton = cut.FindAll("button").Single(b => b.TextContent.Trim() == "Save");
         Assert.False(saveButton.HasAttribute("disabled"));
         await cut.InvokeAsync(() => saveButton.Click());
@@ -194,7 +193,7 @@ public class DividendPaymentHistoryTests
     public async Task EditingDividend_SendsUpdateRequestAndReflectsNewValuesInHistory()
     {
         DividendPaymentRequest? capturedRequest = null;
-        var original = new DividendPaymentDto(92, 10, 42, "VWCE", "VWCE",
+        var original = new DividendPaymentDto(92, 42, "VWCE", "VWCE",
             DateOnly.FromDateTime(new DateTime(2026, 5, 1)), 85m, "USD", null);
 
         var handler = new StubHttpHandler(async request =>
@@ -212,7 +211,7 @@ public class DividendPaymentHistoryTests
                 request.RequestUri!.AbsolutePath == "/api/dividends")
             {
                 var item = capturedRequest is not null
-                    ? new DividendPaymentDto(92, 10, capturedRequest.AssetListingId, "VWCE", "VWCE",
+                    ? new DividendPaymentDto(92, capturedRequest.AssetListingId, "VWCE", "VWCE",
                         capturedRequest.PaymentDate, capturedRequest.Amount,
                         capturedRequest.Currency, capturedRequest.Notes)
                     : original;
@@ -265,7 +264,7 @@ public class DividendPaymentHistoryTests
     [Fact]
     public async Task ConfirmingDelete_RemovesPaymentFromHistory()
     {
-        var original = new DividendPaymentDto(92, 10, 42, "VWCE", "VWCE",
+        var original = new DividendPaymentDto(92, 42, "VWCE", "VWCE",
             DateOnly.FromDateTime(new DateTime(2026, 5, 1)), 85m, "USD", null);
 
         var deleted = false;
@@ -312,7 +311,7 @@ public class DividendPaymentHistoryTests
     [Fact]
     public async Task CancellingDelete_DoesNotRemovePayment()
     {
-        var original = new DividendPaymentDto(92, 10, 42, "VWCE", "VWCE",
+        var original = new DividendPaymentDto(92, 42, "VWCE", "VWCE",
             DateOnly.FromDateTime(new DateTime(2026, 5, 1)), 85m, "USD", null);
 
         var handler = new StubHttpHandler(request => Task.FromResult(
@@ -353,7 +352,7 @@ public class DividendPaymentHistoryTests
             var second = request.RequestUri.Query.Contains("page=2", StringComparison.Ordinal);
             requestedPages.Add(request.RequestUri.Query);
             return Task.FromResult(JsonResponse(new DividendPaymentPage(
-                [new(second ? 1 : 2, 10, 42, second ? "Older fund" : "Latest fund", "FUND", new(2020, 1, 1), 5, "PLN", null)], 21, second ? 2 : 1, 20)));
+                [new(second ? 1 : 2, 42, second ? "Older fund" : "Latest fund", "FUND", new(2020, 1, 1), 5, "PLN", null)], 21, second ? 2 : 1, 20)));
         });
         await using var context = CreateBunitContext(handler);
         var cut = context.Render<DividendPaymentHistory>();
@@ -388,7 +387,7 @@ public class DividendPaymentHistoryTests
     [InlineData("1234.5", "1,234.50 USD")]
     public async Task History_PreservesSignificantPaymentPrecision(string amount, string expected)
     {
-        var payment = new DividendPaymentDto(1, 10, 42, "Fund", "FUND", new(2020, 1, 1), decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture), "USD", null);
+        var payment = new DividendPaymentDto(1, 42, "Fund", "FUND", new(2020, 1, 1), decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture), "USD", null);
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal)
                 ? JsonResponse(Array.Empty<DividendHoldingOption>())
@@ -495,9 +494,9 @@ public class DividendPaymentHistoryTests
     {
         DividendPaymentDto[] payments =
         [
-            new(1, 10, 41, "Fund", "FUND", new(2026, 1, 1), 10m, "USD", null),
-            new(2, 10, 41, "Fund", "FUND", new(2026, 2, 1), 5.5m, "USD", null),
-            new(3, 10, 42, "Other", "OTH", new(2026, 3, 1), 7m, "PLN", null)
+            new(1, 41, "Fund", "FUND", new(2026, 1, 1), 10m, "USD", null),
+            new(2, 41, "Fund", "FUND", new(2026, 2, 1), 5.5m, "USD", null),
+            new(3, 42, "Other", "OTH", new(2026, 3, 1), 7m, "PLN", null)
         ];
         var handler = new StubHttpHandler(request => Task.FromResult(
             request.RequestUri!.AbsolutePath.EndsWith("/holdings", StringComparison.Ordinal) ? JsonResponse(Array.Empty<DividendHoldingOption>())

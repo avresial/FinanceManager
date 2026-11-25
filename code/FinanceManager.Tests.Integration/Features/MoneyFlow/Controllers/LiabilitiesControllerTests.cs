@@ -15,7 +15,7 @@ namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
 [Trait("Category", "Integration")]
 public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
-    private TestDatabase? _testDatabase;
+    private TestDatabase _testDatabase = null!;
     private DateTime _nowUtc;
     private int _valueChange = 10;
     private int _value;
@@ -23,41 +23,27 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     protected override void ConfigureServices(IServiceCollection services)
     {
         _nowUtc = DateTime.UtcNow;
-        _testDatabase = new TestDatabase(stampOwnerKeys: true);
+        _testDatabase = new TestDatabase();
 
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
             services.Remove(descriptor);
 
-        services.AddSingleton(_testDatabase!.Context);
+        services.AddSingleton(_testDatabase.Context);
     }
 
-    private async Task SeedWithTestCurrencyAccount(string accountName = "Test Currency Account")
+    private async Task SeedCashEntries()
     {
-        if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
-            return;
-
         _value = _valueChange;
 
-        var test = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 1,
-            Name = accountName,
-            AccountLabel = AccountLabel.Loan,
-            AccountType = AccountType.Currency
-        };
-
-        _testDatabase!.Context.Accounts.Add(test);
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         int days = 100;
         _value = (2 + days) * _valueChange * -1;
         // Balances are the sum of the entries' changes, so the debt is booked as an opening entry the later repayments work off.
-        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, DateTime.UtcNow.AddDays(-days - 1).Date, _value, _value));
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, DateTime.UtcNow.AddDays(-days - 1).Date, _value, _value) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
 
         for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase!.Context.CurrencyEntries.Add(new CurrencyAccountEntry(test.AccountId, 0, i, _value += _valueChange, _valueChange));
+            _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -65,7 +51,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task IsAnyAccountWithLiabilities_ReturnsTrue()
     {
-        await SeedWithTestCurrencyAccount();
+        await SeedCashEntries();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).IsAnyAccountWithLiabilities(1);
@@ -76,7 +62,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task GetEndLiabilitiesPerAccount_ReturnsList()
     {
-        await SeedWithTestCurrencyAccount();
+        await SeedCashEntries();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerAccount(1, _nowUtc.AddDays(-1), _nowUtc)
@@ -85,14 +71,13 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         Assert.NotNull(result);
         Assert.Single(result);
         Assert.Equal("PLN", result[0].Name);
-        Assert.Null(result[0].AccountId);
         Assert.Equal(_value, result[0].Value);
     }
 
     [Fact]
     public async Task GetEndLiabilitiesPerType_ReturnsList()
     {
-        await SeedWithTestCurrencyAccount();
+        await SeedCashEntries();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetEndLiabilitiesPerType(1, _nowUtc.AddDays(-1), _nowUtc)
@@ -107,7 +92,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
     [Fact]
     public async Task GetLiabilitiesTimeSeries_ReturnsList()
     {
-        await SeedWithTestCurrencyAccount();
+        await SeedCashEntries();
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new LiabilitiesHttpClient(Client).GetLiabilitiesTimeSeries(1, _nowUtc.AddDays(-100), _nowUtc)
@@ -135,7 +120,7 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
             return;
 
         _testDatabase.Dispose();
-        _testDatabase = null;
+        _testDatabase = null!;
         GC.SuppressFinalize(this);
     }
 }

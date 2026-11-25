@@ -19,7 +19,7 @@ public class BondAccountEntryTests
 
         // Assert
         Assert.Equal(updateEntry.PostingDate, entry.PostingDate);
-        Assert.Equal(110m, entry.Value);
+        Assert.Equal(100m, entry.Value);
         Assert.Equal(updateEntry.ValueChange, entry.ValueChange);
         Assert.Equal(updateEntry.BondDetailsId, entry.BondDetailsId);
     }
@@ -50,7 +50,7 @@ public class BondAccountEntryTests
         copy.Labels.Clear();
 
         Assert.NotSame(entry, copy);
-        Assert.Equal((entry.AccountId, entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, entry.BondDetailsId),
+        Assert.Equal(((int?)null, entry.EntryId, entry.PostingDate, 0m, entry.ValueChange, entry.BondDetailsId),
             (copy.AccountId, copy.EntryId, copy.PostingDate, copy.Value, copy.ValueChange, copy.BondDetailsId));
         Assert.Equal("Quarterly top-up", entry.Description);
         Assert.Single(entry.Labels);
@@ -83,7 +83,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(2));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert
 
@@ -115,7 +115,7 @@ public class BondAccountEntryTests
             unitValue: 100m
         );
 
-        var result = entry.GetPrice(DateOnly.FromDateTime(postingDate), bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, DateOnly.FromDateTime(postingDate), bondDetails);
 
         Assert.Equal(1000m, result[DateOnly.FromDateTime(postingDate)]);
     }
@@ -148,7 +148,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(365));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert - Should capitalize after exactly 365 days
         Assert.Equal(366, result.Count); // 366 days (0 through 365)
@@ -197,7 +197,7 @@ public class BondAccountEntryTests
         var afterRateChange = DateOnly.FromDateTime(new DateTime(2023, 7, 2, 0, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var result = entry.GetPrice(afterRateChange, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, afterRateChange, bondDetails);
 
         // Assert - Should have values for all days
         Assert.True(result.ContainsKey(beforeRateChange));
@@ -234,7 +234,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddYears(5));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert - After 5 years with 5% annual compound interest
         // Expected: 10000 * (1.05)^5 ≈ 12762.82
@@ -278,7 +278,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert - Should grow from -500 (becoming more negative)
         Assert.Equal(-500m, result[DateOnly.FromDateTime(postingDate)]);
@@ -315,7 +315,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate);
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert - Should only contain posting date
         Assert.Single(result);
@@ -349,11 +349,10 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(100));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
-        // Assert - Should start from Value (0), because Value tracks the active unit balance.
-        Assert.Equal(0m, result[DateOnly.FromDateTime(postingDate)]);
-        Assert.Equal(0m, result[targetDate]);
+        Assert.Equal(2000m, result[DateOnly.FromDateTime(postingDate)]);
+        Assert.True(result[targetDate] > 2000m);
     }
 
     [Fact]
@@ -383,7 +382,7 @@ public class BondAccountEntryTests
         var targetDate = DateOnly.FromDateTime(postingDate.AddDays(10));
 
         // Act
-        var result = entry.GetPrice(targetDate, bondDetails);
+        var result = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, targetDate, bondDetails);
 
         // Assert - Should have entries up to when calculation method is active
         // After calculation method expires (day 5), no more entries should be added
@@ -418,8 +417,8 @@ public class BondAccountEntryTests
             unitValue: 1m
         );
 
-        var shortHorizon = entry.GetPrice(DateOnly.FromDateTime(postingDate.AddDays(370)), bondDetails);
-        var longHorizon = entry.GetPrice(DateOnly.FromDateTime(postingDate.AddDays(800)), bondDetails);
+        var shortHorizon = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, DateOnly.FromDateTime(postingDate.AddDays(370)), bondDetails);
+        var longHorizon = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), entry.ValueChange, DateOnly.FromDateTime(postingDate.AddDays(800)), bondDetails);
 
         Assert.True(longHorizon.Count >= shortHorizon.Count,
             $"Expected longer horizon to have at least {shortHorizon.Count} entries, got {longHorizon.Count}.");

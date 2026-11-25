@@ -20,7 +20,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
     public async Task ImportStatus_UsesTheAuthenticatedJobOwner()
     {
         var job = _jobs.CreateOwnerJob(77, 0, 1);
-        var route = $"api/CurrencyAccountImport/ImportStatus/{job}";
+        var route = $"api/transactions/cash/import/jobs/{job}";
         Authorize("owner", 77, UserRole.User);
         var status = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>(route, TestContext.Current.CancellationToken);
         Assert.Equal(job, status!.JobId);

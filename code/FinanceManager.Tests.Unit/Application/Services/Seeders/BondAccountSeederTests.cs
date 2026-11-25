@@ -3,6 +3,7 @@ using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -24,7 +25,7 @@ public class BondAccountSeederTests
     };
 
     private readonly Mock<IBondTransactionReader> _bondReader = new();
-    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _entryRepository = new();
+    private readonly Mock<IAccountEntryRepository<BondAccountEntry>> _entryRepository = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepository = new();
     private readonly List<BondAccountEntry> _savedEntries = [];
     private readonly BondAccountSeeder _seeder;
@@ -40,8 +41,8 @@ public class BondAccountSeederTests
             .Returns(new[] { _bond }.ToAsyncEnumerable());
 
         _entryRepository
-            .Setup(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) => _savedEntries.AddRange(entries))
+            .Setup(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<BondAccountEntry>, CancellationToken>((entries, _) => _savedEntries.AddRange(entries))
             .ReturnsAsync(true);
 
         _seeder = new BondAccountSeeder(
@@ -127,7 +128,7 @@ public class BondAccountSeederTests
             Assert.Equal(_bond.Name, e.Description);
             Assert.Equal(DateTimeKind.Utc, e.PostingDate.Kind);
         });
-        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()), Times.Once);
+        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]

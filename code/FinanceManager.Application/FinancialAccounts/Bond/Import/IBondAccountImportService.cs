@@ -5,9 +5,6 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Import;
 
 public interface IBondAccountImportService
 {
-    Task ApplyResolvedConflicts(IEnumerable<ResolvedBondImportConflict> resolvedConflicts, CancellationToken cancellationToken);
-    Task<BondImportResult> ImportEntries(int userId, int accountId, IEnumerable<BondEntryImport> entries, CancellationToken cancellationToken);
-
     /// <summary>
     /// Imports into the owner's pool; each row names its bond definition. Every row the owner has for a row's
     /// definition, linked or not, is compared; no account is involved and no running value is recalculated.

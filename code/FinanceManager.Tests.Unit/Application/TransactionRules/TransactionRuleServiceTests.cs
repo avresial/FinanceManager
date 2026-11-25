@@ -97,7 +97,7 @@ public sealed class TransactionRuleServiceTests
     }
 
     private static CashLogEntry Cash(long id, int? legacyAccountId = null, decimal change = -10m, string contractor = "ACME", string description = "Invoice") =>
-        new(legacyAccountId, id, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(-id), change, description, 1, "PLN", contractor, []);
+        new(id, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(-id), change, description, 1, "PLN", contractor, []);
 
     private void SetupHistory(int userId, params CashLogEntry[] rows) =>
         _cash.Setup(x => x.GetHistory(userId, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))

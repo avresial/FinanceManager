@@ -3,22 +3,8 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
-/// <summary>
-/// Calculates the unrealized gain/loss for one investment account without valuing the rest of the
-/// user's portfolio.
-/// </summary>
+/// <summary>Calculates unrealized gain or loss across the owner's investment holdings.</summary>
 public interface IInvestmentAppreciationService
 {
     Task<UnrealizedGainLossAccountResult?> GetForUserAsync(int userId, Currency currency, DateTime asOfDate, CancellationToken ct = default);
-
-    /// <summary>
-    /// Returns the selected account's appreciation when it belongs to <paramref name="userId"/>.
-    /// An account owned by another user is treated as not found.
-    /// </summary>
-    Task<UnrealizedGainLossAccountResult?> GetForAccountAsync(
-        int userId,
-        int accountId,
-        Currency currency,
-        DateTime asOfDate,
-        CancellationToken cancellationToken = default);
 }

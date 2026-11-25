@@ -1,7 +1,6 @@
 namespace FinanceManager.Domain.MoneyFlow.Entities;
 
 public record UnrealizedGainLossAccountResult(
-    int? AccountId,
     string AccountName,
     decimal CostBasis,
     decimal CurrentValue,

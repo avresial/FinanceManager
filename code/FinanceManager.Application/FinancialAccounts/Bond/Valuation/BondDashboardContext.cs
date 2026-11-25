@@ -13,19 +13,8 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
 {
     private readonly Dictionary<int, BondDetails> _details = [];
     private readonly HashSet<int> _requestedIds = [];
-    private readonly Dictionary<(int AccountId, long EntryId, int BondDetailsId, DateOnly PostingDate, decimal Value, DateOnly Date), decimal> _prices = [];
-    private readonly Dictionary<(int BondDetailsId, DateOnly AnchorDate, decimal Units, DateOnly Date), decimal> _pooledPrices = [];
 
-    /// <summary>
-    /// Loads the bond definitions referenced by the accounts (in-range entries plus next-older boundary
-    /// entries). Repeated calls within one request only query ids not requested yet, so the union of
-    /// references across the dashboard's services costs a single repository round-trip. Missing
-    /// definitions are omitted; <see cref="GetDetails"/> keeps the existing throw for them.
-    /// </summary>
-    public Task<IReadOnlyDictionary<int, BondDetails>> LoadReferencedDetailsAsync(
-        IEnumerable<BondAccount> accounts,
-        CancellationToken cancellationToken = default) =>
-        LoadReferencedDetailsAsync(accounts.SelectMany(x => x.GetStoredBondsIds()), cancellationToken);
+    private readonly Dictionary<(int BondDetailsId, DateOnly AnchorDate, decimal Units, DateOnly Date), decimal> _pooledPrices = [];
 
     /// <summary>Loads the definitions of the given bond ids, with the same once-per-request behaviour as the account overload.</summary>
     public async Task<IReadOnlyDictionary<int, BondDetails>> LoadReferencedDetailsAsync(
@@ -58,27 +47,6 @@ public class BondDashboardContext(IBondDetailsRepository bondDetailsRepository)
             throw new InvalidOperationException($"Bond valuation requires details for bond id {bondDetailsId}.");
 
         return details;
-    }
-
-    /// <summary>
-    /// Returns the memoized price of the entry at the date, computing it only on the first request for
-    /// that account/entry/date. Bond pricing is a pure function of the entry and the definition, so two
-    /// dashboard paths that materialize the same account within one request share a single computation
-    /// without allowing a changed entry snapshot to reuse a stale value. A range caller can supply a
-    /// lazy calculation from its operation-local history; the exact-date cache still takes precedence.
-    /// </summary>
-    public decimal GetOrComputePrice(int accountId, BondAccountEntry entry, DateOnly date, Func<decimal>? calculatePrice = null)
-    {
-        var key = (accountId, entry.EntryId, entry.BondDetailsId, DateOnly.FromDateTime(entry.PostingDate), entry.Value, date);
-        if (_prices.TryGetValue(key, out var price))
-            return price;
-
-        price = calculatePrice is null
-            ? entry.GetPriceAt(date, GetDetails(entry.BondDetailsId))
-            : calculatePrice();
-        _prices[key] = price;
-
-        return price;
     }
 
     /// <summary>

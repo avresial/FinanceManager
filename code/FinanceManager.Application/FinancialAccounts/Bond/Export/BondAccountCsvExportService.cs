@@ -3,18 +3,14 @@ using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
 using System.Globalization;
-using AccountId = int;
 using UserId = int;
 
 namespace FinanceManager.Application.FinancialAccounts.Bond.Export;
 
 public class BondAccountCsvExportService(IBondAccountExportService bondAccountExportService) : IAccountCsvExportService<BondAccountExportDto>
 {
-    public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
-        await WriteCsv(new BondAccountExportDtoMap(), bondAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken), cancellationToken);
-
     public async Task<string> GetOwnerExportResults(UserId userId, int partitionId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
-        await WriteCsv(new BondAccountExportDtoMap(includeValue: false), bondAccountExportService.GetOwnerExportResults(userId, partitionId, start, end, cancellationToken), cancellationToken);
+        await WriteCsv(new BondAccountExportDtoMap(), bondAccountExportService.GetOwnerExportResults(userId, partitionId, start, end, cancellationToken), cancellationToken);
 
     private static async Task<string> WriteCsv(BondAccountExportDtoMap map, IAsyncEnumerable<BondAccountExportDto> exportItems, CancellationToken cancellationToken)
     {

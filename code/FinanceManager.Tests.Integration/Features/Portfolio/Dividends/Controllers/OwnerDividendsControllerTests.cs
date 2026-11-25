@@ -88,7 +88,6 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
 
         var page = await Client.GetFromJsonAsync<DividendPaymentPage>(_route, ct);
         var item = Assert.Single(page!.Items);
-        Assert.Null(item.AccountId);
         Assert.Equal("Test fund", item.HoldingName);
 
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync($"{_route}/{id}", Request(25), ct)).StatusCode);
@@ -175,23 +174,5 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
         Assert.Equal(8, Assert.Single(holdings!).AssetListingId);
         Assert.Equal(HttpStatusCode.BadRequest, (await Client.PostAsJsonAsync(_route, Request(listing: 9), ct)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync(_route, Request(), ct)).StatusCode);
-    }
-
-    [Fact]
-    public async Task UnlinkedPayment_SurvivesDeletingTheAccount_ButLinkedOnesDoNot()
-    {
-        Seed();
-        Db.DividendPayments.Add(new DividendPayment { UserId = 1, AccountId = _accountId, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 1, Currency = "USD" });
-        await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        Authorize("owner", 1, UserRole.User);
-        var ct = TestContext.Current.CancellationToken;
-        (await Client.PostAsJsonAsync(_route, Request(7), ct)).EnsureSuccessStatusCode();
-
-        Assert.True(await new InvestmentAccountRepository(Db).Delete(_accountId));
-
-        Db.ChangeTracker.Clear();
-        var remaining = await Db.DividendPayments.SingleAsync(ct);
-        Assert.Equal(7m, remaining.Amount);
-        Assert.Null(remaining.AccountId);
     }
 }

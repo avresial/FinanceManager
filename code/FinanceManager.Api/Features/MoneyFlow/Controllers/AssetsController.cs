@@ -25,7 +25,6 @@ public class AssetsController(
     IFeeDragService feeDragService,
     ICurrencyRepository currencyRepository,
     IInvestmentAppreciationService investmentAppreciationService,
-    IAccountRepository<InvestmentAccount> accountRepository,
     IMoneyWeightedReturnService moneyWeightedReturnService,
     ITimeWeightedReturnService timeWeightedReturnService,
     IPortfolioReturnAttributionService portfolioReturnAttributionService) : ControllerBase
@@ -143,44 +142,6 @@ public class AssetsController(
         if (currency is null) return NotFound("Currency not found.");
         var result = await investmentAppreciationService.GetForUserAsync(userId, currency, asOfDate, cancellationToken);
         return result is null ? NoContent() : Ok(result);
-    }
-
-    [HttpGet("GetUnrealizedGainLossForAccount/{userId:int}/{accountId:int}/{currencyId:int}/{asOfDate:DateTime}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UnrealizedGainLossAccountResult))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetUnrealizedGainLossForAccount(
-        int userId,
-        int accountId,
-        int currencyId,
-        DateTime asOfDate,
-        CancellationToken cancellationToken = default)
-    {
-        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId))
-            return Forbid();
-
-        var account = await accountRepository.Get(accountId, cancellationToken);
-        if (account is null)
-            return NotFound();
-
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId) || account.UserId != userId)
-            return NotFound();
-
-        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
-        if (currency is null)
-            return NotFound("Currency not found.");
-
-        var result = await investmentAppreciationService.GetForAccountAsync(
-            userId,
-            accountId,
-            currency,
-            asOfDate,
-            cancellationToken);
-
-        if (result is null)
-            return NotFound();
-
-        return Ok(result);
     }
 
     [HttpGet("GetUnrealizedGainLossPerInstrument/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]

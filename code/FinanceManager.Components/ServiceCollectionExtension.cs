@@ -36,12 +36,10 @@ public static class ServiceCollectionExtension
 
                 .AddScoped<AssetHttpClient>()
 
-                .AddScoped<InvestmentTransactionHttpClient>()
+                .AddScoped<InstrumentSearchHttpClient>()
                 .AddScoped<InvestmentValuationHttpClient>()
 
                 .AddScoped<DividendPaymentHttpClient>()
-
-                .AddScoped<CurrencyAccountImportHttpClient>()
 
                 .AddScoped<BondDetailsHttpClient>()
 

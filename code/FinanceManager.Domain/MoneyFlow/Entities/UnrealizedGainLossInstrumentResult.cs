@@ -1,7 +1,6 @@
 namespace FinanceManager.Domain.MoneyFlow.Entities;
 
 public record UnrealizedGainLossInstrumentResult(
-    int? AccountId,
     string AccountName,
     string InstrumentId,
     string InstrumentName,

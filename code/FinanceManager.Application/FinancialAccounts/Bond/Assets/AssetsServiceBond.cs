@@ -98,7 +98,6 @@ public class AssetsServiceBond(
         var gainLoss = new GainLoss(costBasis, currentValue);
 
         return [new UnrealizedGainLossAccountResult(
-            null,
             _bondsGroupName,
             costBasis,
             currentValue,

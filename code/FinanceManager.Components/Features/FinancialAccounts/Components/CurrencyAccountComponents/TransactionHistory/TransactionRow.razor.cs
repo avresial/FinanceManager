@@ -20,7 +20,6 @@ public partial class TransactionRow
 
     [Parameter] public required CurrencyAccountEntry Entry { get; set; }
     [Parameter] public required string Currency { get; set; }
-    [Parameter] public bool ShowBalance { get; set; } = true;
     [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool InitiallyExpanded { get; set; }
 

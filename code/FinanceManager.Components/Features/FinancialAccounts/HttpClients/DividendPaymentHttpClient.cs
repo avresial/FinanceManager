@@ -7,7 +7,6 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class DividendPaymentHttpClient(HttpClient httpClient)
 {
-    // Dividends belong to their owner; the account-scoped routes stay on the server for older clients only.
     private const string _route = "api/dividends";
 
     public async Task<DividendPaymentPage> GetHistoryPageAsync(int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)

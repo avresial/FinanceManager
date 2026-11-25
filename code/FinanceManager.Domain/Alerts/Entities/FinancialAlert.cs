@@ -29,6 +29,7 @@ public class FinancialAlert
     public DateTime? UpdatedAt { get; set; }
 
     // Legacy column of the removed per-account scope, kept (always null) only until the contract step drops it.
+    [System.Text.Json.Serialization.JsonIgnore]
     public int? AccountId { get; set; }
 
     // Parameterless constructor for persistence and serialization frameworks.
@@ -88,7 +89,6 @@ public class FinancialAlert
         Threshold = command.Threshold;
         EvaluationPeriod = command.EvaluationPeriod;
         CurrencyId = command.CurrencyId;
-        AccountId = null;
         LabelId = command.LabelId;
         LabelName = command.LabelName;
         MerchantName = command.MerchantName;

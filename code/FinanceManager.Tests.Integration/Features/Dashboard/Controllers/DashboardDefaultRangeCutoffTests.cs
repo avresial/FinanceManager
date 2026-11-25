@@ -21,8 +21,6 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _userId = 1120;
-    private const int _cashAccountId = 11201;
-    private const int _loanAccountId = 11202;
     private const int _currencyId = 1120;
     private const int _loanCurrencyId = 1121;
     private TestDatabase? _database;
@@ -32,7 +30,7 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase(stampOwnerKeys: true);
+        _database = new TestDatabase();
         services.AddSingleton(_database.Context);
     }
 
@@ -59,16 +57,13 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
             }]
         };
         context.FinancialLabels.Add(label);
-        context.Accounts.AddRange(
-            new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Cash, CurrencyId = _currencyId },
-            new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Loan, CurrencyId = _loanCurrencyId });
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(_cashAccountId, 1, today.AddDays(-2), 1000m, 1000m),
-            new CurrencyAccountEntry(_cashAccountId, 2, laterToday, 1250m, 250m),
-            new CurrencyAccountEntry(_cashAccountId, 3, tomorrow, 9250m, 8000m),
-            new CurrencyAccountEntry(_loanAccountId, 4, today.AddDays(-2), -300m, -300m),
-            new CurrencyAccountEntry(_loanAccountId, 5, laterToday, -350m, -50m) { Labels = [label] },
-            new CurrencyAccountEntry(_loanAccountId, 6, tomorrow, -425m, -75m) { Labels = [label] });
+            new CurrencyAccountEntry(null, 1, today.AddDays(-2), 1000m, 1000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 2, laterToday, 1250m, 250m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 3, tomorrow, 9250m, 8000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 4, today.AddDays(-2), -300m, -300m) { UserId = _userId, CurrencyId = _loanCurrencyId },
+            new CurrencyAccountEntry(null, 5, laterToday, -350m, -50m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] },
+            new CurrencyAccountEntry(null, 6, tomorrow, -425m, -75m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
 
@@ -104,7 +99,6 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         Assert.Equal(900m, overview.NetCashFlowSeries.Sum(point => point.Value));
         var liability = Assert.Single(overview.LiabilitiesPerAccount);
         Assert.Equal(("EUR", -350m), (liability.Name, liability.Value));
-        Assert.Null(liability.AccountId);
         Assert.Equal(-50m, Assert.Single(overview.LabelsValue, row => row.Name == label.Name).Value);
         Assert.Equal(0m, Assert.Single(exact.LabelsValue, row => row.Name == label.Name).Value);
         var essential = FinancialLabelClassificationCatalog.EssentialValue;
@@ -118,12 +112,9 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         var today = DateTime.UtcNow.Date;
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
-        context.Accounts.AddRange(
-            new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Cash, CurrencyId = _currencyId },
-            new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, AccountLabel = AccountLabel.Loan, CurrencyId = _currencyId });
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(_cashAccountId, 1, today.AddDays(-2), 1000m, 1000m),
-            new CurrencyAccountEntry(_loanAccountId, 2, today.AddDays(-2), -300m, -300m));
+            new CurrencyAccountEntry(null, 1, today.AddDays(-2), 1000m, 1000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 2, today.AddDays(-2), -300m, -300m) { UserId = _userId, CurrencyId = _currencyId });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
         var (start, end) = DateRangeHelper.GetDefaultDashboardRange(DateTime.UtcNow);

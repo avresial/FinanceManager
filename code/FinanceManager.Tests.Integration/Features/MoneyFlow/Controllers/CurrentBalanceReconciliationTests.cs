@@ -1,5 +1,4 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
@@ -22,8 +21,6 @@ namespace FinanceManager.Tests.Integration.Features.MoneyFlow.Controllers;
 public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _userId = 951;
-    private const int _cashAccountId = 1951;
-    private const int _loanAccountId = 2951;
     private const int _currencyId = 985;
     private static readonly DateTime _asOf = new(2024, 6, 10, 12, 0, 0, DateTimeKind.Utc);
     private TestDatabase? _database;
@@ -33,7 +30,7 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase(stampOwnerKeys: true);
+        _database = new TestDatabase();
         services.AddSingleton(_database.Context);
         var clock = new Mock<IDateTimeProvider>();
         clock.SetupGet(x => x.UtcNow).Returns(_asOf);
@@ -49,26 +46,22 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
     {
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
-        context.Accounts.AddRange(
-            new FinancialAccountBaseDto { AccountId = _cashAccountId, UserId = _userId, Name = "Cash", AccountType = AccountType.Currency, CurrencyId = _currencyId, AccountLabel = AccountLabel.Cash },
-            new FinancialAccountBaseDto { AccountId = _loanAccountId, UserId = _userId, Name = "Loan", AccountType = AccountType.Currency, CurrencyId = _currencyId, AccountLabel = AccountLabel.Loan });
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(_cashAccountId, 1, _asOf.Date.AddDays(-2), 900m, 900m),
-            new CurrencyAccountEntry(_cashAccountId, 2, _asOf.AddMinutes(-1), 1000m, 100m),
-            new CurrencyAccountEntry(_cashAccountId, 3, _asOf.AddMinutes(-1), 634m, -366m),
-            new CurrencyAccountEntry(_cashAccountId, 4, _asOf.AddMinutes(1), 9634m, 9000m),
-            new CurrencyAccountEntry(_loanAccountId, 5, _asOf.Date.AddDays(-2), -200m, -200m));
+            new CurrencyAccountEntry(null, 1, _asOf.Date.AddDays(-2), 900m, 900m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 2, _asOf.AddMinutes(-1), 1000m, 100m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 3, _asOf.AddMinutes(-1), 634m, -366m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 4, _asOf.AddMinutes(1), 9634m, 9000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CurrencyAccountEntry(null, 5, _asOf.Date.AddDays(-2), -200m, -200m) { UserId = _userId, CurrencyId = _currencyId });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         // From here on every write goes through the real repositories, which must stamp the owner keys themselves.
-        _database.StopStampingOwnerKeys();
         Authorize("current-balances", _userId, UserRole.User);
 
         await AssertCurrentBalances(634m);
         // A midnight historical end remains an exact cutoff, rather than expanding to end-of-day.
         var historical = await Client.GetFromJsonAsync<List<TimeSeriesModel>>(
-            $"api/MoneyFlow/GetClosingBalance/{_userId}/{_currencyId}/{_asOf.Date.AddDays(-2):O}/{_asOf.Date:O}?accountIds={_cashAccountId}",
+            $"api/MoneyFlow/GetClosingBalance/{_userId}/{_currencyId}/{_asOf.Date.AddDays(-2):O}/{_asOf.Date:O}",
             TestContext.Current.CancellationToken);
-        Assert.Equal(900m, historical![^1].Value);
+        Assert.Equal(700m, historical![^1].Value);
 
         var write = await Client.PostAsJsonAsync("api/transactions/cash", new
         {
@@ -89,18 +82,14 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
         var overview = await Client.GetFromJsonAsync<DashboardOverviewDto>(
             $"api/Dashboard/overview?userId={_userId}&currencyId={_currencyId}&start={start:O}&end={_asOf:O}",
             TestContext.Current.CancellationToken);
-        var account = await Client.GetFromJsonAsync<CurrencyAccountDto>(
-            $"api/CurrencyAccount/{_cashAccountId}&{start:O}&{_asOf:O}", TestContext.Current.CancellationToken);
         var cashSeries = await Client.GetFromJsonAsync<List<TimeSeriesModel>>(
-            $"api/MoneyFlow/GetClosingBalance/{_userId}/{_currencyId}/{start:O}/{_asOf:O}?accountIds={_cashAccountId}",
+            $"api/MoneyFlow/GetClosingBalance/{_userId}/{_currencyId}/{start:O}/{_asOf:O}",
             TestContext.Current.CancellationToken);
         var forecast = await Client.GetFromJsonAsync<CashFlowForecast>(
             $"api/CashFlowForecast?userId={_userId}&currencyId={_currencyId}&horizonDays=30",
             TestContext.Current.CancellationToken);
 
-        // These reads explicitly select the historical account. The new owner-only expense has no account link.
-        Assert.Equal(634m, account!.Entries.First().Value);
-        Assert.Equal(634m, cashSeries![^1].Value);
+        Assert.Equal(expectedCash - 200m, cashSeries![^1].Value);
         // The forecast pools every owned cash entry, including the one on the loan-typed account, like net worth does.
         Assert.Equal(expectedCash - 200m, forecast!.HistoricalSeries[^1].Value);
         Assert.Equal(expectedCash - 200m, forecast.ForecastSeries[0].Value);

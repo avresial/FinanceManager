@@ -114,11 +114,10 @@ public class MoneyFlowControllerTests
         // Arrange
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        List<int> accountIds = [7];
-        _mockBalanceService.Setup(repo => repo.GetInflow(_testUserId, DefaultCurrency.PLN, startDate, endDate, accountIds)).ReturnsAsync([new()]);
+        _mockBalanceService.Setup(repo => repo.GetInflow(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetInflow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, accountIds, TestContext.Current.CancellationToken);
+        var result = await _controller.GetInflow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -135,7 +134,7 @@ public class MoneyFlowControllerTests
         _mockBalanceService.Setup(repo => repo.GetOutflow(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetOutflow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, null, TestContext.Current.CancellationToken);
+        var result = await _controller.GetOutflow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -152,7 +151,7 @@ public class MoneyFlowControllerTests
         _mockBalanceService.Setup(repo => repo.GetClosingBalance(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
         // Act
-        var result = await _controller.GetClosingBalance(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, null, TestContext.Current.CancellationToken);
+        var result = await _controller.GetClosingBalance(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -167,7 +166,7 @@ public class MoneyFlowControllerTests
         DateTime endDate = new(2000, 2, 1);
         _mockBalanceService.Setup(repo => repo.GetNetCashFlow(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
-        var result = await _controller.GetNetCashFlow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, null, TestContext.Current.CancellationToken);
+        var result = await _controller.GetNetCashFlow(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, TestContext.Current.CancellationToken);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);
@@ -179,10 +178,9 @@ public class MoneyFlowControllerTests
     {
         DateTime startDate = new(2000, 1, 1);
         DateTime endDate = new(2000, 2, 1);
-        List<int> accountIds = [7];
-        _mockBalanceService.Setup(repo => repo.GetCapital(_testUserId, DefaultCurrency.PLN, startDate, endDate, accountIds)).ReturnsAsync([new()]);
+        _mockBalanceService.Setup(repo => repo.GetCapital(_testUserId, DefaultCurrency.PLN, startDate, endDate)).ReturnsAsync([new()]);
 
-        var result = await _controller.GetCapital(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, accountIds, TestContext.Current.CancellationToken);
+        var result = await _controller.GetCapital(_testUserId, DefaultCurrency.PLN.Id, startDate, endDate, null, TestContext.Current.CancellationToken);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnValue = Assert.IsType<List<TimeSeriesModel>>(okResult.Value);

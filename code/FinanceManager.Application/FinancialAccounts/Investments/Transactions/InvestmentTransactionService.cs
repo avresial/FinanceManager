@@ -26,27 +26,10 @@ public sealed class InvestmentTransactionService(
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _externalAddGates = new(StringComparer.OrdinalIgnoreCase);
 
-    public Task<InvestmentTransactionDto> AddAsync(
-        AddInvestmentTransactionRequest request,
-        long userId,
-        CancellationToken cancellationToken = default) =>
-        AddAsync(request, userId, request.AccountId, cancellationToken);
-
-    public Task<InvestmentTransactionDto> AddOwnerAsync(
+    public async Task<InvestmentTransactionDto> AddOwnerAsync(
         CreateInvestmentTradeRequest request,
         long userId,
-        CancellationToken cancellationToken = default) =>
-        AddAsync(request.ToAddRequest(), userId, null, cancellationToken);
-
-    /// <summary>
-    /// Shared add pipeline. <paramref name="accountId"/> is the trade's account link; <c>null</c> adds an unlinked owner trade.
-    /// It replaces <see cref="AddInvestmentTransactionRequest.AccountId"/>, which owner requests leave unset.
-    /// </summary>
-    private async Task<InvestmentTransactionDto> AddAsync(
-        AddInvestmentTransactionRequest request,
-        long userId,
-        int? accountId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
@@ -138,7 +121,7 @@ public sealed class InvestmentTransactionService(
                 try
                 {
                     var transaction = await transactionRepository.Add(
-                        request.ToEntity(userId, accountId, listingId),
+                        request.ToEntity(userId, listingId),
                         transactionCancellationToken);
                     var saved = await transactionRepository.Get(transaction.EntryId, transactionCancellationToken);
                     if (saved is null)
@@ -243,7 +226,7 @@ public sealed class InvestmentTransactionService(
     private static string GetExternalGateKey(InstrumentDiscoveryResultDto instrument) =>
         $"{instrument.Ticker.Trim().ToUpperInvariant()}:{instrument.ExchangeMic ?? instrument.ExchangeCode}:{instrument.TradingCurrency}:{instrument.ListingFigi}:{instrument.Isin}";
 
-    private static void ValidateRequest(AddInvestmentTransactionRequest request)
+    private static void ValidateRequest(CreateInvestmentTradeRequest request)
     {
         var hasListing = request.AssetListingId is > 0;
         var hasExternal = !string.IsNullOrWhiteSpace(request.ExternalInstrumentResultId);

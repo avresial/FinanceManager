@@ -143,12 +143,9 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
     private const string _bondEntryLabelKey = "BondAccountEntryEntryId";
 
-    private IQueryable<int> LegacyAccountIds(int userId) => context.Accounts.Where(a => a.UserId == userId).Select(a => a.AccountId);
-
     private IEnumerable<IQueryable<FinancialLabel>> LabelsOnBondEntries(int userId)
     {
         yield return context.FinancialLabels.Where(label => context.BondEntries.Any(e => e.UserId == userId && e.EntryId == EF.Property<long?>(label, _bondEntryLabelKey)));
-        yield return context.FinancialLabels.Where(label => context.BondEntries.Any(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value) && e.EntryId == EF.Property<long?>(label, _bondEntryLabelKey)));
     }
 
     // Every table that holds the user's rows, each defined ONCE as a query. The relational path deletes it in place, the
@@ -161,13 +158,9 @@ public class UserRepository(AppDbContext context) : IUserRepository
     {
         long ownerKey = userId;
         yield return RowSet.Of(context, context.BondEntries.Where(e => e.UserId == userId), q => q.Include(e => e.Labels), e => e.Labels.Clear());
-        yield return RowSet.Of(context, context.BondEntries.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)), q => q.Include(e => e.Labels), e => e.Labels.Clear());
         yield return RowSet.Of(context, context.CurrencyEntries.Where(e => e.UserId == userId), q => q.Include(e => e.Labels), e => e.Labels.Clear());
-        yield return RowSet.Of(context, context.CurrencyEntries.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)), q => q.Include(e => e.Labels), e => e.Labels.Clear());
         yield return RowSet.Of(context, context.InvestmentTransactions.Where(e => e.UserId == ownerKey), q => q.Include(e => e.Labels), e => e.Labels.Clear());
         yield return RowSet.Of(context, context.DividendPayments.Where(e => e.UserId == userId));
-        yield return RowSet.Of(context, context.DividendPayments.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)));
-        yield return RowSet.Of(context, context.Accounts.Where(e => e.UserId == userId));
         yield return RowSet.Of(context, context.FinancialAlerts.Where(e => e.UserId == userId));
         yield return RowSet.Of(context, context.FinancialInsights.Where(e => e.UserId == userId));
         yield return RowSet.Of(context, context.TransactionRules.Where(e => e.UserId == userId));

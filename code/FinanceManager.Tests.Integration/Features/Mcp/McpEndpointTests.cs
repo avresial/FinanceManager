@@ -62,11 +62,11 @@ public sealed class McpEndpointTests : IDisposable
         var food = new FinancialLabel { Id = 51, Name = "Food" };
         List<CashLogEntry> cashRows =
         [
-            new(null, 301, _postedAt, -20m, "MCP lunch", 1, "PLN", "internal counterparty", [food]),
-            new(11, 302, _postedAt, -3m, "MCP coffee", 1, "PLN", "secret merchant", []),
-            new(null, 303, _postedAt.AddDays(-1), -7m, "MCP dollars", 2, "USD", "other counterparty", [])
+            new(301, _postedAt, -20m, "MCP lunch", 1, "PLN", "internal counterparty", [food]),
+            new(302, _postedAt, -3m, "MCP coffee", 1, "PLN", "secret merchant", []),
+            new(303, _postedAt.AddDays(-1), -7m, "MCP dollars", 2, "USD", "other counterparty", [])
         ];
-        List<BondLogEntry> bondRows = [new(null, 301, _postedAt, 3m, "private bond note", 7, "PLN", "Treasury 2030", [])];
+        List<BondLogEntry> bondRows = [new(301, _postedAt, 3m, "private bond note", 7, "PLN", "Treasury 2030", [])];
         var cash = new Mock<ICashTransactionReader>();
         cash.Setup(reader => reader.GetHistory(_userId, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int _, OwnerHistoryQuery query, CancellationToken _) =>

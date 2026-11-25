@@ -127,7 +127,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         var dto = await created.Content.ReadFromJsonAsync<InvestmentTransactionDto>(ct);
         Assert.NotNull(dto);
         Assert.EndsWith($"{_route}/{dto.Id}", created.Headers.Location!.AbsolutePath);
-        Assert.Null(dto.AccountId);
         var stored = await Db.InvestmentTransactions.SingleAsync(ct);
         Assert.Equal(_owner, stored.UserId);
         Assert.Null(stored.AccountId);
@@ -329,7 +328,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task LinkedTradeEditedByOwnerRoute_KeepsItsAccountAndRecalculatesRunningUnits()
+    public async Task LinkedTradeEditedByOwnerRoute_ChangesQuantityAndPreservesOtherTrades()
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
@@ -342,11 +341,11 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Db.ChangeTracker.Clear();
         var rows = await Db.InvestmentTransactions.OrderBy(x => x.EntryId).ToListAsync(ct);
         Assert.All(rows, x => Assert.Equal(_accountId, x.AccountId));
-        Assert.Equal([10m, 13m], rows.Select(x => x.Value));
+        Assert.Equal([10m, 3m], rows.Select(x => x.Quantity));
 
         Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync($"{_route}/{first}", ct)).StatusCode);
         Db.ChangeTracker.Clear();
-        Assert.Equal(3m, (await Db.InvestmentTransactions.SingleAsync(x => x.EntryId == second, ct)).Value);
+        Assert.Equal(3m, (await Db.InvestmentTransactions.SingleAsync(x => x.EntryId == second, ct)).Quantity);
     }
 
     [Fact]

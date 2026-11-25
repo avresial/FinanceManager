@@ -20,5 +20,5 @@ public class CurrencyImportJobTrackerTests
     }
 
     private static ImportJobConflict Conflict(string id) =>
-        new(id, new ImportConflict(1, null, null, "test"));
+        new(id, new ImportConflict(null, null, "test"));
 }

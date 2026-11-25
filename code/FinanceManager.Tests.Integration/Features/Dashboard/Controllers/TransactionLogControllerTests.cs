@@ -27,7 +27,7 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
             .ReturnsAsync([new TransactionLogEntryDto(TransactionKind.Cash, 1, new DateTime(2024, 3, 5), -50m, "Groceries")]);
         _serviceMock.Setup(x => x.GetItemsPage(_testUserId, It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TransactionLogItemsPage(
-                [new BondTransactionLogItem(new(null, long.MaxValue, new DateTime(2024, 3, 5), 1, "Bond", 7, "USD", null, []))],
+                [new BondTransactionLogItem(new(long.MaxValue, new DateTime(2024, 3, 5), 1, "Bond", 7, "USD", null, []))],
                 new(new DateTime(2024, 3, 5), TransactionKind.Bond, long.MaxValue)));
         _serviceMock.Setup(x => x.HasAny(_testUserId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _serviceMock.Setup(x => x.HasAny(-_testUserId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
@@ -212,5 +212,4 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
         Assert.Equal(status, response.StatusCode);
         _serviceMock.Verify(x => x.GetItemsPage(It.IsAny<int>(), It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
 }

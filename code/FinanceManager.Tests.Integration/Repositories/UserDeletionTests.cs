@@ -37,6 +37,7 @@ public sealed class UserDeletionTests : IDisposable
     // Tables that carry a user key but intentionally survive RemoveUser, with the reason.
     private static readonly Dictionary<string, string> _keptTables = new()
     {
+        ["Accounts"] = "dormant until the schema contract in #1144",
         ["ActiveUsers"] = "login history is audit data",
         ["GiftCodes"] = "audit actor ids intentionally survive deletion of the account (see GiftCodeConfiguration)",
     };
@@ -135,7 +136,7 @@ public sealed class UserDeletionTests : IDisposable
         context.ChangeTracker.Clear();
 
         Assert.False(await context.Users.AnyAsync(u => u.Id == _target, ct));
-        Assert.False(await context.Accounts.AnyAsync(a => a.UserId == _target, ct));
+        Assert.True(await context.Accounts.AnyAsync(a => a.UserId == _target, ct));
         Assert.Equal(0, await context.CurrencyEntries.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
         Assert.Equal(0, await context.BondEntries.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
         Assert.Equal(0, await context.InvestmentTransactions.CountAsync(e => e.UserId == _target, ct));
@@ -225,7 +226,7 @@ public sealed class UserDeletionTests : IDisposable
         var context = CreateContext("sqlite");
         var deletedByRemoveUser = new HashSet<string>
         {
-            "BondEntries", "CurrencyEntries", "InvestmentTransactions", "DividendPayments", "Accounts", "FinancialAlerts",
+            "BondEntries", "CurrencyEntries", "InvestmentTransactions", "DividendPayments", "FinancialAlerts",
             "FinancialInsights", "TransactionRules", "RecurringSubscriptions", "RefreshTokens", "PasswordResetTokens", "Users",
         };
 

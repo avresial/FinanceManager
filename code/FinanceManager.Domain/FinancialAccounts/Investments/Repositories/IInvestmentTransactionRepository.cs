@@ -18,9 +18,6 @@ public interface IInvestmentTransactionRepository
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
 
-    /// <summary>Get all transactions belonging to the given account.</summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default);
-
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
@@ -38,12 +35,6 @@ public interface IInvestmentTransactionRepository
 
     /// <summary>Delete the transaction with the given id. Returns <c>false</c> when no such transaction exists.</summary>
     Task<bool> Delete(long id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Signed-quantity holdings per <see cref="AssetListing"/> as of a date, summed across the given accounts.
-    /// Replaces the old per-ISIN running-balance boundary lookups with a single grouped query.
-    /// </summary>
-    Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ListingTradePrice>> GetLatestPricesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
     Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
@@ -74,26 +65,7 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a bounded, deterministic page of investment transactions for an account, ordered by
-    /// <see cref="InvestmentTransaction.TradeDate"/> descending then <see cref="InvestmentTransaction.Id"/> descending.
-    /// Supports cursor continuation using (<paramref name="cursorTradeDate"/>, <paramref name="cursorId"/>)
-    /// and optional date range, transaction type, and text search filters applied at the database level.
-    /// Returns at most <paramref name="pageSize"/> items along with a boolean indicating whether more items exist.
-    /// </summary>
-    Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
-        int accountId,
-        int pageSize,
-        DateOnly? cursorTradeDate = null,
-        long? cursorId = null,
-        DateOnly? startDate = null,
-        DateOnly? endDate = null,
-        InvestmentTransactionType? type = null,
-        string? search = null,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Owner-wide counterpart of the account <see cref="GetHistoryPage(int, int, DateOnly?, long?, DateOnly?, DateOnly?, InvestmentTransactionType?, string?, CancellationToken)"/>:
-    /// every trade of <paramref name="userId"/>, linked to an account or not, with the same ordering, cursor and filters plus an optional listing.
+    /// Pages the trades of <paramref name="userId"/>, linked to an account or not, with the same ordering, cursor and filters plus an optional listing.
     /// </summary>
     Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPageByUser(
         long userId,

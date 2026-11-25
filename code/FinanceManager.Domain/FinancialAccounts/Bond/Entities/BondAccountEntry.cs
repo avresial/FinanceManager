@@ -18,7 +18,8 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
 
     private decimal _value = value;
 
-    [JsonPropertyOrder(4)]
+    // Dormant running balance, dropped in #1144.
+    [JsonIgnore]
     public decimal Value
     {
         get => _value;
@@ -34,7 +35,8 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
     [JsonIgnore]
     public int UserId { get; set; }
 
-    [JsonPropertyOrder(2)]
+    // Dormant account link, dropped in #1144.
+    [JsonIgnore]
     public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
@@ -46,32 +48,17 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
 
         PostingDate = entry.PostingDate;
         Description = entry.Description;
-        // An entry without an account link has no running balance to keep in step.
-        if (AccountId is not null)
-            Value += entry.ValueChange - ValueChange;
         ValueChange = entry.ValueChange;
         Labels = entry.Labels ?? [];
         BondDetailsId = entry.BondDetailsId;
     }
 
-    public BondAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange, BondDetailsId)
+    public BondAccountEntry GetCopy() => new(null, EntryId, PostingDate, 0, ValueChange, BondDetailsId)
     {
         UserId = UserId,
         Description = Description,
         Labels = [.. Labels],
     };
-
-    public decimal GetPriceAt(DateOnly date, BondDetails bondDetails)
-    {
-        if (date < DateOnly.FromDateTime(PostingDate))
-            return 0;
-
-        var priceHistory = GetPrice(date, bondDetails);
-        return priceHistory.TryGetValue(date, out var price) ? price : 0;
-    }
-
-    public Dictionary<DateOnly, decimal> GetPrice(DateOnly date, BondDetails bondDetails) =>
-        GetPrice(DateOnly.FromDateTime(PostingDate), Value, date, bondDetails);
 
     /// <summary>
     /// Daily value of <paramref name="units"/> accruing from <paramref name="anchorDate"/> through <paramref name="throughDate"/>.
@@ -107,5 +94,5 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
     }
 
     public override string ToString() =>
-    $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}, Description: {Description}";
+    $"PostingDate: {PostingDate}, EntryId: {EntryId}, ValueChange: {ValueChange}, BondDetailsId: {BondDetailsId}, Description: {Description}";
 }

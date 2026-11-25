@@ -90,7 +90,7 @@ public class DashboardOwnerTransactionInvalidationTests(OptionsProvider optionsP
         Assert.NotNull(afterCash);
         Assert.Equal(500m, afterCash.NetWorthSeries[^1].Value);
         var cashRow = Assert.Single(afterCash.AssetsPerAccount);
-        Assert.Equal(("PLN", 500m, null), (cashRow.Name, cashRow.Value, cashRow.AccountId));
+        Assert.Equal(("PLN", 500m), (cashRow.Name, cashRow.Value));
         Assert.Equal(("Cash", 500m), (Assert.Single(afterCash.AssetsPerType).Name, Assert.Single(afterCash.AssetsPerType).Value));
 
         using var trade = await Client.PostAsJsonAsync("api/transactions/investment",
@@ -101,7 +101,6 @@ public class DashboardOwnerTransactionInvalidationTests(OptionsProvider optionsP
         Assert.Equal(530m, afterTrade.NetWorthSeries[^1].Value);
         Assert.Equal([("Cash", 500m), ("Stock", 30m)], afterTrade.AssetsPerType.Select(x => (x.Name, x.Value)));
         Assert.Equal([("PLN", 500m), ("OWNR", 30m)], afterTrade.AssetsPerAccount.Select(x => (x.Name, x.Value)));
-        Assert.All(afterTrade.AssetsPerAccount, x => Assert.Null(x.AccountId));
 
         using var bond = await Client.PostAsJsonAsync("api/transactions/bonds", new SaveBondEntryRequest(_bond, _day, 2m, "unlinked bond"), ct);
         Assert.Equal(HttpStatusCode.OK, bond.StatusCode);

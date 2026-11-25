@@ -27,7 +27,7 @@ public static class DistributionSlices
         List<DistributionSlice> slices =
         [
             .. named.Select((item, index) => new DistributionSlice(
-                DisplayName(item), item.Value, Percent(item.Value, total), colors[index % colors.Count], item.AccountId, [],
+                DisplayName(item), item.Value, Percent(item.Value, total), colors[index % colors.Count], [],
                 item.CurrencyCode, item.Kind, item.Name))
         ];
 
@@ -35,7 +35,7 @@ public static class DistributionSlices
         {
             var rest = sorted.Skip(MaxNamedSlices).ToList();
             var otherValue = rest.Sum(x => x.Value);
-            slices.Add(new DistributionSlice(OtherName, otherValue, Percent(otherValue, total), ColorsProvider.OtherColor, null, rest));
+            slices.Add(new DistributionSlice(OtherName, otherValue, Percent(otherValue, total), ColorsProvider.OtherColor, rest));
         }
 
         return slices;

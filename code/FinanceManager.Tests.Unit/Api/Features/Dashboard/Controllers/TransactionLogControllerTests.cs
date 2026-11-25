@@ -75,8 +75,8 @@ public class TransactionLogControllerTests
         _transactionLogService.Setup(x => x.GetItemsPage(_testUserId, It.Is<TransactionLogQuery>(q => q.Search == "x" && q.PageSize == 3),
             TestContext.Current.CancellationToken)).ReturnsAsync(new TransactionLogItemsPage(
         [
-            new CurrencyTransactionLogItem(new(null, 1, day, -10, "Lunch", 3, "EUR", null, [])),
-            new BondTransactionLogItem(new(20, 2, day, 5, "Bond", 7, "USD", null, [])),
+            new CurrencyTransactionLogItem(new(1, day, -10, "Lunch", 3, "EUR", null, [])),
+            new BondTransactionLogItem(new(2, day, 5, "Bond", 7, "USD", null, [])),
             new InvestmentTransactionLogItem(new InvestmentTransaction
             {
                 EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2, Currency = "USD"
@@ -89,9 +89,9 @@ public class TransactionLogControllerTests
         var page = Assert.IsType<TransactionLogItemsPageDto>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal(new TransactionLogCursorDto(day, TransactionKindDto.Bond, 2), page.NextCursor);
         var cash = Assert.IsType<CurrencyTransactionLogItemDto>(page.Items[0]);
-        Assert.Equal(((int?)null, 3, "EUR", 1L, "Lunch"), (cash.LegacyAccountId, cash.CurrencyId, cash.Currency, cash.EntryId, cash.Description));
+        Assert.Equal((3, "EUR", 1L, "Lunch"), (cash.CurrencyId, cash.Currency, cash.EntryId, cash.Description));
         Assert.Equal(7, Assert.IsType<BondTransactionLogItemDto>(page.Items[1]).BondDetailsId);
-        Assert.Equal((3L, 30), (Assert.IsType<InvestmentTransactionLogItemDto>(page.Items[2]).Transaction.Id, page.Items[2].LegacyAccountId));
+        Assert.Equal(3L, Assert.IsType<InvestmentTransactionLogItemDto>(page.Items[2]).Transaction.Id);
     }
 
     [Fact]
