@@ -12,7 +12,7 @@ public partial class RemoveCurrencyEntry
 
     [Parameter] public EventCallback Confirm { get; set; }
     [Parameter] public EventCallback Cancel { get; set; }
-    [Parameter] public required string CurrencyAccountName { get; set; }
+    [Parameter] public required string Title { get; set; }
     [Parameter] public required CashEntry CashEntry { get; set; }
     // The account's own currency (not the user's default), as shown on the transaction row.
     [Parameter] public required string Currency { get; set; }

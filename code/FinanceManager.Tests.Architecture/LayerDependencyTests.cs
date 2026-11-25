@@ -129,4 +129,15 @@ public class LayerDependencyTests
 
         rule.Check(LoadedArchitecture);
     }
+
+    // --- Retired concepts ------------------------------------------------------------------
+
+    [Fact]
+    public void No_type_should_live_in_a_FinancialAccounts_namespace()
+    {
+        IArchRule rule = Types().Should().NotResideInNamespaceMatching(@"(^|\.)FinancialAccounts(\.|$)")
+            .Because("financial accounts were removed (ADR 0008); ledger code lives in the Transactions and Portfolio slices.");
+
+        rule.Check(LoadedArchitecture);
+    }
 }
