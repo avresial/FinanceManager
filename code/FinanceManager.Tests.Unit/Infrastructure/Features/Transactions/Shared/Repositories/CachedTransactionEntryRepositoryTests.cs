@@ -17,7 +17,7 @@ public class CachedTransactionEntryRepositoryTests
     private static readonly DateTime _date = new(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
     private static CashEntry Entry(long entryId = 1, decimal value = 100m) =>
-        new(null, entryId, _date, 0, value) { UserId = _userId };
+        new(entryId, _date, value) { UserId = _userId };
 
     // -------------------------------------------------------------------------
     // Every write path invalidates the owning user's cache

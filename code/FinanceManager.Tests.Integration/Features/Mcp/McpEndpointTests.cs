@@ -710,7 +710,6 @@ public sealed class McpEndpointTests : IDisposable
         {
             EntryId = listingId,
             UserId = userId,
-            AccountId = accountId,
             AssetListingId = listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = quantity,

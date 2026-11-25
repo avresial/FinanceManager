@@ -7,9 +7,6 @@ public class DividendPayment
 {
     public long Id { get; set; }
     public int UserId { get; set; }
-    // Dormant account link, dropped in #1144.
-    [System.Text.Json.Serialization.JsonIgnore]
-    public int? AccountId { get; set; }
     public long AssetListingId { get; set; }
     public AssetListing AssetListing { get; set; } = null!;
     public DateOnly PaymentDate { get; set; }

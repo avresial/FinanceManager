@@ -263,11 +263,9 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 42;
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 3.25m,
@@ -279,7 +277,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 1.25m,
@@ -296,7 +293,7 @@ public class InvestmentModelRepositoryTests
     }
 
     [Fact]
-    public async Task GetByUserAndIds_FiltersOwnerAndIdsBeforeMaterializing_IncludingUnlinkedTrades()
+    public async Task GetByUserAndIds_FiltersOwnerAndIdsBeforeMaterializing()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -314,10 +311,9 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        InvestmentTransaction Make(long userId, int? accountId, DateOnly tradeDate) => new()
+        InvestmentTransaction Make(long userId, DateOnly tradeDate) => new()
         {
             UserId = userId,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1m,
@@ -326,22 +322,22 @@ public class InvestmentModelRepositoryTests
             TradeDate = tradeDate
         };
 
-        var linked = await txRepo.Add(Make(1, 10, new DateOnly(2026, 1, 10)), ct);
-        var unlinked = await txRepo.Add(Make(1, null, new DateOnly(2026, 1, 9)), ct);
-        var guest = await txRepo.Add(Make(-4, null, new DateOnly(2026, 1, 8)), ct);
-        var otherUser = await txRepo.Add(Make(2, 20, new DateOnly(2026, 1, 11)), ct);
-        long[] everyId = [linked.EntryId, unlinked.EntryId, guest.EntryId, otherUser.EntryId];
+        var later = await txRepo.Add(Make(1, new DateOnly(2026, 1, 10)), ct);
+        var earlier = await txRepo.Add(Make(1, new DateOnly(2026, 1, 9)), ct);
+        var guest = await txRepo.Add(Make(-4, new DateOnly(2026, 1, 8)), ct);
+        var otherUser = await txRepo.Add(Make(2, new DateOnly(2026, 1, 11)), ct);
+        long[] everyId = [later.EntryId, earlier.EntryId, guest.EntryId, otherUser.EntryId];
 
         var result = await txRepo.GetByUserAndIds(1, everyId, ct);
 
-        Assert.Equal([unlinked.EntryId, linked.EntryId], result.Select(transaction => transaction.EntryId));
+        Assert.Equal([earlier.EntryId, later.EntryId], result.Select(transaction => transaction.EntryId));
         Assert.Equal(guest.EntryId, Assert.Single(await txRepo.GetByUserAndIds(-4, everyId, ct)).EntryId);
         Assert.Empty(await txRepo.GetByUserAndIds(1, [], ct));
         Assert.Empty(await txRepo.GetByUserAndIds(0, everyId, ct));
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputsByUser_PoolsLinkedAndUnlinkedTrades_AndIsolatesOwners()
+    public async Task GetCapitalFlowInputsByUser_PoolsTrades_AndIsolatesOwners()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -357,10 +353,9 @@ public class InvestmentModelRepositoryTests
         }, ct);
         var repository = new InvestmentTransactionRepository(ctx);
 
-        InvestmentTransaction Make(long userId, int? accountId, InvestmentTransactionType type, DateOnly tradeDate) => new()
+        InvestmentTransaction Make(long userId, InvestmentTransactionType type, DateOnly tradeDate) => new()
         {
             UserId = userId,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = type,
             Quantity = 2m,
@@ -370,15 +365,15 @@ public class InvestmentModelRepositoryTests
             TradeDate = tradeDate
         };
 
-        var second = await repository.Add(Make(-4, null, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 12)), ct);
-        var first = await repository.Add(Make(-4, 10, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 10)), ct);
-        var sell = await repository.Add(Make(-4, 11, InvestmentTransactionType.Sell, new DateOnly(2026, 1, 12)), ct);
-        await repository.Add(Make(-4, null, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 25)), ct);
-        await repository.Add(Make(1, 10, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 10)), ct);
+        var second = await repository.Add(Make(-4, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 12)), ct);
+        var first = await repository.Add(Make(-4, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 10)), ct);
+        var sell = await repository.Add(Make(-4, InvestmentTransactionType.Sell, new DateOnly(2026, 1, 12)), ct);
+        await repository.Add(Make(-4, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 25)), ct);
+        await repository.Add(Make(1, InvestmentTransactionType.Buy, new DateOnly(2026, 1, 10)), ct);
 
         var flows = await repository.GetCapitalFlowInputsByUser(-4, new DateOnly(2026, 1, 20), ct);
 
-        // Guest ids are negative; trades pool across accounts and unlinked rows in posting-date then id order and never cross owners.
+        // Guest ids are negative; trades pool in posting-date then id order and never cross owners.
         Assert.Equal([first.EntryId, second.EntryId, sell.EntryId], flows.Select(flow => flow.TransactionId));
         Assert.Equal(new DateOnly(2026, 1, 10), flows[0].TradeDate);
         Assert.Empty(await repository.GetCapitalFlowInputsByUser(0, new DateOnly(2026, 1, 20), ct));
@@ -492,11 +487,9 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 100;
         var t1 = await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1m,
@@ -507,7 +500,6 @@ public class InvestmentModelRepositoryTests
         var t2 = await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2m,
@@ -518,7 +510,6 @@ public class InvestmentModelRepositoryTests
         var t3 = await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 1m,
@@ -556,12 +547,11 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 101;
         var sameDay = new DateOnly(2026, 3, 15);
-        var t1 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AccountId = accountId, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 1m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
-        var t2 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AccountId = accountId, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 2m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
-        var t3 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AccountId = accountId, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 3m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
-        var t4 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AccountId = accountId, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 4m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
+        var t1 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 1m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
+        var t2 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 2m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
+        var t3 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 3m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
+        var t4 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 4m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
 
         // Page 1 with pageSize = 2
         var (page1, hasMore1) = await txRepo.GetHistoryPageByUser(1, pageSize: 2, cancellationToken: ct);
@@ -613,11 +603,9 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 102;
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 10m,
@@ -630,7 +618,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing2.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 5m,
@@ -719,11 +706,9 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 103;
         var t1 = await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 10m,
@@ -747,7 +732,7 @@ public class InvestmentModelRepositoryTests
         Assert.Empty(afterDelete);
     }
     [Fact]
-    public async Task GetHoldingsByUserAsOf_PoolsAccountsPerListing_AndNetsSignedQuantities()
+    public async Task GetHoldingsByUserAsOf_PoolsTradesPerListing_AndNetsSignedQuantities()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var ctx = CreateContext();
@@ -773,11 +758,10 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "EUR"
         }, ct);
 
-        // Account 10: Buy 5 CSPX on Jan 10, Sell 2 CSPX on Jan 15, Buy 10 SXR8 on Jan 12
+        // Buy 5 CSPX on Jan 10, Sell 2 CSPX on Jan 15, Buy 10 SXR8 on Jan 12
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 10,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 5.5m,
@@ -788,7 +772,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 10,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 2.25m,
@@ -799,7 +782,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 10,
             AssetListingId = listing2.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 10m,
@@ -808,11 +790,10 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 12)
         }, ct);
 
-        // Account 20: Buy 1 CSPX on Jan 10, Buy 2 CSPX on Jan 25 (after as-of)
+        // More buys: 1 CSPX on Jan 10, Buy 2 CSPX on Jan 25 (after as-of)
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 20,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1m,
@@ -823,7 +804,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 20,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2m,
@@ -832,11 +812,10 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 25)
         }, ct);
 
-        // Another owner's account 30: Buy 100 CSPX
+        // Another owner: Buy 100 CSPX
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 2,
-            AccountId = 30,
             AssetListingId = listing1.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 100m,
@@ -850,7 +829,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 10,
             AssetListingId = listing1.Id,
             Type = (InvestmentTransactionType)999,
             Quantity = 100m,
@@ -863,7 +841,7 @@ public class InvestmentModelRepositoryTests
         var holdings = (await txRepo.GetHoldingsByUserAsOf(1, asOf, ct)).ToDictionary(h => h.AssetListingId, h => h.Units);
 
         Assert.Equal(2, holdings.Count);
-        Assert.Equal(4.25m, holdings[listing1.Id]); // (5.5 - 2.25) in account 10 + 1 in account 20; the Jan 25 trade and the other owner's trade are excluded
+        Assert.Equal(4.25m, holdings[listing1.Id]); // (5.5 - 2.25) + 1; the Jan 25 trade and the other owner's trade are excluded
         Assert.Equal(10m, holdings[listing2.Id]);
     }
 
@@ -886,12 +864,10 @@ public class InvestmentModelRepositoryTests
             TradingCurrency = "USD"
         }, ct);
 
-        const int accountId = 10;
         // Opening before window (window: Jan 10 to Jan 20)
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 5m,
@@ -902,7 +878,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 1m,
@@ -915,7 +890,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2m,
@@ -926,7 +900,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 0.5m,
@@ -939,7 +912,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = listing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 20m,
@@ -983,7 +955,6 @@ public class InvestmentModelRepositoryTests
             await repository.Add(new InvestmentTransaction
             {
                 UserId = 1,
-                AccountId = 10,
                 AssetListingId = listing.Id,
                 Type = type,
                 Quantity = 2m,
@@ -1026,11 +997,9 @@ public class InvestmentModelRepositoryTests
             PriceMultiplier = 0.01m
         }, ct);
 
-        const int accountId = 10;
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = gbxListing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 10m,
@@ -1042,7 +1011,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = gbxListing.Id,
             Type = InvestmentTransactionType.Sell,
             Quantity = 5m,
@@ -1055,7 +1023,6 @@ public class InvestmentModelRepositoryTests
         await txRepo.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = accountId,
             AssetListingId = gbxListing.Id,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1m,

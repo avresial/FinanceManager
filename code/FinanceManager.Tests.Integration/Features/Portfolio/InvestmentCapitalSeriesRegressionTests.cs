@@ -5,8 +5,6 @@ using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
@@ -26,7 +24,6 @@ namespace FinanceManager.Tests.Integration.Features.Portfolio;
 public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _optionsProvider) : ControllerTests(_optionsProvider), IDisposable
 {
     private const int _userId = 92;
-    private const int _accountId = 792;
     private const long _listingId = 5002;
     private static readonly DateOnly _fixtureStart = new(2025, 12, 4);
     private static readonly DateOnly _fixtureEnd = new(2026, 7, 28);
@@ -138,7 +135,7 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
     [Fact]
     public async Task GetCapitalSeries_NormalizesMinorTransactionCurrencyBeforeAndAfterListingEnrichment()
     {
-        await SeedAccountAndListings();
+        await SeedListings();
         var ct = TestContext.Current.CancellationToken;
         var context = _testDatabase!.Context;
         var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, ct);
@@ -148,7 +145,6 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = _userId,
-            AccountId = _accountId,
             AssetListingId = _listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2m,
@@ -367,13 +363,12 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
     [Fact]
     public async Task MoneyFlowApi_GetCapital_AppliesFeeOnceAndMinorQuoteMultiplier()
     {
-        await SeedAccountAndListings();
+        await SeedListings();
         var context = _testDatabase!.Context;
         context.InvestmentTransactions.AddRange(
             new InvestmentTransaction
             {
                 UserId = _userId,
-                AccountId = _accountId,
                 AssetListingId = _listingId,
                 Type = InvestmentTransactionType.Buy,
                 Quantity = 2m,
@@ -385,7 +380,6 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
             new InvestmentTransaction
             {
                 UserId = _userId,
-                AccountId = _accountId,
                 AssetListingId = _listingId + 1,
                 Type = InvestmentTransactionType.Buy,
                 Quantity = 2m,
@@ -406,11 +400,10 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
 
     private async Task SeedProductionFixture()
     {
-        await SeedAccountAndListings();
+        await SeedListings();
         _testDatabase!.Context.InvestmentTransactions.AddRange(_productionTrades.Select(trade => new InvestmentTransaction
         {
             UserId = _userId,
-            AccountId = _accountId,
             AssetListingId = _listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = trade.Quantity,
@@ -426,17 +419,9 @@ public sealed class InvestmentCapitalSeriesRegressionTests(OptionsProvider _opti
         new InvestmentTransactionRepository(_testDatabase!.Context),
         _currencyExchangeService!.Object);
 
-    private async Task SeedAccountAndListings()
+    private async Task SeedListings()
     {
         var context = _testDatabase!.Context;
-        context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = _accountId,
-            UserId = _userId,
-            Name = "XTB Investment Account",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        });
         context.Assets.Add(new Asset { Id = 1, Name = "iShares Core S&P 500 UCITS ETF", Type = AssetType.ETF });
         context.AssetListings.AddRange(
             new AssetListing

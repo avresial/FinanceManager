@@ -59,7 +59,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             [new() { DateOperator = DateOperator.UntilDate, DateValue = "2025-01-01", Rate = 0.05m }], currency)
         { Id = 1028 };
         context.Bonds.Add(details);
-        var entry = new BondEntry(null, 1028, posting, 1m, 1m, details.Id) { UserId = _userId };
+        var entry = new BondEntry(1028, posting, 1m, details.Id) { UserId = _userId };
         context.BondEntries.Add(entry);
         await context.SaveChangesAsync(ct);
         Authorize("testuser", _userId, UserRole.User);

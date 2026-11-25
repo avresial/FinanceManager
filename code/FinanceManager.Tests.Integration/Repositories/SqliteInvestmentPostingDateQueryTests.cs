@@ -15,7 +15,6 @@ namespace FinanceManager.Tests.Integration.Repositories;
 [Trait("Category", "Integration")]
 public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
 {
-    private const int _accountId = 7;
     private const long _userId = 70;
     private const long _listingId = 700;
     private static readonly DateOnly _start = new(2026, 1, 1);
@@ -80,20 +79,20 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetHoldingsByUserAsOf_PoolsLinkedAndUnlinkedTrades_OmitsZeroUnitsAndOrdersByListing()
+    public async Task GetHoldingsByUserAsOf_PoolsTrades_OmitsZeroUnitsAndOrdersByListing()
     {
         await SeedOwnerPool();
 
         var holdings = await _repository.GetHoldingsByUserAsOf(_userId, _end, TestContext.Current.CancellationToken);
 
-        // Listing 700 nets 3 (linked buy 2 + unlinked buy 2 - sell 1); 702 is closed out; 703 is negative (oversold); other users and later trades are excluded.
+        // Listing 700 nets 3 (buy 2 + buy 2 - sell 1); 702 is closed out; 703 is negative (oversold); other users and later trades are excluded.
         Assert.Equal([_listingId, 703L], holdings.Select(h => h.AssetListingId));
         Assert.Equal([3m, -1m], holdings.Select(h => h.Units));
         Assert.Empty(await _repository.GetHoldingsByUserAsOf(_userId, _start.AddYears(-5), TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task GetHistoryPageByUser_PagesAcrossLinkedAndUnlinkedTrades_ForOneOwnerOnly()
+    public async Task GetHistoryPageByUser_PagesAcrossTrades_ForOneOwnerOnly()
     {
         await SeedOwnerPool();
         var ct = TestContext.Current.CancellationToken;
@@ -108,25 +107,24 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         Assert.DoesNotContain(second.Items, t => first.Items.Any(f => f.EntryId == t.EntryId));
         var all = first.Items.Concat(second.Items).ToList();
         Assert.All(all, t => Assert.Equal(_userId, t.UserId));
-        Assert.Contains(all, t => t.AccountId is null);
         Assert.All(filtered.Items, t => Assert.Equal(_listingId, t.AssetListingId));
         Assert.Equal(3, filtered.Items.Count);
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputsByUser_PoolsLinkedAndUnlinkedTrades_UpToTheDateForOneOwnerOnly()
+    public async Task GetCapitalFlowInputsByUser_PoolsTrades_UpToTheDateForOneOwnerOnly()
     {
         await SeedOwnerPool();
 
         var flows = await _repository.GetCapitalFlowInputsByUser(_userId, _start.AddDays(1), TestContext.Current.CancellationToken);
 
-        // Linked and unlinked rows of the owner, ordered by posting date then id; later trades and other owners are excluded.
+        // Rows of the owner, ordered by posting date then id; later trades and other owners are excluded.
         Assert.Equal([1L, 2L, 4L, 3L], flows.Select(f => f.TransactionId));
         Assert.Empty(await _repository.GetCapitalFlowInputsByUser(0, _end, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task GetByUserAndIds_ReturnsOnlyTheOwnersRequestedTrades_LinkedOrNot()
+    public async Task GetByUserAndIds_ReturnsOnlyTheOwnersRequestedTrades()
     {
         await SeedOwnerPool();
 
@@ -134,7 +132,6 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
 
         Assert.Equal([1L, 2L, 3L], result.Select(t => t.EntryId));
         Assert.All(result, t => Assert.Equal(_userId, t.UserId));
-        Assert.Contains(result, t => t.AccountId is null);
         Assert.Empty(await _repository.GetByUserAndIds(0, [1, 2, 3], TestContext.Current.CancellationToken));
     }
 
@@ -153,11 +150,10 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         var main = Listing(_listingId);
         var closed = Listing(702);
         var oversold = Listing(703);
-        InvestmentTransaction Row(long id, long user, int? account, AssetListing listing, InvestmentTransactionType type, decimal quantity, DateOnly date) => new()
+        InvestmentTransaction Row(long id, long user, AssetListing listing, InvestmentTransactionType type, decimal quantity, DateOnly date) => new()
         {
             EntryId = id,
             UserId = user,
-            AccountId = account,
             AssetListing = listing,
             Currency = "USD",
             Quantity = quantity,
@@ -166,14 +162,14 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
             TradeDate = date
         };
         _context.InvestmentTransactions.AddRange(
-            Row(1, _userId, _accountId, main, InvestmentTransactionType.Buy, 2, _start),
-            Row(2, _userId, null, main, InvestmentTransactionType.Buy, 2, _start),
-            Row(3, _userId, null, main, InvestmentTransactionType.Sell, 1, _start.AddDays(1)),
-            Row(4, _userId, _accountId, closed, InvestmentTransactionType.Buy, 4, _start),
-            Row(5, _userId, null, closed, InvestmentTransactionType.Sell, 4, _start.AddDays(2)),
-            Row(6, _userId, null, oversold, InvestmentTransactionType.Sell, 1, _start.AddDays(3)),
-            Row(7, _userId + 1, null, main, InvestmentTransactionType.Buy, 50, _start),
-            Row(8, _userId, null, main, InvestmentTransactionType.Buy, 9, _end.AddDays(1)));
+            Row(1, _userId, main, InvestmentTransactionType.Buy, 2, _start),
+            Row(2, _userId, main, InvestmentTransactionType.Buy, 2, _start),
+            Row(3, _userId, main, InvestmentTransactionType.Sell, 1, _start.AddDays(1)),
+            Row(4, _userId, closed, InvestmentTransactionType.Buy, 4, _start),
+            Row(5, _userId, closed, InvestmentTransactionType.Sell, 4, _start.AddDays(2)),
+            Row(6, _userId, oversold, InvestmentTransactionType.Sell, 1, _start.AddDays(3)),
+            Row(7, _userId + 1, main, InvestmentTransactionType.Buy, 50, _start),
+            Row(8, _userId, main, InvestmentTransactionType.Buy, 9, _end.AddDays(1)));
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _context.ChangeTracker.Clear();
     }
@@ -204,7 +200,6 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
     private static InvestmentTransaction Trade(long id, DateOnly date, AssetListing listing) => new()
     {
         EntryId = id,
-        AccountId = _accountId,
         UserId = _userId,
         AssetListing = listing,
         Currency = "USD",

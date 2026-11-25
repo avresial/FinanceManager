@@ -125,7 +125,7 @@ public class CashFlowForecastServiceTests
     }
 
     [Fact]
-    public async Task GetForecast_PoolsEveryOwnedCashEntry_IncludingEntriesFormerlyOnOtherAccountTypes()
+    public async Task GetForecast_PoolsEveryOwnedCashEntry()
     {
         // Entries are pooled per owner, so cash booked on what used to be a loan account counts and an unlinked entry does too.
         _ledger.Add(DefaultCurrency.PLN.Id, new DateTime(2026, 9, 10), 1000m, [], "cash", null, 1)

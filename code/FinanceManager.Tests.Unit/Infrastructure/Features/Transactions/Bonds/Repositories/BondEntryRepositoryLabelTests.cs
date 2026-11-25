@@ -18,7 +18,7 @@ public class BondEntryRepositoryLabelTests
             .Options);
 
     private static BondEntry Entry(int? accountId, int userId) =>
-        new(accountId, 0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 0, 100, 5) { UserId = userId };
+        new(0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 100, 5) { UserId = userId };
 
     [Theory]
     [InlineData(1)]

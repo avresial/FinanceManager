@@ -376,12 +376,12 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
-    public async Task GetRecurringCashFlows_IncludesEveryOwnedEntry_LinkedToAnAccountOrNot()
+    public async Task GetRecurringCashFlows_IncludesEveryOwnedEntry()
     {
-        // Entries are pooled per owner, so what used to be a loan account's payments (and entries without any account) recur like any other.
+        // Entries are pooled per owner, so loan payments recur like any other.
         var rows = new[]
         {
-            Entry(1, new DateTime(2026, 4, 15), -40m, "Loan payment", accountId: 3),
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Loan payment"),
             Entry(2, new DateTime(2026, 5, 15), -40m, "Loan payment"),
             Entry(3, new DateTime(2026, 6, 15), -40m, "Loan payment"),
         };
@@ -419,7 +419,7 @@ public class RecurringTransactionDetectorServiceTests
     private void Setup(IReadOnlyCollection<EntryRow> rows, List<RecurringSubscription> subscriptions, int userId = 7)
     {
         foreach (var row in rows)
-            _ledger.Add(DefaultCurrency.PLN.Id, row.Date, row.Amount, [], row.Merchant, row.Merchant, row.AccountId);
+            _ledger.Add(DefaultCurrency.PLN.Id, row.Date, row.Amount, [], row.Merchant, row.Merchant);
         _subscriptions
             .Setup(x => x.GetAll(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(subscriptions);
@@ -430,7 +430,7 @@ public class RecurringTransactionDetectorServiceTests
 
     private static EntryRow[] Account(params EntryRow[] entries) => entries;
 
-    private static EntryRow Entry(int id, DateTime date, decimal amount, string merchant, int? accountId = 1) => new(id, date, amount, merchant, accountId);
+    private static EntryRow Entry(int id, DateTime date, decimal amount, string merchant) => new(id, date, amount, merchant);
 
-    private sealed record EntryRow(int Id, DateTime Date, decimal Amount, string Merchant, int? AccountId);
+    private sealed record EntryRow(int Id, DateTime Date, decimal Amount, string Merchant);
 }

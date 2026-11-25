@@ -59,7 +59,7 @@ public class BondTransactionsController(
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
         // The repository stamps a non-UTC time as UTC without converting it; convert here, as the persistence converter does for updates and cash.
-        var entry = new BondEntry(null, 0, request.PostingDate.ToUniversalTime(), 0, request.ValueChange, bond.Id)
+        var entry = new BondEntry(0, request.PostingDate.ToUniversalTime(), request.ValueChange, bond.Id)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,
@@ -98,7 +98,7 @@ public class BondTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The owner and account link never come from the request.
-        var entry = new BondEntry(null, entryId, request.PostingDate, 0, request.ValueChange, request.BondDetailsId)
+        var entry = new BondEntry(entryId, request.PostingDate, request.ValueChange, request.BondDetailsId)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,

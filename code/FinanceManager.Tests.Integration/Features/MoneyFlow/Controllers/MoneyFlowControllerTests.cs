@@ -79,12 +79,15 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         for (DateTime i = _nowUtc.AddMonths(-2).Date; i <= _nowUtc; i = i.AddDays(1))
-            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 0, i, _value += _valueChange, _valueChange)
+        {
+            _value += _valueChange;
+            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(0, i, _valueChange)
             {
                 UserId = 1,
                 CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [salary]
             });
+        }
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -203,9 +206,9 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         _testDatabase.Context.FinancialLabels.Add(salary);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CashEntry(null, 0, _nowUtc.AddDays(-2), 0, 1000m) { Labels = [salary], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
-            new CashEntry(null, 0, _nowUtc.AddDays(-1), 0, -200m) { Labels = [], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
-            new CashEntry(null, 0, _nowUtc.AddDays(-1), 0, 5000m) { Labels = [salary], UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
+            new CashEntry(0, _nowUtc.AddDays(-2), 1000m) { Labels = [salary], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CashEntry(0, _nowUtc.AddDays(-1), -200m) { Labels = [], UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CashEntry(0, _nowUtc.AddDays(-1), 5000m) { Labels = [salary], UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
         var client = new MoneyFlowHttpClient(Client);
@@ -242,14 +245,14 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         await SeedCashEntries();
 
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 100, _nowUtc.AddDays(-5), 5000m, 5000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(100, _nowUtc.AddDays(-5), 5000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.Bonds.Add(CreateBondDetails(1, _nowUtc));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.BondEntries.Add(
-            new BondEntry(null, 300, _nowUtc.AddDays(-10), 3000m, 3000m, 1) { UserId = 1 });
+            new BondEntry(300, _nowUtc.AddDays(-10), 3000m, 1) { UserId = 1 });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Authorize("TestUser", 1, UserRole.User);
@@ -273,7 +276,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         for (int i = 0; i < 500; i++)
         {
             _testDatabase.Context.CurrencyEntries.Add(
-                new CashEntry(null, i + 1, _nowUtc.AddDays(-500 + i), 0, 100m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+                new CashEntry(i + 1, _nowUtc.AddDays(-500 + i), 100m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         }
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -304,13 +307,13 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         // Arrange - Account with changing values over time
         // Add entries with varying value changes
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 1, _nowUtc.AddDays(-10), 1000m, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(1, _nowUtc.AddDays(-10), 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 2, _nowUtc.AddDays(-7), 1500m, 500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(2, _nowUtc.AddDays(-7), 500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 3, _nowUtc.AddDays(-5), 1200m, -300m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(3, _nowUtc.AddDays(-5), -300m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 4, _nowUtc.AddDays(-2), 1400m, 200m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(4, _nowUtc.AddDays(-2), 200m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -353,9 +356,9 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
 
         var bondFirstDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 1, bondFirstDate, 1000m, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(1, bondFirstDate, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         _testDatabase.Context.CurrencyEntries.Add(
-            new CashEntry(null, 2, bondFirstDate.AddYears(1), 1500m, 500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+            new CashEntry(2, bondFirstDate.AddYears(1), 500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -393,8 +396,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         _testDatabase.Context.Bonds.Add(CreateBondDetails(30, _nowUtc));
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        _testDatabase.Context.BondEntries.Add(new BondEntry(null, 1, _nowUtc.AddDays(-9), 1000m, 1000m, 30) { UserId = 1 });
-        _testDatabase.Context.BondEntries.Add(new BondEntry(null, 2, _nowUtc.AddDays(-4), 1500m, 500m, 30) { UserId = 1 });
+        _testDatabase.Context.BondEntries.Add(new BondEntry(1, _nowUtc.AddDays(-9), 1000m, 30) { UserId = 1 });
+        _testDatabase.Context.BondEntries.Add(new BondEntry(2, _nowUtc.AddDays(-4), 500m, 30) { UserId = 1 });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Authorize("TestUser", 1, UserRole.User);
@@ -429,7 +432,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
         for (int i = 0; i < 500; i++)
         {
             _testDatabase.Context.CurrencyEntries.Add(
-                new CashEntry(null, i + 1, _nowUtc.AddDays(-500 + i), 0, 100m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+                new CashEntry(i + 1, _nowUtc.AddDays(-500 + i), 100m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         }
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -456,8 +459,8 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     {
         // Arrange - Create accounts for two different users
 
-        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 1, _nowUtc, 1000m, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
-        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 2, _nowUtc, 5000m, 5000m) { UserId = 2, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(1, _nowUtc, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(2, _nowUtc, 5000m) { UserId = 2, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - User 1 gets their net worth
@@ -505,11 +508,11 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     // Seeds a cash account that books a -500 "Investment" outflow alongside an investment account
     // (Stock-type, new asset model) that holds the matching shares. The holdings value belongs in
     // closing balance, the cash outflow in cash flow — and neither must leak into the other.
-    private async Task SeedCashAndInvestmentAccounts(DateTime day0, bool includeHighPriceSell = false)
+    private async Task SeedCashAndInvestments(DateTime day0, bool includeHighPriceSell = false)
     {
         // Cash: +1000 on day0, then the −500 "Investment" outflow on day0+1.
-        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 1, day0, 1000m, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
-        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 2, day0.AddDays(1), 500m, -500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(1, day0, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(2, day0.AddDays(1), -500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] });
 
         // Investment listing priced at 100 USD with quotes across the whole window.
         const long listingId = 9100;
@@ -568,10 +571,10 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     }
 
     [Fact]
-    public async Task GetClosingBalance_IncludesInvestmentAccountHoldings()
+    public async Task GetClosingBalance_IncludesInvestmentHoldings()
     {
         var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        await SeedCashAndInvestmentAccounts(day0);
+        await SeedCashAndInvestments(day0);
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetClosingBalance(1, DefaultCurrency.USD, day0, day0.AddDays(2));
@@ -587,10 +590,10 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     {
         var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, day0, 0, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] },
+            new CashEntry(1, day0, 1000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [] },
             // Entries without an account still belong to their owner; another owner's entry never counts.
-            new CashEntry(null, 2, day0.AddDays(1), 0, 250m) { Labels = [], UserId = 1, CurrencyId = 0 },
-            new CashEntry(null, 3, day0.AddDays(1), 0, 9999m) { Labels = [], UserId = 2, CurrencyId = 0 });
+            new CashEntry(2, day0.AddDays(1), 250m) { Labels = [], UserId = 1, CurrencyId = 0 },
+            new CashEntry(3, day0.AddDays(1), 9999m) { Labels = [], UserId = 2, CurrencyId = 0 });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
         var client = new MoneyFlowHttpClient(Client);
@@ -608,7 +611,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     public async Task CashFlow_DoesNotDoubleCountInvestmentHoldings()
     {
         var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        await SeedCashAndInvestmentAccounts(day0);
+        await SeedCashAndInvestments(day0);
         Authorize("TestUser", 1, UserRole.User);
 
         var client = new MoneyFlowHttpClient(Client);
@@ -625,10 +628,10 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     }
 
     [Fact]
-    public async Task GetCapital_IncludesInvestmentAccountTrades()
+    public async Task GetCapital_IncludesInvestmentTrades()
     {
         var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        await SeedCashAndInvestmentAccounts(day0);
+        await SeedCashAndInvestments(day0);
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetCapital(
@@ -646,7 +649,7 @@ public class MoneyFlowControllerTests(OptionsProvider optionsProvider) : Control
     public async Task GetCapital_ReconstructsSellFromHistoricalCost_NotSaleProceeds()
     {
         var day0 = new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        await SeedCashAndInvestmentAccounts(day0, includeHighPriceSell: true);
+        await SeedCashAndInvestments(day0, includeHighPriceSell: true);
         Authorize("TestUser", 1, UserRole.User);
 
         var result = await new MoneyFlowHttpClient(Client).GetCapital(

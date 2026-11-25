@@ -247,7 +247,6 @@ public class FinancialAlertServiceTests
         var result = await _service.CreateAlertAsync(-3, command, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, result.CurrencyId);
-        Assert.Null(result.AccountId);
         Assert.Equal(-3, result.UserId);
     }
 

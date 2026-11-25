@@ -72,7 +72,7 @@ public class ImportCommitNotificationTests
     [Fact]
     public async Task BondImport_AcceptedConflicts_PublishWhenTheyAreCommitted()
     {
-        var existing = new BondEntry(null, 1, new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 0, 50, 1) { UserId = 5 };
+        var existing = new BondEntry(1, new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 50, 1) { UserId = 5 };
         var incoming = new BondEntryImport(new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 100, 1, string.Empty);
         await using var context = CreateContext(BondRoutes(imported: 0, conflicts: [new BondImportConflict(incoming, existing, "Same day")]));
         var published = Count(context);

@@ -46,7 +46,7 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
 
     private async Task<long> AddCash(int owner, int? account, DateTime date, decimal change, string description = "d", params FinancialLabel[] labels)
     {
-        var entry = new CashEntry(account, 0, date, 0, change) { UserId = owner, CurrencyId = 0, Description = description, ContractorDetails = "counterparty", Labels = [.. labels] };
+        var entry = new CashEntry(0, date, change) { UserId = owner, CurrencyId = 0, Description = description, ContractorDetails = "counterparty", Labels = [.. labels] };
         _context.CurrencyEntries.Add(entry);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return entry.EntryId;
@@ -76,9 +76,9 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
     public async Task BondGetById_ReadsTheOwnersLinkedOrUnlinkedEntry_WithBondNameAndLabels_AndNothingForeign()
     {
         _context.Set<BondDetails>().Add(new BondDetails("Treasury 2030", "Issuer", new DateOnly(2025, 1, 1), new DateOnly(2030, 1, 1), []) { Id = 7 });
-        var unlinked = new BondEntry(null, 0, _jan1, 0, 3, 7) { UserId = _owner, Description = "bond note", Labels = [_rent] };
-        var foreign = new BondEntry(null, 0, _jan1, 0, 3, 7) { UserId = _other, Description = "foreign" };
-        var missingDefinition = new BondEntry(12, 0, _jan1, 0, 3, 99) { UserId = _owner, Description = "orphan" };
+        var unlinked = new BondEntry(0, _jan1, 3, 7) { UserId = _owner, Description = "bond note", Labels = [_rent] };
+        var foreign = new BondEntry(0, _jan1, 3, 7) { UserId = _other, Description = "foreign" };
+        var missingDefinition = new BondEntry(0, _jan1, 3, 99) { UserId = _owner, Description = "orphan" };
         _context.BondEntries.AddRange(unlinked, foreign, missingDefinition);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var reader = new BondTransactionRepository(_context);

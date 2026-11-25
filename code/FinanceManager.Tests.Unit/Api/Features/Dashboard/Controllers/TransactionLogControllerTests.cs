@@ -78,7 +78,7 @@ public class TransactionLogControllerTests
             new BondTransactionLogItem(new(2, day, 5, "Bond", 7, "USD", null, [])),
             new InvestmentTransactionLogItem(new InvestmentTransaction
             {
-                EntryId = 3, AccountId = 30, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2, Currency = "USD"
+                EntryId = 3, TradeDate = DateOnly.FromDateTime(day), Quantity = 1, UnitPrice = 2, Currency = "USD"
             }),
         ], cursor));
 
@@ -202,7 +202,7 @@ public class TransactionLogControllerTests
     }
 
     [Fact]
-    public async Task Page_WithUndefinedAccountType_ReturnsValidationProblem()
+    public async Task Page_WithUndefinedTransactionKind_ReturnsValidationProblem()
     {
         var day = new DateTime(2024, 3, 5);
 

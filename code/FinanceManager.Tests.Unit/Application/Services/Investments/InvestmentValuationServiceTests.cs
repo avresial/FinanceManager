@@ -44,7 +44,6 @@ public class InvestmentValuationServiceTests
         {
             EntryId = id,
             UserId = userId,
-            AccountId = accountId,
             AssetListingId = listingId,
             Type = type,
             Quantity = qty,

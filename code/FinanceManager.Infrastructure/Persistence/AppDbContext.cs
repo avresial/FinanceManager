@@ -3,7 +3,6 @@ using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.GiftCodes;
@@ -32,7 +31,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = default!;
     public DbSet<Currency> Currencies { get; set; } = default!;
     public DbSet<ExchangeRate> ExchangeRates { get; set; } = default!;
-    public DbSet<FinancialAccountBaseDto> Accounts { get; set; } = default!;
     public DbSet<CashEntry> CurrencyEntries { get; set; } = default!;
     public DbSet<BondEntry> BondEntries { get; set; } = default!;
     public DbSet<Asset> Assets { get; set; } = default!;
@@ -61,7 +59,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new ActiveUserConfiguration());
-        modelBuilder.ApplyConfiguration(new FinancialAccountBaseDtoConfiguration());
         modelBuilder.ApplyConfiguration(new CashEntryConfiguration());
         modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
         modelBuilder.ApplyConfiguration(new ExchangeRateConfiguration());

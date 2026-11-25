@@ -10,8 +10,6 @@ using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Entities;
@@ -69,28 +67,20 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Null(empty.NextCursor);
     }
 
-    // Owner 641: currency accounts 10 and 11, bond account 20, investment account 30. User 999 owns
-    // accounts of every type (97, 98, 99) with entries on the same day, which must never show up.
+    // Owner 641 has cash in two currencies, bond units and trades. User 999 has entries of every kind
+    // on the same day, which must never show up.
     private async Task<DateTime> SeedHistoryAsync(CancellationToken ct)
     {
         var day = new DateTime(2024, 3, 5, 0, 0, 0, DateTimeKind.Utc);
         var db = _database!.Context;
         db.Currencies.Add(DefaultCurrency.USD);
-        db.Accounts.AddRange(
-            new FinancialAccountBaseDto { AccountId = 10, UserId = 641, Name = "Bank", AccountType = AccountType.Currency },
-            new FinancialAccountBaseDto { AccountId = 11, UserId = 641, Name = "Savings", AccountType = AccountType.Currency, CurrencyId = 1 },
-            new FinancialAccountBaseDto { AccountId = 20, UserId = 641, Name = "Bonds", AccountType = AccountType.Bond },
-            new FinancialAccountBaseDto { AccountId = 30, UserId = 641, Name = "Broker", AccountType = AccountType.Stock },
-            new FinancialAccountBaseDto { AccountId = 98, UserId = 999, Name = "Other bonds", AccountType = AccountType.Bond },
-            new FinancialAccountBaseDto { AccountId = 97, UserId = 999, Name = "Other broker", AccountType = AccountType.Stock },
-            new FinancialAccountBaseDto { AccountId = 99, UserId = 999, Name = "Other user", AccountType = AccountType.Currency });
         db.CurrencyEntries.AddRange(
-            new CashEntry(10, 1, day, 0, 1) { UserId = 641, CurrencyId = 0 }, new CashEntry(11, 2, day, 0, 2) { UserId = 641, CurrencyId = 1 },
-            new CashEntry(null, 3, day.AddHours(1), 0, 3) { UserId = 641, CurrencyId = 0 },
-            new CashEntry(10, 4, day.AddDays(-2), 0, 4) { UserId = 641, CurrencyId = 0 },
-            new CashEntry(99, 99, day, 0, 99) { UserId = 999, CurrencyId = 0 });
+            new CashEntry(1, day, 1) { UserId = 641, CurrencyId = 0 }, new CashEntry(2, day, 2) { UserId = 641, CurrencyId = 1 },
+            new CashEntry(3, day.AddHours(1), 3) { UserId = 641, CurrencyId = 0 },
+            new CashEntry(4, day.AddDays(-2), 4) { UserId = 641, CurrencyId = 0 },
+            new CashEntry(99, day, 99) { UserId = 999, CurrencyId = 0 });
         db.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(day), DateOnly.FromDateTime(day.AddYears(1)), []) { Id = 7 });
-        db.BondEntries.AddRange(new BondEntry(20, 1, day, 0, 1, 7) { UserId = 641 }, new BondEntry(20, 2, day, 0, 2, 7) { UserId = 641 }, new BondEntry(98, 98, day, 0, 98, 7) { UserId = 999 });
+        db.BondEntries.AddRange(new BondEntry(1, day, 1, 7) { UserId = 641 }, new BondEntry(2, day, 2, 7) { UserId = 641 }, new BondEntry(98, day, 98, 7) { UserId = 999 });
         db.AssetListings.Add(new AssetListing
         {
             Id = 1,
@@ -101,9 +91,9 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             TradingCurrency = "PLN"
         });
         db.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { EntryId = 1, AccountId = 30, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
-            new InvestmentTransaction { EntryId = 97, AccountId = 97, UserId = 999, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
-            new InvestmentTransaction { EntryId = 2, AccountId = 30, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
+            new InvestmentTransaction { EntryId = 1, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" },
+            new InvestmentTransaction { EntryId = 97, UserId = 999, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "PLN" },
+            new InvestmentTransaction { EntryId = 2, UserId = 641, AssetListingId = 1, TradeDate = DateOnly.FromDateTime(day), Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 2, Currency = "GBX" });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         Authorize("owner", 641, UserRole.User);
@@ -152,10 +142,10 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal([(TransactionKind.Cash, 3L), (TransactionKind.Bond, 2L), (TransactionKind.Cash, 1L), (TransactionKind.Bond, 1L)], walked);
     }
 
-    // What the Transactions page writes: entries created through the owner routes carry no account link, yet they belong in
+    // What the Transactions page writes: entries created through the owner routes belong in
     // the log and answer the same kind and currency filters.
     [Fact]
-    public async Task EntriesCreatedThroughTheOwnerRoutes_AppearUnlinked_AndFilterByKindAndCurrency()
+    public async Task EntriesCreatedThroughTheOwnerRoutes_Appear_AndFilterByKindAndCurrency()
     {
         var ct = TestContext.Current.CancellationToken;
         var day = await SeedHistoryAsync(ct);

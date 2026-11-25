@@ -64,7 +64,7 @@ public sealed class TransactionRuleApplication(
 
     /// <summary>A detached copy of a history row the rules can be applied to, so previews resolve labels exactly like a real write without touching storage.</summary>
     internal static CashEntry ToSandboxEntry(CashLogEntry entry) =>
-        new(null, entry.EntryId, entry.PostingDate, 0m, entry.ValueChange)
+        new(entry.EntryId, entry.PostingDate, entry.ValueChange)
         {
             CurrencyId = entry.CurrencyId,
             Description = entry.Description,

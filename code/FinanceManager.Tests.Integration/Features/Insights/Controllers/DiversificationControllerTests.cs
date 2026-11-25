@@ -1,8 +1,6 @@
 using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Cash.Entities;
@@ -36,45 +34,10 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
 
     private async Task SeedPortfolio()
     {
-        var stockAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 1,
-            Name = "Stocks",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Stock
-        };
-        var bondAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 2,
-            Name = "Bonds",
-            AccountLabel = AccountLabel.Other,
-            AccountType = AccountType.Bond
-        };
-        var cashAccount = new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 3,
-            Name = "Cash",
-            AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Currency
-        };
-        _testDatabase!.Context.Accounts.AddRange(stockAccount, bondAccount, cashAccount);
-
         var usd = new Currency(1, "USD", "$");
-        _testDatabase.Context.Currencies.Add(usd);
-        _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            UserId = 1,
-            AccountId = 4,
-            Name = "USD cash",
-            AccountLabel = AccountLabel.Cash,
-            AccountType = AccountType.Currency,
-            CurrencyId = usd.Id
-        });
+        _testDatabase!.Context.Currencies.Add(usd);
 
-        // Investment holding: an AAPL listing held via a Buy transaction on the stock-type account.
+        // Investment holding: an AAPL listing held via a Buy transaction.
         const long listingId = 100;
         _testDatabase.Context.Assets.Add(new Asset { Id = 1, Name = "Test asset", Type = AssetType.Stock });
         _testDatabase.Context.AssetListings.Add(new AssetListing
@@ -114,7 +77,6 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
         _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = 1,
             AssetListingId = listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = 10m,
@@ -123,11 +85,10 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-3))
         });
 
-        // Holdings are read per owner (not per account), so the entries carry the owner and, for cash, the currency (PLN is 0).
+        // Holdings are read per owner, so the entries carry the owner and, for cash, the currency (PLN is 0).
         _testDatabase.Context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = 1,
-            AccountId = null,
             AssetListingId = listingId + 1,
             Type = InvestmentTransactionType.Buy,
             Quantity = 2m,
@@ -136,11 +97,11 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-2))
         });
         _testDatabase.Context.BondEntries.AddRange(
-            new BondEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5) { UserId = 1 },
-            new BondEntry(null, 2, _nowUtc.AddDays(-2), 10m, 10m, 6) { UserId = 1 });
+            new BondEntry(1, _nowUtc.AddDays(-3), 1000m, 5) { UserId = 1 },
+            new BondEntry(2, _nowUtc.AddDays(-2), 10m, 6) { UserId = 1 });
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CashEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { UserId = 1, CurrencyId = 0, Labels = [] },
-            new CashEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { UserId = 1, CurrencyId = usd.Id, Labels = [] });
+            new CashEntry(1, _nowUtc.AddDays(-3), 500m) { UserId = 1, CurrencyId = 0, Labels = [] },
+            new CashEntry(2, _nowUtc.AddDays(-3), 50m) { UserId = 1, CurrencyId = usd.Id, Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

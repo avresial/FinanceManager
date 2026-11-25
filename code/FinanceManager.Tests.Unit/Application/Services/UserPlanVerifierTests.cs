@@ -36,7 +36,7 @@ public class UserPlanVerifierTests
     }
 
     [Fact]
-    public async Task GetUsedRecordsCapacity_SumsEntriesAcrossAllAccountTypes()
+    public async Task GetUsedRecordsCapacity_SumsEntriesAcrossAllTransactionKinds()
     {
         // Arrange
         var userId = 1;

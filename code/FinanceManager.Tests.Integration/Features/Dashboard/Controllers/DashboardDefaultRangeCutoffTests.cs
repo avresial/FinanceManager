@@ -58,12 +58,12 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         };
         context.FinancialLabels.Add(label);
         context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, today.AddDays(-2), 1000m, 1000m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 2, laterToday, 1250m, 250m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 3, tomorrow, 9250m, 8000m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 4, today.AddDays(-2), -300m, -300m) { UserId = _userId, CurrencyId = _loanCurrencyId },
-            new CashEntry(null, 5, laterToday, -350m, -50m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] },
-            new CashEntry(null, 6, tomorrow, -425m, -75m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] });
+            new CashEntry(1, today.AddDays(-2), 1000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(2, laterToday, 250m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(3, tomorrow, 8000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(4, today.AddDays(-2), -300m) { UserId = _userId, CurrencyId = _loanCurrencyId },
+            new CashEntry(5, laterToday, -50m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] },
+            new CashEntry(6, tomorrow, -75m) { UserId = _userId, CurrencyId = _loanCurrencyId, Labels = [label] });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
 
@@ -113,8 +113,8 @@ public class DashboardDefaultRangeCutoffTests(OptionsProvider optionsProvider) :
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
         context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, today.AddDays(-2), 1000m, 1000m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 2, today.AddDays(-2), -300m, -300m) { UserId = _userId, CurrencyId = _currencyId });
+            new CashEntry(1, today.AddDays(-2), 1000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(2, today.AddDays(-2), -300m) { UserId = _userId, CurrencyId = _currencyId });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("dashboard-cutoff", _userId, UserRole.User);
         var (start, end) = DateRangeHelper.GetDefaultDashboardRange(DateTime.UtcNow);

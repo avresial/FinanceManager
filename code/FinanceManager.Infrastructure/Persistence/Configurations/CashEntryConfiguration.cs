@@ -31,9 +31,6 @@ public class CashEntryConfiguration : IEntityTypeConfiguration<CashEntry>
                         join.Property<int>("LabelsId").HasColumnName("LabelsId");
                     });
 
-        builder.Property(e => e.Value)
-            .HasPrecision(18, 2);
-
         builder.Property(e => e.ValueChange)
           .HasPrecision(18, 2);
 
@@ -44,7 +41,6 @@ public class CashEntryConfiguration : IEntityTypeConfiguration<CashEntry>
             .HasDatabaseName("IX_CurrencyEntries_OwnerCurrencyDateId");
         builder.HasIndex(x => new { x.UserId, x.PostingDate, x.EntryId })
             .HasDatabaseName("IX_CurrencyEntries_OwnerDateId");
-        builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
 
         // Ensure PostingDate is always returned as UTC
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(

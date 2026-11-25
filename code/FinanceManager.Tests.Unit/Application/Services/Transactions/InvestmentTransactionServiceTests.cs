@@ -105,7 +105,6 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(new InvestmentTransaction
             {
                 EntryId = 7,
-                AccountId = 1,
                 AssetListingId = 42,
                 AssetListing = new AssetListing
                 {
@@ -177,7 +176,6 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(new InvestmentTransaction
             {
                 EntryId = 88,
-                AccountId = 1,
                 AssetListingId = 55,
                 AssetListing = new AssetListing
                 {
@@ -280,7 +278,6 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(new InvestmentTransaction
             {
                 EntryId = 99,
-                AccountId = 1,
                 AssetListingId = 77,
                 AssetListing = existingIncomplete,
                 Type = InvestmentTransactionType.Buy,
@@ -320,8 +317,7 @@ public class InvestmentTransactionServiceTests
 
         var result = await service.AddOwnerAsync(new CreateInvestmentTradeRequest(42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken);
 
-        Assert.Null(added!.AccountId);
-        Assert.Equal(91, added.UserId);
+        Assert.Equal(91, added!.UserId);
         Assert.Equal("EUR", added.Currency);
         Assert.Equal(91, result.UserId);
         _cacheInvalidator.Verify(x => x.InvalidateUser(91, It.IsAny<CancellationToken>()), Times.Once);

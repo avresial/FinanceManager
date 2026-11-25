@@ -26,7 +26,7 @@ public class CurrencyExpenseDistributionServiceTests
     [Fact]
     public async Task GetExpenseDistribution_SumsOutflowsPerClassification_IgnoringInflowsAndUnlabelled()
     {
-        _ledger.Add(0, _date, -100m, [_essential.Id], accountId: 5)
+        _ledger.Add(0, _date, -100m, [_essential.Id])
             .Add(0, _date, -20.456m, [_want.Id])
             .Add(0, _date, -10m, [_want.Id])
             .Add(0, _date, 500m, [_essential.Id])

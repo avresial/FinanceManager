@@ -52,16 +52,6 @@ public class InvestmentTransaction
         set => field = DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
     }
 
-    private decimal _value;
-
-    // Dormant running units, dropped in #1144.
-    [JsonIgnore]
-    public decimal Value
-    {
-        get => _value;
-        set => _value = value;
-    }
-
     /// <summary>Optional broker fee. Retained because fees affect the real cost basis.</summary>
     public decimal? Fee { get; set; }
 
@@ -101,8 +91,4 @@ public class InvestmentTransaction
 
     [JsonPropertyOrder(6)]
     public ICollection<FinancialLabel> Labels { get; set; } = [];
-
-    // Dormant account link, dropped in #1144.
-    [JsonIgnore]
-    public int? AccountId { get; set; }
 }

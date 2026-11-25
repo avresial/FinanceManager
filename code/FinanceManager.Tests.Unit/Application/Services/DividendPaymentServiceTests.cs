@@ -32,7 +32,7 @@ public class DividendPaymentServiceTests
     [Fact]
     public async Task ForgedRecordId_IsRejectedOnUpdateAndDelete()
     {
-        _payments.Setup(x => x.Get(9, It.IsAny<CancellationToken>())).ReturnsAsync(new DividendPayment { Id = 9, UserId = 2, AccountId = 5 });
+        _payments.Setup(x => x.Get(9, It.IsAny<CancellationToken>())).ReturnsAsync(new DividendPayment { Id = 9, UserId = 2 });
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Save(1, 9, Request(), TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Delete(1, 9, TestContext.Current.CancellationToken));
         _payments.Verify(x => x.Save(It.IsAny<CancellationToken>()), Times.Never);
@@ -61,7 +61,7 @@ public class DividendPaymentServiceTests
     [Fact]
     public async Task ExistingRecordRemainsEditableAfterTradesRemoved()
     {
-        var record = new DividendPayment { Id = 7, AccountId = 4, UserId = 1, AssetListingId = 8, Amount = 1 };
+        var record = new DividendPayment { Id = 7, UserId = 1, AssetListingId = 8, Amount = 1 };
         _payments.Setup(x => x.Get(7, It.IsAny<CancellationToken>())).ReturnsAsync(record);
         _payments.Setup(x => x.HasHolding(1, 8, It.IsAny<CancellationToken>())).ReturnsAsync(false);
         await Service.Save(1, 7, Request(), TestContext.Current.CancellationToken);
@@ -76,24 +76,23 @@ public class DividendPaymentServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() => Service.GetHistory(1, page, size, TestContext.Current.CancellationToken));
 
     [Fact]
-    public async Task OwnerWide_NewPaymentIsUnlinked_AndNoAccountIsLookedUp()
+    public async Task OwnerWide_NewPaymentIsStampedWithTheOwner()
     {
         _payments.Setup(x => x.HasHolding(1, 8, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         await Service.Save(1, null, Request(), TestContext.Current.CancellationToken);
-        _payments.Verify(x => x.Add(It.Is<DividendPayment>(p => p.AccountId == null && p.UserId == 1 && p.Currency == "USD"), It.IsAny<CancellationToken>()), Times.Once);
+        _payments.Verify(x => x.Add(It.Is<DividendPayment>(p => p.UserId == 1 && p.Currency == "USD"), It.IsAny<CancellationToken>()), Times.Once);
     }
     [Fact]
-    public async Task OwnerWide_ForeignRecord_IsReportedAsMissing_AndLinkedRecordOfTheOwnerIsEditable()
+    public async Task OwnerWide_ForeignRecord_IsReportedAsMissing_AndARecordOfTheOwnerIsEditable()
     {
-        _payments.Setup(x => x.Get(9, It.IsAny<CancellationToken>())).ReturnsAsync(new DividendPayment { Id = 9, UserId = 2, AccountId = null });
+        _payments.Setup(x => x.Get(9, It.IsAny<CancellationToken>())).ReturnsAsync(new DividendPayment { Id = 9, UserId = 2 });
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Save(1, 9, Request(), TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Delete(1, 9, TestContext.Current.CancellationToken));
 
-        var linked = new DividendPayment { Id = 10, UserId = 1, AccountId = 4, AssetListingId = 8 };
-        _payments.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(linked);
+        var owned = new DividendPayment { Id = 10, UserId = 1, AssetListingId = 8 };
+        _payments.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(owned);
         await Service.Save(1, 10, Request(), TestContext.Current.CancellationToken);
-        Assert.Equal(4, linked.AccountId);
-        Assert.Equal(12.34m, linked.Amount);
+        Assert.Equal(12.34m, owned.Amount);
     }
     [Fact]
     public async Task OwnerWide_SharesTheScalarValidationWithTheAccountPath()

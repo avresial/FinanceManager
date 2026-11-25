@@ -96,7 +96,7 @@ public sealed class TransactionRuleServiceTests
         Assert.Equal(TransactionRuleOutcomeStatus.Applied, Assert.Single(result.RuleOutcomes).Status);
     }
 
-    private static CashLogEntry Cash(long id, int? legacyAccountId = null, decimal change = -10m, string contractor = "ACME", string description = "Invoice") =>
+    private static CashLogEntry Cash(long id, decimal change = -10m, string contractor = "ACME", string description = "Invoice") =>
         new(id, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(-id), change, description, 1, "PLN", contractor, []);
 
     private void SetupHistory(int userId, params CashLogEntry[] rows) =>
@@ -113,7 +113,7 @@ public sealed class TransactionRuleServiceTests
     [Fact]
     public async Task Test_UsesUnsavedRule_ReturnsAtMostFiveMatches_AndPerformsNoWrites()
     {
-        SetupHistory(7, [.. Enumerable.Range(1, 7).Select(index => Cash(index, legacyAccountId: index % 2 == 0 ? 2 : null))]);
+        SetupHistory(7, [.. Enumerable.Range(1, 7).Select(index => Cash(index))]);
 
         var results = await _service.TestAsync(7, UnsavedAcmeRule(), TestContext.Current.CancellationToken);
 
@@ -218,7 +218,7 @@ public sealed class TransactionRuleServiceTests
                     ActionsJson = "[{\"type\":\"SetLabels\",\"labels\":[\"Bills\"]}]"
                 }
             });
-        var entry = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m)
+        var entry = new CashEntry(3, DateTime.UtcNow, -20m)
         {
             Description = "Invoice from ACME",
             ContractorDetails = "ACME"
@@ -283,7 +283,7 @@ public sealed class TransactionRuleServiceTests
             ]);
 
     private static CashEntry EntryWithCaseVariantLabels() =>
-        new(2, 3, DateTime.UtcNow, -20m, -20m)
+        new(3, DateTime.UtcNow, -20m)
         {
             Description = "Shop",
             Labels = [new FinancialLabel { Id = 7, Name = "Food" }, new FinancialLabel { Id = 8, Name = "FOOD" }]
@@ -304,7 +304,7 @@ public sealed class TransactionRuleServiceTests
                 }
             ]);
 
-        var entry = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m)
+        var entry = new CashEntry(3, DateTime.UtcNow, -20m)
         {
             Description = "Invoice from ACME"
         };
@@ -335,14 +335,14 @@ public sealed class TransactionRuleServiceTests
             ]);
 
     [Fact]
-    public async Task ApplyRetroactively_UpdatesLinkedAndUnlinkedEntries_AndReevaluatesAlertsOnce()
+    public async Task ApplyRetroactively_UpdatesTheOwnerEntries_AndReevaluatesAlertsOnce()
     {
         SetupInvoiceRule();
-        SetupHistory(7, Cash(1, legacyAccountId: 2), Cash(2));
+        SetupHistory(7, Cash(1), Cash(2));
         var entries = new[]
         {
-            new CashEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one", UserId = 7 },
-            new CashEntry(null, 2, DateTime.UtcNow.AddDays(-1), 0, -20m) { Description = "Invoice two", UserId = 7, CurrencyId = 1 }
+            new CashEntry(1, DateTime.UtcNow, -10m) { Description = "Invoice one", UserId = 7 },
+            new CashEntry(2, DateTime.UtcNow.AddDays(-1), -20m) { Description = "Invoice two", UserId = 7, CurrencyId = 1 }
         };
         _entries.Setup(x => x.GetByIds(7, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 1, 2 })), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);
@@ -367,7 +367,7 @@ public sealed class TransactionRuleServiceTests
         SetupHistory(7, rows);
         _entries.Setup(x => x.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
-                [.. ids.Select(id => new CashEntry(null, id, DateTime.UtcNow, 0, -1m) { Description = "Other" })]);
+                [.. ids.Select(id => new CashEntry(id, DateTime.UtcNow, -1m) { Description = "Other" })]);
 
         var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true), TestContext.Current.CancellationToken);
 
@@ -381,7 +381,7 @@ public sealed class TransactionRuleServiceTests
     public async Task ApplyRetroactively_ForOneEntry_UsesTheOwnerReadAndWrite()
     {
         SetupInvoiceRule();
-        var entry = new CashEntry(null, 9, DateTime.UtcNow, 0, -10m) { Description = "Invoice", UserId = 7, CurrencyId = 1 };
+        var entry = new CashEntry(9, DateTime.UtcNow, -10m) { Description = "Invoice", UserId = 7, CurrencyId = 1 };
         _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync(entry);
         _entries.Setup(x => x.UpdateByOwner(7, entry, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
@@ -409,7 +409,7 @@ public sealed class TransactionRuleServiceTests
     public async Task ApplyToEntry_UnlinkedEntry_AppliesRulesThatDoNotNeedAnAccount()
     {
         SetupSingleRule("[{\"type\":\"NormalizeDescription\",\"value\":\"Groceries\"}]");
-        var entry = new CashEntry(null, 3, DateTime.UtcNow, 0, -20m) { Description = "Shop", UserId = 7, CurrencyId = 0 };
+        var entry = new CashEntry(3, DateTime.UtcNow, -20m) { Description = "Shop", UserId = 7, CurrencyId = 0 };
 
         var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
 
@@ -435,8 +435,8 @@ public sealed class TransactionRuleServiceTests
                     ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Matched\"}]"
                 }
             ]);
-        var first = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
-        var second = new CashEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
+        var first = new CashEntry(3, DateTime.UtcNow, -20m) { Description = "Shop" };
+        var second = new CashEntry(4, DateTime.UtcNow, -20m) { Description = "Shop" };
 
         Assert.False(await _service.ApplyToEntryAsync(7, first, TestContext.Current.CancellationToken));
         Assert.False(await _service.ApplyToEntryAsync(7, second, TestContext.Current.CancellationToken));

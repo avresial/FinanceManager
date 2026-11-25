@@ -31,9 +31,7 @@ public class BondEntryRepository(AppDbContext context) : ITransactionEntryReposi
 
         foreach (var entry in entryList)
         {
-            // Don't use entry.Value as it may be a placeholder
-            var newEntry = new BondEntry(null, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
-             0, entry.ValueChange, entry.BondDetailsId)
+            var newEntry = new BondEntry(0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc), entry.ValueChange, entry.BondDetailsId)
             {
                 UserId = entry.UserId,
                 Description = entry.Description,

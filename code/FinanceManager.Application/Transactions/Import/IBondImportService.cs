@@ -6,8 +6,7 @@ public interface IBondImportService
 {
     /// <summary>
     /// Imports into the owner's pool; each row names its bond definition. Every row the owner has for a row's
-    /// definition, linked or not, is compared; no account is involved and no running value is recalculated.
-    /// Exact matches are treated as already present and only the incoming surplus is reported as a conflict.
+    /// definition is compared. Exact matches are treated as already present and only the incoming surplus is reported as a conflict.
     /// </summary>
     Task<BondImportResult> ImportOwnerEntries(int userId, IEnumerable<BondEntryImport> entries, CancellationToken cancellationToken);
 

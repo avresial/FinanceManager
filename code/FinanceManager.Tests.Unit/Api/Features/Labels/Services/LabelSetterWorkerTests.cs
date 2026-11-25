@@ -87,7 +87,7 @@ public sealed class LabelSetterWorkerTests
             var label = new FinancialLabel { Name = "Food" };
             seed.FinancialLabels.Add(label);
             CashEntry Entry(int userId, int? accountId, string description, string? contractor = null, params FinancialLabel[] labels) =>
-                new(accountId, 0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 0, -1m) { UserId = userId, CurrencyId = 1, Description = description, ContractorDetails = contractor, Labels = labels };
+                new(0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), -1m) { UserId = userId, CurrencyId = 1, Description = description, ContractorDetails = contractor, Labels = labels };
             seed.CurrencyEntries.AddRange(
                 Entry(5, null, "unlinked"),
                 Entry(5, 40, "linked"),
@@ -149,7 +149,7 @@ public sealed class LabelSetterWorkerTests
     [Fact]
     public async Task AiService_NeverReturnsAnAssignmentForAnEntryTheUserDoesNotOwn()
     {
-        var owned = new CashEntry(null, 10, new DateTime(2026, 1, 1), 0, -5m) { Description = "Lunch" };
+        var owned = new CashEntry(10, new DateTime(2026, 1, 1), -5m) { Description = "Lunch" };
         var entries = new Mock<ITransactionEntryRepository<CashEntry>>();
         // The repository filters by owner: entry 20 is requested but belongs to someone else.
         entries.Setup(repository => repository.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([owned]);

@@ -14,7 +14,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 internal sealed class InMemoryOwnerLedger : ICashTransactionReader, IBondTransactionReader
 {
     private sealed record Row(int PartitionId, long EntryId, DateTime PostingDate, decimal ValueChange,
-        IReadOnlyList<int> LabelIds, string Description, string? ContractorDetails, int? AccountId);
+        IReadOnlyList<int> LabelIds, string Description, string? ContractorDetails);
 
     private readonly List<Row> _rows = [];
     private long _nextEntryId = 1;
@@ -23,9 +23,9 @@ internal sealed class InMemoryOwnerLedger : ICashTransactionReader, IBondTransac
         Add(partitionId, postingDate, valueChange, [], string.Empty);
 
     public InMemoryOwnerLedger Add(int partitionId, DateTime postingDate, decimal valueChange, IReadOnlyList<int> labelIds,
-        string description = "", string? contractorDetails = null, int? accountId = null)
+        string description = "", string? contractorDetails = null)
     {
-        _rows.Add(new Row(partitionId, _nextEntryId++, postingDate, valueChange, labelIds, description, contractorDetails, accountId));
+        _rows.Add(new Row(partitionId, _nextEntryId++, postingDate, valueChange, labelIds, description, contractorDetails));
         return this;
     }
 

@@ -34,7 +34,7 @@ public class CashEntryRepository(AppDbContext context) : ITransactionEntryReposi
 
         foreach (var entry in entryList)
         {
-            CashEntry newEntry = new(null, 0, entry.PostingDate, 0, entry.ValueChange)
+            CashEntry newEntry = new(0, entry.PostingDate, entry.ValueChange)
             {
                 UserId = entry.UserId,
                 CurrencyId = entry.CurrencyId,

@@ -69,7 +69,7 @@ public class TransactionRowTests
         var handler = new RecordingHttpHandler();
         await using var context = CreateContext(handler);
         var cut = context.Render<TransactionRow>(p => p
-            .Add(x => x.Entry, new CashEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, -20m) { Description = "Groceries" })
+            .Add(x => x.Entry, new CashEntry(7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), -20m) { Description = "Groceries" })
             .Add(x => x.Currency, "PLN")
             .Add(x => x.InitiallyExpanded, true));
         var published = 0;
@@ -87,7 +87,7 @@ public class TransactionRowTests
 
     private static IRenderedComponent<TransactionRow> RenderRow(BunitContext context, bool initiallyExpanded, string description = "Groceries")
     {
-        var entry = new CashEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 100m, -20m)
+        var entry = new CashEntry(7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), -20m)
         {
             Description = description,
             ContractorDetails = "Corner shop",

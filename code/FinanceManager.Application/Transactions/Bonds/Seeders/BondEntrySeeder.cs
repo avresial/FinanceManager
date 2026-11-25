@@ -41,7 +41,7 @@ public class BondEntrySeeder(
             cancellationToken.ThrowIfCancellationRequested();
             if (!GuestInvestmentPlan.IsBondInvestmentDay(date)) continue;
 
-            entries.Add(new BondEntry(null, 0, DateTime.SpecifyKind(date, DateTimeKind.Utc), 0m, unitsPerPurchase, bondDetails.Id)
+            entries.Add(new BondEntry(0, DateTime.SpecifyKind(date, DateTimeKind.Utc), unitsPerPurchase, bondDetails.Id)
             {
                 UserId = userId,
                 Description = bondDetails.Name

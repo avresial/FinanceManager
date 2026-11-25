@@ -152,7 +152,6 @@ public class AssetsServiceInvestmentTests
         var listing = new AssetListing { Id = 11, Ticker = "CSPX" };
         InvestmentTransaction Buy(int? accountId, decimal quantity, decimal unitPrice, int day) => new()
         {
-            AccountId = accountId,
             AssetListingId = listing.Id,
             AssetListing = listing,
             Type = InvestmentTransactionType.Buy,
@@ -165,7 +164,6 @@ public class AssetsServiceInvestmentTests
         List<InvestmentTransaction> transactions = [Buy(7, 10m, 100m, 1), Buy(8, 10m, 200m, 2), Buy(null, 20m, 300m, 3)];
         transactions.Add(new()
         {
-            AccountId = 7,
             AssetListingId = listing.Id,
             AssetListing = listing,
             Type = InvestmentTransactionType.Sell,

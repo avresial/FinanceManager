@@ -18,7 +18,7 @@ public class BondExportService(
         var names = await bondDetailsRepository.GetNamesByIdsAsync([bondDetailsId], cancellationToken);
         var bondName = names.TryGetValue(bondDetailsId, out var name) ? name : $"Bond #{bondDetailsId}";
 
-        // The owner stream is already in ascending date and id order. The running value is not part of an owner export.
+        // The owner stream is already in ascending date and id order.
         await foreach (var entry in bondAccountEntryRepository.GetByOwner(userId, bondDetailsId, start, end, cancellationToken))
             yield return new BondExportDto(entry.EntryId, entry.PostingDate, entry.ValueChange, bondName, Description: entry.Description);
     }

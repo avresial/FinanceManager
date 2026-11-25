@@ -4,8 +4,6 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Investments.Entities;
@@ -28,7 +26,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     private const int _owner = 1;
     private const int _other = 2;
     private const int _guest = -7;
-    private const int _accountId = 40;
     private const long _listing = 8;
     private const long _sameTickerListing = 9;
     private const long _flatListing = 10;
@@ -55,7 +52,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
 
     private void Seed()
     {
-        Db.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = _owner, Name = "Broker", AccountType = AccountType.Stock });
         Db.Currencies.Add(new Currency(1, "USD", "$"));
         Db.Assets.Add(new Asset
         {
@@ -72,13 +68,12 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Db.SaveChanges();
     }
 
-    private async Task<long> SeedTrade(int userId, int? accountId, InvestmentTransactionType type, decimal quantity, DateOnly date,
+    private async Task<long> SeedTrade(int userId, InvestmentTransactionType type, decimal quantity, DateOnly date,
         decimal price = 100m, long listing = _listing)
     {
         var trade = new InvestmentTransaction
         {
             UserId = userId,
-            AccountId = accountId,
             AssetListingId = listing,
             Type = type,
             Quantity = quantity,
@@ -116,7 +111,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task NullLinkTrade_CanBeCreatedReadUpdatedAndDeleted_WithoutAnAccount()
+    public async Task OwnerTrade_CanBeCreatedReadUpdatedAndDeleted()
     {
         Seed();
         Authorize("owner", _owner, UserRole.User);
@@ -129,7 +124,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Assert.EndsWith($"{_route}/{dto.Id}", created.Headers.Location!.AbsolutePath);
         var stored = await Db.InvestmentTransactions.SingleAsync(ct);
         Assert.Equal(_owner, stored.UserId);
-        Assert.Null(stored.AccountId);
 
         var read = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"{_route}/{dto.Id}", ct);
         Assert.Equal(3m, read!.Quantity);
@@ -141,7 +135,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Assert.Equal(5m, stored.Quantity);
         Assert.Equal(130m, stored.UnitPrice);
         Assert.Equal(_owner, stored.UserId);
-        Assert.Null(stored.AccountId);
 
         using var deleted = await Client.DeleteAsync($"{_route}/{dto.Id}", ct);
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
@@ -160,7 +153,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         using var created = await Client.PostAsJsonAsync(_route, new
         {
             userId = _other,
-            accountId = _accountId,
+            accountId = 40,
             assetListingId = _listing,
             type = 0,
             quantity = 1m,
@@ -171,7 +164,6 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var stored = await Db.InvestmentTransactions.SingleAsync(ct);
         Assert.Equal(_owner, stored.UserId);
-        Assert.Null(stored.AccountId);
     }
 
     [Fact]
@@ -179,7 +171,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
         Authorize("other", _other, UserRole.User);
 
         foreach (var target in new[] { id, id + 1000 })
@@ -242,7 +234,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Seed();
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1));
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1));
 
         var mismatch = await Client.PostAsJsonAsync(_route, Create() with { Currency = "EUR" }, ct);
         Assert.Equal(HttpStatusCode.BadRequest, mismatch.StatusCode);
@@ -285,7 +277,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
         Authorize("owner", _owner, UserRole.User);
 
         Assert.Equal(HttpStatusCode.NotFound, (await Client.PutAsJsonAsync($"{_route}/{id + 1000}", Update(), ct)).StatusCode);
@@ -304,7 +296,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
         Authorize("other", _other, UserRole.User);
 
         Assert.Equal(HttpStatusCode.NotFound, (await Client.PutAsJsonAsync($"{_route}/{id}", Update(), ct)).StatusCode);
@@ -317,7 +309,7 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
         _cacheInvalidator.Setup(x => x.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>())).Throws(new InvalidOperationException("cache down"));
         Authorize("owner", _owner, UserRole.User);
 
@@ -328,19 +320,18 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task LinkedTradeEditedByOwnerRoute_ChangesQuantityAndPreservesOtherTrades()
+    public async Task TradeEditedByOwnerRoute_ChangesQuantityAndPreservesOtherTrades()
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var first = await SeedTrade(_owner, _accountId, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
-        var second = await SeedTrade(_owner, _accountId, InvestmentTransactionType.Buy, 3m, new(2024, 2, 1));
+        var first = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1));
+        var second = await SeedTrade(_owner, InvestmentTransactionType.Buy, 3m, new(2024, 2, 1));
         Authorize("owner", _owner, UserRole.User);
 
         Assert.Equal(HttpStatusCode.NoContent, (await Client.PutAsJsonAsync($"{_route}/{first}", Update(quantity: 10m) with { TradeDate = new(2024, 1, 1) }, ct)).StatusCode);
 
         Db.ChangeTracker.Clear();
         var rows = await Db.InvestmentTransactions.OrderBy(x => x.EntryId).ToListAsync(ct);
-        Assert.All(rows, x => Assert.Equal(_accountId, x.AccountId));
         Assert.Equal([10m, 3m], rows.Select(x => x.Quantity));
 
         Assert.Equal(HttpStatusCode.NoContent, (await Client.DeleteAsync($"{_route}/{first}", ct)).StatusCode);
@@ -356,12 +347,12 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         var day = new DateOnly(2024, 3, 1);
         var ids = new List<long>
         {
-            await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 1m, day),
-            await SeedTrade(_owner, _accountId, InvestmentTransactionType.Sell, 1m, day),
-            await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 1m, day, listing: _sameTickerListing),
-            await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1))
+            await SeedTrade(_owner, InvestmentTransactionType.Buy, 1m, day),
+            await SeedTrade(_owner, InvestmentTransactionType.Sell, 1m, day),
+            await SeedTrade(_owner, InvestmentTransactionType.Buy, 1m, day, listing: _sameTickerListing),
+            await SeedTrade(_owner, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1))
         };
-        await SeedTrade(_other, null, InvestmentTransactionType.Buy, 1m, day);
+        await SeedTrade(_other, InvestmentTransactionType.Buy, 1m, day);
         Authorize("owner", _owner, UserRole.User);
 
         var seen = new List<long>();
@@ -387,18 +378,18 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task Holdings_PoolAcrossAccounts_KeepNegative_OmitZero_AndIncludeUnpriced()
+    public async Task Holdings_PoolTrades_KeepNegative_OmitZero_AndIncludeUnpriced()
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        await SeedTrade(_owner, _accountId, InvestmentTransactionType.Buy, 5m, new(2024, 1, 1));
-        await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 2, 1), price: 0m);
-        await SeedTrade(_owner, null, InvestmentTransactionType.Sell, 1m, new(2024, 3, 1));
-        await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1), listing: _sameTickerListing);
-        await SeedTrade(_owner, null, InvestmentTransactionType.Sell, 3m, new(2024, 2, 1), listing: _sameTickerListing);
-        await SeedTrade(_owner, _accountId, InvestmentTransactionType.Buy, 4m, new(2024, 1, 1), listing: _flatListing);
-        await SeedTrade(_owner, null, InvestmentTransactionType.Sell, 4m, new(2024, 2, 1), listing: _flatListing);
-        await SeedTrade(_other, null, InvestmentTransactionType.Buy, 50m, new(2024, 1, 1));
+        await SeedTrade(_owner, InvestmentTransactionType.Buy, 5m, new(2024, 1, 1));
+        await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 2, 1), price: 0m);
+        await SeedTrade(_owner, InvestmentTransactionType.Sell, 1m, new(2024, 3, 1));
+        await SeedTrade(_owner, InvestmentTransactionType.Buy, 1m, new(2024, 1, 1), listing: _sameTickerListing);
+        await SeedTrade(_owner, InvestmentTransactionType.Sell, 3m, new(2024, 2, 1), listing: _sameTickerListing);
+        await SeedTrade(_owner, InvestmentTransactionType.Buy, 4m, new(2024, 1, 1), listing: _flatListing);
+        await SeedTrade(_owner, InvestmentTransactionType.Sell, 4m, new(2024, 2, 1), listing: _flatListing);
+        await SeedTrade(_other, InvestmentTransactionType.Buy, 50m, new(2024, 1, 1));
         Authorize("owner", _owner, UserRole.User);
 
         var holdings = await Client.GetFromJsonAsync<List<InvestmentHoldingDto>>($"{_route}/holdings?asOf=2024-12-31", ct);
@@ -422,10 +413,10 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
         Seed();
         var ct = TestContext.Current.CancellationToken;
         var date = new DateOnly(2024, 5, 2);
-        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date, price: 10m);
-        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date, price: 0m);
-        await SeedTrade(_other, null, InvestmentTransactionType.Buy, 1m, date, price: 200m);
-        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date.AddDays(1), price: 300m);
+        await SeedTrade(_guest, InvestmentTransactionType.Buy, 1m, date, price: 10m);
+        await SeedTrade(_guest, InvestmentTransactionType.Buy, 1m, date, price: 0m);
+        await SeedTrade(_other, InvestmentTransactionType.Buy, 1m, date, price: 200m);
+        await SeedTrade(_guest, InvestmentTransactionType.Buy, 1m, date.AddDays(1), price: 300m);
         _priceProvider.Setup(x => x.GetPricePerUnitAsync(_listing, It.IsAny<Currency>(), date.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
             .ReturnsAsync(15m);
         Authorize("guest", _guest, UserRole.User);
@@ -437,11 +428,11 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task MissingPrice_IsRecoveredOnRead_ForUnlinkedTrades()
+    public async Task MissingPrice_IsRecoveredOnRead()
     {
         Seed();
         var ct = TestContext.Current.CancellationToken;
-        var id = await SeedTrade(_owner, null, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1), price: 0m);
+        var id = await SeedTrade(_owner, InvestmentTransactionType.Buy, 2m, new(2024, 1, 1), price: 0m);
         _priceProvider
             .Setup(x => x.GetPricePerUnitAsync(_listing, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(150m);

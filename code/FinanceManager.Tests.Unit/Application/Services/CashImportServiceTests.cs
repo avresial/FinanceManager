@@ -79,10 +79,8 @@ public class CashImportServiceTests
 
         Assert.Equal(1, result.Imported);
         var entry = Assert.Single(added!);
-        Assert.Null(entry.AccountId);
         Assert.Equal(_owner, entry.UserId);
         Assert.Equal(_currency, entry.CurrencyId);
-        Assert.Equal(0m, entry.Value);
         Assert.Equal(-5m, entry.ValueChange);
         // The whole last UTC day is probed, so rows late in the day are seen.
         _mockAccountEntryRepository.Verify(x => x.GetByOwner(_owner, _currency, date.Date, date.Date.AddDays(1).AddTicks(-1), It.IsAny<CancellationToken>()), Times.Once);
@@ -92,7 +90,7 @@ public class CashImportServiceTests
     public async Task ImportOwnerEntries_UnrelatedRowsOnTheSameDay_DoNotBlockTheImport()
     {
         var date = new DateTime(2025, 3, 4, 10, 0, 0, DateTimeKind.Utc);
-        SetupOwnerRows(new CashEntry(null, 1, date, 0, 10m) { UserId = _owner, CurrencyId = _currency });
+        SetupOwnerRows(new CashEntry(1, date, 10m) { UserId = _owner, CurrencyId = _currency });
 
         var result = await OwnerService().ImportOwnerEntries(_owner, _currency, [new CurrencyEntryImport(date, 5m)], TestContext.Current.CancellationToken);
 
@@ -106,9 +104,9 @@ public class CashImportServiceTests
         var date = new DateTime(2025, 3, 4, 10, 0, 0, DateTimeKind.Utc);
         // One linked and one unlinked row already exist for the same key; one unrelated row must not be offered back.
         SetupOwnerRows(
-            new CashEntry(9, 1, date, 10m, 10m) { UserId = _owner, CurrencyId = _currency },
-            new CashEntry(null, 2, date, 0, 10m) { UserId = _owner, CurrencyId = _currency },
-            new CashEntry(null, 3, date, 0, 99m) { UserId = _owner, CurrencyId = _currency });
+            new CashEntry(1, date, 10m) { UserId = _owner, CurrencyId = _currency },
+            new CashEntry(2, date, 10m) { UserId = _owner, CurrencyId = _currency },
+            new CashEntry(3, date, 99m) { UserId = _owner, CurrencyId = _currency });
         CurrencyEntryImport[] incoming =
         [
             new(date, 10m, "A", "first"),
@@ -153,7 +151,7 @@ public class CashImportServiceTests
     }
 
     [Fact]
-    public async Task ApplyOwnerConflict_AddsTheRuleAppliedUnlinkedRow_AndReportsAFailedWrite()
+    public async Task ApplyOwnerConflict_AddsTheRuleAppliedOwnerRow_AndReportsAFailedWrite()
     {
         var rules = new Mock<ITransactionRuleService>();
         rules.Setup(x => x.LoadApplicationAsync(_owner, It.IsAny<CancellationToken>())).ReturnsAsync(new TransactionRuleApplication([], []));
@@ -164,7 +162,7 @@ public class CashImportServiceTests
         Assert.True(await service.ApplyOwnerConflict(_owner, _currency, new CurrencyEntryImport(date, 4m, "Shop", "Surplus"), TestContext.Current.CancellationToken));
 
         _mockAccountEntryRepository.Verify(x => x.Add(
-            It.Is<CashEntry>(e => e.AccountId == null && e.UserId == _owner && e.CurrencyId == _currency && e.Value == 0 && e.ValueChange == 4m
+            It.Is<CashEntry>(e => e.UserId == _owner && e.CurrencyId == _currency && e.ValueChange == 4m
                 && e.Description == "Surplus" && e.ContractorDetails == "Shop"), It.IsAny<CancellationToken>()), Times.Once);
 
         _mockAccountEntryRepository.Setup(x => x.Add(It.IsAny<CashEntry>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);

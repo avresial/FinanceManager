@@ -6,9 +6,8 @@ namespace FinanceManager.Application.Transactions.Import;
 public interface ICashImportService
 {
     /// <summary>
-    /// Imports into the owner's pool of one currency. Every row of that currency the owner has, linked or not, is
-    /// compared; no account is involved and no running value is recalculated. Exact matches are treated as already
-    /// present and only the incoming surplus is reported as a conflict.
+    /// Imports into the owner's pool of one currency. Every row of that currency the owner has is compared.
+    /// Exact matches are treated as already present and only the incoming surplus is reported as a conflict.
     /// </summary>
     Task<ImportResult> ImportOwnerEntries(
         int userId,

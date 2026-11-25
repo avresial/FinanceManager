@@ -19,34 +19,24 @@ public class TransactionEntryContractTests
         Assert.Equal(typeof(object), typeof(CashEntry).BaseType);
         Assert.Equal(typeof(object), typeof(BondEntry).BaseType);
         Assert.Equal(typeof(object), typeof(InvestmentTransaction).BaseType);
-        Assert.IsAssignableFrom<ILedgerEntry>(new CashEntry(1, 2, _postingDate, 10m, 1m));
-        Assert.IsAssignableFrom<ILedgerEntry>(new BondEntry(1, 2, _postingDate, 10m, 1m, 3));
+        Assert.IsAssignableFrom<ILedgerEntry>(new CashEntry(2, _postingDate, 1m));
+        Assert.IsAssignableFrom<ILedgerEntry>(new BondEntry(2, _postingDate, 1m, 3));
     }
 
     [Fact]
     public void CurrencyEntry_ConstructorSetsIdentity()
     {
-        var entry = new CashEntry(7, 5_000_000_000L, _postingDate, 10m, 1m);
+        var entry = new CashEntry(5_000_000_000L, _postingDate, 1m);
 
-        Assert.Equal(7, entry.AccountId);
         Assert.Equal(5_000_000_000L, entry.EntryId);
-    }
-
-    [Fact]
-    public void InvestmentTransaction_InitializerSetsAccountId()
-    {
-        var transaction = new InvestmentTransaction { AccountId = 9 };
-
-        Assert.Equal(9, transaction.AccountId);
-        Assert.Equal(0, transaction.EntryId);
     }
 
     [Fact]
     public void EntryRepositories_CanSetConcreteEntryIdsThroughReflection()
     {
         // Mirrors CashEntryRepository / BondEntryRepository: the setter is internal, so it is only reachable by reflection.
-        var currency = new CashEntry(1, 0, _postingDate, 10m, 1m);
-        var bond = new BondEntry(1, 0, _postingDate, 10m, 1m, 3);
+        var currency = new CashEntry(0, _postingDate, 1m);
+        var bond = new BondEntry(0, _postingDate, 1m, 3);
         typeof(CashEntry).GetProperty(nameof(CashEntry.EntryId))!.SetValue(currency, 5_000_000_000L);
         typeof(BondEntry).GetProperty(nameof(BondEntry.EntryId))!.SetValue(bond, 42L);
 
@@ -57,7 +47,7 @@ public class TransactionEntryContractTests
     [Fact]
     public void CurrencyEntry_SerializesWithUnchangedPropertyOrder()
     {
-        var entry = new CashEntry(1, 2, _postingDate, 10m, 1m) { Description = "d", ContractorDetails = "c" };
+        var entry = new CashEntry(2, _postingDate, 1m) { Description = "d", ContractorDetails = "c" };
 
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -69,7 +59,7 @@ public class TransactionEntryContractTests
     [Fact]
     public void BondEntry_SerializesDescriptionAfterBondDetailsId()
     {
-        var entry = new BondEntry(1, 2, _postingDate, 10m, 1m, 3) { Description = "Quarterly top-up" };
+        var entry = new BondEntry(2, _postingDate, 1m, 3) { Description = "Quarterly top-up" };
 
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -81,15 +71,15 @@ public class TransactionEntryContractTests
     [Fact]
     public void Description_DefaultsToEmptyOnEveryEntryType()
     {
-        Assert.Equal(string.Empty, new CashEntry(1, 2, _postingDate, 10m, 1m).Description);
-        Assert.Equal(string.Empty, new BondEntry(1, 2, _postingDate, 10m, 1m, 3).Description);
+        Assert.Equal(string.Empty, new CashEntry(2, _postingDate, 1m).Description);
+        Assert.Equal(string.Empty, new BondEntry(2, _postingDate, 1m, 3).Description);
         Assert.Equal(string.Empty, new InvestmentTransaction().Description);
     }
 
     [Fact]
     public void BondEntry_SerializesWithUnchangedPropertyOrder()
     {
-        var entry = new BondEntry(1, 2, _postingDate, 10m, 1m, 3);
+        var entry = new BondEntry(2, _postingDate, 1m, 3);
 
         var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
@@ -132,7 +122,6 @@ public class TransactionEntryContractTests
     {
         var entry = new InvestmentTransaction
         {
-            AccountId = 1,
             UserId = 2,
             AssetListingId = 3,
             Type = InvestmentTransactionType.Sell,
@@ -180,34 +169,6 @@ public class TransactionEntryContractTests
     }
 
     [Fact]
-    public void EfModel_ValueIsMappedOnEveryEntryWithTheDocumentedPrecision()
-    {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
-        using var context = new AppDbContext(options.Options);
-
-        foreach (var (type, precision, scale) in new[] { (typeof(CashEntry), 18, 2), (typeof(BondEntry), 18, 2), (typeof(InvestmentTransaction), 18, 8) })
-        {
-            var property = context.Model.FindEntityType(type)!.FindProperty(nameof(CashEntry.Value));
-            Assert.NotNull(property);
-            Assert.Equal("Value", property.GetColumnName());
-            Assert.Equal(precision, property.GetPrecision());
-            Assert.Equal(scale, property.GetScale());
-        }
-    }
-
-    [Fact]
-    public void InvestmentTransaction_ValueIsStoredButNotSerialized()
-    {
-        // No endpoint returns the entity (controllers map to DTOs), and its JSON predates Value.
-        var entry = new InvestmentTransaction { AccountId = 1, Value = 12.5m };
-
-        var json = JsonSerializer.Serialize(entry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-
-        Assert.Equal(12.5m, entry.Value);
-        Assert.DoesNotContain("\"value\"", json);
-    }
-
-    [Fact]
     public void EfModel_UsesStandaloneEntryModelsAndKeepsIdColumn()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only");
@@ -226,41 +187,25 @@ public class TransactionEntryContractTests
     public void InvestmentTransaction_JsonRoundTrip_PreservesEntryId()
     {
         const long entryId = 5_000_000_000;
-        var transaction = new InvestmentTransaction { EntryId = entryId, AccountId = 3 };
+        var transaction = new InvestmentTransaction { EntryId = entryId };
 
         var roundTripped = JsonSerializer.Deserialize<InvestmentTransaction>(JsonSerializer.Serialize(transaction));
 
         Assert.Equal(entryId, roundTripped!.EntryId);
-        Assert.Null(roundTripped.AccountId);
     }
 
     [Fact]
-    public void Update_HistoricalEntry_LeavesTheDormantBalanceUntouched()
+    public void Update_ChangesTheDeltaAndDetails()
     {
-        var cash = new CashEntry(1, 2, _postingDate, 100m, 10m);
-        var bond = new BondEntry(1, 2, _postingDate, 100m, 10m, 3);
+        var cash = new CashEntry(2, _postingDate, 10m);
+        var bond = new BondEntry(2, _postingDate, 10m, 3);
 
-        cash.Update(new CashEntry(1, 2, _postingDate, 0m, 25m));
-        bond.Update(new BondEntry(1, 2, _postingDate, 0m, 25m, 3));
-
-        Assert.Equal(100m, cash.Value);
-        Assert.Equal(100m, bond.Value);
-    }
-
-    [Fact]
-    public void Update_UnlinkedEntry_ChangesTheDeltaButLeavesTheUnusedValueAlone()
-    {
-        var cash = new CashEntry(null, 2, _postingDate, 0m, 10m);
-        var bond = new BondEntry(null, 2, _postingDate, 0m, 10m, 3);
-
-        cash.Update(new CashEntry(null, 2, _postingDate, 0m, 25m) { Description = "changed" });
-        bond.Update(new BondEntry(null, 2, _postingDate, 0m, 25m, 4));
+        cash.Update(new CashEntry(2, _postingDate, 25m) { Description = "changed" });
+        bond.Update(new BondEntry(2, _postingDate, 25m, 4));
 
         Assert.Equal(25m, cash.ValueChange);
         Assert.Equal("changed", cash.Description);
-        Assert.Equal(0m, cash.Value);
         Assert.Equal(25m, bond.ValueChange);
         Assert.Equal(4, bond.BondDetailsId);
-        Assert.Equal(0m, bond.Value);
     }
 }

@@ -25,7 +25,6 @@ public class SqliteInvestmentLabelsTests
         context.AssetListings.Add(listing);
         var trades = Enumerable.Range(1, 5).Select(i => new InvestmentTransaction
         {
-            AccountId = 1,
             UserId = 1,
             AssetListing = listing,
             Quantity = 1,
