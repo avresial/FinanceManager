@@ -9,7 +9,7 @@ namespace FinanceManager.Application.Portfolio.Valuation;
 
 /// <summary>
 /// Values the owner's pooled investment holdings: holdings are computed on read from every
-/// <see cref="Domain.Transactions.Investments.Entities.InvestmentTransaction"/> of the user (linked to an account or not)
+/// <see cref="Domain.Transactions.Investments.Entities.InvestmentTransaction"/> owned by the user
 /// and each listing is priced through <see cref="IInvestmentPriceProvider"/>. Queries run strictly sequentially because the scoped
 /// <c>AppDbContext</c> cannot service concurrent operations.
 /// </summary>

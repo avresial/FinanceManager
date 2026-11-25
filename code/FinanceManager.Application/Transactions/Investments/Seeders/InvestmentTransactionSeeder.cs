@@ -51,7 +51,8 @@ public class InvestmentTransactionSeeder(
             IsUcits = true,
             Identifiers =
             [
-                new AssetIdentifier { Type = AssetIdentifierType.ISIN, Value = _isin, Scope = IdentifierScope.Asset, Source = nameof(InvestmentTransactionSeeder), IsPrimary = true }
+                // Persisted value: keeps the pre-rename seeder name so new and existing databases match.
+                new AssetIdentifier { Type = AssetIdentifierType.ISIN, Value = _isin, Scope = IdentifierScope.Asset, Source = "InvestmentAccountSeeder", IsPrimary = true }
             ]
         }, cancellationToken);
 
