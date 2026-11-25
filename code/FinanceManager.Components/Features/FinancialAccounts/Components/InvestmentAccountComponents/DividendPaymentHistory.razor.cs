@@ -47,7 +47,29 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private string _formCurrency = string.Empty;
     private string? _formNotes;
     private bool _savingEdit;
+    private MudButton? _recordButton;
+    private MudNumericField<decimal?>? _amountField;
+    // One-shot focus moves, applied after the render that makes the target available.
+    private bool _focusAmountField;
+    private bool _focusRecordButton;
     private bool Busy => _isLoading || _isHistoryLoading || _savingEdit || _confirmingDelete;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The dialog opens on the field the user must fill: focusing the Holding select first would scroll its long name to the end on narrow screens.
+        if (_focusAmountField && _editVisible && _amountField is not null)
+        {
+            _focusAmountField = false;
+            await _amountField.FocusAsync();
+        }
+
+        // Closing the dialog hands focus back to the Record button once it is enabled again (it is disabled while a save reloads the history).
+        if (_focusRecordButton && !_editVisible && !Busy && _recordButton is not null)
+        {
+            _focusRecordButton = false;
+            await _recordButton.FocusAsync();
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -131,6 +153,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         _formNotes = null;
         _formError = null;
         _editVisible = true;
+        _focusAmountField = true;
     }
     private void ShowEdit(DividendPaymentDto payment)
     {
@@ -144,6 +167,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         _formNotes = payment.Notes;
         _formError = null;
         _editVisible = true;
+        _focusAmountField = true;
     }
     // A payout normally arrives in the currency the holding trades in; fall back to the display currency, then the first known one.
     private string CurrencyFor(long listingId)
@@ -194,6 +218,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         if (_savingEdit) return;
         _editVisible = false;
         _editingPayment = null;
+        _focusRecordButton = true;
     }
     // Keep the ledger's accepted precision while retaining the usual two decimal places for whole amounts.
     private static string FormatCashReceived(DividendPaymentDto payment) =>
@@ -218,6 +243,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
             if (ct.IsCancellationRequested) return;
             _editVisible = false;
             _editingPayment = null;
+            _focusRecordButton = true;
             Snackbar.Add(creating ? "Dividend recorded." : "Dividend updated.", Severity.Success);
             await AccountDataSynchronization.AccountChanged();
             await ReloadHistoryAsync();

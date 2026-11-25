@@ -179,6 +179,14 @@ public static class ChartHelper
         var step = GetNiceStep((high - low) / targetBands);
         var niceLow = Math.Floor(low / step) * step;
         var niceHigh = Math.Ceiling(high / step) * step;
+        // A series that never goes below zero must not get an axis below zero: clamp the low end at 0 and
+        // drop the label gutter when the scale already starts there, so no empty band sits under the 0 line.
+        if (minimum >= 0 && niceLow <= 0)
+        {
+            var zeroBasedBands = (int)Math.Round(niceHigh / step);
+            return (0, niceHigh, zeroBasedBands);
+        }
+
         var bands = (int)Math.Round((niceHigh - niceLow) / step);
 
         return (niceLow - step, niceHigh, bands + 1);

@@ -484,6 +484,35 @@ public class DividendPaymentHistoryTests
     }
 
     [Fact]
+    public async Task RecordDialog_FocusesCashReceivedNotTheHoldingSelect_AndReturnsFocusToTheRecordButtonOnClose()
+    {
+        await using var context = CreateBunitContext(HoldingsHandler());
+        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.DefaultCurrency, "PLN"));
+        cut.WaitForAssertion(() => Assert.Contains("No dividend payments yet.", cut.Markup));
+        var recordButton = cut.FindAll("button").Single(b => b.GetAttribute("aria-label") == "Record dividend");
+
+        await cut.InvokeAsync(() => recordButton.Click());
+        var opened = FocusedElementIds(context);
+        var cashInput = cut.FindComponents<MudNumericField<decimal?>>().Single(f => f.Instance.Label == "Cash received").Find("input");
+        var holdingInput = cut.FindComponents<MudSelect<long>>().Single(s => s.Instance.Label == "Holding").Find("input");
+        await cut.InvokeAsync(() => cut.Find("[role=dialog]").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" }));
+        var closed = FocusedElementIds(context);
+
+        // Opening focuses the field the user fills (the long Holding name would scroll to its end on a phone).
+        Assert.Equal(cashInput.GetAttribute("blazor:elementreference"), Assert.Single(opened));
+        Assert.NotEqual(holdingInput.GetAttribute("blazor:elementreference"), opened[0]);
+        // Closing hands focus back to the Record button.
+        Assert.Equal(2, closed.Count);
+        // The second focus targets the Record button: it is neither the Cash received input nor the Holding select.
+        Assert.NotEqual(opened[0], closed[1]);
+        Assert.NotEqual(holdingInput.GetAttribute("blazor:elementreference"), closed[1]);
+    }
+
+    private static List<string> FocusedElementIds(BunitContext context) => [.. context.JSInterop.Invocations
+        .Where(i => i.Identifier == "Blazor._internal.domWrapper.focus")
+        .Select(i => ((Microsoft.AspNetCore.Components.ElementReference)i.Arguments[0]!).Id)];
+
+    [Fact]
     public async Task Header_SumsEachCurrencySeparately_WhenEveryPaymentIsLoaded()
     {
         DividendPaymentDto[] payments =

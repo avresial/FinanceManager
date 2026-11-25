@@ -2,8 +2,8 @@
 @inherits PortfolioCardBase<InvestmentsValueModel>
 
 <TimeSeriesValueCard Title="Investments value" Data="@(Model?.Series ?? [])" Overlays="@(Model?.Overlays ?? [])"
-                     SummaryValue="@Model?.CurrentValue" DeltaBaseline="@(Model is { HasOpenPositions: true } ? Model.CostBasis : null)"
+                     SummaryValue="@Model?.CurrentValue" DeltaBaseline="@(Model is { HasPricedPositions: true } ? Model.CostBasis : null)"
                      CurrencyShortName="@(Model?.Currency ?? string.Empty)"
-                     SummaryCaption="@(Model is null ? null : Model.HasOpenPositions ? $"Cost basis {MoneyFormatter.Format(Model.CostBasis, Model.Currency)}" : "No open positions")"
+                     SummaryCaption="@Caption"
                      Description="Value of your shares and ETFs, capital contributed (the cost basis of what you still hold), and a benchmark bought with the same contributions. The all-time unrealized gain compares the current value with the cost basis of your open positions, whatever date range is selected."
                      Height="@Height" IsLoading="@Loading" HasError="@Failed" OnRetry="Reload" />

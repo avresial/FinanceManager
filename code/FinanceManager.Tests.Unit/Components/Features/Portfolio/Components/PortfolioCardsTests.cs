@@ -110,6 +110,7 @@ public class PortfolioCardsTests
         using var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
         {
             var path when path.Contains("/GetInvestmentGainLoss/") => new(HttpStatusCode.NoContent),
+            var path when path.EndsWith("/holdings") => Json(new InvestmentHoldingDto[] { new(3, "SOLD", "Berlin", AssetTypeDto.ETF, 0, "EUR", 50m) }),
             var path when path.Contains("/ValueSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-3)] = 100, [_end] = 0 }),
             _ => Json(new Dictionary<DateTime, decimal>())
         });
@@ -131,6 +132,7 @@ public class PortfolioCardsTests
         using var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
         {
             var path when path.Contains("/GetInvestmentGainLoss/") => Json(new UnrealizedGainLossAccountResult(null, "Investments", 100, 125, 25, 25, _end, 0)),
+            var path when path.EndsWith("/holdings") => Json(new InvestmentHoldingDto[] { new(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m) }),
             var path when path.Contains("/CapitalSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-2)] = 100 }),
             var path when path.Contains("/BenchmarkSeries/") => Json(new Dictionary<DateTime, decimal> { [_end] = 110 }),
             var path when path.Contains("/ValueSeries/") => fail ? new(HttpStatusCode.ServiceUnavailable) :
@@ -151,11 +153,82 @@ public class PortfolioCardsTests
         Assert.Equal(["Capital", "Capital + inflation"], chart.Overlays.Select(o => o.Name));
         Assert.Equal(_end, chart.Overlays[0].Data[^1].DateTime);
         cut.Render(p => p.Add(c => c.StartDateTime, _end.AddDays(-7)));
-        Assert.Equal(12, handler.Requests.Count);
+        Assert.Equal(15, handler.Requests.Count);
         Assert.All(handler.Requests, r => Assert.DoesNotContain("account", r.PathAndQuery, StringComparison.OrdinalIgnoreCase));
         Assert.Equal([true, false, true, false, true, false], refresh);
-        _snapshots.Verify(s => s.SetAsync($"investments-value:v1:-7:{DefaultCurrency.PLN.Id}:inflation",
+        _snapshots.Verify(s => s.SetAsync($"investments-value:v2:-7:{DefaultCurrency.PLN.Id}:inflation",
             It.Is<PortfolioCardSnapshot<InvestmentsValueModel>>(v => v.Start == _end.AddDays(-7))), Times.Once);
+    }
+
+    [Fact]
+    public async Task Value_WithAnUnpricedHolding_KeepsTheHoldingVisibleAndHidesTheGainChip()
+    {
+        // The server keeps an unpriced holding in the result but leaves it out of both totals.
+        var cut = RenderValue(new UnrealizedGainLossAccountResult(null, "Investments", 0, 0, 0, 0, _end, 1),
+            new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 0m), out var context);
+        await using var _ = context;
+
+        var chart = cut.FindComponent<TimeSeriesValueCard>().Instance;
+        Assert.Equal("Cost basis unavailable", chart.SummaryCaption);
+        Assert.Null(chart.DeltaBaseline);
+        Assert.Empty(cut.FindAll(".fm-tsvc-delta"));
+    }
+
+    [Fact]
+    public async Task Value_WithAnFxExcludedHolding_KeepsTheChipForThePricedOnesAndNamesTheExcludedCount()
+    {
+        var cut = RenderValue(new UnrealizedGainLossAccountResult(null, "Investments", 100, 125, 25, 25, _end, 1),
+            new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m), out var context,
+            new InvestmentHoldingDto(4, "NOFX", "Tokyo", AssetTypeDto.Stock, 5, "JPY", 9m));
+        await using var _ = context;
+
+        var chart = cut.FindComponent<TimeSeriesValueCard>().Instance;
+        Assert.Equal("Cost basis 100.00 PLN · 1 not priced", chart.SummaryCaption);
+        Assert.Equal(100m, chart.DeltaBaseline);
+    }
+
+    [Fact]
+    public async Task Value_WithAnOversoldPosition_AgreesWithHoldingsThatTheOwnerHasAPosition()
+    {
+        // Oversold units are listed by Holdings but have no cost basis, so the server returns no gain/loss row.
+        InvestmentHoldingDto oversold = new(1, "SHORT", "London", AssetTypeDto.Stock, -2, "GBP", 10m);
+        var cut = RenderValue(null, oversold, out var context);
+        await using var _ = context;
+
+        var chart = cut.FindComponent<TimeSeriesValueCard>().Instance;
+        Assert.Equal("Cost basis unavailable", chart.SummaryCaption);
+        Assert.Null(chart.DeltaBaseline);
+
+        var holdings = context.Render<InvestmentHoldingsCardContainer>(p => p.Add(c => c.AsOf, _end));
+        Assert.Equal(["SHORT"], holdings.FindComponent<InvestmentHoldingCard>().Instance.Holdings.Select(h => h.Ticker));
+    }
+
+    [Fact]
+    public async Task Holdings_WhenEmpty_ShowsOneEmptyMessage()
+    {
+        using var handler = new RecordingHttpHandler(_ => Json(Array.Empty<InvestmentHoldingDto>()));
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<InvestmentHoldingsCardContainer>(p => p.Add(c => c.AsOf, _end));
+
+        Assert.Contains("No open holdings.", cut.Markup);
+        Assert.DoesNotContain("No open positions", cut.Markup);
+        Assert.Empty(cut.FindAll(".fm-card-header-subtitle"));
+    }
+
+    private IRenderedComponent<InvestmentsValueCardContainer> RenderValue(UnrealizedGainLossAccountResult? gain,
+        InvestmentHoldingDto holding, out BunitContext context, params InvestmentHoldingDto[] more)
+    {
+        InvestmentHoldingDto[] rows = [holding, .. more];
+        var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
+        {
+            var path when path.Contains("/GetInvestmentGainLoss/") => gain is null ? new(HttpStatusCode.NoContent) : Json(gain),
+            var path when path.EndsWith("/holdings") => Json(rows),
+            var path when path.Contains("/ValueSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-3)] = 100, [_end] = 125 }),
+            _ => Json(new Dictionary<DateTime, decimal>())
+        });
+        context = CreateContext(handler);
+        return context.Render<InvestmentsValueCardContainer>(p => p.Add(c => c.StartDateTime, _end.AddDays(-30)).Add(c => c.EndDateTime, _end));
     }
 
     private BunitContext CreateContext(RecordingHttpHandler handler)

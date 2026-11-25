@@ -96,7 +96,7 @@
     [Parameter] public EventCallback OnRetry { get; set; }
     private bool _showAll;
 
-    private string Subtitle => IsLoading ? "Loading open positions" : Holdings.Count == 0 ? "No open positions" : Holdings.Count == 1 ? "1 open position" : $"{Holdings.Count} open positions";
+    private string? Subtitle => IsLoading ? "Loading open positions" : Holdings.Count == 0 ? null : Holdings.Count == 1 ? "1 open position" : $"{Holdings.Count} open positions";
 
     // Native currencies are never converted into one figure, so each currency gets its own total.
     private IEnumerable<string> Totals => Holdings.GroupBy(h => h.Currency, StringComparer.OrdinalIgnoreCase)

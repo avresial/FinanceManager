@@ -189,13 +189,21 @@ public class TimeSeriesValueCardTests
     }
 
     [Fact]
-    public async Task YAxis_HidesTickLabelsBelowZeroWhenEverySeriesIsNonNegative()
+    public async Task YAxis_StartsAtZeroWhenEverySeriesIsNonNegative()
     {
         var options = await RenderedOptionsAsync(Points(0, 12_000), "390px");
 
         var axis = options.Yaxis!.Single();
-        Assert.True(Convert.ToDouble(axis.Min) < 0);
+        Assert.Equal(0d, Convert.ToDouble(axis.Min));
         Assert.Contains("if(v<0) return ''", Assert.IsType<YAxisLabels>(axis.Labels).Formatter);
+    }
+
+    [Fact]
+    public async Task YAxis_KeepsRoomBelowZeroWhenASeriesIsNegative()
+    {
+        var options = await RenderedOptionsAsync(Points(-500, 12_000), "390px");
+
+        Assert.True(Convert.ToDouble(options.Yaxis!.Single().Min) < -500);
     }
 
     private static List<TimeSeriesModel> Points(params decimal[] values) =>

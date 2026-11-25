@@ -6,7 +6,7 @@
     <section aria-label="Dividend income" class="d-flex flex-column overflow-hidden" inert="@(_editVisible || _confirmingDelete)">
         <CardHeader Title="Dividend income" Subtitle="@Subtitle" InfoText="Recorded payouts do not change balances or investment returns.">
             <Actions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                <MudButton @ref="_recordButton" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
                            Disabled="@(Busy || _error is not null)" OnClick="ShowRecord" aria-label="Record dividend">Record</MudButton>
             </Actions>
         </CardHeader>
@@ -62,7 +62,7 @@
 @if (_editVisible)
 {
     <MudOverlay Visible DarkBackground ZIndex="1300">
-        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+        <MudFocusTrap DefaultFocus="DefaultFocus.None">
             <MudPaper Class="pa-5" Style="width:min(520px,92vw);max-height:90dvh;overflow-y:auto" role="dialog" aria-modal="true" aria-label="@(_editingPayment is null ? "Record dividend" : "Edit dividend")"
                       @onkeydown="OnDialogKeyDown">
                 <MudText Typo="Typo.h6" Class="mb-3">@(_editingPayment is null ? "Record dividend" : "Edit dividend")</MudText>
@@ -75,7 +75,7 @@
                         </MudSelect>
                     }
                     <MudDatePicker Label="Received date" @bind-Date="_formPaymentDate" MaxDate="DateTime.UtcNow.Date" DateFormat="@DateFormatter.PickerFormat" Culture="@DateFormatter.Culture" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    <MudNumericField T="decimal?" Label="Cash received" @bind-Value="_formAmount" Min="0.00000001m" Step="0.01m" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudNumericField @ref="_amountField" T="decimal?" Label="Cash received" @bind-Value="_formAmount" Min="0.00000001m" Step="0.01m" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     <MudSelect T="string" Label="Payout currency" Value="_formCurrency" ValueChanged="OnCurrencyChanged" Disabled="_savingEdit" Variant="Variant.Outlined" Margin="Margin.Dense">
                         @foreach (var currency in _availableCurrencies) { <MudSelectItem Value="currency">@currency</MudSelectItem> }
                     </MudSelect>
