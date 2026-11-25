@@ -8,7 +8,7 @@ public static class BondAccountEntryExtension
 {
     public static BondAccountEntryDto ToDto(this BondAccountEntry bondAccountEntry) => new()
     {
-        AccountId = bondAccountEntry.AccountId,
+        AccountId = bondAccountEntry.AccountId!.Value,
         EntryId = bondAccountEntry.EntryId,
         ValueChange = bondAccountEntry.ValueChange,
         Value = bondAccountEntry.Value,

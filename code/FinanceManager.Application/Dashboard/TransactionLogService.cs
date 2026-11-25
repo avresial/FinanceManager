@@ -45,14 +45,18 @@ public class TransactionLogService(
             var entries = await currencyEntryRepository.GetMostRecentByAccounts(
                 [.. currencyAccountNames.Keys], count, cancellationToken);
 
-            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
-                e.AccountId,
-                currencyAccountNames[e.AccountId],
-                AccountType.Currency,
-                e.EntryId,
-                e.PostingDate,
-                e.ValueChange,
-                GetCurrencyDescription(e), currencies[e.AccountId])));
+            foreach (var e in entries)
+            {
+                if (e.AccountId is not int accountId) continue;
+                result.Add(new TransactionLogEntryDto(
+                    accountId,
+                    currencyAccountNames[accountId],
+                    AccountType.Currency,
+                    e.EntryId,
+                    e.PostingDate,
+                    e.ValueChange,
+                    GetCurrencyDescription(e), currencies[accountId]));
+            }
         }
 
         var bondAccounts = await BufferAccounts(bondAccountRepository.GetAvailableAccounts(userId), cancellationToken);
@@ -63,14 +67,18 @@ public class TransactionLogService(
                 [.. bondAccountNames.Keys], count, cancellationToken);
             var bondNames = await GetBondNames(entries, cancellationToken);
 
-            result.AddRange(entries.Select(e => new TransactionLogEntryDto(
-                e.AccountId,
-                bondAccountNames[e.AccountId],
-                AccountType.Bond,
-                e.EntryId,
-                e.PostingDate,
-                e.ValueChange,
-                GetBondDescription(e, bondNames), "units")));
+            foreach (var e in entries)
+            {
+                if (e.AccountId is not int accountId) continue;
+                result.Add(new TransactionLogEntryDto(
+                    accountId,
+                    bondAccountNames[accountId],
+                    AccountType.Bond,
+                    e.EntryId,
+                    e.PostingDate,
+                    e.ValueChange,
+                    GetBondDescription(e, bondNames), "units"));
+            }
         }
 
         Dictionary<int, string> investmentAccounts = [];
@@ -80,15 +88,18 @@ public class TransactionLogService(
         if (investmentAccounts.Count != 0)
         {
             var transactions = await investmentTransactionRepository.GetMostRecentByAccounts([.. investmentAccounts.Keys], count, cancellationToken);
-            result.AddRange(transactions
-                .Select(t => new TransactionLogEntryDto(
-                    t.AccountId,
-                    investmentAccounts[t.AccountId],
-                    AccountType.Stock,
-                    t.EntryId,
-                    t.TradeDate.ToDateTime(TimeOnly.MinValue),
-                    t.SignedQuantity * t.UnitPrice,
-                    GetInvestmentDescription(t), t.Currency)));
+            foreach (var t in transactions)
+            {
+                if (t.AccountId is not int accountId) continue;
+                result.Add(new TransactionLogEntryDto(
+                        accountId,
+                        investmentAccounts[accountId],
+                        AccountType.Stock,
+                        t.EntryId,
+                        t.TradeDate.ToDateTime(TimeOnly.MinValue),
+                        t.SignedQuantity * t.UnitPrice,
+                        GetInvestmentDescription(t), t.Currency));
+            }
         }
 
         return [.. result
@@ -146,10 +157,14 @@ public class TransactionLogService(
             var boundary = GetPageBoundary(query.Cursor, AccountType.Currency);
             var entries = await currencyEntryRepository.GetHistoryPage(
                 [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-            result.AddRange(entries.Select(e => new LogRow(
-                new TransactionLogEntryDto(e.AccountId, names[e.AccountId], AccountType.Currency, e.EntryId, e.PostingDate,
-                    e.ValueChange, GetCurrencyDescription(e), currencies[e.AccountId]),
-                new CurrencyTransactionLogItem(e.AccountId, names[e.AccountId], currencyIds[e.AccountId], currencies[e.AccountId] ?? string.Empty, e))));
+            foreach (var e in entries)
+            {
+                if (e.AccountId is not int accountId) continue;
+                result.Add(new LogRow(
+                    new TransactionLogEntryDto(accountId, names[accountId], AccountType.Currency, e.EntryId, e.PostingDate,
+                        e.ValueChange, GetCurrencyDescription(e), currencies[accountId]),
+                    new CurrencyTransactionLogItem(accountId, names[accountId], currencyIds[accountId], currencies[accountId] ?? string.Empty, e)));
+            }
         }
 
         var bondAccounts = IncludesStream(query, AccountType.Bond)
@@ -162,10 +177,14 @@ public class TransactionLogService(
             var entries = await bondEntryRepository.GetHistoryPage(
                 [.. names.Keys], query.Start, end, take, boundary.Date, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
             var bondNames = await GetBondNames(entries, cancellationToken);
-            result.AddRange(entries.Select(e => new LogRow(
-                new TransactionLogEntryDto(e.AccountId, names[e.AccountId], AccountType.Bond, e.EntryId, e.PostingDate,
-                    e.ValueChange, GetBondDescription(e, bondNames), "units"),
-                new BondTransactionLogItem(e.AccountId, names[e.AccountId], e))));
+            foreach (var e in entries)
+            {
+                if (e.AccountId is not int accountId) continue;
+                result.Add(new LogRow(
+                    new TransactionLogEntryDto(accountId, names[accountId], AccountType.Bond, e.EntryId, e.PostingDate,
+                        e.ValueChange, GetBondDescription(e, bondNames), "units"),
+                    new BondTransactionLogItem(accountId, names[accountId], e)));
+            }
         }
 
         // Investment dates represent midnight. A non-midnight start excludes that day's trades.
@@ -190,10 +209,14 @@ public class TransactionLogService(
                 var transactions = await investmentTransactionRepository.GetHistoryPage(
                     [.. names.Keys], startDate, endDate, take,
                     boundary.Date is DateTime date ? DateOnly.FromDateTime(date) : null, boundary.Id, cancellationToken, query.Search, SearchAccountIds(names, query.Search));
-                result.AddRange(transactions.Select(t => new LogRow(
-                    new TransactionLogEntryDto(t.AccountId, names[t.AccountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                        t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency),
-                    new InvestmentTransactionLogItem(t.AccountId, names[t.AccountId], t))));
+                foreach (var t in transactions)
+                {
+                    if (t.AccountId is not int accountId) continue;
+                    result.Add(new LogRow(
+                        new TransactionLogEntryDto(accountId, names[accountId], AccountType.Stock, t.EntryId, t.TradeDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+                            t.SignedQuantity * t.UnitPrice, GetInvestmentDescription(t), t.Currency),
+                        new InvestmentTransactionLogItem(accountId, names[accountId], t)));
+                }
             }
         }
 

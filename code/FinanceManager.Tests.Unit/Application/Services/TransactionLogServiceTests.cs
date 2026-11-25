@@ -737,7 +737,7 @@ public class TransactionLogServiceTests
         _currencyEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
             It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
             .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
+                entries.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
         _currencyEntryRepository.Setup(r => r.GetMostRecentByAccounts(
@@ -754,7 +754,7 @@ public class TransactionLogServiceTests
         _bondEntryRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
             It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
             .ReturnsAsync((IReadOnlyCollection<int> ids, DateTime start, DateTime end, int take, DateTime? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                entries.Where(e => ids.Contains(e.AccountId) && e.PostingDate >= start && e.PostingDate <= end &&
+                entries.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.PostingDate >= start && e.PostingDate <= end &&
                     (date == null || e.PostingDate < date || (e.PostingDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.PostingDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
         _bondEntryRepository.Setup(r => r.GetMostRecentByAccounts(
@@ -771,7 +771,7 @@ public class TransactionLogServiceTests
         _investmentTransactionRepository.Setup(r => r.GetHistoryPage(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(),
             It.IsAny<int>(), It.IsAny<DateOnly?>(), It.IsAny<long?>(), It.IsAny<CancellationToken>(), It.IsAny<string?>(), It.IsAny<IReadOnlyCollection<int>?>()))
             .ReturnsAsync((IReadOnlyCollection<int> ids, DateOnly start, DateOnly end, int take, DateOnly? date, long? id, CancellationToken _, string? search, IReadOnlyCollection<int>? searchAccounts) =>
-                transactions.Where(e => ids.Contains(e.AccountId) && e.TradeDate >= start && e.TradeDate <= end &&
+                transactions.Where(e => e.AccountId.HasValue && ids.Contains(e.AccountId.Value) && e.TradeDate >= start && e.TradeDate <= end &&
                     (date == null || e.TradeDate < date || (e.TradeDate == date && e.EntryId < id)))
                 .OrderByDescending(e => e.TradeDate).ThenByDescending(e => e.EntryId).Take(take).ToList());
         _investmentTransactionRepository.Setup(r => r.GetMostRecentByAccounts(It.Is<IReadOnlyCollection<int>>(ids => ids.Contains(accountId)), It.IsAny<int>(), It.IsAny<CancellationToken>()))

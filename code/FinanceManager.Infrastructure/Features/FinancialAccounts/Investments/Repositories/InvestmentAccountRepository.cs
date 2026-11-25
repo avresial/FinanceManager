@@ -27,15 +27,18 @@ internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepos
 
     public async Task<bool> Delete(int accountId)
     {
+        var account = context.Accounts.Where(x => x.AccountId == accountId && x.AccountType == AccountType.Stock);
         if (context.Database.IsRelational())
         {
-            var deleted = await context.Accounts
-                .Where(x => x.AccountId == accountId)
-                .ExecuteDeleteAsync();
-            return deleted > 0;
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            await context.DividendPayments.Where(d => d.AccountId == accountId).ExecuteDeleteAsync();
+            // Disposing the uncommitted transaction rolls the dividend delete back when no investment account matched.
+            if (await account.ExecuteDeleteAsync() == 0) return false;
+            await transaction.CommitAsync();
+            return true;
         }
 
-        var toRemove = await context.Accounts.Where(x => x.AccountId == accountId).ToListAsync();
+        var toRemove = await account.ToListAsync();
         if (toRemove.Count == 0) return false;
         var dividends = await context.DividendPayments.Where(x => x.AccountId == accountId).ToListAsync();
         context.DividendPayments.RemoveRange(dividends);

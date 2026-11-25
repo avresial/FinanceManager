@@ -263,9 +263,9 @@ public sealed class SqliteInvestmentRunningValueTests : IDisposable
 
     private async Task<List<(long Id, int Account, long Listing, decimal Quantity, decimal Value)>> Snapshot(params (int, long)[] except) =>
         (await Read())
-            .Where(t => !except.Contains((t.AccountId, t.AssetListingId)))
+            .Where(t => t.AccountId.HasValue && !except.Contains((t.AccountId.Value, t.AssetListingId)))
             .OrderBy(t => t.EntryId)
-            .Select(t => (t.EntryId, t.AccountId, t.AssetListingId, t.Quantity, t.Value))
+            .Select(t => (t.EntryId, t.AccountId!.Value, t.AssetListingId, t.Quantity, t.Value))
             .ToList();
 
     private async Task AssertAllValuesMatchRunningSum()

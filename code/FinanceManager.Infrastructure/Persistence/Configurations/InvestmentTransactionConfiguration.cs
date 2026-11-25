@@ -38,6 +38,8 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.HasMany(x => x.Labels).WithMany()
             .UsingEntity(j => j.ToTable("InvestmentTransactionFinancialLabel"));
 
+        builder.HasIndex(x => new { x.UserId, x.AssetListingId, x.PostingDate, x.EntryId })
+            .HasDatabaseName("IX_InvestmentTransactions_OwnerListingDateId");
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.AssetListingId);
         builder.HasIndex(x => x.AccountId);

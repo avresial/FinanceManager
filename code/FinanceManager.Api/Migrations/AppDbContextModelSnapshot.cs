@@ -522,7 +522,7 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
-                    b.Property<int>("AccountId")
+                    b.Property<int?>("AccountId")
                         .HasColumnType("integer");
 
                     b.Property<int>("BondDetailsId")
@@ -535,6 +535,9 @@ namespace FinanceManager.Api.Migrations
 
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Value")
                         .HasPrecision(18, 2)
@@ -549,6 +552,9 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("AccountId", "PostingDate", "EntryId");
 
                     b.HasIndex("AccountId", "BondDetailsId", "PostingDate", "EntryId");
+
+                    b.HasIndex("UserId", "BondDetailsId", "PostingDate", "EntryId")
+                        .HasDatabaseName("IX_BondEntries_OwnerBondDateId");
 
                     b.ToTable("BondEntries");
                 });
@@ -657,12 +663,15 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
-                    b.Property<int>("AccountId")
+                    b.Property<int?>("AccountId")
                         .HasColumnType("integer");
 
                     b.Property<string>("ContractorDetails")
                         .HasMaxLength(140)
                         .HasColumnType("character varying(140)");
+
+                    b.Property<int?>("CurrencyId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -670,6 +679,9 @@ namespace FinanceManager.Api.Migrations
 
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Value")
                         .HasPrecision(18, 2)
@@ -682,6 +694,9 @@ namespace FinanceManager.Api.Migrations
                     b.HasKey("EntryId");
 
                     b.HasIndex("AccountId", "PostingDate", "EntryId");
+
+                    b.HasIndex("UserId", "CurrencyId", "PostingDate", "EntryId")
+                        .HasDatabaseName("IX_CurrencyEntries_OwnerCurrencyDateId");
 
                     b.ToTable("CurrencyEntries");
                 });
@@ -727,7 +742,7 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<int>("AccountId")
+                    b.Property<int?>("AccountId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Amount")
@@ -764,6 +779,9 @@ namespace FinanceManager.Api.Migrations
 
                     b.HasIndex("AssetListingId");
 
+                    b.HasIndex("UserId", "PaymentDate", "Id")
+                        .HasDatabaseName("IX_DividendPayments_OwnerPaymentDateId");
+
                     b.HasIndex("UserId", "AccountId", "PaymentDate", "Id");
 
                     b.ToTable("DividendPayments");
@@ -778,7 +796,7 @@ namespace FinanceManager.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("EntryId"));
 
-                    b.Property<int>("AccountId")
+                    b.Property<int?>("AccountId")
                         .HasColumnType("integer");
 
                     b.Property<long>("AssetListingId")
@@ -838,6 +856,9 @@ namespace FinanceManager.Api.Migrations
                     b.HasIndex("UserId", "PostingDate");
 
                     b.HasIndex("AccountId", "PostingDate", "EntryId");
+
+                    b.HasIndex("UserId", "AssetListingId", "PostingDate", "EntryId")
+                        .HasDatabaseName("IX_InvestmentTransactions_OwnerListingDateId");
 
                     b.ToTable("InvestmentTransactions");
                 });
@@ -1725,8 +1746,7 @@ namespace FinanceManager.Api.Migrations
                     b.HasOne("FinanceManager.Domain.FinancialAccounts.Shared.Dtos.FinancialAccountBaseDto", null)
                         .WithMany()
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.ClientNoAction);
 
                     b.HasOne("FinanceManager.Domain.Assets.Entities.AssetListing", "AssetListing")
                         .WithMany()

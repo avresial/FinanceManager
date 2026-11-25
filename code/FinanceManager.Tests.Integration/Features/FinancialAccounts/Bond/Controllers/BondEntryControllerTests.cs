@@ -170,6 +170,7 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
                                      e.BondDetailsId == addEntry.BondDetailsId,
                                      TestContext.Current.CancellationToken);
         Assert.NotNull(dbEntry);
+        Assert.Equal(_testUserId, dbEntry.UserId);
         Assert.Equal(250m, dbEntry.ValueChange);
         Assert.Equal(250m, dbEntry.Value);
     }
@@ -348,7 +349,7 @@ public class BondEntryControllerTests(OptionsProvider optionsProvider) : Control
         Assert.NotNull(entry);
 
         var updateEntry = new UpdateBondAccountEntry(
-            entry.AccountId,
+            _testAccountId,
             entry.EntryId,
             entry.PostingDate,
             entry.Value,

@@ -103,5 +103,5 @@ public class InvestmentTransaction
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
     [JsonPropertyOrder(2)]
-    public int AccountId { get; set; }
+    public int? AccountId { get; set; }
 }

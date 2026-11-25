@@ -17,7 +17,7 @@ public class DividendPaymentRepository(AppDbContext context) : IDividendPaymentR
         var count = await query.CountAsync(ct);
         var items = await query.OrderByDescending(x => x.PaymentDate).ThenByDescending(x => x.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new DividendPaymentDto(x.Id, x.AccountId, x.AssetListingId, x.AssetListing.Asset.Name,
+            .Select(x => new DividendPaymentDto(x.Id, accountId, x.AssetListingId, x.AssetListing.Asset.Name,
                 x.AssetListing.Ticker, x.PaymentDate, x.Amount, x.Currency, x.Notes)).ToListAsync(ct);
         return new(items, count, page, pageSize);
     }

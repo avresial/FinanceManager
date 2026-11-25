@@ -1,6 +1,8 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
@@ -20,6 +22,7 @@ namespace FinanceManager.Tests.Integration.Repositories;
 public sealed class RecalculateValuesTests : IDisposable
 {
     private const int _accountId = 9001;
+    private const int _bondAccountId = _accountId + 1;
 
     private readonly AppDbContext _context;
 
@@ -29,6 +32,10 @@ public sealed class RecalculateValuesTests : IDisposable
             new DbContextOptionsBuilder<AppDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options);
+        _context.Accounts.AddRange(
+            new FinancialAccountBaseDto { AccountId = _accountId, UserId = 1, AccountType = AccountType.Currency },
+            new FinancialAccountBaseDto { AccountId = _bondAccountId, UserId = 1, AccountType = AccountType.Bond });
+        _context.SaveChanges();
     }
 
     public void Dispose()
@@ -151,21 +158,21 @@ public sealed class RecalculateValuesTests : IDisposable
         const int bondA = 1;
         const int bondB = 2;
 
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan20, 0, 300m, bondA), recalculate: true, cancellationToken: ct);
         // Different bond — must remain independent.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 0, 1000m, bondB), recalculate: true, cancellationToken: ct);
 
         // Out-of-order insert for bondA.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan15, 0, 100m, bondA), recalculate: true, cancellationToken: ct);
 
         var bondAEntries = await _context.BondEntries
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)
+            .Where(e => e.AccountId == _bondAccountId && e.BondDetailsId == bondA)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 
         var bondBEntries = await _context.BondEntries
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondB)
+            .Where(e => e.AccountId == _bondAccountId && e.BondDetailsId == bondB)
             .ToListAsync(ct);
 
         Assert.Equal(3, bondAEntries.Count);
@@ -189,19 +196,19 @@ public sealed class RecalculateValuesTests : IDisposable
         const int bondB = 2;
 
         // Simulate legacy import drift: Value equals ValueChange across two bonds, no recalc.
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
-        await repo.Add(new BondAccountEntry(_accountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 500m, 500m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan20, 300m, 300m, bondA), recalculate: false, cancellationToken: ct);
+        await repo.Add(new BondAccountEntry(_bondAccountId, 0, jan10, 1000m, 1000m, bondB), recalculate: false, cancellationToken: ct);
 
-        await repo.RecalculateValues(_accountId, ct);
+        await repo.RecalculateValues(_bondAccountId, ct);
 
         var bondAEntries = await _context.BondEntries
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)
+            .Where(e => e.AccountId == _bondAccountId && e.BondDetailsId == bondA)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 
         var bondBEntries = await _context.BondEntries
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondB)
+            .Where(e => e.AccountId == _bondAccountId && e.BondDetailsId == bondB)
             .ToListAsync(ct);
 
         Assert.Equal(500m, bondAEntries[0].Value); // jan10

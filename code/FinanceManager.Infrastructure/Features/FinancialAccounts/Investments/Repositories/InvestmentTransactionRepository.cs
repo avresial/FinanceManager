@@ -59,7 +59,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
         return await context.InvestmentTransactions.AsNoTracking()
             .Include(x => x.AssetListing)
-            .Where(x => accountIds.Contains(x.AccountId))
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value))
             .OrderByDescending(x => x.PostingDate).ThenByDescending(x => x.EntryId)
             .Take(count)
             .ToListAsync(cancellationToken);
@@ -74,16 +74,17 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
+        var accountId = transaction.AccountId ?? throw new ArgumentException("A trade requires an account.", nameof(transaction));
         var now = DateTimeOffset.UtcNow;
         if (transaction.CreatedAt == default) transaction.CreatedAt = now;
         transaction.UpdatedAt = now;
 
         transaction.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
-        await InAccountTransaction(transaction.AccountId, async () =>
+        await InAccountTransaction(accountId, async () =>
         {
             context.InvestmentTransactions.Add(transaction);
             await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([(transaction.AccountId, transaction.AssetListingId)], cancellationToken);
+            await RecalculateValues([(accountId, transaction.AssetListingId)], cancellationToken);
         }, cancellationToken);
         return transaction;
     }
@@ -101,9 +102,11 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             // A changed listing moves the row between two running-sum partitions, so both must be recalculated.
             // Original values are used because a caller may pass the tracked instance with its listing already changed.
             var entry = context.Entry(existing);
-            var previousPartition = (entry.Property(x => x.AccountId).OriginalValue, entry.Property(x => x.AssetListingId).OriginalValue);
+            var previousPartition = (accountId, entry.Property(x => x.AssetListingId).OriginalValue);
             await entry.Collection(x => x.Labels).LoadAsync(cancellationToken);
             existing.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
+            existing.AccountId = accountId;
+            existing.UserId = entry.Property(x => x.UserId).OriginalValue;
             existing.AssetListingId = transaction.AssetListingId;
             existing.Type = transaction.Type;
             existing.Quantity = transaction.Quantity;
@@ -114,7 +117,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             existing.Description = transaction.Description;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
             await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([previousPartition, (existing.AccountId, existing.AssetListingId)], cancellationToken);
+            await RecalculateValues([previousPartition, (accountId, existing.AssetListingId)], cancellationToken);
             updated = true;
         }, cancellationToken);
         return updated;
@@ -132,7 +135,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
             context.InvestmentTransactions.Remove(entity);
             await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([(entity.AccountId, entity.AssetListingId)], cancellationToken);
+            await RecalculateValues([(accountId, entity.AssetListingId)], cancellationToken);
             deleted = true;
         }, cancellationToken);
         return deleted;
@@ -141,7 +144,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
     private Task<int?> GetAccountId(long entryId, CancellationToken cancellationToken) =>
         context.InvestmentTransactions.AsNoTracking()
             .Where(x => x.EntryId == entryId)
-            .Select(x => (int?)x.AccountId)
+            .Select(x => x.AccountId)
             .FirstOrDefaultAsync(cancellationToken);
 
     private async Task RecalculateValues(IEnumerable<(int AccountId, long AssetListingId)> partitions, CancellationToken cancellationToken)
@@ -182,7 +185,7 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return new Dictionary<long, decimal>();
 
         var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .GroupBy(x => x.AssetListingId)
             .Select(g => new
             {
@@ -204,8 +207,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
 
         var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { x.AccountId, x.AssetListingId })
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
             .Select(g => new
             {
                 g.Key.AccountId,
@@ -233,8 +236,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             return new IInvestmentTransactionRepository.AccountValuationInputs([], []);
 
         var openingRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate < startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { x.AccountId, x.AssetListingId })
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate < startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
             .Select(g => new
             {
                 g.Key.AccountId,
@@ -247,8 +250,8 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToListAsync(cancellationToken);
 
         var tradeRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { x.AccountId, x.AssetListingId, x.PostingDate })
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId, x.PostingDate })
             .Select(g => new
             {
                 g.Key.AccountId,
@@ -280,11 +283,11 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
                 x.EntryId,
-                x.AccountId,
+                x.AccountId!.Value,
                 x.AssetListingId,
                 DateOnly.FromDateTime(x.PostingDate),
                 x.Type,
@@ -348,13 +351,13 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         if (accountIds.Count == 0 || take <= 0) return [];
 
         var query = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
             var matchedAccounts = searchAccountIds ?? [];
-            query = query.Where(x => matchedAccounts.Contains(x.AccountId) ||
+            query = query.Where(x => x.AccountId.HasValue && matchedAccounts.Contains(x.AccountId.Value) ||
                 x.AssetListing.Ticker.ToUpper().Contains(term) ||
                 x.AssetListing.Asset.Name.ToUpper().Contains(term));
         }

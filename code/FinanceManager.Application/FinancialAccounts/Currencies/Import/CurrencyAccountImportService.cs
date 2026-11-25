@@ -262,10 +262,10 @@ public class CurrencyAccountImportService(ICurrencyAccountRepository<CurrencyAcc
                         }
                     }
 
-                    if (cancellationToken.CanBeCanceled)
-                        await currencyAccountEntryRepository.Add(resolvedEntry, recalculate: true, cancellationToken);
-                    else
-                        await currencyAccountEntryRepository.Add(resolvedEntry);
+                    var added = cancellationToken.CanBeCanceled
+                        ? await currencyAccountEntryRepository.Add(resolvedEntry, recalculate: true, cancellationToken)
+                        : await currencyAccountEntryRepository.Add(resolvedEntry);
+                    if (!added) logger.LogError("Could not add a resolved currency import entry.");
                 }
             }
             catch (OperationCanceledException ex)

@@ -4,7 +4,7 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 public interface ILedgerEntry
 {
     long EntryId { get; }
-    int AccountId { get; }
+    int? AccountId { get; }
     DateTime PostingDate { get; }
     decimal Value { get; set; }
     decimal ValueChange { get; }

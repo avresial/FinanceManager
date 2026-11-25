@@ -33,6 +33,22 @@ public class AccountModelCompatibilityTests
         else builder.UseNpgsql("Host=localhost;Database=model-only");
         using var context = new AppDbContext(builder.Options);
 
+        var cash = context.Model.FindEntityType(typeof(CurrencyAccountEntry))!;
+        var bond = context.Model.FindEntityType(typeof(BondAccountEntry))!;
+        var trade = context.Model.FindEntityType(typeof(InvestmentTransaction))!;
+        var dividend = context.Model.FindEntityType(typeof(DividendPayment))!;
+        Assert.All(new[] { cash, bond, trade, dividend }, entity => Assert.True(entity.FindProperty("AccountId")!.IsNullable));
+        Assert.True(cash.FindProperty("CurrencyId")!.IsNullable);
+        Assert.True(cash.FindProperty("UserId")!.IsNullable);
+        Assert.True(bond.FindProperty("UserId")!.IsNullable);
+        Assert.Equal(typeof(long), trade.FindProperty("UserId")!.ClrType);
+        Assert.Equal(typeof(int), dividend.FindProperty("UserId")!.ClrType);
+        Assert.Equal(DeleteBehavior.ClientNoAction, dividend.FindProperty("AccountId")!.GetContainingForeignKeys().Single().DeleteBehavior);
+        Assert.Equal("CurrencyAccountEntryFinancialLabel", cash.FindSkipNavigation("Labels")!.JoinEntityType.GetTableName());
+        Assert.Equal("InvestmentTransactionFinancialLabel", trade.FindSkipNavigation("Labels")!.JoinEntityType.GetTableName());
+        Assert.Equal("BondAccountEntryEntryId", bond.FindNavigation("Labels")!.ForeignKey.Properties.Single().Name);
+        Assert.Null(dividend.FindNavigation("Labels"));
+
         foreach (var (type, table, precision, scale) in new[] {
             (typeof(CurrencyAccountEntry), "CurrencyEntries", 18, 2),
             (typeof(BondAccountEntry), "BondEntries", 18, 2),
@@ -80,7 +96,9 @@ public class AccountModelCompatibilityTests
     public void CurrencyAccountEntry_PreservesExistingJson()
     {
         var date = new DateTime(2026, 5, 17, 0, 0, 0, DateTimeKind.Utc);
-        var model = new CurrencyAccountEntry(3, 5_000_000_000L, date, 10m, 2m) { Description = "d", ContractorDetails = "c" };
+        var model = new CurrencyAccountEntry(3, 5_000_000_000L, date, 10m, 2m) { Description = "d", ContractorDetails = "c", UserId = -2, CurrencyId = 0 };
+        Assert.Equal(model.UserId, model.GetCopy().UserId);
+        Assert.Equal(model.CurrencyId, model.GetCopy().CurrencyId);
         Assert.Equal("""{"description":"d","contractorDetails":"c","entryId":5000000000,"accountId":3,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":2,"labels":[]}""", JsonSerializer.Serialize(model, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
@@ -88,7 +106,8 @@ public class AccountModelCompatibilityTests
     public void BondAccountEntry_PreservesExistingJson()
     {
         var date = new DateTime(2026, 5, 17, 0, 0, 0, DateTimeKind.Utc);
-        var model = new BondAccountEntry(3, 5_000_000_000L, date, 10m, 2m, 4) { Description = "d" };
+        var model = new BondAccountEntry(3, 5_000_000_000L, date, 10m, 2m, 4) { Description = "d", UserId = -2 };
+        Assert.Equal(model.UserId, model.GetCopy().UserId);
         Assert.Equal("""{"bondDetailsId":4,"description":"d","entryId":5000000000,"accountId":3,"postingDate":"2026-05-17T00:00:00Z","value":10,"valueChange":2,"labels":[]}""", JsonSerializer.Serialize(model, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 

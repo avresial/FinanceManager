@@ -57,7 +57,8 @@ public class MultiAccountHistoryPageTests
             Entry(bonds, 1, 4, _end),
             Entry(bonds, 2, 5, _end),
             Entry(bonds, 1, 6, _end.AddTicks(1)),
-            Entry(bonds, 3, 7, _end)
+            Entry(bonds, 3, 7, _end),
+            Entry(bonds, null, 8, _end)
         ];
         Labels(entries[3]).Add(new FinancialLabel { Name = "History label" });
         context.AddRange(entries);
@@ -98,7 +99,7 @@ public class MultiAccountHistoryPageTests
         context.AssetListings.Add(listing);
         context.InvestmentTransactions.AddRange(
             Trade(1, 1, start.AddDays(-1)), Trade(2, 1, start), Trade(3, 2, start.AddDays(1)),
-            Trade(4, 1, end), Trade(5, 2, end), Trade(6, 1, end.AddDays(1)), Trade(7, 3, end));
+            Trade(4, 1, end), Trade(5, 2, end), Trade(6, 1, end.AddDays(1)), Trade(7, 3, end), Trade(8, null, end));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
         var repository = new InvestmentTransactionRepository(context);
@@ -203,11 +204,11 @@ public class MultiAccountHistoryPageTests
         _ => throw new ArgumentException("Unsupported test entry", nameof(entry))
     };
 
-    private static ILedgerEntry Entry(bool bonds, int accountId, int id, DateTime date) => bonds
+    private static ILedgerEntry Entry(bool bonds, int? accountId, int id, DateTime date) => bonds
         ? new BondAccountEntry(accountId, id, date, 100m, 1m, 1)
         : new CurrencyAccountEntry(accountId, id, date, 100m, 1m);
 
-    private static InvestmentTransaction Trade(long id, int accountId, DateOnly date) => new()
+    private static InvestmentTransaction Trade(long id, int? accountId, DateOnly date) => new()
     {
         EntryId = id,
         AccountId = accountId,

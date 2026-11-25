@@ -93,7 +93,7 @@ public class CurrencyEntryController(
         await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Add(newEntry);
-        await labelSetterChannel.QueueEntries(newEntry.AccountId, [newEntry.EntryId]);
+        if (result) await labelSetterChannel.QueueEntries(addEntry.AccountId, [newEntry.EntryId]);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         if (result)
             await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);

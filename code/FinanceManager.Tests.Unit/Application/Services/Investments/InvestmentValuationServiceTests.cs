@@ -689,7 +689,7 @@ public class InvestmentValuationServiceTests
             .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly asOf, CancellationToken _) =>
             {
                 var dict = new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
-                foreach (var group in transactions.Where(t => accounts.Contains(t.AccountId) && t.TradeDate <= asOf).GroupBy(t => t.AccountId))
+                foreach (var group in transactions.Where(t => t.AccountId.HasValue && accounts.Contains(t.AccountId.Value) && t.TradeDate <= asOf).GroupBy(t => t.AccountId!.Value))
                 {
                     var perListing = group
                         .GroupBy(t => t.AssetListingId)
@@ -704,15 +704,15 @@ public class InvestmentValuationServiceTests
             .ReturnsAsync((IReadOnlyCollection<int> accounts, DateOnly startDate, DateOnly endDate, CancellationToken _) =>
             {
                 var opening = transactions
-                    .Where(t => accounts.Contains(t.AccountId) && t.TradeDate < startDate)
-                    .GroupBy(t => (t.AccountId, t.AssetListingId))
+                    .Where(t => t.AccountId.HasValue && accounts.Contains(t.AccountId.Value) && t.TradeDate < startDate)
+                    .GroupBy(t => (AccountId: t.AccountId!.Value, t.AssetListingId))
                     .Select(g => new IInvestmentTransactionRepository.ValuationOpeningPosition(g.Key.AccountId, g.Key.AssetListingId, g.Sum(t => t.SignedQuantity)))
                     .Where(p => p.Quantity != 0m)
                     .ToList();
 
                 var trades = transactions
-                    .Where(t => accounts.Contains(t.AccountId) && t.TradeDate >= startDate && t.TradeDate <= endDate)
-                    .GroupBy(t => (t.AccountId, t.AssetListingId, t.TradeDate))
+                    .Where(t => t.AccountId.HasValue && accounts.Contains(t.AccountId.Value) && t.TradeDate >= startDate && t.TradeDate <= endDate)
+                    .GroupBy(t => (AccountId: t.AccountId!.Value, t.AssetListingId, t.TradeDate))
                     .Select(g => new IInvestmentTransactionRepository.ValuationTradeInput(g.Key.AccountId, g.Key.AssetListingId, g.Key.TradeDate, g.Sum(t => t.SignedQuantity)))
                     .Where(t => t.SignedQuantity != 0m)
                     .ToList();
@@ -739,11 +739,11 @@ public class InvestmentValuationServiceTests
         IReadOnlyCollection<int> accounts,
         DateOnly toDate) =>
         transactions
-            .Where(t => accounts.Contains(t.AccountId) && t.TradeDate <= toDate)
+            .Where(t => t.AccountId.HasValue && accounts.Contains(t.AccountId.Value) && t.TradeDate <= toDate)
             .OrderBy(t => t.TradeDate).ThenBy(t => t.EntryId)
             .Select(t => new IInvestmentTransactionRepository.CapitalFlowInput(
                 t.EntryId,
-                t.AccountId,
+                t.AccountId!.Value,
                 t.AssetListingId,
                 t.TradeDate,
                 t.Type,

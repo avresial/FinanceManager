@@ -35,7 +35,7 @@ internal sealed class LabelSetterStartupService(
                                          && account.AccountType == AccountType.Currency
                                          && (entry.Description != ""
                                              || (entry.ContractorDetails != null && entry.ContractorDetails != ""))
-                                     select new { entry.AccountId, entry.EntryId, account.UserId };
+                                     select new { account.AccountId, entry.EntryId, account.UserId };
 
 
                 var unlabeledEntries = await unlabeledQuery

@@ -14,7 +14,9 @@ public class DividendPaymentConfiguration : IEntityTypeConfiguration<DividendPay
         builder.Property(x => x.Currency).HasMaxLength(3).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(512);
         builder.HasOne(x => x.AssetListing).WithMany().HasForeignKey(x => x.AssetListingId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<FinancialAccountBaseDto>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<FinancialAccountBaseDto>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.ClientNoAction);
+        builder.HasIndex(x => new { x.UserId, x.PaymentDate, x.Id })
+            .HasDatabaseName("IX_DividendPayments_OwnerPaymentDateId");
         builder.HasIndex(x => new { x.UserId, x.AccountId, x.PaymentDate, x.Id });
         builder.HasIndex(x => x.AssetListingId);
     }

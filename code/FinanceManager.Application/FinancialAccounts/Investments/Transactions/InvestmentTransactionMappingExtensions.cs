@@ -12,7 +12,7 @@ public static class InvestmentTransactionMappingExtensions
     public static InvestmentTransactionDto ToDto(this InvestmentTransaction transaction) => new(
         transaction.EntryId,
         transaction.UserId,
-        transaction.AccountId,
+        transaction.AccountId ?? throw new InvalidOperationException("An account-linked trade is required."),
         transaction.AssetListingId,
         (InvestmentTransactionTypeDto)transaction.Type,
         transaction.Quantity,

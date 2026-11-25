@@ -152,7 +152,7 @@ public class InvestmentTransactionController(
     public async Task<IActionResult> Get(long id, CancellationToken cancellationToken = default)
     {
         var transaction = await transactionRepository.Get(id, cancellationToken);
-        if (transaction is null) return NotFound();
+        if (transaction?.AccountId is null) return NotFound();
         if (transaction.UserId is < int.MinValue or > int.MaxValue) return Forbid();
         if (!ApiAuthenticationHelper.IsAccountOwner(User, (int)transaction.UserId)) return Forbid();
 

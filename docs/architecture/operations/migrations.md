@@ -29,3 +29,58 @@ Use that runbook for:
 - manual Supabase backups before deployment
 - restoring from Supabase backups or manual logical dumps
 - reverting production to a previous EF Core migration
+
+## Transaction owner keys
+
+The expand migration adds nullable ownership columns for cash and bonds and a nullable cash currency. Its two backfill statements copy keys only from accounts of the matching kind with a nonzero owner. Existing trades and dividends retain their stored owners. Account-based reads continue during rollout.
+
+Dev CI applies migrations before replacing the API. During that interval an old writer can leave cash or bond keys empty, and an old investment-account delete can fail if dividends still reference it. Retry a failed delete after deployment. Before enabling owner reads and again during the #1138 maintenance window, rerun the two provider-specific UPDATE statements from [ExpandTransactionOwnerKeys](../../../code/FinanceManager.Api/Migrations/20261122201026_ExpandTransactionOwnerKeys.cs) and run the inventory below. During cutover, take a backup and stop writers first. The updates can be repeated. Resolve discrepancies before exposing the affected rows or enforcing ownership. Confirm a normal cash and bond write persists the expected keys.
+
+Reverse the expand migration only while every ledger row still has an account link. The migration checks all four tables before restoring the required columns and cascading dividend foreign key. Use the backup recovery procedure after account-free writes begin.
+
+### Data-quality inventory
+
+Run the following read-only batch on the expanded database before enabling owner reads, after an expand deployment, and again before the #1138 cutover. Use a consistent snapshot, or drain writers for the final inventory. SQL Server sessions need `SET QUOTED_IDENTIFIER ON;` and the usual default schema; PostgreSQL uses the ordinary search path. The first result set includes every anomalous row once and preserves the IDs needed for adjudication.
+
+~~~sql
+WITH entries AS (
+    SELECT 'cash' AS kind, 0 AS account_type, "EntryId" AS entry_id,
+           "AccountId" AS account_id, "UserId" AS owner_id, "CurrencyId" AS currency_id
+    FROM "CurrencyEntries"
+    UNION ALL
+    SELECT 'bond', 2, "EntryId", "AccountId", "UserId", NULL FROM "BondEntries"
+    UNION ALL
+    SELECT 'trade', 1, "Id", "AccountId", "UserId", NULL FROM "InvestmentTransactions"
+    UNION ALL
+    SELECT 'dividend', 1, "Id", "AccountId", "UserId", NULL FROM "DividendPayments"
+)
+SELECT e.*, a."AccountType" AS actual_account_type, a."UserId" AS account_owner_id,
+       a."CurrencyId" AS account_currency_id, c."ShortName" AS currency_code,
+       CASE WHEN e.account_id IS NULL THEN 1 ELSE 0 END AS unlinked,
+       CASE WHEN e.account_id IS NOT NULL AND a."AccountId" IS NULL THEN 1 ELSE 0 END AS missing_account,
+       CASE WHEN e.owner_id > 0 AND u."Id" IS NULL THEN 1 ELSE 0 END AS missing_user
+FROM entries AS e
+LEFT JOIN "Accounts" AS a ON a."AccountId" = e.account_id
+LEFT JOIN "Currencies" AS c ON c."Id" = e.currency_id
+LEFT JOIN "Users" AS u ON u."Id" = e.owner_id
+WHERE a."AccountId" IS NULL OR a."AccountType" <> e.account_type
+   OR a."UserId" = 0 OR e.owner_id IS NULL OR e.owner_id = 0 OR e.owner_id <> a."UserId"
+   OR (e.owner_id > 0 AND u."Id" IS NULL)
+   OR (e.kind = 'cash' AND (c."Id" IS NULL OR e.currency_id <> a."CurrencyId"
+                           OR (e.currency_id = 0 AND UPPER(c."ShortName") <> 'PLN')))
+ORDER BY e.kind, e.entry_id;
+
+SELECT "Id", "ShortName", "Symbol"
+FROM "Currencies"
+WHERE "Id" = 0 OR UPPER("ShortName") = 'PLN'
+ORDER BY "Id";
+
+SELECT COUNT(*) AS legacy_cash_entries_on_id_zero
+FROM "CurrencyEntries" AS e
+JOIN "Accounts" AS a ON a."AccountId" = e."AccountId"
+WHERE a."AccountType" = 0 AND a."CurrencyId" = 0;
+~~~
+
+- For a pre-expand run of the first result set, replace the cash and bond `"UserId"` references in the CTE with a correlated lookup of `Accounts.UserId` by the existing `AccountId`, and replace the cash `"CurrencyId"` reference with the same lookup of `Accounts.CurrencyId`. Use that form only to inventory historical relationships. It cannot detect missing expanded values. The other two statements work on either schema.
+- If legacy cash references ID 0, require exactly the row `(0, PLN)` and no conflicting PLN row. An empty schema may have no currencies before lazy defaults are created. Where referenced ID 0 and PLN are both absent, repair using the existing default-currency path before enabling owner reads. An occupied ID 0 or PLN at another ID requires explicit reconciliation. Do not substitute a different currency.
+- `kind = 'trade' AND missing_account = 1` inventories orphan trades, including those left by account deletion. This condition does not prove deletion provenance. `missing_user` separates trades for missing persisted owners from eligible negative guest IDs. Retain records in expand. Obtain an explicit disposition before any new owner read would surface orphan trades or conflicting owners. Later read steps need to preserve legacy eligibility if unresolved, since account deletion can still create orphan trades before cutover. #1138 reruns the inventory before stopping account-linked writes and resolves or explicitly excludes these rows before enforcing constraints.

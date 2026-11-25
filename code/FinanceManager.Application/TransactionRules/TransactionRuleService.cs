@@ -109,7 +109,7 @@ public sealed class TransactionRuleService(
                     _ = application.ApplyTo(sandboxEntry);
                     var after = TransactionRuleApplication.ToFacts(sandboxEntry);
                     results.Add(new(
-                        entry.AccountId,
+                        account.AccountId,
                         account.Name,
                         entry.EntryId,
                         entry.PostingDate,

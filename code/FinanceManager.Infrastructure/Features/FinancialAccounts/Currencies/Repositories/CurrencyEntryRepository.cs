@@ -1,6 +1,7 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
@@ -20,51 +21,9 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     public Task<bool> Add(CurrencyAccountEntry entry, bool recalculate) =>
         Add(entry, recalculate, CancellationToken.None);
 
-    public async Task<bool> Add(CurrencyAccountEntry entry, bool recalculate, CancellationToken cancellationToken)
-    {
-        CurrencyAccountEntry newAccountEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
-        {
-            Description = entry.Description,
-            ContractorDetails = entry.ContractorDetails,
-            Labels = await ResolveTrackedLabels(entry.Labels, cancellationToken),
-        };
+    public Task<bool> Add(CurrencyAccountEntry entry, bool recalculate, CancellationToken cancellationToken) =>
+        Add([entry], recalculate, cancellationToken);
 
-        if (context.Database.IsRelational() && recalculate)
-        {
-            // Relational: transactional mutation + recalculation commit together atomically.
-            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            context.CurrencyEntries.Add(newAccountEntry);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
-            context.ChangeTracker.Clear();
-        }
-        else
-        {
-            // Non-relational or no recalculation: persist entry first.
-            context.CurrencyEntries.Add(newAccountEntry);
-            await context.SaveChangesAsync(cancellationToken);
-            if (entry.EntryId == 0 && newAccountEntry.EntryId != 0)
-                _entryIdProperty?.SetValue(entry, newAccountEntry.EntryId);
-            if (recalculate)
-            {
-                // Post-commit repair: complete recalculation before propagating cancellation.
-                try
-                {
-                    await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, cancellationToken);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                    await RecalculateValues(newAccountEntry.AccountId, newAccountEntry.EntryId, CancellationToken.None);
-                }
-            }
-            context.ChangeTracker.Clear();
-        }
-        return true;
-    }
     public Task<bool> Add(IEnumerable<CurrencyAccountEntry> entries, bool recalculate = true) =>
         Add(entries, recalculate, CancellationToken.None);
 
@@ -75,6 +34,8 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     {
         var entryList = entries as IList<CurrencyAccountEntry> ?? entries.ToList();
         if (entryList.Count == 0) return true;
+        var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Currency, entryList.Select(e => e.AccountId), cancellationToken);
+        if (accounts is null) return false;
 
         // Re-resolve already-persisted labels to context-tracked instances in one query so EF reuses the
         // existing rows instead of trying to INSERT detached copies — the guest seeder reads labels via
@@ -85,81 +46,56 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             : await context.FinancialLabels.Where(l => existingLabelIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
 
         List<(CurrencyAccountEntry Source, CurrencyAccountEntry Target)> pairs = new(entryList.Count);
-        CurrencyAccountEntry? oldestEntry = null;
 
         foreach (var entry in entryList)
         {
+            var account = accounts[entry.AccountId!.Value];
             CurrencyAccountEntry newEntry = new(entry.AccountId, 0, entry.PostingDate, entry.Value, entry.ValueChange)
             {
+                UserId = account.UserId,
+                CurrencyId = account.CurrencyId,
                 Description = entry.Description,
                 ContractorDetails = entry.ContractorDetails,
                 Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
 
             pairs.Add((entry, newEntry));
-            if (oldestEntry is null || newEntry.PostingDate < oldestEntry.PostingDate)
-                oldestEntry = newEntry;
-
             context.CurrencyEntries.Add(newEntry);
         }
 
-        if (context.Database.IsRelational() && recalculate && oldestEntry is not null)
+        async Task RecalculateAccounts(CancellationToken token)
         {
-            // Relational: transactional mutation + recalculation commit together atomically.
-            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
+            foreach (var group in pairs.GroupBy(p => p.Target.AccountId!.Value))
+                await RecalculateValues(group.Key, group.MinBy(p => p.Target.PostingDate.ToUniversalTime()).Target.EntryId, token);
+        }
+
+        await using var transaction = context.Database.IsRelational() && recalculate
+            ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
+        await context.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await RecalculateAccounts(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            foreach (var (source, target) in pairs)
-            {
-                if (source.EntryId == 0 && target.EntryId != 0)
-                    _entryIdProperty?.SetValue(source, target.EntryId);
-            }
-            context.ChangeTracker.Clear();
         }
-        else
+        foreach (var (source, target) in pairs)
         {
-            // Non-relational or no recalculation: persist entries first.
-            await context.SaveChangesAsync(cancellationToken);
-            foreach (var (source, target) in pairs)
-            {
-                if (source.EntryId == 0 && target.EntryId != 0)
-                    _entryIdProperty?.SetValue(source, target.EntryId);
-            }
-            if (recalculate && oldestEntry is not null)
-            {
-                // Post-commit repair: complete recalculation before propagating cancellation.
-                try
-                {
-                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, cancellationToken);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                    await RecalculateValues(oldestEntry.AccountId, oldestEntry.EntryId, CancellationToken.None);
-                }
-            }
-            context.ChangeTracker.Clear();
+            if (source.EntryId == 0 && target.EntryId != 0)
+                _entryIdProperty?.SetValue(source, target.EntryId);
         }
+        if (recalculate && transaction is null)
+        {
+            try
+            {
+                await RecalculateAccounts(cancellationToken);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // The insert already committed. Finish the repair after a provider timeout.
+                await RecalculateAccounts(CancellationToken.None);
+            }
+        }
+        context.ChangeTracker.Clear();
         return true;
-    }
-
-    // Maps existing labels (Id != 0) to their context-tracked instances so EF does not re-insert detached
-    // copies; brand-new labels (Id == 0) are passed through unchanged to be inserted. #408
-    private async Task<List<FinancialLabel>> ResolveTrackedLabels(
-        ICollection<FinancialLabel> labels,
-        CancellationToken cancellationToken)
-    {
-        if (labels.Count == 0) return [];
-
-        var existingIds = labels.Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
-        var trackedById = existingIds.Count == 0
-            ? []
-            : await context.FinancialLabels.Where(l => existingIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, cancellationToken);
-
-        return labels
-            .Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l)
-            .ToList();
     }
 
     public Task<bool> Delete(int accountId, long entryId) =>
@@ -172,7 +108,6 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             cancellationToken);
         if (entryToDelete is null) return false;
 
-        var deletedAccountId = entryToDelete.AccountId;
         var deletedPostingDate = entryToDelete.PostingDate;
 
         if (context.Database.IsRelational())
@@ -181,7 +116,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
             context.CurrencyEntries.Remove(entryToDelete);
             await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues(deletedAccountId, deletedPostingDate, cancellationToken);
+            await RecalculateValues(accountId, deletedPostingDate, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         else
@@ -192,12 +127,12 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             // Post-commit repair: complete recalculation before propagating cancellation.
             try
             {
-                await RecalculateValues(deletedAccountId, deletedPostingDate, cancellationToken);
+                await RecalculateValues(accountId, deletedPostingDate, cancellationToken);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 // Provider timeout or internal cancellation: complete recalculation with no-token fallback.
-                await RecalculateValues(deletedAccountId, deletedPostingDate, CancellationToken.None);
+                await RecalculateValues(accountId, deletedPostingDate, CancellationToken.None);
             }
         }
 
@@ -369,7 +304,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         return await context.CurrencyEntries
             .AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .Include(x => x.Labels)
             .ThenInclude(l => l.Classifications)
             .AsSplitQuery()
@@ -384,7 +319,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         return await context.CurrencyEntries
             .AsNoTracking()
-            .Where(x => accountIds.Contains(x.AccountId) && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate && x.PostingDate <= endDate)
             .OrderByDescending(x => x.PostingDate)
             .ThenByDescending(x => x.EntryId)
             .ToListAsync();
@@ -397,12 +332,12 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         // One row per account: the entry that no other older-than-date entry of the same account beats on
         // (PostingDate, EntryId). EntryId is unique, so exactly one row per account survives the filter.
         var rows = await context.CurrencyEntries
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate < date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate < date)
             .Where(e => !context.CurrencyEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate < date
                 && (o.PostingDate > e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId > e.EntryId))))
             .ToListAsync();
 
-        return rows.ToDictionary(e => e.AccountId);
+        return rows.ToDictionary(e => e.AccountId!.Value);
     }
 
     public async Task<Dictionary<int, CurrencyAccountEntry>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date)
@@ -410,12 +345,12 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         if (accountIds.Count == 0) return [];
 
         var rows = await context.CurrencyEntries
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate > date)
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate > date)
             .Where(e => !context.CurrencyEntries.Any(o => o.AccountId == e.AccountId && o.PostingDate > date
                 && (o.PostingDate < e.PostingDate || (o.PostingDate == e.PostingDate && o.EntryId < e.EntryId))))
             .ToListAsync();
 
-        return rows.ToDictionary(e => e.AccountId);
+        return rows.ToDictionary(e => e.AccountId!.Value);
     }
 
     public async Task<CurrencyAccountEntry?> GetOldest(int accountId) => await context.CurrencyEntries
@@ -432,7 +367,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
     public async Task<bool> Update(CurrencyAccountEntry entry)
     {
-        var existingEntry = await context.CurrencyEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == entry.AccountId && e.EntryId == entry.EntryId);
+        if (entry.AccountId is not int accountId) return false;
+        var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Currency, [accountId], CancellationToken.None);
+        if (accounts is null) return false;
+        var existingEntry = await context.CurrencyEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
 
         var labelIds = entry.Labels.Select(x => x.Id).ToList();
@@ -441,8 +379,10 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             .ToListAsync();
 
         existingEntry.Update(entry);
+        existingEntry.UserId = accounts[accountId].UserId;
+        existingEntry.CurrencyId = accounts[accountId].CurrencyId;
         await context.SaveChangesAsync();
-        await RecalculateValues(entry.AccountId, entry.EntryId);
+        await RecalculateValues(accountId, entry.EntryId);
         return true;
     }
 
@@ -450,7 +390,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     {
         var entry = await context.CurrencyEntries
             .Include(e => e.Labels)
-            .FirstOrDefaultAsync(e => e.EntryId == entryId);
+            .FirstOrDefaultAsync(e => e.AccountId.HasValue && e.EntryId == entryId);
         var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
 
         if (entry is null || label is null) return false;
@@ -473,7 +413,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         // Fetch all relevant entries and labels at once
         var entries = await context.CurrencyEntries
-            .Where(e => entryIds.Contains(e.EntryId))
+            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
             .ToListAsync(cancellationToken);
 
@@ -549,7 +489,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         return await context.CurrencyEntries
             .AsNoTracking()
-            .Where(e => entryIds.Contains(e.EntryId))
+            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
@@ -573,13 +513,13 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         if (accountIds.Count == 0 || take <= 0) return [];
 
         var query = context.CurrencyEntries.AsNoTracking()
-            .Where(e => accountIds.Contains(e.AccountId) && e.PostingDate >= startDate && e.PostingDate <= endDate);
+            .Where(e => e.AccountId.HasValue && accountIds.Contains(e.AccountId.Value) && e.PostingDate >= startDate && e.PostingDate <= endDate);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
             var matchedAccounts = searchAccountIds ?? [];
-            query = query.Where(e => matchedAccounts.Contains(e.AccountId) ||
+            query = query.Where(e => e.AccountId.HasValue && matchedAccounts.Contains(e.AccountId.Value) ||
                 (e.Description != null && e.Description.ToUpper().Contains(term)) ||
                 (e.ContractorDetails != null && e.ContractorDetails.ToUpper().Contains(term)));
         }
@@ -609,7 +549,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
         {
             results.AddRange(await context.CurrencyEntries
                 .AsNoTracking()
-                .Where(e => accountIdChunk.Contains(e.AccountId))
+                .Where(e => e.AccountId.HasValue && accountIdChunk.Contains(e.AccountId.Value))
                 .OrderByDescending(e => e.PostingDate)
                 .ThenByDescending(e => e.EntryId)
                 // The dashboard does not need Value or labels for this read. Materialise only the

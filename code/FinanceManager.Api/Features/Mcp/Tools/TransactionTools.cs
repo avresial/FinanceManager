@@ -55,8 +55,8 @@ public sealed class TransactionTools(
         if (currencyIds.Count != 0)
         {
             transactions.AddRange((await currencyEntries.GetRange(currencyIds, rangeStart, rangeEnd))
-                .Where(entry => currencyAccountMap.ContainsKey(entry.AccountId))
-                .Select(entry => McpResponseMapper.Transaction(entry, currencyAccountMap[entry.AccountId].Name)));
+                .Where(entry => entry.AccountId.HasValue && currencyAccountMap.ContainsKey(entry.AccountId.Value))
+                .Select(entry => McpResponseMapper.Transaction(entry, currencyAccountMap[entry.AccountId!.Value].Name)));
         }
 
         var bondIds = SelectedIds(bondAccountMap.Keys, accountId);
@@ -65,13 +65,13 @@ public sealed class TransactionTools(
             var bondNames = new Dictionary<int, string>();
             foreach (var entry in await bondEntries.GetRange(bondIds, rangeStart, rangeEnd))
             {
-                if (!bondAccountMap.ContainsKey(entry.AccountId)) continue;
+                if (entry.AccountId is not int bondAccountId || !bondAccountMap.ContainsKey(bondAccountId)) continue;
                 if (!bondNames.TryGetValue(entry.BondDetailsId, out var bondName))
                 {
                     bondName = (await bondDetails.GetByIdAsync(entry.BondDetailsId, cancellationToken))?.Name ?? "Bond";
                     bondNames[entry.BondDetailsId] = bondName;
                 }
-                transactions.Add(McpResponseMapper.Transaction(entry, bondAccountMap[entry.AccountId].Name, bondName));
+                transactions.Add(McpResponseMapper.Transaction(entry, bondAccountMap[bondAccountId].Name, bondName));
             }
         }
 
@@ -79,8 +79,8 @@ public sealed class TransactionTools(
         transactions.AddRange(investments
             .Where(transaction => transaction.UserId == userId)
             .Where(transaction => accountId is null || transaction.AccountId == accountId)
-            .Where(transaction => investmentAccountMap.ContainsKey(transaction.AccountId))
-            .Select(transaction => McpResponseMapper.Transaction(transaction, investmentAccountMap[transaction.AccountId].Name)));
+            .Where(transaction => transaction.AccountId.HasValue && investmentAccountMap.ContainsKey(transaction.AccountId.Value))
+            .Select(transaction => McpResponseMapper.Transaction(transaction, investmentAccountMap[transaction.AccountId!.Value].Name)));
 
         var filtered = transactions
             .Where(transaction => string.IsNullOrWhiteSpace(label) || transaction.Labels.Contains(label, StringComparer.OrdinalIgnoreCase))

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 
-public class CurrencyAccountEntry(int accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange) : ILedgerEntry
+public class CurrencyAccountEntry(int? accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange) : ILedgerEntry
 {
     public string? ContractorDetails { get; set; }
 
@@ -29,8 +29,14 @@ public class CurrencyAccountEntry(int accountId, long entryId, DateTime postingD
     [JsonPropertyOrder(6)]
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
+    [JsonIgnore]
+    public int? UserId { get; set; }
+
+    [JsonIgnore]
+    public int? CurrencyId { get; set; }
+
     [JsonPropertyOrder(2)]
-    public int AccountId { get; set; } = accountId;
+    public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
     public decimal ValueChange { get; set; } = valueChange;
@@ -44,13 +50,14 @@ public class CurrencyAccountEntry(int accountId, long entryId, DateTime postingD
         var valueChangeChange = entry.ValueChange - ValueChange;
         Value += valueChangeChange;
         ValueChange = entry.ValueChange;
-        AccountId = entry.AccountId;
         Labels = entry.Labels ?? [];
         ContractorDetails = entry.ContractorDetails;
     }
 
     public CurrencyAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange)
     {
+        UserId = UserId,
+        CurrencyId = CurrencyId,
         Description = this.Description,
         ContractorDetails = this.ContractorDetails,
     };

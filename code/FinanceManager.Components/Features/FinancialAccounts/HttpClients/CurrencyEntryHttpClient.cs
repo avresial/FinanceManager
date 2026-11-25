@@ -73,8 +73,9 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
 
     public async Task<bool> UpdateEntryAsync(CurrencyAccountEntry entry)
     {
+        if (entry.AccountId is not int accountId) return false;
         var updateCommand = new UpdateCurrencyAccountEntry(
-            entry.AccountId,
+            accountId,
             entry.EntryId,
             entry.PostingDate,
             entry.Value,

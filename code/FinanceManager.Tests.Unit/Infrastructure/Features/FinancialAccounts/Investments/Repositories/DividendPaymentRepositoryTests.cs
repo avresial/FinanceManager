@@ -14,7 +14,7 @@ namespace FinanceManager.Tests.Unit.Infrastructure.Features.FinancialAccounts.In
 public class DividendPaymentRepositoryTests
 {
     [Fact]
-    public async Task RelationalLedgerPagesStableTiesIsolatesOwnersAndCascadesAccountDeletion()
+    public async Task RelationalLedgerPagesStableTiesIsolatesOwnersAndDeletesOnlyLinkedDividends()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var connection = new SqliteConnection("Data Source=:memory:");
@@ -26,7 +26,7 @@ public class DividendPaymentRepositoryTests
         context.InvestmentTransactions.Add(new InvestmentTransaction { UserId = 1, AccountId = 4, AssetListingId = 8, Quantity = 1, Currency = "USD", TradeDate = new(2019, 1, 1) });
         context.DividendPayments.AddRange(
             Payment(1, 1, 4, new(2020, 1, 1)), Payment(2, 1, 4, new(2020, 1, 1)),
-            Payment(3, 1, 4, new(2019, 1, 1)), Payment(4, 2, 5, new(2021, 1, 1)));
+            Payment(3, 1, 4, new(2019, 1, 1)), Payment(4, 2, 5, new(2021, 1, 1)), Payment(5, 1, null, new(2021, 1, 1)));
         await context.SaveChangesAsync(ct);
         var repository = new DividendPaymentRepository(context);
         var first = await repository.GetHistory(1, 4, 1, 2, ct);
@@ -37,11 +37,12 @@ public class DividendPaymentRepositoryTests
         Assert.False(await repository.HasHolding(2, 4, 8, ct));
         Assert.Single(await repository.GetHoldings(1, 4, ct));
         Assert.Empty(await repository.GetHoldings(2, 4, ct));
-        await context.Accounts.Where(x => x.AccountId == 4).ExecuteDeleteAsync(ct);
-        Assert.Equal(4, (await context.DividendPayments.AsNoTracking().SingleAsync(ct)).Id);
+        await Assert.ThrowsAsync<SqliteException>(() => context.Accounts.Where(x => x.AccountId == 4).ExecuteDeleteAsync(ct));
+        Assert.True(await new InvestmentAccountRepository(context).Delete(4));
+        Assert.Equal(new long[] { 4, 5 }, await context.DividendPayments.OrderBy(d => d.Id).Select(d => d.Id).ToListAsync(ct));
         Assert.Single(await context.InvestmentTransactions.ToListAsync(ct));
     }
-    private static DividendPayment Payment(long id, int user, int account, DateOnly date) => new()
+    private static DividendPayment Payment(long id, int user, int? account, DateOnly date) => new()
     { Id = id, UserId = user, AccountId = account, AssetListingId = 8, PaymentDate = date, Amount = 5, Currency = "USD" };
 
     // SQLite requires a numeric timestamp representation; production providers support DateTimeOffset.

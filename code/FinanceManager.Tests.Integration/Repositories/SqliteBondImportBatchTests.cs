@@ -7,6 +7,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
@@ -44,6 +45,8 @@ public sealed class SqliteBondImportBatchTests : IDisposable
 
         _context.Database.EnsureCreated();
         _repo = new BondEntryRepository(_context);
+        _context.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = _userId, AccountType = AccountType.Bond });
+        _context.SaveChanges();
     }
 
     public void Dispose()

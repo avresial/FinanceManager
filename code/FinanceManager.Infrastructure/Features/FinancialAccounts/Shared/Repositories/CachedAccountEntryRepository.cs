@@ -404,10 +404,10 @@ public class CachedAccountEntryRepository<T>(
             tags: [Tag(userId)]);
     }
 
-    private async Task InvalidateAccounts(IEnumerable<int> accountIds, CancellationToken cancellationToken = default)
+    private async Task InvalidateAccounts(IEnumerable<int?> accountIds, CancellationToken cancellationToken = default)
     {
         var invalidatedUsers = new HashSet<int>();
-        foreach (var accountId in accountIds.Distinct())
+        foreach (var accountId in accountIds.OfType<int>().Distinct())
         {
             await cache.RemoveByTagAsync(AccountTag(accountId), cancellationToken);
 
