@@ -34,6 +34,7 @@ public class ImportStepCaptionTests
         context.Services.AddSingleton(Moq.Mock.Of<FinanceManager.Domain.Identity.Services.ISettingsService>());
         context.Services.AddTransient<FinanceManager.Components.Features.FinancialAccounts.HttpClients.CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<FinanceManager.Components.Features.FinancialAccounts.Services.CurrencyImportJobTracker>();
+        context.Services.AddSingleton<FinanceManager.Components.Features.FinancialAccounts.Services.AccountDataSynchronizationService>();
 
         var cut = context.Render<FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import.ImportCurrencyEntriesComponent>();
         cut.WaitForAssertion(() => Assert.Contains("Step 1 of 3", cut.Find(".fm-import-step-caption").TextContent));

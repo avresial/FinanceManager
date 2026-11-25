@@ -12,6 +12,7 @@ using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Features.Transactions.Components;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
+using FinanceManager.Components.Shared.Layout;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
@@ -21,6 +22,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Tests.Unit.Components.Features.Transactions;
+using FinanceManager.Tests.Unit.Components.Shared.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -575,7 +577,7 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
-    public async Task DeletingAnInvestmentRow_UsesTheOwnerRoute_AndReloads()
+    public async Task DeletingAnInvestmentRow_UsesTheOwnerRoute_PublishesOnce_AndReloadsOnce()
     {
         using var handler = new PageHandler((count, _) => Respond(count == 1
             ? Page([Entry(3, _oct15, TransactionKind.Investment, accountId: 30)], null)
@@ -583,6 +585,8 @@ public sealed class TransactionsPageTests
         using var services = new PageHandler((_, uri) => Task.FromResult(new HttpResponseMessage(
             uri.AbsolutePath.StartsWith("/api/transactions/investment/") ? HttpStatusCode.NoContent : HttpStatusCode.ServiceUnavailable)));
         await using var context = CreateContext(handler, services);
+        var published = 0;
+        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
 
@@ -591,7 +595,9 @@ public sealed class TransactionsPageTests
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
         Assert.Contains(services.Requests, uri => uri.AbsolutePath == "/api/transactions/investment/3");
+        await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
         Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal(1, published);
         // Deleting the last trade of a currency must drop it from the filter options.
         cut.WaitForAssertion(() => Assert.Equal(2, handler.CurrencyRequests.Count));
     }
@@ -714,6 +720,106 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
+    public async Task InvestmentSaved_PublishesTheChangeOnce_AndReloadsTheListOnce()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var published = 0;
+        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(handler.Requests));
+
+        await cut.InvokeAsync(() => cut.FindComponent<AddTransactionDialog>().Instance.OnSaved.InvokeAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.Requests.Count));
+        await Task.Delay(100, Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, published);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task FirstTradeFromAnEmptySession_ShowsAssetsInTheMenu()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([], null)));
+        await using var context = CreateContext(handler);
+        var backend = new NavMenuTestBackend();
+        context.Services.AddSingleton(backend.CreateService());
+        var menu = context.Render<NavMenu>(parameters => parameters.Add(x => x.DrawerIsOpen, true));
+        menu.WaitForAssertion(() => Assert.Contains(backend.Requests, path => path.StartsWith("api/Assets/", StringComparison.Ordinal)));
+        Assert.Empty(menu.FindAll("[data-testid='nav-assets']"));
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
+
+        // The server now holds the first buy; saving it must reach the menu without a reload.
+        backend.HasAssets = true;
+        await cut.InvokeAsync(() => cut.FindComponent<AddTransactionDialog>().Instance.OnSaved.InvokeAsync());
+
+        menu.WaitForAssertion(() => Assert.Single(menu.FindAll("[data-testid='nav-assets']")));
+    }
+
+    [Fact]
+    public async Task EmptyList_ForAnOwnerWithNothingRecorded_IsAFirstRunPrompt_NotADateRangeHint()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([], null)), ownerHasTransactions: false);
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("No transactions yet", cut.Find("[data-testid='transactions-empty']").TextContent));
+        var empty = cut.Find("[data-testid='transactions-empty']").TextContent;
+        Assert.DoesNotContain("date range", empty);
+        Assert.Contains("Import cash CSV", empty);
+        Assert.Contains("Import bond CSV", empty);
+        Assert.Contains("Add transaction", empty);
+    }
+
+    [Fact]
+    public async Task EmptyRange_ForAnOwnerWithData_KeepsTheDateRangeHint()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([], null)));
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Pick a longer date range", cut.Find("[data-testid='transactions-empty']").TextContent));
+        Assert.DoesNotContain("No transactions yet", cut.Markup);
+    }
+
+    [Fact]
+    public async Task ClosingTheDialogOpenedByTheLink_DropsDialogAndKindFromTheUrl_KeepingOtherParameters()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/Transactions?dialog=add-entry&kind=bond&search=rent");
+        var cut = context.Render<TransactionsPage>();
+        var dialog = cut.FindComponent<AddTransactionDialog>();
+        Assert.True(dialog.Instance.Visible);
+
+        await cut.InvokeAsync(() => dialog.Instance.VisibleChanged.InvokeAsync(false));
+
+        Assert.EndsWith("/Transactions?search=rent", navigation.Uri);
+        Assert.True(context.Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>().History.First().Options.ReplaceHistoryEntry);
+    }
+
+    [Fact]
+    public async Task ClosingTheDialogOpenedByTheAddButton_LeavesTheUrlAlone()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var navigation = context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/Transactions");
+        var historyBefore = context.Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>().History.Count;
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-add']")));
+        cut.Find("[data-testid='transactions-add']").Click();
+
+        await cut.InvokeAsync(() => cut.FindComponent<AddTransactionDialog>().Instance.VisibleChanged.InvokeAsync(false));
+
+        Assert.Equal(historyBefore, context.Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>().History.Count);
+    }
+
+    [Fact]
     public async Task DialogQuery_WithAnUndefinedKind_OpensOnCash()
     {
         using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
@@ -733,6 +839,7 @@ public sealed class TransactionsPageTests
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
         Assert.Contains(cut.FindAll("[data-testid='transactions-empty'] a"), link => link.GetAttribute("href") == "/Transactions/Import/cash");
+        Assert.Contains(cut.FindAll("[data-testid='transactions-empty'] a"), link => link.GetAttribute("href") == "/Transactions/Import/bond");
         Assert.Contains(cut.FindAll("[data-testid='transactions-empty'] button"), button => button.TextContent.Contains("Add transaction"));
         Assert.Empty(cut.FindAll("[data-testid='transactions-clear-filters']"));
 
@@ -818,7 +925,7 @@ public sealed class TransactionsPageTests
 
     // Feed requests go to `respond`; the currency-options request is answered from `currencies` (unavailable when null)
     // and recorded apart, so request counts and indexes only ever describe the feed.
-    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond, IReadOnlyList<string>? currencies = null) : HttpMessageHandler
+    private sealed class PageHandler(Func<int, Uri, Task<HttpResponseMessage>> respond, IReadOnlyList<string>? currencies = null, bool ownerHasTransactions = true) : HttpMessageHandler
     {
         private readonly List<Uri> _requests = [];
         private readonly List<Uri> _currencyRequests = [];
@@ -846,6 +953,8 @@ public sealed class TransactionsPageTests
             int count;
             lock (_requests)
             {
+                if (request.RequestUri!.AbsolutePath.Contains("/Exists/", StringComparison.Ordinal))
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(ownerHasTransactions) });
                 if (request.RequestUri!.AbsolutePath.Contains("/Currencies/", StringComparison.Ordinal))
                 {
                     _currencyRequests.Add(request.RequestUri);

@@ -102,23 +102,6 @@ public class AssetsHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
     }
 
-    public async Task<UnrealizedGainLossAccountResult?> GetUnrealizedGainLossForAccount(
-        int userId,
-        int accountId,
-        Currency currency,
-        DateTime asOfDate,
-        CancellationToken cancellationToken = default)
-    {
-        using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/Assets/GetUnrealizedGainLossForAccount/{userId}/{accountId}/{currency.Id}/{asOfDate:O}",
-            cancellationToken);
-
-        if (response.StatusCode == HttpStatusCode.NotFound) return null;
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
-    }
-
     public async Task<FeeDragAnalysisResult?> GetFeeDragAnalysis(
         int userId,
         Currency currency,

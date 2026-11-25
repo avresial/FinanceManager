@@ -16,6 +16,9 @@ public class LegacyAccountRedirectTests
     [InlineData("/Import/7", "/Transactions")]
     [InlineData("/Export/7", "/Transactions")]
     [InlineData("/AddAccount", "/Transactions?dialog=add-entry")]
+    [InlineData("/AddAccount/", "/Transactions?dialog=add-entry")]
+    [InlineData("/AddAccount/?source=review", "/Transactions?dialog=add-entry")]
+    [InlineData("/Import/7/", "/Transactions")]
     public async Task OldAccountRoutes_ReplaceTheHistoryEntryWithTheirTransactionsTarget(string oldRoute, string expectedPath)
     {
         await using var context = new BunitContext();

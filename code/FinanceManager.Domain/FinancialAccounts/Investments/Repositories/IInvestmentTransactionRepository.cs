@@ -12,6 +12,9 @@ public interface IInvestmentTransactionRepository
     /// <summary>Distinct currency codes of the user's trades.</summary>
     Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default);
 
+    /// <summary>Whether the user has at least one trade, linked to an account or not. Short-circuits in the database.</summary>
+    Task<bool> HasAnyByUser(long userId, CancellationToken ct = default);
+
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
 

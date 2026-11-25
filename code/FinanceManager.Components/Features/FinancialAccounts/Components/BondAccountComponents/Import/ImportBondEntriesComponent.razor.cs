@@ -138,6 +138,8 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Imp
             _importRows = entries;
             _importResult = await BondTransactionsHttpClient.ImportAsync(entries);
             AddImportMessages(_importResult);
+            if (_importResult.Imported > 0)
+                await PublishCommittedImportAsync();
         }
         catch (Exception ex)
         {
@@ -179,9 +181,11 @@ public partial class ImportBondEntriesComponent : ImportEntriesComponentBase<Imp
             await _resolverRef.SubmitAsync();
     }
 
-    private void OnConflictsSubmitted()
+    // Accepted conflicts were just written, so the menu may now have something to show even when nothing was imported before.
+    private async Task OnConflictsSubmitted()
     {
         _conflictsResolved = true;
+        await PublishCommittedImportAsync();
     }
 
     private void EnsureRequiredMapping()

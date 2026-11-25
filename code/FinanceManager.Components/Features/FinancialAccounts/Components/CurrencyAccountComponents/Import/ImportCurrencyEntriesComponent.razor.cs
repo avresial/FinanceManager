@@ -37,6 +37,7 @@ public partial class ImportCurrencyEntriesComponent :
     private string? JobError => JobTracker.Error;
 
     private CurrencyEntryConflictResolver? _resolverRef;
+    private Guid? _publishedJobId;
 
     protected override int MinimumHeaderCount => 2;
     protected override bool HasMappedPreview => _mappedPreview.Any();
@@ -95,7 +96,18 @@ public partial class ImportCurrencyEntriesComponent :
         if (HasImportTarget) _erorrs.Clear();
     }
 
-    private void OnTrackingChanged() => _ = InvokeAsync(StateHasChanged);
+    private void OnTrackingChanged() => _ = InvokeAsync(OnTrackingChangedAsync);
+
+    private async Task OnTrackingChangedAsync()
+    {
+        // The job commits entries while it runs; once it has finished, tell the menu about them (once per job).
+        if (ActiveJobStatus is { IsCompleted: true, Imported: > 0 } status && _publishedJobId != status.JobId)
+        {
+            _publishedJobId = status.JobId;
+            await PublishCommittedImportAsync();
+        }
+        StateHasChanged();
+    }
 
     protected override Task<(List<string> Headers, List<List<string>> Data)?> ReadCsvAsync(
         string content,
@@ -267,10 +279,10 @@ public partial class ImportCurrencyEntriesComponent :
             "Failed to save mapping choices");
     }
 
-    private Task OnConflictsResolved(IReadOnlyCollection<string> conflictIds)
+    internal async Task OnConflictsResolved(IReadOnlyCollection<string> conflictIds)
     {
         JobTracker.MarkResolved(conflictIds);
-        return Task.CompletedTask;
+        await PublishCommittedImportAsync();
     }
 
     public async ValueTask DisposeAsync()

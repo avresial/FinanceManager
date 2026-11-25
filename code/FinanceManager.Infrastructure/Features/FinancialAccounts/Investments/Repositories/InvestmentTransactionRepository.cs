@@ -19,6 +19,12 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.FinancialLabels.Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
     }
 
+    public async Task<bool> HasAnyByUser(long userId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        return await context.InvestmentTransactions.AnyAsync(x => x.UserId == userId, ct);
+    }
+
     public Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default) =>
         context.InvestmentTransactions
             .AsSplitQuery().Include(x => x.Labels)

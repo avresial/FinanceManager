@@ -26,7 +26,7 @@ public class HomeTests
 
         cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<Stub<DashboardComponent>>()));
         Assert.Empty(cut.FindComponents<Stub<WelcomePage>>());
-        Assert.Equal("api/TransactionLog/Get/-5?count=1", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
+        Assert.Equal("api/TransactionLog/Exists/-5", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
     }
 
     [Fact]

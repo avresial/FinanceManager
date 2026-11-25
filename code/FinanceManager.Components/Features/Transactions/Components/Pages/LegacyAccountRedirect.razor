@@ -13,7 +13,8 @@
 
     protected override void OnInitialized()
     {
-        var isAddAccount = new Uri(Navigation.Uri).AbsolutePath.Equals("/AddAccount", StringComparison.OrdinalIgnoreCase);
+        // The router matches "/AddAccount/" too, so the trailing slash must not change the destination.
+        var isAddAccount = new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').Equals("/AddAccount", StringComparison.OrdinalIgnoreCase);
         Navigation.NavigateTo(isAddAccount ? "Transactions?dialog=add-entry" : "Transactions", replace: true);
     }
 }

@@ -35,7 +35,7 @@ Any in-app route, including ones with segments. Omit it to land on the dashboard
 ```
 http://localhost:5113/DevelopLogin/guest                    → dashboard
 http://localhost:5113/DevelopLogin/guest/Assets             → assets page
-http://localhost:5113/DevelopLogin/guest/Transactions?dialog=add-entry   → transactions page with the add dialog open
+http://localhost:5113/DevelopLogin/guest/AddAccount         → transactions page with the add dialog open
 http://localhost:5113/DevelopLogin/testuser/UserSettings    → settings, as testuser
 ```
 

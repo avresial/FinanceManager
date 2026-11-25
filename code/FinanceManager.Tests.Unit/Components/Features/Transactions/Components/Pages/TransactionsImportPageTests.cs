@@ -116,6 +116,7 @@ public class TransactionsImportPageTests
         context.Services.AddTransient<CurrencyAccountImportHttpClient>();
         context.Services.AddTransient<CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<CurrencyImportJobTracker>();
+        context.Services.AddSingleton<AccountDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settings.Object);

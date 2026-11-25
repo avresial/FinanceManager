@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Features.Administration.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
@@ -14,6 +15,8 @@ public partial class LandingPage : ComponentBase
     [Inject] public required ILocalStorageService LocalStorageService { get; set; }
     [Inject] public required NewVisitorsHttpClient NewVisitorsHttpClient { get; set; }
     [Inject] public required ILogger<LandingPage> Logger { get; set; }
+    [Inject] public required NavigationManager Navigation { get; set; }
+    [Inject] public required ILoginService LoginService { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

@@ -14,7 +14,6 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.Invest
 public partial class DividendPaymentHistory : ComponentBase, IDisposable
 {
     [Parameter] public string? Height { get; set; }
-    [Parameter] public int? AccountId { get; set; }
     [Parameter] public string DefaultCurrency { get; set; } = string.Empty;
     [Inject] public required DividendPaymentHttpClient DividendPaymentHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
@@ -24,9 +23,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronization { get; set; }
     private const int _historyPageSize = 20;
     private readonly RefreshVersionGate _historyGate = new();
-    private CancellationTokenSource _accountLifetime = new();
-    private int? _loadedAccount;
-    private bool _initialized;
+    private CancellationTokenSource _lifetime = new();
     private List<DividendPaymentDto> _payments = [];
     private List<DividendHoldingOption> _holdings = [];
     private List<string> _availableCurrencies = [];
@@ -54,6 +51,8 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private bool _focusRecordButton;
     private bool Busy => _isLoading || _isHistoryLoading || _savingEdit || _confirmingDelete;
 
+    protected override Task OnInitializedAsync() => ReloadHistoryAsync();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // The dialog opens on the field the user must fill: focusing the Holding select first would scroll its long name to the end on narrow screens.
@@ -71,36 +70,17 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
         }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        if (_initialized && _loadedAccount == AccountId) return;
-        _initialized = true;
-        _loadedAccount = AccountId;
-        _accountLifetime.Cancel();
-        _accountLifetime.Dispose();
-        _accountLifetime = new();
-        _historyGate.Claim();
-        _payments = [];
-        _holdings = [];
-        _availableCurrencies = [];
-        _editVisible = false;
-        _savingEdit = false;
-        _confirmingDelete = false;
-        await ReloadHistoryAsync();
-    }
-
     private async Task ReloadHistoryAsync()
     {
         var version = _historyGate.Claim();
-        var account = AccountId;
-        var ct = _accountLifetime.Token;
+        var ct = _lifetime.Token;
         _isLoading = true;
         _isHistoryLoading = false;
         _error = null;
         try
         {
-            var pageTask = DividendPaymentHttpClient.GetHistoryPageAsync(account, 1, _historyPageSize, ct);
-            var holdingsTask = DividendPaymentHttpClient.GetHoldingsAsync(account, ct);
+            var pageTask = DividendPaymentHttpClient.GetHistoryPageAsync(1, _historyPageSize, ct);
+            var holdingsTask = DividendPaymentHttpClient.GetHoldingsAsync(ct);
             var currenciesTask = CurrencyHttpClient.GetAll(ct);
             await Task.WhenAll(pageTask, holdingsTask, currenciesTask);
             if (ct.IsCancellationRequested || !_historyGate.IsCurrent(version)) return;
@@ -124,12 +104,12 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     {
         if (!_hasMore || Busy) return;
         var version = _historyGate.Claim();
-        var ct = _accountLifetime.Token;
+        var ct = _lifetime.Token;
         _isHistoryLoading = true;
         _error = null;
         try
         {
-            var page = await DividendPaymentHttpClient.GetHistoryPageAsync(AccountId, _historyPage + 1, _historyPageSize, ct);
+            var page = await DividendPaymentHttpClient.GetHistoryPageAsync(_historyPage + 1, _historyPageSize, ct);
             if (ct.IsCancellationRequested || !_historyGate.IsCurrent(version)) return;
             var known = _payments.Select(x => x.Id).ToHashSet();
             _payments.AddRange(page.Items.Where(x => known.Add(x.Id)));
@@ -230,16 +210,15 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private async Task SaveEditAsync()
     {
         if (!CanSaveEdit) return;
-        var account = AccountId;
-        var ct = _accountLifetime.Token;
+        var ct = _lifetime.Token;
         var creating = _editingPayment is null;
         _savingEdit = true;
         _formError = null;
         try
         {
             var request = new DividendPaymentRequest { AssetListingId = _formHoldingId, PaymentDate = DateOnly.FromDateTime(_formPaymentDate!.Value), Amount = _formAmount!.Value, Currency = _formCurrency, Notes = _formNotes };
-            if (creating) await DividendPaymentHttpClient.AddAsync(account, request, ct);
-            else await DividendPaymentHttpClient.UpdateAsync(account, _editingPayment!.Id, request, ct);
+            if (creating) await DividendPaymentHttpClient.AddAsync(request, ct);
+            else await DividendPaymentHttpClient.UpdateAsync(_editingPayment!.Id, request, ct);
             if (ct.IsCancellationRequested) return;
             _editVisible = false;
             _editingPayment = null;
@@ -257,8 +236,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     private async Task ConfirmDeleteAsync(DividendPaymentDto payment)
     {
         if (Busy) return;
-        var account = AccountId;
-        var ct = _accountLifetime.Token;
+        var ct = _lifetime.Token;
         _confirmingDelete = true;
         try
         {
@@ -266,7 +244,7 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
             var dialog = await DialogService.ShowAsync<ConfirmDeleteDialog>("Delete dividend", parameters);
             var result = await dialog.Result;
             if (ct.IsCancellationRequested || result is null || result.Canceled) return;
-            await DividendPaymentHttpClient.DeleteAsync(account, payment.Id, ct);
+            await DividendPaymentHttpClient.DeleteAsync(payment.Id, ct);
             if (ct.IsCancellationRequested) return;
             Snackbar.Add("Dividend removed.", Severity.Success);
             await AccountDataSynchronization.AccountChanged();
@@ -279,8 +257,8 @@ public partial class DividendPaymentHistory : ComponentBase, IDisposable
     public void Dispose()
     {
         _historyGate.Claim();
-        _accountLifetime.Cancel();
-        _accountLifetime.Dispose();
+        _lifetime.Cancel();
+        _lifetime.Dispose();
         GC.SuppressFinalize(this);
     }
 }

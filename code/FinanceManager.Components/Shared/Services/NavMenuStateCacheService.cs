@@ -27,7 +27,7 @@ public class NavMenuStateCacheService(
     protected override async Task<NavMenuCacheSnapshot> BuildStateAsync(UserSession user)
     {
         var userId = user.UserId;
-        var hasTransactionsTask = transactionLogHttpClient.GetLastTransactions(userId, 1);
+        var hasTransactionsTask = transactionLogHttpClient.HasAnyTransactions(userId);
         var displayAssetsTask = GetAssetsFlagAsync(userId);
         var displayLiabilitiesTask = GetLiabilitiesFlagAsync(userId);
 
@@ -36,7 +36,7 @@ public class NavMenuStateCacheService(
             SchemaVersion = NavMenuCacheSnapshot.CurrentSchemaVersion,
             UserId = userId,
             FetchedAtUtc = DateTime.UtcNow,
-            HasTransactions = (await hasTransactionsTask).Count > 0,
+            HasTransactions = await hasTransactionsTask,
             DisplayAssetsLink = await displayAssetsTask,
             DisplayLiabilitiesLink = await displayLiabilitiesTask
         };

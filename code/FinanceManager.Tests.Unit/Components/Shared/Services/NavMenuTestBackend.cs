@@ -1,7 +1,6 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.Dashboard.Dtos;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -13,10 +12,15 @@ namespace FinanceManager.Tests.Unit.Components.Shared.Services;
 /// <summary>Answers the three requests that build the nav menu state, and builds a <see cref="NavMenuStateCacheService"/> over them.</summary>
 public sealed class NavMenuTestBackend(bool hasAssets = false, bool hasLiabilities = false, int transactionCount = 0, bool failTransactions = false) : HttpMessageHandler
 {
+    /// <summary>What the server answers from now on, so a test can commit data after the menu has loaded.</summary>
+    public bool HasAssets { get; set; } = hasAssets;
+    public bool HasLiabilities { get; set; } = hasLiabilities;
+    public int TransactionCount { get; set; } = transactionCount;
+
     public List<string> Requests { get; } = [];
     public Mock<ILocalStorageService> Storage { get; } = new();
 
-    public int TransactionRequests => Requests.Count(path => path.StartsWith("api/TransactionLog/Get/", StringComparison.Ordinal));
+    public int TransactionRequests => Requests.Count(path => path.StartsWith("api/TransactionLog/Exists/", StringComparison.Ordinal));
 
     public NavMenuStateCacheService CreateService()
     {
@@ -30,13 +34,12 @@ public sealed class NavMenuTestBackend(bool hasAssets = false, bool hasLiabiliti
     {
         var path = request.RequestUri!.PathAndQuery.TrimStart('/');
         Requests.Add(path);
-        if (path.StartsWith("api/Assets/IsAnyAccountWithAssets/", StringComparison.Ordinal)) return Json(hasAssets);
-        if (path.StartsWith("api/Liabilities/IsAnyAccountWithLiabilities/", StringComparison.Ordinal)) return Json(hasLiabilities);
-        if (path.StartsWith("api/TransactionLog/Get/", StringComparison.Ordinal))
+        if (path.StartsWith("api/Assets/IsAnyAccountWithAssets/", StringComparison.Ordinal)) return Json(HasAssets);
+        if (path.StartsWith("api/Liabilities/IsAnyAccountWithLiabilities/", StringComparison.Ordinal)) return Json(HasLiabilities);
+        if (path.StartsWith("api/TransactionLog/Exists/", StringComparison.Ordinal))
         {
             if (failTransactions) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
-            return Json(Enumerable.Range(0, transactionCount)
-                .Select(id => new TransactionLogEntryDto(TransactionKind.Cash, id + 1, new DateTime(2026, 1, 1), 10m, "Entry")).ToList());
+            return Json(TransactionCount > 0);
         }
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }

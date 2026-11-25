@@ -16,6 +16,8 @@ public partial class LiabilitiesTimeSeriesCard
     private bool _isLoading;
     private bool _hasError;
     private string _currency = "PLN";
+    // Set when every liability is in one currency: the figures are then labelled with it instead of the display currency.
+    private string? _singleCurrency;
     private (int UserId, int CurrencyId)? _owner;
     private bool _hasDisplayedModel;
 
@@ -101,7 +103,7 @@ public partial class LiabilitiesTimeSeriesCard
             fetchAsync: async () =>
             {
                 var data = await LiabilitiesHttpClient.GetLiabilitiesTimeSeries(user.UserId, startDate, endDate).ToListAsync();
-                return new TimeSeriesCardModel([.. data.OrderBy(x => x.DateTime)]);
+                return new TimeSeriesCardModel([.. data.OrderBy(x => x.DateTime)], await GetSingleCurrencyAsync(user.UserId, startDate, endDate));
             },
             onSnapshotPainted: ShowData,
             onSnapshotMissing: () =>
@@ -122,9 +124,18 @@ public partial class LiabilitiesTimeSeriesCard
         StateHasChanged();
     }
 
+    // Liabilities are summed in their own currencies. When they all share one, say which; a mix keeps the display currency and its "not converted" note.
+    private async Task<string?> GetSingleCurrencyAsync(int userId, DateTime startDate, DateTime endDate)
+    {
+        var rows = await LiabilitiesHttpClient.GetEndLiabilitiesPerAccount(userId, startDate, endDate).ToListAsync();
+        var codes = rows.Select(row => row.CurrencyCode).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        return codes is [string code] ? code : null;
+    }
+
     private Task ShowData(TimeSeriesCardModel model)
     {
         ChartData = model.Series;
+        _singleCurrency = model.CurrencyCode;
         _hasDisplayedModel = true;
         _isLoading = false;
         StateHasChanged();

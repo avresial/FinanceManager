@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
@@ -35,6 +36,10 @@ public abstract class ImportEntriesComponentBase<TComponent> : ComponentBase
 
     [Inject] public required ILogger<TComponent> Logger { get; set; }
     [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
+    [Inject] public required AccountDataSynchronizationService DataSynchronization { get; set; }
+
+    /// <summary>Tells the menu (Assets and Liabilities links, Home's welcome check) that imported entries have been committed.</summary>
+    protected Task PublishCommittedImportAsync() => DataSynchronization.AccountChanged();
 
     protected string Delimiter
     {

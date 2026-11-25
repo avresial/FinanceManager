@@ -10,4 +10,6 @@ public partial class WelcomePage : ComponentBase
     private void AddTransaction(string kind) => Navigation.NavigateTo($"Transactions?dialog=add-entry&kind={kind}");
 
     private void ImportCsv() => Navigation.NavigateTo("Transactions/Import/cash");
+
+    private void ImportBondCsv() => Navigation.NavigateTo("Transactions/Import/bond");
 }

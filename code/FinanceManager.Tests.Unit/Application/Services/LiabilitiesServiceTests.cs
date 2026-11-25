@@ -91,6 +91,19 @@ public class LiabilitiesServiceTests
         Assert.Equal("Cash", result.Name);
         Assert.Equal(-150m, result.Value);
         Assert.Null(result.AccountId);
+        // A mix of currencies has no single code to claim.
+        Assert.Null(result.CurrencyCode);
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerType_NamesTheCurrency_WhenEveryLiabilityIsInOne()
+    {
+        _ledger.Add(_eurId, _day, -30m).Add(_eurId, _day.AddDays(1), -10m).Add(_plnId, _day, 900m);
+
+        var result = Assert.Single(await _service.GetEndLiabilitiesPerType(1, _day, _day.AddDays(2)).ToListAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(-40m, result.Value);
+        Assert.Equal("EUR", result.CurrencyCode);
     }
 
     [Fact]

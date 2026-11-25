@@ -9,8 +9,18 @@ using FinanceManager.Domain.Transactions.Shared.Dtos;
 namespace FinanceManager.Application.Dashboard;
 
 public class TransactionLogService(ICashTransactionReader cash, IBondTransactionReader bonds,
-    IInvestmentTransactionRepository investments) : ITransactionLogService
+    IInvestmentTransactionRepository investments, IDividendPaymentRepository dividends) : ITransactionLogService
 {
+    public async Task<bool> HasAny(int userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        // The probes share a scoped DbContext, so they run one after another and stop at the first hit.
+        return await cash.HasAnyEntries(userId, cancellationToken)
+            || await bonds.HasAnyEntries(userId, cancellationToken)
+            || await investments.HasAnyByUser(userId, cancellationToken)
+            || await dividends.HasPayments(userId, cancellationToken);
+    }
+
     public async Task<List<TransactionLogEntryDto>> GetLastTransactions(int userId, int count, CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);

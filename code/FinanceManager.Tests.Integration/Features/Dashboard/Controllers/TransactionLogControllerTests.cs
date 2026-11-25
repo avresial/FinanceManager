@@ -29,6 +29,8 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
             .ReturnsAsync(new TransactionLogItemsPage(
                 [new BondTransactionLogItem(new(null, long.MaxValue, new DateTime(2024, 3, 5), 1, "Bond", 7, "USD", null, []))],
                 new(new DateTime(2024, 3, 5), TransactionKind.Bond, long.MaxValue)));
+        _serviceMock.Setup(x => x.HasAny(_testUserId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _serviceMock.Setup(x => x.HasAny(-_testUserId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
         services.AddSingleton(_serviceMock.Object);
     }
 
@@ -77,6 +79,41 @@ public class TransactionLogControllerTests(OptionsProvider optionsProvider) : Co
         Assert.True(response.IsSuccessStatusCode);
         var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("Groceries", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(_testUserId, true)]
+    [InlineData(-_testUserId, false)]
+    public async Task Exists_ForTheOwnerIncludingAGuest_ReturnsTheBoolean(int userId, bool expected)
+    {
+        Authorize("user", userId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/TransactionLog/Exists/{userId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expected, await response.Content.ReadFromJsonAsync<bool>(TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("999")]
+    [InlineData("0")]
+    public async Task Exists_ForAnotherUserOrZero_IsForbidden(string userId)
+    {
+        Authorize("user", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/TransactionLog/Exists/{userId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        _serviceMock.Verify(x => x.HasAny(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Exists_WithoutAuthentication_IsUnauthorized()
+    {
+        ClearAuthorization();
+        var response = await Client.GetAsync($"api/TransactionLog/Exists/{_testUserId}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

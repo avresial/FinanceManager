@@ -8,6 +8,6 @@
                      OnRetry="Reload"
                      Accent="@ColorsProvider.LiabilityColor"
                      IsDebt="true"
-                     ShowUnconvertedNote="true"
-                     CurrencyShortName="@_currency"
+                     ShowUnconvertedNote="@(_singleCurrency is null)"
+                     CurrencyShortName="@(_singleCurrency ?? _currency)"
                      Height="@Height" />

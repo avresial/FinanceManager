@@ -382,28 +382,6 @@ public class DividendPaymentHistoryTests
         Assert.Contains("Retry", cut.Markup);
     }
 
-    [Fact]
-    public async Task ChangingAccount_DiscardsAnOlderPendingHistoryResponse()
-    {
-        var oldResponse = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var handler = new StubHttpHandler(request =>
-        {
-            var path = request.RequestUri!.AbsolutePath;
-            if (path.EndsWith("/Currency/GetAll", StringComparison.Ordinal)) return Task.FromResult(JsonResponse(new[] { _pln }));
-            if (path.EndsWith("/holdings", StringComparison.Ordinal)) return Task.FromResult(JsonResponse(Array.Empty<DividendHoldingOption>()));
-            if (path.Contains("/10/", StringComparison.Ordinal)) return oldResponse.Task;
-            return Task.FromResult(JsonResponse(new DividendPaymentPage([new(3, 11, 42, "Current account fund", "FUND", new(2020, 1, 1), 5, "PLN", null)], 1, 1, 20)));
-        });
-        await using var context = CreateBunitContext(handler);
-        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.AccountId, 10));
-        cut.Render(p => p.Add(x => x.AccountId, 11));
-        cut.WaitForAssertion(() => Assert.Contains("Current account fund", cut.Markup));
-        oldResponse.SetResult(JsonResponse(new DividendPaymentPage([new(1, 10, 42, "Old account fund", "FUND", new(2020, 1, 1), 5, "PLN", null)], 1, 1, 20)));
-        await cut.InvokeAsync(() => Task.CompletedTask);
-        cut.WaitForAssertion(() => Assert.Contains("Current account fund", cut.Markup));
-        Assert.DoesNotContain("Old account fund", cut.Markup);
-    }
-
     [Theory]
     [InlineData("0.00000001", "0.00000001 USD")]
     [InlineData("12.34567890", "12.3456789 USD")]
@@ -418,7 +396,7 @@ public class DividendPaymentHistoryTests
                     ? JsonResponse(new[] { _pln })
                     : JsonResponse(new DividendPaymentPage([payment], 1, 1, 20))));
         await using var context = CreateBunitContext(handler);
-        var cut = context.Render<DividendPaymentHistory>(p => p.Add(x => x.AccountId, 10));
+        var cut = context.Render<DividendPaymentHistory>();
         cut.WaitForAssertion(() => Assert.Contains(expected, cut.Markup));
     }
 

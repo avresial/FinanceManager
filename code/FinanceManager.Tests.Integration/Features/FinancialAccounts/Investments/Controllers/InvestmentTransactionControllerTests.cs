@@ -195,7 +195,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             .Setup(x => x.GetPricePerUnitResultAsync(_listingId, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentPriceResult.Success(321.45m));
 
-        var result = await new InvestmentTransactionAccountClient(Client).GetListingPriceAsync(_listingId);
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
 
         Assert.NotNull(result);
         Assert.Equal(321.45m, result.LatestPrice);
@@ -213,7 +213,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new InvestmentPriceResult.Success(300m));
 
-        var result = await new InvestmentTransactionAccountClient(Client).GetListingPriceAsync(_listingId, tradeDate);
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId, tradeDate);
 
         Assert.NotNull(result);
         Assert.Equal(300m, result.LatestPrice);
@@ -236,7 +236,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(pending);
 
-        var result = await new InvestmentTransactionAccountClient(Client).GetListingPriceAsync(_listingId);
+        var result = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(_listingId);
 
         Assert.NotNull(result);
         Assert.Null(result.LatestPrice);
@@ -472,7 +472,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(listing.Id, existingOption.AssetListingId);
 
         // ListingPrice endpoint safely returns null LatestPrice when TradingCurrency is unknown
-        var listingPrice = await new InvestmentTransactionAccountClient(Client).GetListingPriceAsync(listing.Id);
+        var listingPrice = await new InvestmentTransactionHttpClient(Client).GetListingPriceAsync(listing.Id);
         Assert.NotNull(listingPrice);
         Assert.Null(listingPrice!.LatestPrice);
         Assert.Equal(string.Empty, listingPrice.Currency);

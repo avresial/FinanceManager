@@ -52,7 +52,7 @@ public class NavMenuStateCacheServiceTests
     [Theory]
     [InlineData(0, false)]
     [InlineData(1, true)]
-    public async Task RefreshAsync_ComputesHasTransactionsFromTheLatestTransactions(int transactionCount, bool expected)
+    public async Task RefreshAsync_ComputesHasTransactionsFromTheExistenceProbe(int transactionCount, bool expected)
     {
         var backend = new NavMenuTestBackend(hasAssets: true, hasLiabilities: true, transactionCount: transactionCount);
 
@@ -61,7 +61,7 @@ public class NavMenuStateCacheServiceTests
         Assert.Equal(expected, snapshot.HasTransactions);
         Assert.True(snapshot.DisplayAssetsLink);
         Assert.True(snapshot.DisplayLiabilitiesLink);
-        Assert.Equal("api/TransactionLog/Get/5?count=1", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
+        Assert.Equal("api/TransactionLog/Exists/5", Assert.Single(backend.Requests, path => path.StartsWith("api/TransactionLog/", StringComparison.Ordinal)));
         backend.Storage.Verify(x => x.SetItemAsync("nav-menu-cache-v2:5", snapshot, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

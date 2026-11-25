@@ -18,7 +18,7 @@ public sealed class CurrencyImportJobTracker(
     private CancellationTokenSource? _polling;
 
     public event Action? Changed;
-    public Guid? JobId { get; private set; }
+    public Guid? JobId { get; internal set; }
     public CurrencyImportJobStatusDto? Status { get; private set; }
     public IReadOnlyList<ImportJobConflict> Conflicts { get; private set; } = [];
     public string? Error { get; private set; }
@@ -59,6 +59,11 @@ public sealed class CurrencyImportJobTracker(
         Changed?.Invoke();
     }
 
+    internal void Receive(CurrencyImportJobStatusDto status)
+    {
+        if (ApplyStatus(status)) Changed?.Invoke();
+    }
+
     internal bool ApplyStatus(CurrencyImportJobStatusDto status)
     {
         if (JobId != status.JobId || Status is not null && status.ProcessedEntries < Status.ProcessedEntries) return false;
@@ -83,7 +88,7 @@ public sealed class CurrencyImportJobTracker(
             .WithUrl(navigation.ToAbsoluteUri("hubs/currency-import"), options =>
                 options.AccessTokenProvider = async () => (await loginService.GetLoggedUser())?.Token)
             .WithAutomaticReconnect().Build();
-        _hub.On<CurrencyImportJobStatusDto>("ImportStatusUpdated", status => { if (ApplyStatus(status)) Changed?.Invoke(); });
+        _hub.On<CurrencyImportJobStatusDto>("ImportStatusUpdated", Receive);
         _hub.On<ImportJobConflict>("ConflictDiscovered", conflict =>
         {
             if (JobId is null || Conflicts.Any(x => x.ConflictId == conflict.ConflictId)) return;
@@ -113,7 +118,7 @@ public sealed class CurrencyImportJobTracker(
         try
         {
             var status = await importClient.GetCurrencyImportStatusAsync(jobId);
-            if (status is not null && ApplyStatus(status)) Changed?.Invoke();
+            if (status is not null) Receive(status);
         }
         catch (Exception ex) { logger.LogDebug(ex, "Unable to refresh import job status"); }
     }
