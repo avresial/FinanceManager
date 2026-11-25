@@ -1,11 +1,11 @@
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.Transactions.Bonds.Dtos;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 

@@ -1,14 +1,12 @@
 using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 

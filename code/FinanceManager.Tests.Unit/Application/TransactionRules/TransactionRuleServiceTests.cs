@@ -1,8 +1,6 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
@@ -13,8 +11,10 @@ using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Domain.TransactionRules.Services;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -27,7 +27,7 @@ public sealed class TransactionRuleServiceTests
     private readonly Mock<IFinancialLabelsRepository> _labels = new();
     private readonly Mock<ICashTransactionReader> _cash = new();
     private readonly Mock<ILogger<TransactionRuleService>> _logger = new();
-    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _entries = new();
+    private readonly Mock<ITransactionEntryRepository<CashEntry>> _entries = new();
     private readonly Mock<IFinancialAlertService> _alerts = new();
     private readonly TransactionRuleService _service;
 
@@ -128,7 +128,7 @@ public sealed class TransactionRuleServiceTests
         Assert.Equal([1L, 2, 3, 4, 5], results.Select(result => result.TransactionId));
         _repository.Verify(x => x.Add(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
         _repository.Verify(x => x.Update(It.IsAny<TransactionRuleDefinition>(), It.IsAny<CancellationToken>()), Times.Never);
-        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CashEntry>(), It.IsAny<CancellationToken>()), Times.Never);
         _alerts.Verify(x => x.EvaluateAlertsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -218,7 +218,7 @@ public sealed class TransactionRuleServiceTests
                     ActionsJson = "[{\"type\":\"SetLabels\",\"labels\":[\"Bills\"]}]"
                 }
             });
-        var entry = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m)
+        var entry = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m)
         {
             Description = "Invoice from ACME",
             ContractorDetails = "ACME"
@@ -282,7 +282,7 @@ public sealed class TransactionRuleServiceTests
                 }
             ]);
 
-    private static CurrencyAccountEntry EntryWithCaseVariantLabels() =>
+    private static CashEntry EntryWithCaseVariantLabels() =>
         new(2, 3, DateTime.UtcNow, -20m, -20m)
         {
             Description = "Shop",
@@ -304,7 +304,7 @@ public sealed class TransactionRuleServiceTests
                 }
             ]);
 
-        var entry = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m)
+        var entry = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m)
         {
             Description = "Invoice from ACME"
         };
@@ -341,12 +341,12 @@ public sealed class TransactionRuleServiceTests
         SetupHistory(7, Cash(1, legacyAccountId: 2), Cash(2));
         var entries = new[]
         {
-            new CurrencyAccountEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one", UserId = 7 },
-            new CurrencyAccountEntry(null, 2, DateTime.UtcNow.AddDays(-1), 0, -20m) { Description = "Invoice two", UserId = 7, CurrencyId = 1 }
+            new CashEntry(2, 1, DateTime.UtcNow, -10m, -10m) { Description = "Invoice one", UserId = 7 },
+            new CashEntry(null, 2, DateTime.UtcNow.AddDays(-1), 0, -20m) { Description = "Invoice two", UserId = 7, CurrencyId = 1 }
         };
         _entries.Setup(x => x.GetByIds(7, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 1, 2 })), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entries);
-        _entries.Setup(x => x.UpdateByOwner(7, It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _entries.Setup(x => x.UpdateByOwner(7, It.IsAny<CashEntry>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _alerts.Setup(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
@@ -355,7 +355,7 @@ public sealed class TransactionRuleServiceTests
         Assert.Equal(2, result.Examined);
         Assert.Equal(2, result.Updated);
         Assert.All(entries, entry => Assert.Equal("Receipt", entry.Description));
-        _entries.Verify(x => x.UpdateByOwner(7, It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _entries.Verify(x => x.UpdateByOwner(7, It.IsAny<CashEntry>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         _alerts.Verify(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -367,7 +367,7 @@ public sealed class TransactionRuleServiceTests
         SetupHistory(7, rows);
         _entries.Setup(x => x.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) =>
-                [.. ids.Select(id => new CurrencyAccountEntry(null, id, DateTime.UtcNow, 0, -1m) { Description = "Other" })]);
+                [.. ids.Select(id => new CashEntry(null, id, DateTime.UtcNow, 0, -1m) { Description = "Other" })]);
 
         var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true), TestContext.Current.CancellationToken);
 
@@ -381,7 +381,7 @@ public sealed class TransactionRuleServiceTests
     public async Task ApplyRetroactively_ForOneEntry_UsesTheOwnerReadAndWrite()
     {
         SetupInvoiceRule();
-        var entry = new CurrencyAccountEntry(null, 9, DateTime.UtcNow, 0, -10m) { Description = "Invoice", UserId = 7, CurrencyId = 1 };
+        var entry = new CashEntry(null, 9, DateTime.UtcNow, 0, -10m) { Description = "Invoice", UserId = 7, CurrencyId = 1 };
         _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync(entry);
         _entries.Setup(x => x.UpdateByOwner(7, entry, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
@@ -397,19 +397,19 @@ public sealed class TransactionRuleServiceTests
     public async Task ApplyRetroactively_ForAForeignOrMissingEntry_ChangesNothing()
     {
         SetupInvoiceRule();
-        _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync((CurrencyAccountEntry?)null);
+        _entries.Setup(x => x.GetByOwner(7, 9, It.IsAny<CancellationToken>())).ReturnsAsync((CashEntry?)null);
 
         var result = await _service.ApplyRetroactivelyAsync(7, new ApplyTransactionRules(true, 9), TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.Examined);
-        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CurrencyAccountEntry>(), It.IsAny<CancellationToken>()), Times.Never);
+        _entries.Verify(x => x.UpdateByOwner(It.IsAny<int>(), It.IsAny<CashEntry>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task ApplyToEntry_UnlinkedEntry_AppliesRulesThatDoNotNeedAnAccount()
     {
         SetupSingleRule("[{\"type\":\"NormalizeDescription\",\"value\":\"Groceries\"}]");
-        var entry = new CurrencyAccountEntry(null, 3, DateTime.UtcNow, 0, -20m) { Description = "Shop", UserId = 7, CurrencyId = 0 };
+        var entry = new CashEntry(null, 3, DateTime.UtcNow, 0, -20m) { Description = "Shop", UserId = 7, CurrencyId = 0 };
 
         var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
 
@@ -435,8 +435,8 @@ public sealed class TransactionRuleServiceTests
                     ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Matched\"}]"
                 }
             ]);
-        var first = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
-        var second = new CurrencyAccountEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
+        var first = new CashEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
+        var second = new CashEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
 
         Assert.False(await _service.ApplyToEntryAsync(7, first, TestContext.Current.CancellationToken));
         Assert.False(await _service.ApplyToEntryAsync(7, second, TestContext.Current.CancellationToken));

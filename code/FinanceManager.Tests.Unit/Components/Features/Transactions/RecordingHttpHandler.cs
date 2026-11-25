@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using System.Net;
 using System.Net.Http.Json;
 

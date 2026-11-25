@@ -1,11 +1,11 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Application.Transactions.Bonds.Valuation;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 

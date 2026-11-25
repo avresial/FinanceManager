@@ -1,14 +1,14 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Components.Features.Alerts.HttpClients;
 using FinanceManager.Components.Features.Alerts.Models;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Dtos;
 using FinanceManager.Domain.Alerts.Enums;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;

@@ -1,5 +1,5 @@
 using FinanceManager.Application.Labels.RecurringTransactions;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Tests.Unit.Shared.Time;

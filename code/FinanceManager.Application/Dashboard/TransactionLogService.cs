@@ -1,9 +1,10 @@
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Portfolio.Dividends.Repositories;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Application.Dashboard;

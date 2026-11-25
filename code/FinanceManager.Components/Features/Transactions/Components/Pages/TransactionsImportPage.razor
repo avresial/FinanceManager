@@ -1,11 +1,7 @@
 @page "/Transactions/Import/{Kind}"
-@using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import
-@using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import
-@using FinanceManager.Components.Features.FinancialAccounts.Components.Shared
-
 <PageTitle>Import transactions</PageTitle>
 
-<AccountFormContainer>
+<TransactionFormContainer>
     @* A way out at every step; the completion panel has its own link back once the import has run. *@
     <MudButton Href="/Transactions" Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" data-testid="import-back">Back to Transactions</MudButton>
@@ -24,7 +20,7 @@
             Only cash and bond entries can be imported. <MudLink Href="/Transactions">Back to Transactions</MudLink>
         </MudAlert>
     }
-</AccountFormContainer>
+</TransactionFormContainer>
 
 @code {
     [Parameter] public string Kind { get; set; } = string.Empty;

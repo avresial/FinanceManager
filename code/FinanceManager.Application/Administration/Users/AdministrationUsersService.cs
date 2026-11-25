@@ -1,17 +1,15 @@
 ﻿using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Administration.Users;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
 using FinanceManager.Domain.Shared.Charting;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 
@@ -77,7 +75,7 @@ public class AdministrationUsersService(ICashTransactionReader cashTransactionRe
             {
                 if (!bondDetails.TryGetValue(position.PartitionId, out var details))
                     throw new InvalidOperationException($"Bond valuation requires details for bond id {position.PartitionId}.");
-                var price = BondAccountEntry.GetPrice(DateOnly.FromDateTime(position.LastPostingDate), position.Value, DateOnly.FromDateTime(now), details)
+                var price = BondEntry.GetPrice(DateOnly.FromDateTime(position.LastPostingDate), position.Value, DateOnly.FromDateTime(now), details)
                     .GetValueOrDefault(DateOnly.FromDateTime(now));
                 total += await ConvertToPln(price, details.Currency);
             }

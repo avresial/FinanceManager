@@ -1,12 +1,13 @@
 using FinanceManager.Api.Migrations;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -57,13 +58,13 @@ public class EnforceTransactionOwnerKeysLiveTests
             var user = new UserDto { Login = "cutover", Password = "unused", CreationDate = DateTime.UtcNow };
             context.AddRange(account, bondAccount, user, new Currency(0, "PLN", "PLN"));
             await context.SaveChangesAsync(ct);
-            var linked = new CurrencyAccountEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1);
-            var mismatch = new CurrencyAccountEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1) { UserId = 99 };
-            var invalidCurrency = new CurrencyAccountEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5, CurrencyId = 999 };
-            var zero = new CurrencyAccountEntry(null, 0, DateTime.UnixEpoch, 1, 1);
-            var ownerOnly = new CurrencyAccountEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5 };
-            var orphan = new CurrencyAccountEntry(int.MaxValue, 0, DateTime.UnixEpoch, 1, 1) { UserId = -10 };
-            var bond = new BondAccountEntry(bondAccount.AccountId, 0, DateTime.UnixEpoch, 1, 1, 9);
+            var linked = new CashEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1);
+            var mismatch = new CashEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1) { UserId = 99 };
+            var invalidCurrency = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5, CurrencyId = 999 };
+            var zero = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1);
+            var ownerOnly = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5 };
+            var orphan = new CashEntry(int.MaxValue, 0, DateTime.UnixEpoch, 1, 1) { UserId = -10 };
+            var bond = new BondEntry(bondAccount.AccountId, 0, DateTime.UnixEpoch, 1, 1, 9);
             var alert = new FinancialAlert { UserId = user.Id, AccountId = account.AccountId };
             var trade = new InvestmentTransaction
             {

@@ -2,20 +2,20 @@ using FinanceManager.Api.Features.Dashboard.Extensions;
 using FinanceManager.Api.Features.Transactions.Shared.Validation;
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
-using FinanceManager.Application.FinancialAccounts.Bond.Import;
-using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
+using FinanceManager.Application.Transactions.Export;
+using FinanceManager.Application.Transactions.Import;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
-using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Exports;
+using FinanceManager.Domain.Transactions.Bonds.Imports;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -33,13 +33,13 @@ namespace FinanceManager.Api.Features.Transactions.Bonds.Controllers;
 [Tags("Owner Bond Transactions")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 public class BondTransactionsController(
-    IAccountEntryRepository<BondAccountEntry> entryRepository,
+    ITransactionEntryRepository<BondEntry> entryRepository,
     IBondDetailsRepository bondDetailsRepository,
     IFinancialLabelsRepository labelsRepository,
     IUserPlanVerifier userPlanVerifier,
-    IBondAccountImportService importService,
+    IBondImportService importService,
     IFinancialAlertService financialAlertService,
-    IAccountCsvExportService<BondAccountExportDto> csvExportService) : ControllerBase
+    ICsvExportService<BondExportDto> csvExportService) : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType<BondTransactionLogItemDto>(StatusCodes.Status200OK)]
@@ -59,7 +59,7 @@ public class BondTransactionsController(
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
         // The repository stamps a non-UTC time as UTC without converting it; convert here, as the persistence converter does for updates and cash.
-        var entry = new BondAccountEntry(null, 0, request.PostingDate.ToUniversalTime(), 0, request.ValueChange, bond.Id)
+        var entry = new BondEntry(null, 0, request.PostingDate.ToUniversalTime(), 0, request.ValueChange, bond.Id)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,
@@ -98,7 +98,7 @@ public class BondTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The owner and account link never come from the request.
-        var entry = new BondAccountEntry(null, entryId, request.PostingDate, 0, request.ValueChange, request.BondDetailsId)
+        var entry = new BondEntry(null, entryId, request.PostingDate, 0, request.ValueChange, request.BondDetailsId)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,

@@ -2,12 +2,13 @@ using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +69,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
 
     private async Task<long> SeedEntry(int userId, int? accountId, int currencyId, DateTime date, decimal valueChange, decimal value = 0m, string description = "seed")
     {
-        var entry = new CurrencyAccountEntry(accountId, 0, date, value, valueChange)
+        var entry = new CashEntry(accountId, 0, date, value, valueChange)
         {
             UserId = userId,
             CurrencyId = currencyId,

@@ -1,6 +1,5 @@
 using Blazored.LocalStorage;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;

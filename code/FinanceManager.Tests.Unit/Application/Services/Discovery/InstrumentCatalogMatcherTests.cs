@@ -1,4 +1,4 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
+using FinanceManager.Application.Assets.Discovery;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;

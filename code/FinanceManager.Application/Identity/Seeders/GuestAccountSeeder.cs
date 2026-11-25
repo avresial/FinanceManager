@@ -1,9 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
-using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
-using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Labels.Seeders;
+using FinanceManager.Application.Transactions.Bonds.Seeders;
+using FinanceManager.Application.Transactions.Cash.Seeders;
+using FinanceManager.Application.Transactions.Investments.Seeders;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Shared.Services;
@@ -15,9 +15,9 @@ public class GuestAccountSeeder(
     IUserRepository userRepository,
     FinancialLabelSeeder financialLabelSeeder,
     BondDetailsSeeder bondDetailsSeeder,
-    CurrencyAccountSeeder currencyAccountSeeder,
-    InvestmentAccountSeeder investmentAccountSeeder,
-    BondAccountSeeder bondAccountSeeder,
+    CashEntrySeeder currencyAccountSeeder,
+    InvestmentTransactionSeeder investmentAccountSeeder,
+    BondEntrySeeder bondAccountSeeder,
     FinancialInsightsSeeder financialInsightsSeeder,
     IDateTimeProvider dateTimeProvider,
     ILogger<GuestAccountSeeder> logger)

@@ -33,8 +33,8 @@ public partial class UserVisibleCopyTests
         ["Features/Mcp/Components/McpConnectPage.razor"] = ["secure access to your Finance Manager account."],
         ["Features/Administration/Components/AdminDashboard.razor"] = ["All registered user accounts on the platform."],
         ["Shared/Layout/MainLayout.razor"] = ["aria-label=\"Account\""],
-        ["Features/FinancialAccounts/Components/CurrencyAccountComponents/Import/ImportCurrencyEntriesComponent.razor"] = ["Counterparty name or account (optional)"],
-        ["Features/FinancialAccounts/Components/Shared/AccountFormContainer.razor"] = ["fm-account-form"],
+        ["Features/Transactions/Cash/Components/Import/ImportCurrencyEntriesComponent.razor"] = ["Counterparty name or account (optional)"],
+        ["Features/Transactions/Components/TransactionFormContainer.razor"] = ["fm-account-form"],
     };
 
     [GeneratedRegex(@"\baccounts?\b", RegexOptions.IgnoreCase)]

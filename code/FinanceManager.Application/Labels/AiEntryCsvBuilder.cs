@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using System.Globalization;
 using System.Text;
 
@@ -9,7 +9,7 @@ internal static class AiEntryCsvBuilder
     private const string _labelingHeader = "entryId,postingDate,valueChange,description,contractorDetails";
     private const string _suggestionHeader = "postingDate,valueChange,description,contractorDetails";
 
-    public static string BuildForCurrencyLabeling(IEnumerable<CurrencyAccountEntry> entries)
+    public static string BuildForCurrencyLabeling(IEnumerable<CashEntry> entries)
     {
         var sb = new StringBuilder();
         sb.AppendLine(_labelingHeader);
@@ -25,7 +25,7 @@ internal static class AiEntryCsvBuilder
         return sb.ToString();
     }
 
-    public static string BuildForLabelSuggestion(IEnumerable<CurrencyAccountEntry> entries)
+    public static string BuildForLabelSuggestion(IEnumerable<CashEntry> entries)
     {
         var sb = new StringBuilder();
         sb.AppendLine(_suggestionHeader);

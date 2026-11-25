@@ -1,18 +1,17 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
-using FinanceManager.Application.FinancialAccounts.Investments.Performance;
+using FinanceManager.Application.Portfolio.Performance;
+using FinanceManager.Application.Transactions.Bonds.Valuation;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Dtos;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Moq;
 

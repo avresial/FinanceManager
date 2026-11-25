@@ -6,7 +6,7 @@ namespace FinanceManager.Domain.TransactionRules.Models;
 /// This model deliberately contains no transaction or import identity (no entry id,
 /// account entry reference, or import row id): the rule engine operates on a copy of
 /// these facts and only ever reports the resulting values, so identity is left to the
-/// caller (e.g. the <c>CurrencyAccountEntry</c> being imported or edited).
+/// caller (e.g. the <c>CashEntry</c> being imported or edited).
 /// </summary>
 public sealed record TransactionFacts
 {

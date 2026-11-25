@@ -1,7 +1,7 @@
+using FinanceManager.Application.Assets.Discovery;
+using FinanceManager.Application.Assets.Pricing;
+using FinanceManager.Application.Assets.Resolution;
 using FinanceManager.Application.Backfill.Currencies;
-using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Insights.Generation;
 using FinanceManager.Application.Labels.Setter;
 using FinanceManager.Application.Labels.Suggestions;
@@ -12,47 +12,47 @@ using FinanceManager.Domain.Administration.Logging;
 using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Alerts.Repositories;
 using FinanceManager.Domain.Assets.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Portfolio.Dividends.Repositories;
 using FinanceManager.Domain.Shared.Ai.Repositories;
 using FinanceManager.Domain.Shared.Charting;
 using FinanceManager.Domain.Shared.ExternalServices.Repositories;
 using FinanceManager.Domain.Shared.Maintenance.Repositories;
 using FinanceManager.Domain.TransactionRules.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Import.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Repositories;
 using FinanceManager.Infrastructure.Features.Administration.Services;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using FinanceManager.Infrastructure.Features.Assets.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Infrastructure.Features.Currencies.Providers;
+using FinanceManager.Infrastructure.Features.Currencies.Repositories;
 using FinanceManager.Infrastructure.Features.Identity.Repositories;
 using FinanceManager.Infrastructure.Features.Insights.Repositories;
 using FinanceManager.Infrastructure.Features.Labels.Repositories;
 using FinanceManager.Infrastructure.Features.Mcp.OAuth;
 using FinanceManager.Infrastructure.Features.MoneyFlow.Providers;
+using FinanceManager.Infrastructure.Features.Portfolio.Dividends.Repositories;
 using FinanceManager.Infrastructure.Features.TransactionRules.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Import.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Shared.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Ai;
 using FinanceManager.Infrastructure.Shared.Persistence;
@@ -158,10 +158,10 @@ public static class ServiceCollectionExtension
 
     private static void AddCachedEntryRepositories(IServiceCollection services)
     {
-        services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>, CurrencyEntryRepository>()
-            .Decorate<IAccountEntryRepository<CurrencyAccountEntry>, CachedAccountEntryRepository<CurrencyAccountEntry>>();
-        services.AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
-            .Decorate<IAccountEntryRepository<BondAccountEntry>, CachedAccountEntryRepository<BondAccountEntry>>();
+        services.AddScoped<ITransactionEntryRepository<CashEntry>, CashEntryRepository>()
+            .Decorate<ITransactionEntryRepository<CashEntry>, CachedTransactionEntryRepository<CashEntry>>();
+        services.AddScoped<ITransactionEntryRepository<BondEntry>, BondEntryRepository>()
+            .Decorate<ITransactionEntryRepository<BondEntry>, CachedTransactionEntryRepository<BondEntry>>();
     }
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)

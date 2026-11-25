@@ -1,5 +1,4 @@
 using FinanceManager.Domain.Administration.Logging;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.Administration.HttpClients;

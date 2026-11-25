@@ -1,5 +1,5 @@
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Assets.Pricing;

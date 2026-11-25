@@ -1,14 +1,14 @@
 using Bunit;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Features.Transactions.Components;
 using FinanceManager.Components.Shared.Helpers;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

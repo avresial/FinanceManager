@@ -1,5 +1,5 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Application.Transactions.Bonds.Valuation;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;

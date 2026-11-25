@@ -1,5 +1,5 @@
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -1,4 +1,3 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

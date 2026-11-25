@@ -1,10 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Assets.Discovery;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text.Json;

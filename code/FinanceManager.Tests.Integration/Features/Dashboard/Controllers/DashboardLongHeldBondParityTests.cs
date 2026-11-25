@@ -1,17 +1,14 @@
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Bonds;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +59,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             [new() { DateOperator = DateOperator.UntilDate, DateValue = "2025-01-01", Rate = 0.05m }], currency)
         { Id = 1028 };
         context.Bonds.Add(details);
-        var entry = new BondAccountEntry(null, 1028, posting, 1m, 1m, details.Id) { UserId = _userId };
+        var entry = new BondEntry(null, 1028, posting, 1m, 1m, details.Id) { UserId = _userId };
         context.BondEntries.Add(entry);
         await context.SaveChangesAsync(ct);
         Authorize("testuser", _userId, UserRole.User);
@@ -96,7 +93,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             {
                 var date = point!["dateTime"]!.GetValue<DateTime>();
                 Assert.True((start.Date - entry.PostingDate.Date).Days >= 3650);
-                Assert.Equal(Math.Round(BondAccountEntry.GetPrice(DateOnly.FromDateTime(entry.PostingDate), entry.ValueChange, DateOnly.FromDateTime(date), loadedDetails)[DateOnly.FromDateTime(date)], 2), point["value"]!.GetValue<decimal>());
+                Assert.Equal(Math.Round(BondEntry.GetPrice(DateOnly.FromDateTime(entry.PostingDate), entry.ValueChange, DateOnly.FromDateTime(date), loadedDetails)[DateOnly.FromDateTime(date)], 2), point["value"]!.GetValue<decimal>());
             }
         }
 

@@ -2,9 +2,9 @@ using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.Alerts.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -132,18 +132,18 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         return result;
     }
 
-    private IQueryable<CurrencyAccountEntry> GetUserEntries(int userId, DateTime endDate) =>
+    private IQueryable<CashEntry> GetUserEntries(int userId, DateTime endDate) =>
         context.CurrencyEntries
             .AsNoTracking()
             .Where(entry => entry.UserId == userId && entry.PostingDate <= endDate);
 
-    private static IQueryable<CurrencyAccountEntry> InCurrency(IQueryable<CurrencyAccountEntry> entries, FinancialAlert alert) =>
+    private static IQueryable<CashEntry> InCurrency(IQueryable<CashEntry> entries, FinancialAlert alert) =>
         alert.CurrencyId is int currencyId
             ? entries.Where(entry => entry.CurrencyId == currencyId)
             : entries.Where(_ => false);
 
-    private static IQueryable<CurrencyAccountEntry> BuildMatchingEntries(
-        IQueryable<CurrencyAccountEntry> entries,
+    private static IQueryable<CashEntry> BuildMatchingEntries(
+        IQueryable<CashEntry> entries,
         FinancialAlert alert) => alert.AlertType switch
         {
             AlertType.CategorySpending => BuildCategoryEntries(entries, alert),
@@ -153,11 +153,11 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         };
 
     private static IQueryable<AlertEvaluationAggregateRow> BuildMatchingTransactionRows(
-        IQueryable<CurrencyAccountEntry> entries,
+        IQueryable<CashEntry> entries,
         FinancialAlert alert,
         bool includeAllMatchingTransactions)
     {
-        IQueryable<CurrencyAccountEntry> matchingEntries = BuildMatchingEntries(entries, alert)
+        IQueryable<CashEntry> matchingEntries = BuildMatchingEntries(entries, alert)
             .OrderByDescending(entry => -entry.ValueChange)
             .ThenByDescending(entry => entry.PostingDate)
             .ThenByDescending(entry => entry.EntryId);
@@ -185,8 +185,8 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         });
     }
 
-    private static IQueryable<CurrencyAccountEntry> BuildCategoryEntries(
-        IQueryable<CurrencyAccountEntry> entries,
+    private static IQueryable<CashEntry> BuildCategoryEntries(
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = InCurrency(entries, alert).Where(entry => entry.ValueChange < 0);
@@ -208,8 +208,8 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         return entries;
     }
 
-    private static IQueryable<CurrencyAccountEntry> BuildMerchantEntries(
-        IQueryable<CurrencyAccountEntry> entries,
+    private static IQueryable<CashEntry> BuildMerchantEntries(
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = InCurrency(entries, alert).Where(entry => entry.ValueChange < 0);
@@ -225,8 +225,8 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         return entries;
     }
 
-    private static IQueryable<CurrencyAccountEntry> BuildLargeTransactionEntries(
-        IQueryable<CurrencyAccountEntry> entries,
+    private static IQueryable<CashEntry> BuildLargeTransactionEntries(
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = InCurrency(entries, alert);
@@ -248,7 +248,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
     }
 
     private static IQueryable<AlertEvaluationAggregateRow> BuildCategoryAggregate(
-        IQueryable<CurrencyAccountEntry> entries,
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = BuildCategoryEntries(entries, alert);
@@ -276,7 +276,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
     }
 
     private static IQueryable<AlertEvaluationAggregateRow> BuildMerchantAggregate(
-        IQueryable<CurrencyAccountEntry> entries,
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = BuildMerchantEntries(entries, alert);
@@ -304,7 +304,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
     }
 
     private static IQueryable<AlertEvaluationAggregateRow> BuildLargeTransactionAggregate(
-        IQueryable<CurrencyAccountEntry> entries,
+        IQueryable<CashEntry> entries,
         FinancialAlert alert)
     {
         entries = BuildLargeTransactionEntries(entries, alert);

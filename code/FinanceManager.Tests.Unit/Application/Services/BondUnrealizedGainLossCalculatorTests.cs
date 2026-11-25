@@ -1,8 +1,8 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Details;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Application.Transactions.Bonds.Details;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Moq;
 

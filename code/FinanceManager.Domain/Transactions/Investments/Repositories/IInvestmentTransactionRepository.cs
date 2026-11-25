@@ -1,0 +1,112 @@
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Transactions.Investments.Dtos;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
+
+namespace FinanceManager.Domain.Transactions.Investments.Repositories;
+
+public interface IInvestmentTransactionRepository
+{
+    Task<IReadOnlyList<InvestmentTransaction>> GetHistoryByUser(long userId, OwnerHistoryQuery query, CancellationToken ct = default);
+
+    /// <summary>Distinct currency codes of the user's trades.</summary>
+    Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default);
+
+    /// <summary>Whether the user has at least one trade, linked to an account or not. Short-circuits in the database.</summary>
+    Task<bool> HasAnyByUser(long userId, CancellationToken ct = default);
+
+    /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
+    Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
+
+    /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The number of trades per user in one grouped query, linked to an account or not. Users without trades are omitted,
+    /// so callers should treat a missing key as zero. Id 0 is never a user and is ignored.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Insert a new transaction and return the persisted entity (with its generated id).</summary>
+    Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>Update an existing transaction. Returns <c>false</c> when no transaction with that id exists.</summary>
+    Task<bool> Update(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>Delete the transaction with the given id. Returns <c>false</c> when no such transaction exists.</summary>
+    Task<bool> Delete(long id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ListingTradePrice>> GetLatestPricesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
+    Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
+
+    public sealed record ListingTradePrice(long AssetListingId, string Currency, decimal UnitPrice);
+
+    /// <summary>
+    /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.
+    /// The owner predicate is applied before materialisation, so ids of other users are never returned.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
+        long userId,
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bounded historical capital reconstruction inputs: every trade of <paramref name="userId"/> on or before <paramref name="toDate"/>,
+    /// linked to an account or not, ordered by posting date then id. The projection includes the stable transaction/listing identity so
+    /// the application can replay same-day history deterministically without loading entity graphs.
+    /// </summary>
+    Task<IReadOnlyList<UserCapitalFlowInput>> GetCapitalFlowInputsByUser(long userId, DateOnly toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
+    /// users, resolved in a single grouped query. Feeds maintenance jobs (e.g. the weekly price
+    /// backfill) that must cover every instrument anyone holds without materialising transactions.
+    /// </summary>
+    Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pages the trades of <paramref name="userId"/>, linked to an account or not, with the same ordering, cursor and filters plus an optional listing.
+    /// </summary>
+    Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPageByUser(
+        long userId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        long? assetListingId = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Non-zero signed units per listing as of a date, pooled across all of the owner's trades regardless of price or account,
+    /// summed in the database and ordered by listing id. Oversold positions stay negative.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within [<paramref name="startDate"/>,
+    /// <paramref name="endDate"/>], pooled per listing across all of the owner's trades (linked to an account or not). Positions and days
+    /// that net to zero are omitted.
+    /// </summary>
+    Task<UserValuationInputs> GetValuationInputsByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
+
+    public sealed record UserValuationOpeningPosition(long AssetListingId, decimal Quantity);
+
+    public sealed record UserValuationTradeInput(long AssetListingId, DateOnly TradeDate, decimal SignedQuantity);
+
+    public sealed record UserValuationInputs(
+        IReadOnlyList<UserValuationOpeningPosition> OpeningPositions,
+        IReadOnlyList<UserValuationTradeInput> InWindowTrades);
+
+    public sealed record UserCapitalFlowInput(
+        long TransactionId,
+        long AssetListingId,
+        DateOnly TradeDate,
+        InvestmentTransactionType Type,
+        decimal Quantity,
+        decimal UnitPrice,
+        decimal? Fee,
+        string Currency);
+}

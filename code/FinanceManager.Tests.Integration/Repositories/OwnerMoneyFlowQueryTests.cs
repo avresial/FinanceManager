@@ -1,11 +1,11 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -55,7 +55,7 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
 
     private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, string description = "", string? contractor = null, params FinancialLabel[] labels)
     {
-        _context.CurrencyEntries.Add(new CurrencyAccountEntry(account, 0, date, 999, change) { UserId = owner, CurrencyId = currency, Description = description, ContractorDetails = contractor, Labels = labels });
+        _context.CurrencyEntries.Add(new CashEntry(account, 0, date, 999, change) { UserId = owner, CurrencyId = currency, Description = description, ContractorDetails = contractor, Labels = labels });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -76,11 +76,11 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
     [Fact]
     public async Task Bond_HasAnyEntries_SeesLinkedAndUnlinkedRowsOfTheOwnerOnly()
     {
-        _context.BondEntries.Add(new BondAccountEntry(null, 0, _jan1, 0, 1, 5) { UserId = _other });
+        _context.BondEntries.Add(new BondEntry(null, 0, _jan1, 0, 1, 5) { UserId = _other });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.False(await _bonds.HasAnyEntries(_owner, TestContext.Current.CancellationToken));
 
-        _context.BondEntries.Add(new BondAccountEntry(null, 0, _jan1, 0, 1, 5) { UserId = _guest });
+        _context.BondEntries.Add(new BondEntry(null, 0, _jan1, 0, 1, 5) { UserId = _guest });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.True(await _bonds.HasAnyEntries(_guest, TestContext.Current.CancellationToken));

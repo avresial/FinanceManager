@@ -1,7 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
@@ -34,11 +33,11 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     {
         var ct = TestContext.Current.CancellationToken;
         _context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, _beyondIntId, _postingDate, 100, 1) { UserId = 1, CurrencyId = 0 },
-            new CurrencyAccountEntry(1, _beyondIntId + 1, _postingDate, 101, 1) { UserId = 1, CurrencyId = 0 });
+            new CashEntry(1, _beyondIntId, _postingDate, 100, 1) { UserId = 1, CurrencyId = 0 },
+            new CashEntry(1, _beyondIntId + 1, _postingDate, 101, 1) { UserId = 1, CurrencyId = 0 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
-        var repository = new CurrencyEntryRepository(_context);
+        var repository = new CashEntryRepository(_context);
 
         var entry = await repository.GetByOwner(1, _beyondIntId, ct);
         var page = await new CashTransactionRepository(_context).GetHistory(1, new(_postingDate, _postingDate, 10, new(_postingDate, _beyondIntId + 1, false)), ct);
@@ -53,7 +52,7 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     public async Task BondEntry_BeyondIntId_CanBeReadAndDeleted()
     {
         var ct = TestContext.Current.CancellationToken;
-        _context.BondEntries.Add(new BondAccountEntry(1, _beyondIntId, _postingDate, 100, 1, 1) { UserId = 1 });
+        _context.BondEntries.Add(new BondEntry(1, _beyondIntId, _postingDate, 100, 1, 1) { UserId = 1 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
         var repository = new BondEntryRepository(_context);

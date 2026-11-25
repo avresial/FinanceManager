@@ -1,5 +1,4 @@
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
-using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.Transactions.Investments;
 using System.Net;
 using System.Net.Http.Json;

@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Features.Alerts.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -159,7 +159,7 @@ public sealed class FinancialAlertRepositoryTests
     }
 
     // Owner-keyed entry with no account link, as written by the account-free transaction API.
-    private static CurrencyAccountEntry Entry(long id, int userId, int currencyId, DateTime postingDate, decimal change, FinancialLabel? label = null) =>
+    private static CashEntry Entry(long id, int userId, int currencyId, DateTime postingDate, decimal change, FinancialLabel? label = null) =>
         new(null, id, postingDate, 0m, change)
         {
             UserId = userId,

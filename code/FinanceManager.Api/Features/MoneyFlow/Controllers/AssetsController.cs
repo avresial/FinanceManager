@@ -1,15 +1,14 @@
 using FinanceManager.Api.Shared.Helpers;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Portfolio.FeeDrag.Dtos;
+using FinanceManager.Domain.Portfolio.FeeDrag.Services;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -126,12 +125,12 @@ public class AssetsController(
     }
 
     [HttpGet("GetUnrealizedGainLossPerAccount/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossAccountResult>))]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<UnrealizedGainLossResult>))]
     public async Task<IActionResult> GetUnrealizedGainLossPerAccount(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.GetUnrealizedGainLossPerAccount(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate)) : Forbid();
 
     [HttpGet("GetInvestmentGainLoss/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
-    [ProducesResponseType<UnrealizedGainLossAccountResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType<UnrealizedGainLossResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

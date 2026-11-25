@@ -1,9 +1,8 @@
 using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Benchmarks.Configuration;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;

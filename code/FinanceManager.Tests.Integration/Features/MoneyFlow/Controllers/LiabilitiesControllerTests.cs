@@ -1,8 +1,7 @@
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -40,10 +39,10 @@ public class LiabilitiesControllerTests(OptionsProvider optionsProvider) : Contr
         int days = 100;
         _value = (2 + days) * _valueChange * -1;
         // Balances are the sum of the entries' changes, so the debt is booked as an opening entry the later repayments work off.
-        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, DateTime.UtcNow.AddDays(-days - 1).Date, _value, _value) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 0, DateTime.UtcNow.AddDays(-days - 1).Date, _value, _value) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
 
         for (DateTime i = DateTime.UtcNow.AddDays(-days).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }

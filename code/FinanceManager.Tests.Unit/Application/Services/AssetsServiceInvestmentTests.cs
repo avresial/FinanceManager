@@ -1,12 +1,12 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Assets;
+using FinanceManager.Application.MoneyFlow.Assets;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
+using FinanceManager.Domain.Portfolio.Dividends.Repositories;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -27,7 +27,7 @@ public class AssetsServiceInvestmentTests
         var transactions = new Mock<IInvestmentTransactionRepository>();
         transactions.Setup(x => x.GetHoldingsByUserAsOf(4, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
         transactions.Setup(x => x.GetHoldingsByUserAsOf(-3, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new FinanceManager.Domain.FinancialAccounts.Investments.Dtos.InvestmentHolding(1, "CSPX", "XLON", AssetType.ETF, -1m)]);
+            .ReturnsAsync([new FinanceManager.Domain.Transactions.Investments.Dtos.InvestmentHolding(1, "CSPX", "XLON", AssetType.ETF, -1m)]);
         var service = CreateService(new Mock<IInvestmentValuationService>(), transactions);
 
         Assert.True(await service.IsAnyAccountWithAssets(-3));

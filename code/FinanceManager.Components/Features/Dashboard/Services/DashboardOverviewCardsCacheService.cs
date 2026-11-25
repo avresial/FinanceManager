@@ -1,6 +1,6 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 
 namespace FinanceManager.Components.Features.Dashboard.Services;
 

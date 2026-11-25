@@ -1,7 +1,6 @@
 using FinanceManager.Benchmarks.Hosting;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +52,7 @@ internal static class LongBondFixtureValidator
                 decimal startPrice = 0, endPrice = 0;
                 var prices = new Dictionary<DateTime, decimal>();
                 var postingDate = fixture.PostingDate;
-                var history = BondAccountEntry.GetPrice(DateOnly.FromDateTime(postingDate), fixture.ValueChange, DateOnly.FromDateTime(scenario.End), details);
+                var history = BondEntry.GetPrice(DateOnly.FromDateTime(postingDate), fixture.ValueChange, DateOnly.FromDateTime(scenario.End), details);
                 for (var date = scenario.Start.Date; date <= scenario.End.Date; date = date.AddDays(1))
                 {
                     var price = history[DateOnly.FromDateTime(date)];

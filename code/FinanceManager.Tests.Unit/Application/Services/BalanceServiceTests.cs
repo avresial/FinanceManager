@@ -1,7 +1,5 @@
-using FinanceManager.Application.FinancialAccounts.Currencies.Balance;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Application.MoneyFlow.Balances;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using Moq;
 

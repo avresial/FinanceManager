@@ -1,5 +1,4 @@
 using FinanceManager.Api.Shared.Helpers;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;

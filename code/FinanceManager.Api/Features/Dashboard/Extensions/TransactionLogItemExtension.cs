@@ -1,10 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
+using FinanceManager.Application.Transactions.Investments;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 
 namespace FinanceManager.Api.Features.Dashboard.Extensions;
 
@@ -29,12 +28,12 @@ public static class TransactionLogItemExtension
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted cash entry (labels loaded) and its currency code.</summary>
-    public static CurrencyTransactionLogItemDto ToLogItemDto(this CurrencyAccountEntry entry, string? currency) => new(
+    public static CurrencyTransactionLogItemDto ToLogItemDto(this CashEntry entry, string? currency) => new(
         entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, currency, entry.ContractorDetails,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted bond entry (labels loaded) and its definition's currency code and name.</summary>
-    public static BondTransactionLogItemDto ToLogItemDto(this BondAccountEntry entry, string? currency, string? bondName) => new(
+    public static BondTransactionLogItemDto ToLogItemDto(this BondEntry entry, string? currency, string? bondName) => new(
         entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.BondDetailsId, currency, bondName,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 }

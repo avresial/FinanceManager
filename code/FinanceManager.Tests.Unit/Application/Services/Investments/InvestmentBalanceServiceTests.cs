@@ -1,8 +1,6 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Balance;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Application.MoneyFlow.Balances;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;

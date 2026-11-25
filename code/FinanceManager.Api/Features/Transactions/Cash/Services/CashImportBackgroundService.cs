@@ -1,0 +1,129 @@
+using FinanceManager.Api.Features.Transactions.Cash.Hubs;
+using FinanceManager.Application.Alerts.Services;
+using FinanceManager.Application.Shared.Diagnostics;
+using FinanceManager.Application.Transactions.Import;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Transactions.Cash.Imports;
+using FinanceManager.Domain.Transactions.Import;
+using Microsoft.AspNetCore.SignalR;
+using System.Diagnostics;
+
+namespace FinanceManager.Api.Features.Transactions.Cash.Services;
+
+public sealed class CashImportBackgroundService(
+    ICashImportJobChannel channel,
+    ICashImportJobStore jobStore,
+    IServiceScopeFactory scopeFactory,
+    IHubContext<CashImportHub> hub,
+    ILogger<CashImportBackgroundService> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("Currency import background service started.");
+        DateTime lastStatusUpdate = DateTime.MinValue;
+        await foreach (var request in channel.ReadAll(stoppingToken))
+        {
+            if (!jobStore.TrySetRunning(request.JobId))
+                continue;
+
+            using var activity = FinanceManagerTelemetry.ActivitySource.StartActivity("currency_import.job");
+            activity?.SetTag("job.id", request.JobId);
+            activity?.SetTag("user.id", request.UserId);
+            var stopwatch = Stopwatch.StartNew();
+            var outcome = "success";
+            try
+            {
+                await PublishStatus(request.JobId, request.UserId, stoppingToken);
+
+                using var scope = scopeFactory.CreateScope();
+                // This scope has no HttpContext, so repositories would fall back to the shared
+                // database. Pin the guest first so they resolve the guest's in-memory sandbox. #942
+                if (request.GuestUserId is int guestUserId)
+                    scope.ServiceProvider.GetRequiredService<IGuestSessionAccessor>().SetGuestUserId(guestUserId);
+
+                var importService = scope.ServiceProvider.GetRequiredService<ICashImportService>();
+                var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
+                var domainEntries = request.Entries
+                    .Select(x => new CurrencyEntryImport(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
+                    .ToList();
+
+                async Task OnConflicts(IReadOnlyList<ImportConflict> conflicts)
+                {
+                    foreach (var conflict in conflicts.Where(x => !x.IsExactMatch))
+                    {
+                        var added = jobStore.TryAddConflict(request.JobId, conflict);
+                        if (added is null)
+                            continue;
+
+                        if (!added.IsResolved)
+                        {
+                            await hub.Clients.Group(CashImportHub.GetJobGroupName(request.JobId))
+                                .SendAsync("ConflictDiscovered", added, stoppingToken);
+                        }
+                    }
+
+                    await PublishStatus(request.JobId, request.UserId, stoppingToken);
+                }
+
+                async Task OnProgress(int processed, int imported, int failed)
+                {
+                    jobStore.TryUpdateProgress(request.JobId, processed, imported, failed);
+
+                    var timeSinceLastUpdate = DateTime.UtcNow - lastStatusUpdate;
+                    if (timeSinceLastUpdate >= TimeSpan.FromMilliseconds(200) || processed == domainEntries.Count)
+                    {
+                        lastStatusUpdate = DateTime.UtcNow;
+                        await PublishStatus(request.JobId, request.UserId, stoppingToken);
+                    }
+                }
+
+                var result = await importService.ImportOwnerEntries(
+                    request.UserId, request.CurrencyId, domainEntries, stoppingToken, OnConflicts, OnProgress);
+
+                await financialAlertService.EvaluateAlertsAsync(request.UserId, CancellationToken.None);
+
+                jobStore.TryMarkCompleted(request.JobId, result);
+                await PublishStatus(request.JobId, request.UserId, stoppingToken);
+            }
+            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
+            {
+                outcome = "canceled";
+                logger.LogDebug(ex, "Currency import job {JobId} cancelled during application shutdown.", request.JobId);
+                break;
+            }
+            catch (OperationCanceledException ex)
+            {
+                outcome = "canceled";
+                logger.LogDebug(ex, "Currency import job {JobId} cancelled or timed out.", request.JobId);
+                jobStore.TryMarkFailed(request.JobId, ex.Message);
+                await PublishStatus(request.JobId, request.UserId, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                outcome = "failure";
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                logger.LogError(ex, "Currency import job {JobId} failed.", request.JobId);
+                jobStore.TryMarkFailed(request.JobId, ex.Message);
+                await PublishStatus(request.JobId, request.UserId, stoppingToken);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                var outcomeTag = new KeyValuePair<string, object?>("outcome", outcome);
+                FinanceManagerTelemetry.CurrencyImportJobs.Add(1, outcomeTag);
+                FinanceManagerTelemetry.CurrencyImportDuration.Record(stopwatch.Elapsed.TotalMilliseconds, outcomeTag);
+            }
+        }
+
+        logger.LogInformation("Currency import background service stopped.");
+    }
+
+    private async Task PublishStatus(Guid jobId, int userId, CancellationToken cancellationToken)
+    {
+        if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
+            return;
+
+        await hub.Clients.Group(CashImportHub.GetJobGroupName(jobId))
+            .SendAsync("ImportStatusUpdated", status, cancellationToken);
+    }
+}

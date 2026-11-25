@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Transactions.Import;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

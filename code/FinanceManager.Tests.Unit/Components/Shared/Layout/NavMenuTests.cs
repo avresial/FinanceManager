@@ -1,6 +1,6 @@
 using Bunit;
 using FinanceManager.Components;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
 using FinanceManager.Components.Shared.Layout;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -24,7 +24,7 @@ public class NavMenuTests
         var login = new Mock<ILoginService>();
         login.Setup(service => service.GetLoggedUser()).ReturnsAsync(new UserSession { UserId = 5, UserName = "user", Password = string.Empty, UserRole = UserRole.User });
         context.Services.AddSingleton(login.Object);
-        context.Services.AddSingleton(new AccountDataSynchronizationService());
+        context.Services.AddSingleton(new TransactionDataSynchronizationService());
         context.Services.AddSingleton(backend.CreateService());
         return context;
     }

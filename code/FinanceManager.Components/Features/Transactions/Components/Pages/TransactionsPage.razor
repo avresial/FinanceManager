@@ -1,0 +1,134 @@
+@page "/Transactions"
+@using FinanceManager.Components.Shared.Helpers
+@using FinanceManager.Components.Features.Transactions.Components
+
+<PageTitle>Transactions</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6 fm-txlog-scope">
+    <PageHeader Title="Transactions">
+        <Actions>
+            <TransactionsPageActions IsMobile="@_isMobile" OnAdd="OpenAdd" OnExport="OpenExportAsync" />
+        </Actions>
+    </PageHeader>
+
+    <TransactionLogToolbar SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
+                           CustomDateRange="@_customRange" CustomDateRangeChanged="OnCustomRangeChanged"
+                           SearchText="@_search" SearchTextChanged="OnSearchChanged"
+                           Currencies="_currencies" Filter="_filter" FilterChanged="OnFilterChanged" />
+
+    @if (_isLoading)
+    {
+        <div data-testid="transactions-loading" aria-busy="true" aria-label="Loading transactions">
+            @for (var day = 0; day < 2; day++)
+            {
+                <MudPaper Outlined Class="mb-3" Style="background-color: transparent;">
+                    <div class="fm-txlog-day-header" style="position: static;">
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="25%" />
+                    </div>
+                    <div class="fm-txlog-day-rows">
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            <div class="d-flex align-center fm-row py-1 px-2">
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="40px" Height="40px" Class="rounded" Style="flex-shrink:0;" />
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="d-flex justify-space-between align-center gap-2">
+                                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="45%" />
+                                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="20%" />
+                                    </div>
+                                    <MudSkeleton SkeletonType="SkeletonType.Text" Width="30%" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+            }
+        </div>
+    }
+    else if (_hasError)
+    {
+        <div class="fm-state" data-testid="transactions-error">
+            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" Size="Size.Large" />
+            <MudText Typo="Typo.subtitle1" Class="mt-2">Couldn't load transactions</MudText>
+            <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                Something went wrong fetching your transactions.
+            </MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+                       Class="mt-2" OnClick="Retry">Try again</MudButton>
+        </div>
+    }
+    else if (_entries.Count == 0)
+    {
+        <div class="fm-state" data-testid="transactions-empty">
+            <div class="fm-state-icon">
+                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Default" Size="Size.Large" />
+            </div>
+            <MudText Typo="Typo.subtitle1" Class="mt-2">@(_ownerHasNoTransactions ? "No transactions yet" : "No transactions found")</MudText>
+            <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
+                @EmptyMessage
+            </MudText>
+            @* The header already offers Import and Add; a filtered view only needs the way back out of the filters. *@
+            @if (_filter.IsActive || !string.IsNullOrWhiteSpace(_search))
+            {
+                <MudStack Row Justify="Justify.Center" Class="mt-3">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearFilters"
+                               data-testid="transactions-clear-filters">Clear filters</MudButton>
+                </MudStack>
+            }
+            else
+            {
+                <MudStack Row Wrap="Wrap.Wrap" Justify="Justify.Center" Spacing="2" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+                               Href="/Transactions/Import/cash">Import cash CSV</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+                               Href="/Transactions/Import/bond">Import bond CSV</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenAdd">Add transaction</MudButton>
+                </MudStack>
+            }
+        </div>
+    }
+    else
+    {
+        @foreach (var group in _dayGroups)
+        {
+            <TransactionHistoryDayGroupCard @key="group.Day" Day="group.Day" Items="group.Items" IsMobile="@_isMobile"
+                                            CashSiblingsShareSameTime="@group.CashSiblingsShareSameTime"
+                                            BondDetails="_bondDetails" Valuations="_valuations"
+                                            OnEditInvestment="ShowInvestmentEdit" OnDeleteInvestment="DeleteInvestmentAsync" />
+        }
+
+        <div class="d-flex flex-column align-center py-2">
+            @if (_loadMoreFailed)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" Class="mb-1" data-testid="transactions-load-more-error">
+                    Couldn't load more transactions.
+                </MudText>
+            }
+            @if (_nextCursor is not null)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" Disabled="_isLoadingMore"
+                           OnClick="LoadMore" data-testid="transactions-load-more">
+                    @if (_isLoadingMore)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                    }
+                    @(_loadMoreFailed ? "Try again" : "Load more")
+                </MudButton>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Class="fm-muted" data-testid="transactions-end">End of the selected range</MudText>
+            }
+        </div>
+    }
+</MudContainer>
+
+<AddTransactionDialog Visible="_addVisible" VisibleChanged="OnAddVisibleChanged" InitialKind="_addKind" OnSaved="OnInvestmentSavedAsync" />
+
+@if (_editingInvestment is not null)
+{
+    @* One form for the whole page; a trade is edited through its owner route, whatever it is linked to. *@
+    <InvestmentTransactionForm @key="_editingInvestment.Id" Visible="@_investmentFormVisible"
+                               VisibleChanged="OnInvestmentFormVisibleChanged" Transaction="@_editingInvestment"
+                               OnSaved="OnInvestmentSavedAsync" />
+}

@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

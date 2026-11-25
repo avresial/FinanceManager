@@ -1,7 +1,6 @@
 using FinanceManager.Application.Labels.Suggestions;
-using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Commands;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.AspNetCore.Authorization;

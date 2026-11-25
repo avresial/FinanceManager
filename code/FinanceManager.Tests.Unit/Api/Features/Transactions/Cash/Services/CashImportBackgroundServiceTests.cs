@@ -1,0 +1,158 @@
+using FinanceManager.Api.Features.Identity.Guest;
+using FinanceManager.Api.Features.Transactions.Cash.Hubs;
+using FinanceManager.Api.Features.Transactions.Cash.Services;
+using FinanceManager.Application.Alerts.Services;
+using FinanceManager.Application.Transactions.Import;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Imports;
+using FinanceManager.Domain.Transactions.Import;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+
+namespace FinanceManager.Tests.Unit.Api.Features.Transactions.Cash.Services;
+
+[Collection("Api")]
+[Trait("Category", "Unit")]
+public class CashImportBackgroundServiceTests
+{
+    private const int _guestUserId = -7;
+
+    [Fact]
+    public async Task GuestJob_PinsTheJobScopeToTheGuestSandboxBeforeResolvingImportServices()
+    {
+        // The job runs on a background scope without an HttpContext. Repositories pick the guest's
+        // per-session in-memory database from IGuestSessionAccessor at resolution time, so the
+        // guest must be pinned before the import service (and its repositories) are created.
+        var guestIdSeenWhenResolving = (int?)null;
+        var importService = new Mock<ICashImportService>();
+        importService
+            .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
+                It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
+
+        var alerts = new Mock<IFinancialAlertService>();
+        var services = new ServiceCollection();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+        services.AddScoped(sp =>
+        {
+            guestIdSeenWhenResolving = sp.GetRequiredService<IGuestSessionAccessor>().GuestUserId;
+            return importService.Object;
+        });
+        services.AddScoped(_ => alerts.Object);
+        await using var provider = services.BuildServiceProvider();
+
+        var channel = new CashImportJobChannel();
+        var store = new CashImportJobStore();
+        var jobId = store.CreateOwnerJob(_guestUserId, currencyId: 10, totalEntries: 1);
+        await channel.QueueJob(new CashImportJobRequest(jobId, _guestUserId, 10,
+            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)], _guestUserId), TestContext.Current.CancellationToken);
+
+        using var service = new CashImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
+            CreateHub(), NullLogger<CashImportBackgroundService>.Instance);
+
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await WaitForCompletion(store, jobId);
+        await service.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(_guestUserId, guestIdSeenWhenResolving);
+    }
+
+    [Fact]
+    public async Task RegularUserJob_DoesNotPinAGuestSandbox()
+    {
+        var guestIdSeenWhenResolving = (int?)-1;
+        var importService = new Mock<ICashImportService>();
+        importService
+            .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
+                It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+        services.AddScoped(sp =>
+        {
+            guestIdSeenWhenResolving = sp.GetRequiredService<IGuestSessionAccessor>().GuestUserId;
+            return importService.Object;
+        });
+        services.AddScoped(_ => Mock.Of<IFinancialAlertService>());
+        await using var provider = services.BuildServiceProvider();
+
+        var channel = new CashImportJobChannel();
+        var store = new CashImportJobStore();
+        var jobId = store.CreateOwnerJob(5, currencyId: 10, totalEntries: 1);
+        await channel.QueueJob(new CashImportJobRequest(jobId, 5, 10,
+            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)]), TestContext.Current.CancellationToken);
+
+        using var service = new CashImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
+            CreateHub(), NullLogger<CashImportBackgroundService>.Instance);
+
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await WaitForCompletion(store, jobId, userId: 5);
+        await service.StopAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(guestIdSeenWhenResolving);
+    }
+
+    [Fact]
+    public async Task OwnerJob_ImportsIntoTheOwnersPoolOfTheJobsCurrency_NotAnAccount()
+    {
+        var importService = new Mock<ICashImportService>();
+        importService
+            .Setup(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
+                It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
+        services.AddScoped(_ => importService.Object);
+        services.AddScoped(_ => Mock.Of<IFinancialAlertService>());
+        await using var provider = services.BuildServiceProvider();
+
+        var channel = new CashImportJobChannel();
+        var store = new CashImportJobStore();
+        var jobId = store.CreateOwnerJob(5, currencyId: 3, totalEntries: 1);
+        await channel.QueueJob(new CashImportJobRequest(jobId, 5, 3,
+            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)]), TestContext.Current.CancellationToken);
+
+        using var service = new CashImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
+            CreateHub(), NullLogger<CashImportBackgroundService>.Instance);
+
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await WaitForCompletion(store, jobId, userId: 5);
+        await service.StopAsync(TestContext.Current.CancellationToken);
+
+        importService.Verify(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
+            It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Once);
+        store.TryGetStatus(jobId, 5, out var status);
+        Assert.Equal(AsyncImportJobState.Completed, status!.Status);
+    }
+
+    private static IHubContext<CashImportHub> CreateHub()
+    {
+        var proxy = new Mock<IClientProxy>();
+        var clients = new Mock<IHubClients>();
+        clients.Setup(x => x.Group(It.IsAny<string>())).Returns(proxy.Object);
+        var hub = new Mock<IHubContext<CashImportHub>>();
+        hub.SetupGet(x => x.Clients).Returns(clients.Object);
+        return hub.Object;
+    }
+
+    private static async Task WaitForCompletion(CashImportJobStore store, Guid jobId, int userId = _guestUserId)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (true)
+        {
+            if (store.TryGetStatus(jobId, userId, out var status) && status is not null
+                && status.Status is AsyncImportJobState.Completed or AsyncImportJobState.Failed)
+                return;
+            await Task.Delay(20, timeout.Token);
+        }
+    }
+}

@@ -1,14 +1,15 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Bonds;
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Imports;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -72,7 +73,7 @@ public class BondTransactionsControllerTests(OptionsProvider optionsProvider) : 
 
     private async Task<long> SeedEntry(int userId, int? accountId, int bondId, DateTime date, decimal valueChange, decimal value = 0m, string description = "seed")
     {
-        var entry = new BondAccountEntry(accountId, 0, date, value, valueChange, bondId) { UserId = userId, Description = description };
+        var entry = new BondEntry(accountId, 0, date, value, valueChange, bondId) { UserId = userId, Description = description };
         Db.BondEntries.Add(entry);
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return entry.EntryId;

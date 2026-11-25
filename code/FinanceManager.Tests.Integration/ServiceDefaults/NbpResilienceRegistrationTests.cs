@@ -1,9 +1,9 @@
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Shared.Services;
 using FinanceManager.Infrastructure;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
+using FinanceManager.Infrastructure.Features.Currencies.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;

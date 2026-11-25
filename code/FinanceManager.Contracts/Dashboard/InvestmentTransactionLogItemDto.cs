@@ -1,4 +1,4 @@
-using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 
 namespace FinanceManager.Contracts.Dashboard;
 

@@ -1,0 +1,45 @@
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
+
+namespace FinanceManager.Application.MoneyFlow.Balances;
+
+public class BalanceService(IEnumerable<IBalanceServiceTyped> typedBalanceServices) : IBalanceService
+{
+    private static readonly TimeSpan _oneDay = TimeSpan.FromDays(1);
+    public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetInflow(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetOutflow(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetNetCashFlow(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetCapital(userId, currency, start, end));
+
+    public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
+        Aggregate(service => service.GetClosingBalance(userId, currency, start, end));
+
+    private async Task<List<TimeSeriesModel>> Aggregate(Func<IBalanceServiceTyped, Task<List<TimeSeriesModel>>> getter)
+    {
+        Dictionary<DateTime, decimal> aggregated = [];
+
+        foreach (var service in typedBalanceServices)
+        {
+            foreach (var point in await getter(service))
+            {
+                if (aggregated.ContainsKey(point.DateTime))
+                    aggregated[point.DateTime] += point.Value;
+                else
+                    aggregated[point.DateTime] = point.Value;
+            }
+        }
+
+        return aggregated.OrderBy(x => x.Key)
+                         .Select(x => new TimeSeriesModel(x.Key, x.Value))
+                         .ToList();
+    }
+}

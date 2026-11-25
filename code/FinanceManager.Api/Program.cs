@@ -1,9 +1,9 @@
 using FinanceManager.Api;
 using FinanceManager.Api.Features.Administration.Hubs;
 using FinanceManager.Api.Features.Administration.Logging;
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
 using FinanceManager.Api.Features.Labels.Hubs;
 using FinanceManager.Api.Features.Mcp;
+using FinanceManager.Api.Features.Transactions.Cash.Hubs;
 using FinanceManager.Api.Shared.Middleware;
 using FinanceManager.Application;
 using FinanceManager.Application.Shared.Diagnostics;
@@ -132,7 +132,7 @@ app.MapStaticAssets().DisableRateLimiting();
 
 app.MapControllers();
 app.MapMcpFeature(app.Configuration);
-app.MapHub<CurrencyImportHub>("/hubs/currency-import");
+app.MapHub<CashImportHub>("/hubs/currency-import");
 app.MapHub<LabelSetterProgressHub>("/hubs/label-setter-progress");
 app.MapHub<AdminLogsHub>("/hubs/admin-logs");
 // index.html names the current fingerprinted assets, so it must be revalidated on every visit.

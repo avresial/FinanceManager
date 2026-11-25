@@ -1,7 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +13,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _context;
-    private readonly CurrencyEntryRepository _repo;
+    private readonly CashEntryRepository _repo;
 
     // Ordered SQLite setup requires explicit constructor statements and cannot be expressed with a primary constructor.
     public SqliteCurrencyImportBatchTests()
@@ -28,7 +27,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
                 .Options);
 
         _context.Database.EnsureCreated();
-        _repo = new CurrencyEntryRepository(_context);
+        _repo = new CashEntryRepository(_context);
         _context.SaveChanges();
     }
 
@@ -45,8 +44,8 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var entry1 = new CurrencyAccountEntry(null, 0, jan10, 0, 500m) { UserId = 1 };
-        var entry2 = new CurrencyAccountEntry(null, 0, jan15, 0, 300m) { UserId = 1 };
+        var entry1 = new CashEntry(null, 0, jan10, 0, 500m) { UserId = 1 };
+        var entry2 = new CashEntry(null, 0, jan15, 0, 300m) { UserId = 1 };
 
         var added = await _repo.Add([entry2, entry1], cancellationToken: ct);
 
@@ -76,7 +75,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         await _context.SaveChangesAsync(ct);
 
         var postingDate = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new CurrencyAccountEntry(null, 0, postingDate, 0, 500m)
+        var entry = new CashEntry(null, 0, postingDate, 0, 500m)
         {
             UserId = 1,
             Labels = [new FinancialLabel { Id = existingLabel.Id, Name = existingLabel.Name }]

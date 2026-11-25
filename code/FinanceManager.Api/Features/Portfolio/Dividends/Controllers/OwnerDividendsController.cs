@@ -1,6 +1,6 @@
 using FinanceManager.Api.Shared.Helpers;
-using FinanceManager.Application.FinancialAccounts.Investments.Dividends;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Application.Portfolio.Dividends;
+using FinanceManager.Domain.Portfolio.Dividends.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

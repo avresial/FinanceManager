@@ -1,10 +1,9 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Insights.Services;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 
 namespace FinanceManager.Application.Insights.Diversification;
 

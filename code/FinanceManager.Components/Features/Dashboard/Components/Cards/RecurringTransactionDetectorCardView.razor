@@ -1,5 +1,4 @@
-@using FinanceManager.Domain.FinancialAccounts.Currencies.Entities
-
+@using FinanceManager.Domain.Currencies.Entities
 <MudCard Outlined Class="rounded-lg d-flex flex-column" Style="@($"height:{Height};")" data-testid="recurring-transactions-card">
     <CardHeader Title="@(SelectedItem?.Name ?? "Recurring transactions")"
                 InfoText="Transactions that repeat on a schedule, grouped by income and outgoing with monthly totals. Select one to see its entries."

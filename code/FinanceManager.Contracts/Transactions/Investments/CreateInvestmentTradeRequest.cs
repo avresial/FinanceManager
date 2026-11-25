@@ -1,4 +1,3 @@
-using FinanceManager.Contracts.FinancialAccounts.Investments;
 
 namespace FinanceManager.Contracts.Transactions.Investments;
 

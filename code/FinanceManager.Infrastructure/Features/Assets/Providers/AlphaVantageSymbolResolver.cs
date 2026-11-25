@@ -1,10 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
+using FinanceManager.Application.Assets.Discovery;
+using FinanceManager.Application.Assets.Pricing;
+using FinanceManager.Application.Assets.Resolution;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using System.Text.Json;
 
 namespace FinanceManager.Infrastructure.Features.Assets.Providers;

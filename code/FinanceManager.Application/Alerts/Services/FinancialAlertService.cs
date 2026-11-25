@@ -5,7 +5,7 @@ using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.Alerts.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Labels.Services;
 using FinanceManager.Domain.Shared.Services;
 using FinanceManager.Domain.Transactions.Cash.Dtos;

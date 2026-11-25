@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using ModelContextProtocol.Server;
 using System.ComponentModel;

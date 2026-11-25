@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Labels.Setter;

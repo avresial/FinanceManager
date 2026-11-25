@@ -1,8 +1,8 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 
 namespace FinanceManager.Application.TransactionRules;
 
@@ -13,7 +13,7 @@ public sealed class TransactionRuleApplication(
     IReadOnlyCollection<TransactionRule> rules,
     IReadOnlyCollection<FinancialLabel> availableLabels)
 {
-    public bool ApplyTo(CurrencyAccountEntry entry)
+    public bool ApplyTo(CashEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
         var facts = ToFacts(entry);
@@ -54,7 +54,7 @@ public sealed class TransactionRuleApplication(
         return label;
     }
 
-    internal static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
+    internal static TransactionFacts ToFacts(CashEntry entry) =>
         new(entry.ContractorDetails ?? string.Empty, entry.Description, Math.Abs(entry.ValueChange), DirectionOf(entry.ValueChange),
             entry.Labels.Select(label => label.Name).ToList());
 
@@ -63,7 +63,7 @@ public sealed class TransactionRuleApplication(
             entry.Labels.Select(label => label.Name).ToList());
 
     /// <summary>A detached copy of a history row the rules can be applied to, so previews resolve labels exactly like a real write without touching storage.</summary>
-    internal static CurrencyAccountEntry ToSandboxEntry(CashLogEntry entry) =>
+    internal static CashEntry ToSandboxEntry(CashLogEntry entry) =>
         new(null, entry.EntryId, entry.PostingDate, 0m, entry.ValueChange)
         {
             CurrencyId = entry.CurrencyId,

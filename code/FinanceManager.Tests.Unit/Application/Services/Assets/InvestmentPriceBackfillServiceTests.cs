@@ -1,6 +1,6 @@
 using FinanceManager.Application.Assets.Pricing;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

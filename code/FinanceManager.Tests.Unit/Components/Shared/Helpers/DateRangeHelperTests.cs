@@ -1,4 +1,3 @@
-using FinanceManager.Components.Features.FinancialAccounts.Components.Shared;
 using FinanceManager.Components.Shared.Helpers;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Helpers;

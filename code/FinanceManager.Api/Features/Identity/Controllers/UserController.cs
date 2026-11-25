@@ -2,7 +2,7 @@ using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Commands;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;

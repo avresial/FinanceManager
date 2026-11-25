@@ -1,8 +1,8 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Labels.Setter;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceManager.Api.Features.Labels.Services;
@@ -34,7 +34,7 @@ public sealed class LabelSetterBackgroundService(
                 using var scope = scopeFactory.CreateScope();
 
                 var labelSetterAiService = scope.ServiceProvider.GetRequiredService<ILabelSetterAiService>();
-                var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<IAccountEntryRepository<CurrencyAccountEntry>>();
+                var currencyEntryRepository = scope.ServiceProvider.GetRequiredService<ITransactionEntryRepository<CashEntry>>();
                 var financialLabelsRepository = scope.ServiceProvider.GetRequiredService<IFinancialLabelsRepository>();
                 var financialAlertService = scope.ServiceProvider.GetRequiredService<IFinancialAlertService>();
 

@@ -1,6 +1,6 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

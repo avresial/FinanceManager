@@ -1,6 +1,7 @@
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Assets.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Domain.Assets.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
 

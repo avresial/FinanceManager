@@ -1,8 +1,6 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
@@ -11,8 +9,10 @@ using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Domain.TransactionRules.Services;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
@@ -23,7 +23,7 @@ public sealed class TransactionRuleService(
     ITransactionRuleEngineService engineService,
     IFinancialLabelsRepository labelsRepository,
     ICashTransactionReader cashTransactionReader,
-    IAccountEntryRepository<CurrencyAccountEntry> entryRepository,
+    ITransactionEntryRepository<CashEntry> entryRepository,
     IFinancialAlertService financialAlertService,
     ILogger<TransactionRuleService> logger) : ITransactionRuleService
 {
@@ -161,7 +161,7 @@ public sealed class TransactionRuleService(
         return engineService.RunRules(runtimeRules, transactionFacts);
     }
 
-    public async Task<bool> ApplyToEntryAsync(int userId, CurrencyAccountEntry entry, CancellationToken cancellationToken = default)
+    public async Task<bool> ApplyToEntryAsync(int userId, CashEntry entry, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
         var application = await LoadApplicationAsync(userId, cancellationToken);
@@ -192,7 +192,7 @@ public sealed class TransactionRuleService(
 
         if (command.EntryId is long requestedEntryId)
         {
-            if (await entryRepository.GetByOwner(userId, requestedEntryId, cancellationToken) is CurrencyAccountEntry entry)
+            if (await entryRepository.GetByOwner(userId, requestedEntryId, cancellationToken) is CashEntry entry)
             {
                 examined++;
                 if (application.ApplyTo(entry) && await entryRepository.UpdateByOwner(userId, entry, cancellationToken))

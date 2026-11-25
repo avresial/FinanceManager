@@ -1,6 +1,6 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Application.Assets.Pricing;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 
 namespace FinanceManager.Benchmarks.Hosting;
 

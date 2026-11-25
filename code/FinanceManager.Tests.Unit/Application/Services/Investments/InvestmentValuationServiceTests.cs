@@ -1,10 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
+using FinanceManager.Application.Portfolio.Valuation;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
@@ -109,7 +109,7 @@ public class InvestmentValuationServiceTests
         Assert.Empty(await CreateSut().GetUserValueSeriesAsync(7, _usd, end, start, TestContext.Current.CancellationToken));
     }
 
-    private static FinanceManager.Domain.FinancialAccounts.Investments.Dtos.InvestmentHolding Holding(long listingId, decimal units) =>
+    private static FinanceManager.Domain.Transactions.Investments.Dtos.InvestmentHolding Holding(long listingId, decimal units) =>
         new(listingId, $"T{listingId}", "XLON", FinanceManager.Domain.Assets.Entities.AssetType.ETF, units);
 
     [Fact]

@@ -1,6 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Contracts.FinancialAccounts.Investments;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Contracts.Portfolio;
+using FinanceManager.Contracts.Transactions.Investments;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Features.Dashboard.Components;

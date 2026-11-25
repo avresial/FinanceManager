@@ -1,8 +1,8 @@
-using FinanceManager.Application.FinancialAccounts;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Application.MoneyFlow.Balances;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

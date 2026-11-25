@@ -2,8 +2,8 @@ using FinanceManager.Components.Features.Transactions.Shared.HttpClients;
 using FinanceManager.Components.Features.Transactions.Shared.Models;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Bonds;
-using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Imports;
 using System.Globalization;
 using System.Net.Http.Json;
 

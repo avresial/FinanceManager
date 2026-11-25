@@ -1,21 +1,23 @@
 using Bunit;
-using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Import;
-using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Import;
-using FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Currencies.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.Components.Import;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.Components.Import;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.Services;
 using FinanceManager.Components.Features.Transactions.Components.Pages;
+using FinanceManager.Components.Features.Transactions.Import.Components;
+using FinanceManager.Components.Features.Transactions.Import.HttpClients;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
 using FinanceManager.Components.Shared.Layout;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Imports;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Import;
+using FinanceManager.Domain.Transactions.Import.Dtos;
 using FinanceManager.Tests.Unit.Components.Shared.Services;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,7 +72,7 @@ public class ImportCommitNotificationTests
     [Fact]
     public async Task BondImport_AcceptedConflicts_PublishWhenTheyAreCommitted()
     {
-        var existing = new BondAccountEntry(null, 1, new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 0, 50, 1) { UserId = 5 };
+        var existing = new BondEntry(null, 1, new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 0, 50, 1) { UserId = 5 };
         var incoming = new BondEntryImport(new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc), 100, 1, string.Empty);
         await using var context = CreateContext(BondRoutes(imported: 0, conflicts: [new BondImportConflict(incoming, existing, "Same day")]));
         var published = Count(context);
@@ -149,7 +151,7 @@ public class ImportCommitNotificationTests
     private static Func<int> Count(BunitContext context)
     {
         var published = 0;
-        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => Interlocked.Increment(ref published);
+        context.Services.GetRequiredService<TransactionDataSynchronizationService>().TransactionsChanged += () => Interlocked.Increment(ref published);
         return () => Volatile.Read(ref published);
     }
 
@@ -204,7 +206,7 @@ public class ImportCommitNotificationTests
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
         context.Services.AddTransient<CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<CurrencyImportJobTracker>();
-        context.Services.AddSingleton<AccountDataSynchronizationService>();
+        context.Services.AddSingleton<TransactionDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settings.Object);

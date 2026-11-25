@@ -1,6 +1,6 @@
+@using FinanceManager.Domain.Transactions.Bonds.Entities
 @using FinanceManager.Domain.Shared
 @page "/Admin/AddBondDetails"
-@using FinanceManager.Domain.FinancialAccounts.Bond.Entities
 @using FinanceManager.Domain.Identity.Entities
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
@@ -40,11 +40,11 @@
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudSelect Variant="Variant.Outlined" T="FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency" Label="Currency"
+            <MudSelect Variant="Variant.Outlined" T="FinanceManager.Domain.Currencies.Entities.Currency" Label="Currency"
                        @bind-Value="_selectedCurrency" ToStringFunc="@(c => c?.ShortName)">
                 @foreach (var currency in _currencies)
                 {
-                    <MudSelectItem T="FinanceManager.Domain.FinancialAccounts.Currencies.Entities.Currency" Value="@currency">
+                    <MudSelectItem T="FinanceManager.Domain.Currencies.Entities.Currency" Value="@currency">
                         @currency.ShortName</MudSelectItem>
                     }
                 </MudSelect>

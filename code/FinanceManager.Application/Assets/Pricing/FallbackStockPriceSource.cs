@@ -1,0 +1,169 @@
+using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using Microsoft.Extensions.Logging;
+
+namespace FinanceManager.Application.Assets.Pricing;
+
+/// <summary>
+/// Composes an ordered list of <see cref="IStockPriceSource"/> providers into a single source.
+/// Tries each in order and returns the first non-empty result, so a rate-limited or unentitled
+/// primary (Alpha Vantage) transparently falls through to a secondary (EODHD).
+/// </summary>
+public sealed class FallbackStockPriceSource(
+    IReadOnlyList<IStockPriceSource> sources,
+    ILogger<FallbackStockPriceSource> logger) : IStockPriceSource
+{
+    public string Name => "Fallback";
+    public int Priority => 0;
+    public bool SupportsProviderSelection => true;
+    public IReadOnlySet<AssetType> SupportedAssetTypes => sources.SelectMany(x => x.SupportedAssetTypes).ToHashSet();
+    public IReadOnlySet<string> SupportedIntervals => sources.SelectMany(x => x.SupportedIntervals).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    public async Task<IReadOnlyList<StockPrice>> GetDailySeries(string symbol, string isin, DateTime start, DateTime end, Currency currency, CancellationToken ct = default)
+    {
+        var ordered = sources.OrderBy(x => x.Priority).ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var source = ordered[i];
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                var prices = await source.GetDailySeries(symbol, isin, start, end, currency, ct);
+                if (prices.Count > 0)
+                {
+                    if (i > 0)
+                        logger.LogInformation("Price source {Source} served {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
+                    return prices;
+                }
+
+                logger.LogDebug("Price source {Source} returned no data for {Symbol}; trying next.", source.Name, Sanitize(symbol));
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} timed out while retrieving daily series for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} failed while retrieving daily series for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+        }
+
+        return [];
+    }
+
+    public async Task<StockPrice?> GetLatestQuote(
+        string symbol,
+        string isin,
+        Currency currency,
+        CancellationToken ct = default)
+    {
+        var ordered = sources.OrderBy(x => x.Priority).ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var source = ordered[i];
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                var quote = await source.GetLatestQuote(symbol, isin, currency, ct);
+                if (quote is not null)
+                {
+                    if (i > 0)
+                        logger.LogInformation("Price source {Source} served latest quote for {Symbol} after {Tried} earlier source(s) returned no data.", source.Name, Sanitize(symbol), i);
+                    return quote;
+                }
+
+                logger.LogDebug("Price source {Source} returned no quote for {Symbol}; trying next.", source.Name, Sanitize(symbol));
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} timed out while retrieving latest quote for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    "Price source {Source} failed while retrieving latest quote for {Symbol}; trying next. Failure: {FailureType}.",
+                    source.Name,
+                    Sanitize(symbol),
+                    ex.GetType().Name);
+            }
+        }
+
+        return null;
+    }
+
+    public async Task<IReadOnlyList<StockPrice>> GetDailySeries(
+        MarketDataProvider provider,
+        string symbol,
+        string isin,
+        DateTime start,
+        DateTime end,
+        Currency currency,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var source = sources
+            .Where(x => x.Provider == provider)
+            .OrderBy(x => x.Priority)
+            .FirstOrDefault();
+
+        if (source is null)
+            return [];
+
+        try
+        {
+            return await source.GetDailySeries(symbol, isin, start, end, currency, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogWarning(
+                "Price source {Source} timed out while retrieving daily series for {Symbol}. Failure: {FailureType}.",
+                source.Name,
+                Sanitize(symbol),
+                ex.GetType().Name);
+            return [];
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                "Price source {Source} failed while retrieving daily series for {Symbol}. Failure: {FailureType}.",
+                source.Name,
+                Sanitize(symbol),
+                ex.GetType().Name);
+            return [];
+        }
+    }
+
+    public int GetPriority(MarketDataProvider provider) =>
+        sources.Where(x => x.Provider == provider).Select(x => x.Priority).DefaultIfEmpty(int.MaxValue).Min();
+
+    // Strip CR/LF so an attacker-influenced symbol cannot forge log entries (log injection).
+    private static string Sanitize(string value)
+        => value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+}

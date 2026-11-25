@@ -1,6 +1,6 @@
-using FinanceManager.Application.FinancialAccounts.Shared;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Application.Currencies.ExchangeRates;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Services;

@@ -1,4 +1,4 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared;
 using Microsoft.AspNetCore.Mvc.ModelBinding;

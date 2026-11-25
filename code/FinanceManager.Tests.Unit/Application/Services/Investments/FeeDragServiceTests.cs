@@ -1,10 +1,11 @@
-using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
+using FinanceManager.Application.Portfolio.FeeDrag;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Portfolio.FeeDrag.Dtos;
+using FinanceManager.Domain.Transactions.Investments.Dtos;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;

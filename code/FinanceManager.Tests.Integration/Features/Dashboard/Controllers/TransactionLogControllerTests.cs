@@ -1,7 +1,6 @@
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.Extensions.DependencyInjection;

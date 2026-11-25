@@ -1,4 +1,4 @@
-using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Dashboard.Dtos;
 
 namespace FinanceManager.Components.Features.Dashboard.Models;

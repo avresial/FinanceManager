@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using System.Net;
 using System.Net.Http.Json;

@@ -1,9 +1,9 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +30,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
 
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _context;
-    private readonly CurrencyEntryRepository _cash;
+    private readonly CashEntryRepository _cash;
     private readonly BondEntryRepository _bonds;
 
     public SqliteOwnerEntryRepositoryTests()
@@ -43,7 +43,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
             new FinancialAccountBaseDto { AccountId = _cashAccount, UserId = _owner, AccountType = AccountType.Currency, CurrencyId = 0 },
             new FinancialAccountBaseDto { AccountId = _bondAccount, UserId = _owner, AccountType = AccountType.Bond });
         _context.SaveChanges();
-        _cash = new CurrencyEntryRepository(_context);
+        _cash = new CashEntryRepository(_context);
         _bonds = new BondEntryRepository(_context);
     }
 
@@ -53,10 +53,10 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         _connection.Dispose();
     }
 
-    private static CurrencyAccountEntry Cash(int? account, DateTime date, decimal change, int owner = _owner, int currency = 0) =>
+    private static CashEntry Cash(int? account, DateTime date, decimal change, int owner = _owner, int currency = 0) =>
         new(account, 0, date, 0, change) { UserId = owner, CurrencyId = currency, Description = "d" };
 
-    private static BondAccountEntry Bond(int? account, DateTime date, decimal change, int bond = _bondA, int owner = _owner) =>
+    private static BondEntry Bond(int? account, DateTime date, decimal change, int bond = _bondA, int owner = _owner) =>
         new(account, 0, date, 0, change, bond) { UserId = owner, Description = "d" };
 
     private async Task<List<decimal>> CashDeltas() =>
@@ -116,7 +116,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         Assert.Equal([10m, 5m, 100m, 2m], await CashDeltas());
 
         // The first row moves behind the second: values between the old and the new position change too.
-        var edit = new CurrencyAccountEntry(_cashAccount, ids[0], _jan1.AddDays(1).AddHours(12), 0, 20) { Description = "moved" };
+        var edit = new CashEntry(_cashAccount, ids[0], _jan1.AddDays(1).AddHours(12), 0, 20) { Description = "moved" };
         Assert.True(await _cash.UpdateByOwner(_owner, edit, ct));
         Assert.Equal([5m, 100m, 20m, 2m], await CashDeltas());
 
@@ -126,7 +126,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         Assert.Equal([100m, 20m, 2m], await CashDeltas());
 
         // The unlinked row keeps its zero value and is edited or deleted without any account to repair.
-        Assert.True(await _cash.UpdateByOwner(_owner, new CurrencyAccountEntry(null, ids[3], _jan1.AddDays(3), 0, 50) { Description = "free" }, ct));
+        Assert.True(await _cash.UpdateByOwner(_owner, new CashEntry(null, ids[3], _jan1.AddDays(3), 0, 50) { Description = "free" }, ct));
         var free = await _context.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == ids[3], ct);
         Assert.Equal((50m, 0m, (int?)null, _owner), (free.ValueChange, free.Value, free.AccountId, free.UserId));
         Assert.True(await _cash.DeleteByOwner(_owner, ids[3], ct));
@@ -140,7 +140,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         await _cash.Add([Cash(null, _jan1, 1, currency: 1)], ct);
         var id = (await _context.CurrencyEntries.AsNoTracking().SingleAsync(ct)).EntryId;
 
-        Assert.True(await _cash.UpdateByOwner(_owner, new CurrencyAccountEntry(_cashAccount, id, _jan1, 99, 2) { UserId = _other, CurrencyId = 0, Description = "x" }, ct));
+        Assert.True(await _cash.UpdateByOwner(_owner, new CashEntry(_cashAccount, id, _jan1, 99, 2) { UserId = _other, CurrencyId = 0, Description = "x" }, ct));
 
         var stored = await _context.CurrencyEntries.AsNoTracking().SingleAsync(ct);
         Assert.Equal((_owner, 1, (int?)null, 0m, 2m), (stored.UserId, stored.CurrencyId, stored.AccountId, stored.Value, stored.ValueChange));
@@ -174,7 +174,7 @@ public sealed class SqliteOwnerEntryRepositoryTests : IDisposable
         ], ct);
         var ids = await _context.BondEntries.AsNoTracking().OrderBy(e => e.EntryId).Select(e => e.EntryId).ToListAsync(ct);
 
-        var move = new BondAccountEntry(_bondAccount, ids[0], _jan1.AddDays(1).AddHours(12), 0, 20, _bondB) { Description = "moved" };
+        var move = new BondEntry(_bondAccount, ids[0], _jan1.AddDays(1).AddHours(12), 0, 20, _bondB) { Description = "moved" };
         Assert.True(await _bonds.UpdateByOwner(_owner, move, ct));
 
         var values = await _context.BondEntries.AsNoTracking().ToDictionaryAsync(e => e.EntryId, e => e.ValueChange, ct);

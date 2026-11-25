@@ -1,9 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Performance;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Application.Portfolio.Performance;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
