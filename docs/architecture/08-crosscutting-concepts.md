@@ -55,7 +55,7 @@ Three mechanisms solve different problems:
 | --- | --- | --- |
 | Rendered UI snapshot | Browser local storage, `ISnapshotService` / `ISnapshotRefreshCoordinator` | Paint last rendered content promptly, **always** fetch, compare rendered content, skip equal writes, preserve painted content on failure |
 | Time-based client data cache | `LocalStorageStateCacheService` and browser state | Reuse fetched data during its validity window; can skip the request; choose explicitly rather than substitute it for a snapshot |
-| Server read cache | HybridCache repository/dashboard decorators and exact FX memory cache | Reuse persisted/derived reads; invalidate affected owner scopes on writes; no shared distributed backend is shown in default registration |
+| Server read cache | HybridCache dashboard read-model cache, invalidating entry-repository decorators and exact FX memory cache | Reuse derived dashboard reads; entry writes invalidate affected owner scopes; no shared distributed backend is shown in default registration |
 
 The [snapshot guide](concepts/ui-snapshots.md) is the detailed contract. [SnapshotRefreshCoordinator](../../code/FinanceManager.Components/Shared/Services/SnapshotRefreshCoordinator.cs) holds no surface state; the caller owns the version gate. Keys must incorporate user and relevant currency/date/filter context. Persist rendered content, not transient selection/paging/expanded state. The financial-account Contracts extraction preserves DTO type names, JSON names/order, numeric enums, dates and labels so previously stored investment transaction/valuation snapshots remain readable. Storage failures are best effort; a stale asynchronous refresh cannot overwrite a newer context. Diagnostics use snapshot type names instead of owner-bearing keys.
 
@@ -71,7 +71,7 @@ The [PWA guide](concepts/pwa.md) covers installation, service-worker assets and 
 
 EF Core repositories implement Domain contracts. The provider/connection precedence and guest stores are described in [section 7](07-deployment-view.md). Investment writes can use `IAtomicOperation` backed by EF transactions; check the specific use case before assuming an entire workflow is atomic.
 
-Hosted workers consume in-process channels for currency imports, price backfill, insights and labeling. SignalR publishes user/job progress; job stores/channels and guest sessions are process-local unless their specific implementation persists state. A process restart or additional instance can therefore change work/progress behavior. Queued submission is not proof of completed persistence. Inspect cancellation, committed partial work, conflict handling, final recalculation and invalidation before altering import batching.
+Hosted workers consume in-process channels for currency imports, price backfill, insights and labeling. SignalR publishes user/job progress; job stores/channels and guest sessions are process-local unless their specific implementation persists state. A process restart or additional instance can therefore change work/progress behavior. Queued submission is not proof of completed persistence. Inspect cancellation, committed partial work, conflict handling and invalidation before altering import batching.
 
 Apply schema changes using the [migration guide](operations/migrations.md) and use the [recovery runbook](operations/database-recovery.md) for backup/restore. SQLite benchmarks and EF InMemory tests do not establish PostgreSQL/SQL Server migration compatibility.
 

@@ -121,6 +121,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<ICashTransactionReader, CashTransactionRepository>()
                 .AddScoped<IBondTransactionReader, BondTransactionRepository>()
                 .AddScoped<IInvestmentTransactionRepository, InvestmentTransactionRepository>()
+                .AddScoped<IDividendPaymentRepository, DividendPaymentRepository>()
                 .AddScoped<IAtomicOperation, EfAtomicOperation>()
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
@@ -140,7 +141,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IAiProviderConfigRepository, AiProviderConfigRepository>()
                 .AddScoped<IExternalServiceConfigRepository, ExternalServiceConfigRepository>()
                 .AddScoped<IMaintenanceKeyRepository, MaintenanceKeyRepository>()
-                .AddScoped<IDividendPaymentRepository, DividendPaymentRepository>()
                 .AddScoped<ILogEntryRepository, LogEntryRepository>()
                 .AddScoped<ITransactionRuleRepository, TransactionRuleRepository>()
 
