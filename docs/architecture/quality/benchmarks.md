@@ -44,12 +44,10 @@ BenchmarkDotNet category:
 |---|---|---|
 | `Dashboard` | `Dashboard/overview` over a 6-month and a 1-month window | The single most important number: what the landing page waits on after login. Two windows separate fixed overhead from cost that scales with range. |
 | `MoneyFlow` | net worth (point and series), inflow, outflow, net cash flow, closing balance, labels value, investment rate | Re-fired every time a user changes the date range; felt as chart lag. |
-| `Assets` | asset existence, end assets per account and per type, time series, paycheck estimate, unrealized gain/loss per account and per instrument | The heaviest reads in the app — transactions joined to listings joined to daily price quotes, then currency-converted. |
+| `Assets` | asset existence, pooled positions and asset classes, time series, paycheck estimate, pooled and per-instrument unrealized gain/loss | The heaviest reads in the app — transactions joined to listings joined to daily price quotes, then currency-converted. |
 | `Analysis` | expense distribution, essential spending, diversification score and breakdown, liabilities | One per dashboard card. |
-| `Accounts` | currency/investment/bond account lists and details, holdings and valuation | Account-page setup before entry history is loaded. |
-| `FinancialAccountEntries` | currency and bond entry history over the full range plus 50-entry pages in both directions | The range-vs-page contrast shows whether paging saves work; forward and backward pages catch direction-specific query costs. |
-| `Supporting` | user record, currency list, label count/page/by-account, recent transaction log | Called from layout and navigation, so their cost lands on *every* interaction. |
-| `Writes` | append a currency entry, recalculate account balances | A slow write is felt directly, and an over-broad cache invalidation makes the *next* read slow too. |
+| `Supporting` | user record, currency list, label count and page, recent transaction log | Called from layout and navigation, so their cost lands on *every* interaction. |
+| `Writes` | append an owner cash entry | A slow write is felt directly, and an over-broad cache invalidation makes the *next* read slow too. |
 
 ### Deliberately excluded
 
@@ -156,20 +154,10 @@ returns a single boolean and costs ~13 ms, the same order as endpoints that retu
    can turn into an HTTP call to a rate-limited vendor.
 3. **`BenchmarkEnvironment`** is a process-wide singleton holding the host, an authenticated
    `HttpClient`, and the resolved `BenchmarkScenario`.
-4. **`BenchmarkScenario`** carries the account ids and date window, *resolved from the running API*
-   rather than hard-coded — the seeders anchor history to `UtcNow`, so a hard-coded window would drift
-   into empty ranges as the template ages and endpoints would quietly start measuring "return nothing".
+4. **`BenchmarkScenario`** carries the seeded owner, currency and date window read from its cash entries.
 
 Adding an endpoint: add a `[Benchmark]` method to the matching class (or a new `ApiBenchmark` subclass),
 call it from `Prime()` to keep first-call costs out of the measurement, and re-run `--validate`.
-
-## Note on `CurrencyEntryValueCalculator`
-
-Running-balance recalculation is a hand-written windowed `UPDATE` with no portable spelling. Before this
-project it had a PostgreSQL branch and an `else` branch that assumed SQL Server syntax, so *any* other
-relational provider got statements it could not parse. Adding SQLite support meant making that switch
-explicit (`DatabaseProviders`), which also means an unrecognised provider now falls back to the correct
-managed path instead of failing. Production behaviour on SQL Server and PostgreSQL is unchanged.
 
 ## Operation-local dashboard distribution evidence
 

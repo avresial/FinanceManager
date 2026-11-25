@@ -11,9 +11,10 @@ The records below reconstruct decisions from the implementation and existing rep
 | [0003 — Separate rendered snapshots and data caches](decisions/0003-separate-ui-snapshots-and-data-caches.md) | Paint last rendered UI state and always refresh; use TTL caching separately | Immediate continuity without skipping freshness; invalidation/context/race discipline is required |
 | [0004 — Separate MCP authorization from the SPA session](decisions/0004-separate-mcp-authorization.md) | OAuth scope/resource/reference-token grants secure MCP; tools derive owner identity from the principal | Independent AI-client revocation and identity isolation; extra certificate/grant lifecycle |
 | [0005 — Normalize portfolio movements without return semantics](decisions/0005-normalize-portfolio-movements.md) | A shared movement ledger feeds money-weighted return and attribution, with calculations kept in consumer services | Common normalization with explicit signs/FX in consumers; TWR still has a separate path |
-| [0006 — Account models without implementation inheritance](decisions/0006-account-models-without-inheritance.md) | Concrete accounts, transactions and response DTOs own their state; narrow interfaces support shared consumers | Preserved schema and wire contracts; modest duplication avoids inherited financial assumptions |
+| [0006 — Account models without implementation inheritance](decisions/0006-account-models-without-inheritance.md) | Historical account model | Superseded by [ADR 0008](decisions/0008-owner-keyed-transaction-ledger.md) |
 
 | [0007 — Shared API contracts](decisions/0007-shared-api-contracts.md) | Independent transport models shared by API, Application and browser | Domain/persistence remain separate; explicit mapping and incremental migration |
+| [0008 — Owner-keyed transaction ledger](decisions/0008-owner-keyed-transaction-ledger.md) | Pool balances by owner and instrument from signed changes | Accepted. Schema contract follows in #1144 |
 
 ## Recording future decisions
 

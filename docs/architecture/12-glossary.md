@@ -8,9 +8,9 @@ Terms below describe FinanceManager's current model. Refer to [financial semanti
 
 | Term | Meaning in this repository |
 | --- | --- |
-| Account / financial account | A user's tracked container of financial data; currency, bond and investment accounts have different entry/transaction and valuation rules |
-| Account entry | A dated currency or bond account record, including a value/value change; accumulated balances may need recalculation after earlier mutations |
-| Posting date | Effective date of an account entry; used for ordering, balance history and bond holding changes |
+| Financial account | Historical container for transactions. Current ledgers identify each entry by its owner and instrument or currency. |
+| Ledger entry | An owner’s dated, signed cash movement, bond unit change or investment trade. Balances derive from the changes in each partition. |
+| Posting date | Effective date of a ledger entry; used for ordering, balance history and bond holding changes |
 | Trade date | Date of an investment transaction; distinct from the time a price provider publishes a quote |
 | Transaction currency | Recorded denomination of an investment trade's unit price and fee; later catalog enrichment does not replace it with the listing's quote currency |
 | Asset | Instrument identity shared across listings; not synonymous with a user's holding |
@@ -19,7 +19,7 @@ Terms below describe FinanceManager's current model. Refer to [financial semanti
 | Price quote | A stored market observation for a listing and time/currency; an as-of valuation can use the latest available prior observation |
 | Price multiplier | Scale converting raw quote units to major currency units; e.g. a GBX listing can require `0.01` to yield GBP |
 | GBX / minor quote unit | Pence-style quote denomination; must be normalized before major-currency FX conversion |
-| Holding / position | Quantity held for a listing/account as of a date, derived from transactions and opening history |
+| Holding / position | Quantity held for a listing and owner as of a date, derived from transactions and opening history |
 | Valuation | Monetary value of holdings at an as-of date, with price-unit normalization and conversion into the requested currency |
 | Opening-boundary history | Entries/positions preceding the selected window required to establish opening holdings/balances; excluding them can distort series and returns |
 | Portfolio | User-scoped investment and bond holdings considered together by performance services; not an independently authorized tenant |

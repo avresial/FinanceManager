@@ -24,6 +24,8 @@ This section migrates every concern, debt item, security/performance finding, hi
 
 R1 also carries forward the original OWASP A05 security-misconfiguration concern and its mitigation that the API has User Secrets/environment configuration support. The remaining gap is local defaults/details plus historical rotation verification. R9/R10 retain the original categories and resolved mechanisms. Risks share evidence and should not be counted as separate independent incidents merely because they appeared in multiple original tables.
 
+The persisted cash and bond CLR types and several namespaces still use financial-account names. #1143 pins the physical label-column names before renaming those types. #1144 removes the dormant accounts table, links and running balances. [ADR 0008](decisions/0008-owner-keyed-transaction-ledger.md).
+
 ## 11.2 Historical performance, cleanup and accessibility debt
 
 The migrated [performance audit](audits/performance-2026-09-05.md) preserves all ten original opportunities and their validation plans. It was a static audit with no latency, throughput, allocation or SQL-plan measurements; benefits overlap. Do not treat it as a current backlog in which every finding is still open. Current import services batch persistence, current exact FX caching preserves provenance, and current repository/history APIs include projections/paging; inspect the current code and tests for each opportunity before implementation.

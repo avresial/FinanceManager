@@ -115,7 +115,7 @@ sequenceDiagram
 
 Evidence: [typed client](../../code/FinanceManager.Components/Features/FinancialAccounts/HttpClients/InvestmentValuationHttpClient.cs), [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/InvestmentValuationController.cs), [valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentValuationService.cs), [price provider](../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs), [quote ingestion](../../code/FinanceManager.Application/Assets/Pricing/PriceQuoteIngestionService.cs), [quote repository](../../code/FinanceManager.Infrastructure/Features/Assets/Repositories/PriceQuoteRepository.cs).
 
-Capital (remaining cost basis) and benchmark series are separate services beside account valuation: [capital series](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentCapitalSeriesService.cs) and [contribution-matched benchmark](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentBenchmarkService.cs).
+Capital (remaining cost basis) and benchmark series are separate services alongside portfolio valuation: [capital series](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentCapitalSeriesService.cs) and [contribution-matched benchmark](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentBenchmarkService.cs).
 
 Historical purchase valuation follows a separate currency boundary: [transaction valuation](../../code/FinanceManager.Application/FinancialAccounts/Investments/Valuation/InvestmentTransactionValuationService.cs), remaining-buy cost and capital flows convert the recorded transaction amounts using their transaction currency. Filling an incomplete listing's currency later changes quote metadata, not historical trade denominations. The investment transaction list, history page and holding metadata endpoints await missing-price recovery before returning their responses. The operation requests a price in the recorded transaction currency and saves it to the trade. [Price recovery](../../code/FinanceManager.Application/FinancialAccounts/Investments/Transactions/InvestmentTransactionPriceRecoveryService.cs). [Financial semantics](08-crosscutting-concepts.md#81-domain-and-financial-semantics).
 
@@ -134,18 +134,17 @@ Important branches:
 ```mermaid
 sequenceDiagram
     participant Browser as Import component / job tracker
-    participant Start as CashTransactionsController
-    participant API as CurrencyAccountImportController
+    participant API as CashTransactionsController
     participant Store as CurrencyImportJobStore
     participant Queue as CurrencyImportJobChannel
     participant Worker as CurrencyImportBackgroundService
     participant Import as CurrencyAccountImportService
     participant Hub as CurrencyImportHub
-    Browser->>Start: StartImport(currency id, entries)
-    Start->>Start: Resolve owner and validate currency
-    Start->>Store: CreateOwnerJob(user, currency, total)
-    Start->>Queue: QueueJob(job request)
-    Start-->>Browser: 202 Accepted with job id
+    Browser->>API: StartImport(currency id, entries)
+    API->>API: Resolve owner and validate currency
+    API->>Store: CreateOwnerJob(user, currency, total)
+    API->>Queue: QueueJob(job request)
+    API-->>Browser: 202 Accepted with job id
     Browser->>Hub: JoinJob(job id), authenticated
     Hub->>Store: CanAccessJob(job, authenticated user)
     Hub-->>Browser: Join owned job group
@@ -163,11 +162,11 @@ sequenceDiagram
     Worker->>Worker: Evaluate financial alerts
     Worker->>Store: Mark completed, or failed on exception
     Worker->>Hub: Publish final status
-    Browser->>API: ImportStatus(job id), authenticated
+    Browser->>API: GET import/jobs/{jobId}, authenticated
     API->>Store: Get status scoped to user
     API-->>Browser: Status or 404
     opt User selects sides for conflicts
-        Browser->>API: ResolveAsyncImportConflicts(job, decisions)
+        Browser->>API: POST import/jobs/{jobId}/resolve
         API->>API: Require exactly one selected side per decision
         API->>Store: Resolve owned conflicts
         API->>Import: ApplyOwnerConflict for each approved addition
@@ -177,7 +176,7 @@ sequenceDiagram
     end
 ```
 
-Evidence: [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Controllers/CurrencyAccountImportController.cs), [channel](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobChannel.cs), [worker](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportBackgroundService.cs), [job store](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobStore.cs), [hub](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Hubs/CurrencyImportHub.cs), [import service](../../code/FinanceManager.Application/FinancialAccounts/Currencies/Import/CurrencyAccountImportService.cs), [browser tracker](../../code/FinanceManager.Components/Features/FinancialAccounts/Services/CurrencyImportJobTracker.cs).
+Evidence: [controller](../../code/FinanceManager.Api/Features/Transactions/Cash/Controllers/CashTransactionsController.cs), [channel](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobChannel.cs), [worker](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportBackgroundService.cs), [job store](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobStore.cs), [hub](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Hubs/CurrencyImportHub.cs), [import service](../../code/FinanceManager.Application/FinancialAccounts/Currencies/Import/CurrencyAccountImportService.cs), [browser tracker](../../code/FinanceManager.Components/Features/FinancialAccounts/Services/CurrencyImportJobTracker.cs).
 
 The queue is bounded to 256 requests, uses one reader, and waits when full; `202` follows successful queue admission, not completed persistence. The worker publishes progress with a 200 ms throttling interval and a final update. Status polling complements events that can race group subscription. Store and queue are process-local; restart does not preserve queued jobs/status. The worker uses the host shutdown token, not the original HTTP request token. Shutdown cancellation exits processing; other exceptions mark the job failed and publish status. Import effects and job metadata have different persistence lifetimes.
 

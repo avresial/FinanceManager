@@ -2,7 +2,7 @@
 
 [Architecture decisions](../09-architecture-decisions.md)
 
-Status: accepted for implementation, 2026-11-16. The developer requested removal of account-model base classes; [#1109](https://github.com/avresial/FinanceManager/issues/1109) records the reviewed plan. This record does not assert deployment.
+Superseded by [ADR 0008](0008-owner-keyed-transaction-ledger.md). Originally accepted on 2026-11-16.
 
 ## Context
 
@@ -10,7 +10,7 @@ Currency accounts have one balance stream, bonds have one per instrument, and in
 
 ## Decision
 
-Concrete account and transaction models own their properties. [IAccount](../../../code/FinanceManager.Domain/FinancialAccounts/Shared/Entities/IAccount.cs) supplies only account identity, ownership and name to generic repository/client consumers. Currency and bond history dates belong to their concrete models. The investment account retains its null date properties for wire compatibility without placing them on IAccount.
+Concrete account and transaction models own their properties. [IAccount](https://github.com/avresial/FinanceManager/blob/d086689c553c23554a937d2c4c79381ff6219144/code/FinanceManager.Domain/FinancialAccounts/Shared/Entities/IAccount.cs) supplies only account identity, ownership and name to generic repository/client consumers. Currency and bond history dates belong to their concrete models. The investment account retains its null date properties for wire compatibility without placing them on IAccount.
 
 [ILedgerEntry](../../../code/FinanceManager.Domain/FinancialAccounts/Shared/Entities/ILedgerEntry.cs) supplies dated identity, account identity, a running balance and a signed change to existing shared ledger and cache operations. Only currency and bond entries implement it. Each concrete type owns mutation, copying and financial semantics; investment transactions keep their date normalization, quantity-derived change and repository-managed balance.
 
