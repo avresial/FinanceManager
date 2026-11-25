@@ -37,6 +37,15 @@ public class EntryModelCompatibilityTests
         Assert.Equal("BondAccountEntryEntryId", bond.FindNavigation("Labels")!.ForeignKey.Properties.Single().Name);
         Assert.Null(dividend.FindNavigation("Labels"));
 
+        // Physical names that predate the CashEntry and BondEntry type names and must not follow them.
+        var cashJoin = cash.FindSkipNavigation("Labels")!.JoinEntityType;
+        Assert.Equal("CurrencyAccountEntryFinancialLabel", cashJoin.Name);
+        Assert.Equal(["CurrencyAccountEntryEntryId", "LabelsId"], cashJoin.GetProperties().Select(property => property.GetColumnName()).Order());
+        Assert.Equal(["CurrencyAccountEntryEntryId", "LabelsId"], cashJoin.FindPrimaryKey()!.Properties.Select(property => property.Name));
+        var bondLabelColumn = bond.FindNavigation("Labels")!.ForeignKey.Properties.Single();
+        Assert.Equal("FinancialLabels", bondLabelColumn.DeclaringType.GetTableName());
+        Assert.Equal("BondAccountEntryEntryId", bondLabelColumn.GetColumnName());
+
         foreach (var (type, table, precision, scale) in new[] {
             (typeof(CashEntry), "CurrencyEntries", 18, 2),
             (typeof(BondEntry), "BondEntries", 18, 2),
