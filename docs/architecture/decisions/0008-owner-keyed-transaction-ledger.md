@@ -1,6 +1,6 @@
 # 0008 — Owner-keyed transaction ledger
 
-Accepted on 2026-11-22 in epic #1126. The schema contract lands in step 13c (#1144). This decision supersedes [ADR 0006](0006-account-models-without-inheritance.md).
+Accepted on 2026-11-22 in epic #1126. Implemented on 2026-11-25: the schema contract of step 13c (#1144) completed it. This decision supersedes [ADR 0006](0006-account-models-without-inheritance.md).
 
 ## Context
 
@@ -20,4 +20,4 @@ Keep the three entry tables. Each row carries its owner. Cash pools by `(UserId,
 
 The authenticated principal determines ownership, including for guest users. Writes affect the selected row and invalidate owner caches. Net cash in each currency contributes to assets when positive and liabilities when negative. Bond accrual starts at the latest pooled entry. Existing FX and cost-basis policies continue.
 
-The `Accounts` table, historical links and stored `Value` columns remain dormant until #1144. Some CLR names still contain `Account`. Their relocation and explicit EF column-name mappings belong to #1143. See [epic #1126](https://github.com/avresial/FinanceManager/issues/1126).
+`DropFinancialAccounts` (#1144) dropped the `Accounts` table, the historical account links and the stored `Value` columns, without an archive. The pre-contract backup is the only rollback ([runbook](../operations/migrations.md#financial-accounts-contract-1144)). The label join table and columns that still contain `Account` keep their physical names through explicit EF mappings (#1143). See [epic #1126](https://github.com/avresial/FinanceManager/issues/1126).

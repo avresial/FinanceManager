@@ -24,7 +24,7 @@ This section migrates every concern, debt item, security/performance finding, hi
 
 R1 also carries forward the original OWASP A05 security-misconfiguration concern and its mitigation that the API has User Secrets/environment configuration support. The remaining gap is local defaults/details plus historical rotation verification. R9/R10 retain the original categories and resolved mechanisms. Risks share evidence and should not be counted as separate independent incidents merely because they appeared in multiple original tables.
 
-The physical label join table and columns of cash and bond entries keep their financial-account names, pinned in the EF configurations since #1143, and the dormant account row type keeps the `FinancialAccounts` namespace. #1144 removes the dormant accounts table, links and running balances. [ADR 0008](decisions/0008-owner-keyed-transaction-ledger.md).
+The dormant accounts table, account links and running balances are gone since #1144, and no type lives in a `FinancialAccounts` namespace (an architecture test enforces it). Remaining naming debt: the cash label join table `CurrencyAccountEntryFinancialLabel` with its `CurrencyAccountEntryEntryId` column, and `FinancialLabels.BondAccountEntryEntryId`, keep their financial-account names, pinned in the EF configurations since #1143. Renaming them needs its own migration. [ADR 0008](decisions/0008-owner-keyed-transaction-ledger.md).
 
 ## 11.2 Historical performance, cleanup and accessibility debt
 

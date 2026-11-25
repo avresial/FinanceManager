@@ -14,7 +14,7 @@ The records below reconstruct decisions from the implementation and existing rep
 | [0006 — Account models without implementation inheritance](decisions/0006-account-models-without-inheritance.md) | Historical account model | Superseded by [ADR 0008](decisions/0008-owner-keyed-transaction-ledger.md) |
 
 | [0007 — Shared API contracts](decisions/0007-shared-api-contracts.md) | Independent transport models shared by API, Application and browser | Domain/persistence remain separate; explicit mapping and incremental migration |
-| [0008 — Owner-keyed transaction ledger](decisions/0008-owner-keyed-transaction-ledger.md) | Pool balances by owner and instrument from signed changes | Accepted. Schema contract follows in #1144 |
+| [0008 — Owner-keyed transaction ledger](decisions/0008-owner-keyed-transaction-ledger.md) | Pool balances by owner and instrument from signed changes | Accepted, implemented (#1144) |
 
 ## Recording future decisions
 

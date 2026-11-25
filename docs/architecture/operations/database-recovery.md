@@ -262,6 +262,7 @@ Use Supabase backup restore when:
 - A bad release wrote incorrect values.
 - A migration performed destructive or irreversible data changes.
 - Multiple migrations or app writes happened after the failure.
+- The migration to revert is `DropFinancialAccounts` or later. Its `Down()` throws on purpose because the dropped account names, links and running values cannot be rebuilt ([contract runbook](migrations.md#financial-accounts-contract-1144)).
 
 ## 8. Repo-Specific Commands
 
