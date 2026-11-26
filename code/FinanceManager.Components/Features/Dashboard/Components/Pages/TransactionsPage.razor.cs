@@ -52,6 +52,8 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     private bool _isLoadingMore;
     private bool _hasError;
     private bool _loadMoreFailed;
+    // True only for an owner who has recorded nothing at all, so the empty list is a first-run prompt instead of "pick a longer date range".
+    private bool _ownerHasNoTransactions;
 
     private readonly Guid _viewportSubscriptionId = Guid.NewGuid();
     private bool _isMobile;
@@ -97,6 +99,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     [Inject] public required IDialogService DialogService { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ISnackbar Snackbar { get; set; }
+    [Inject] public required NavigationManager Navigation { get; set; }
     [Inject] public required IBrowserViewportService BrowserViewportService { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -215,7 +218,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
     private void ApplyRange()
     {
         var now = DateTime.UtcNow;
-        var (start, end) = DateRangeHelper.GetAccountDetailsRange(
+        var (start, end) = DateRangeHelper.GetRange(
             _selectedRange, _customRange?.Start, _customRange?.End, now.AddMonths(-3), now.AddMonths(-3), now);
 
         // Whole days from the start day on, and explicitly UTC so the endpoint reads them the same way.
@@ -269,6 +272,9 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
             if (page is not null)
             {
+                _ownerHasNoTransactions = reset && page.Items.Count == 0 && !_filter.IsActive && string.IsNullOrWhiteSpace(_search)
+                    && _userId is int owner && !await HasAnyTransactionsAsync(owner, cts.Token);
+                if (_disposed || !_loadGate.IsCurrent(version)) return;
                 _entries = [.. _entries, .. page.Items];
                 _dayGroups = BuildDayGroups(_entries);
                 _nextCursor = page.NextCursor;
@@ -295,6 +301,20 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         _isLoading = false;
         _isLoadingMore = false;
         StateHasChanged();
+    }
+
+    // The date range may simply be empty, so an empty first page asks whether the owner has anything at all. A failed check assumes they do.
+    private async Task<bool> HasAnyTransactionsAsync(int userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await TransactionLogHttpClient.HasAnyTransactions(userId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogWarning(ex, "Failed to check whether the user has any transactions.");
+            return true;
+        }
     }
 
     internal static List<DayGroup> BuildDayGroups(IEnumerable<TransactionHistoryItem> entries) =>
@@ -394,6 +414,15 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         _addVisible = true;
     }
 
+    private void OnAddVisibleChanged(bool visible)
+    {
+        _addVisible = visible;
+        if (visible || (Dialog is null && Kind is null)) return;
+        // ?dialog=add-entry&kind=… only opens the dialog on arrival; once it closes the link must not reopen it on reload or share.
+        var cleaned = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?> { ["dialog"] = null, ["kind"] = null });
+        Navigation.NavigateTo(cleaned, new NavigationOptions { ReplaceHistoryEntry = true });
+    }
+
     private Task ClearFilters()
     {
         _filter = TransactionLogFilter.None;
@@ -427,11 +456,13 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         return Task.CompletedTask;
     }
 
+    // The first buy can reveal Assets in the menu, so a save is published like a cash or bond edit: the menu and this
+    // page's own subscriber both reload from that one event, which keeps the list from reloading twice.
     private Task OnInvestmentSavedAsync()
     {
         _investmentFormVisible = false;
         _editingInvestment = null;
-        return ReloadAsync();
+        return AccountDataSynchronizationService.AccountChanged();
     }
 
     private async Task DeleteInvestmentAsync(InvestmentTransactionDto transaction)
@@ -440,7 +471,7 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
         {
             await InvestmentTradesHttpClient.DeleteAsync(transaction.Id);
             Snackbar.Add("Transaction removed.", Severity.Success);
-            await ReloadAsync();
+            await AccountDataSynchronizationService.AccountChanged();
         }
         catch (Exception ex)
         {
@@ -451,7 +482,9 @@ public partial class TransactionsPage : ComponentBase, IAsyncDisposable
 
     internal sealed record DayGroup(DateTime Day, IReadOnlyList<TransactionHistoryItem> Items, bool CashSiblingsShareSameTime);
 
-    private string EmptyMessage => _filter.IsActive || !string.IsNullOrWhiteSpace(_search)
+    private string EmptyMessage => _ownerHasNoTransactions
+        ? "Add your first transaction or import a CSV statement to get started."
+        : _filter.IsActive || !string.IsNullOrWhiteSpace(_search)
         ? $"No transactions match the selected filters between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Adjust the filters or pick a longer date range."
         : $"No transactions between {DateFormatter.Format(_rangeStart)} and {DateFormatter.Format(_rangeEnd)}. Pick a longer date range to look further back.";
 }

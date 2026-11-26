@@ -5,9 +5,6 @@
 @layout NoNavbarLayout
 @using FinanceManager.Application.Identity.Users
 
-@inject NavigationManager Navigation
-@inject ILoginService LoginService
-
 <PageTitle>Welcome to Finance Manager</PageTitle>
 
 <div class="landing-page">
@@ -114,40 +111,24 @@
             <MudItem xs="12" Class="d-flex flex-grow-1 gap-4 align-center">
                 <div class="d-flex flex-grow-1">
                     <MudPaper Class="flex-grow-1 text-center" Elevation="0" Style="background-color:transparent">
-                        <MudText Typo="Typo.h3">Accounts</MudText>
-                        <MudText Typo="Typo.h5" Class="mt-4 px-4 px-md-0">Track cash, shares, ETF, real estate value and more...</MudText>
+                        <MudText Typo="Typo.h3">Transactions</MudText>
+                        <MudText Typo="Typo.h5" Class="mt-4 px-4 px-md-0">Cash, bonds, shares and ETFs in one list. Add them by hand or import a bank statement.</MudText>
                     </MudPaper>
                 </div>
             </MudItem>
             <MudItem xs="12" md="6" Class="d-flex align-start">
                 <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
                     <picture>
-                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/cash-account-mobile.jpg" />
-                        <img src="IMGS/landing/cash-account-desktop.jpg" alt="CashAccount" />
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/transactions-mobile.jpg" />
+                        <img src="IMGS/landing/transactions-desktop.jpg" alt="Transactions" />
                     </picture>
                 </div>
             </MudItem>
             <MudItem xs="12" md="6" Class="d-flex align-start">
                 <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
                     <picture>
-                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/shares-account-mobile.jpg" />
-                        <img src="IMGS/landing/shares-account-desktop.jpg" alt="SharesAccount" />
-                    </picture>
-                </div>
-            </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-start">
-                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
-                    <picture>
-                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/bond-account-mobile.jpg" />
-                        <img src="IMGS/landing/bond-account-desktop.jpg" alt="BondAccount" />
-                    </picture>
-                </div>
-            </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-start">
-                <div class="landing-preview flex-grow-1 m-4 rounded-lg mud-elevation-25">
-                    <picture>
-                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/loan-account-mobile.jpg" />
-                        <img src="IMGS/landing/loan-account-desktop.jpg" alt="LoanAccount" />
+                        <source media="(max-width: 599.98px)" srcset="IMGS/landing/transactions-add-mobile.jpg" />
+                        <img src="IMGS/landing/transactions-add-desktop.jpg" alt="Add transaction" />
                     </picture>
                 </div>
             </MudItem>

@@ -30,7 +30,6 @@ public class InvestmentTransactionFormTests
         await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<InvestmentInstrumentOptionDto>()))));
         context.Render<MudPopoverProvider>();
         var cut = context.Render<InvestmentTransactionForm>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.Visible, true));
 
         var searchFunc = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>().Instance.SearchFunc
@@ -51,7 +50,7 @@ public class InvestmentTransactionFormTests
     [Fact]
     public async Task IncompleteExternalInstrument_EnablesCurrencySelectorAndShowsUnpricedAdminNotificationAfterSave()
     {
-        AddInvestmentTransactionRequest? capturedRequest = null;
+        CreateInvestmentTradeRequest? capturedRequest = null;
         var externalOption = new InvestmentInstrumentOptionDto
         {
             ResultId = "ext-incomplete-1",
@@ -70,15 +69,15 @@ public class InvestmentTransactionFormTests
 
         var handler = new StubHttpHandler(async request =>
         {
-            if (request.RequestUri!.AbsolutePath.EndsWith("/Add", StringComparison.Ordinal))
+            if (request.Method == HttpMethod.Post)
             {
-                capturedRequest = await JsonSerializer.DeserializeAsync<AddInvestmentTransactionRequest>(
+                capturedRequest = await JsonSerializer.DeserializeAsync<CreateInvestmentTradeRequest>(
                     await request.Content!.ReadAsStreamAsync(),
                     new JsonSerializerOptions(JsonSerializerDefaults.Web));
                 return JsonResponse(new InvestmentTransactionDto(
                     Id: 501,
                     UserId: 1,
-                    AccountId: 10,
+                    AccountId: null,
                     AssetListingId: 77,
                     Type: InvestmentTransactionTypeDto.Buy,
                     Quantity: 2m,
@@ -99,7 +98,6 @@ public class InvestmentTransactionFormTests
         var snackbar = context.Services.GetRequiredService<ISnackbar>();
         context.Render<MudPopoverProvider>();
         var cut = context.Render<InvestmentTransactionForm>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.Visible, true));
 
         var autocomplete = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>();
@@ -165,7 +163,6 @@ public class InvestmentTransactionFormTests
         await using var context = CreateBunitContext(handler);
         context.Render<MudPopoverProvider>();
         var cut = context.Render<InvestmentTransactionForm>(p => p
-            .Add(x => x.AccountId, 10)
             .Add(x => x.Visible, true));
         var autocomplete = cut.FindComponent<MudAutocomplete<InvestmentInstrumentOptionDto>>();
         // The field formats with the current culture, so parse it back the same way.
@@ -210,7 +207,7 @@ public class InvestmentTransactionFormTests
         await using var context = CreateBunitContext(new StubHttpHandler(_ => Task.FromResult(JsonResponse(Array.Empty<Currency>()))),
             [new FinanceManager.Domain.FinancialAccounts.Shared.Entities.FinancialLabel { Id = 7, Name = "Long term" }]);
         context.Render<MudPopoverProvider>();
-        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true));
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true));
         var select = cut.FindComponent<MudSelect<int>>();
         await cut.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(new int[] { 7 }));
         cut.WaitForAssertion(() => Assert.Equal("Long term", select.Instance.GetState(x => x.Text)));
@@ -231,11 +228,11 @@ public class InvestmentTransactionFormTests
             labelHandler: labelHandler);
         var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
             DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
-        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
         cut.WaitForAssertion(() => Assert.Equal(1, Volatile.Read(ref labelRequests)));
 
         // The Transactions page re-renders when valuations arrive, handing the form the same trade again.
-        cut.Render(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        cut.Render(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
         labelsReleased.SetResult();
         await Task.Delay(50, Xunit.TestContext.Current.CancellationToken);
 
@@ -256,7 +253,7 @@ public class InvestmentTransactionFormTests
         var trade = new InvestmentTransactionDto(5, 1, 10, 1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN",
             DateOnly.FromDateTime(DateTime.Today), null, null, "TCK", Labels: []);
 
-        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.AccountId, 10).Add(x => x.Visible, true).Add(x => x.Transaction, trade));
+        var cut = context.Render<InvestmentTransactionForm>(p => p.Add(x => x.Visible, true).Add(x => x.Transaction, trade));
         var save = () => cut.FindComponents<MudButton>().Single(b => b.Markup.Contains("Save"));
 
         // The user picks an instrument while the trade is still loading; saving now would add a new trade
@@ -276,7 +273,7 @@ public class InvestmentTransactionFormTests
     }
 
     [Fact]
-    public async Task WithoutAnAccount_NewTradeIsCreatedThroughTheOwnerRoute()
+    public async Task NewTradeIsCreatedThroughTheOwnerRoute()
     {
         CreateInvestmentTradeRequest? captured = null;
         string? path = null;
@@ -324,7 +321,7 @@ public class InvestmentTransactionFormTests
     }
 
     [Fact]
-    public async Task WithoutAnAccount_EditedTradeIsUpdatedThroughTheOwnerRoute()
+    public async Task EditedTradeIsUpdatedThroughTheOwnerRoute()
     {
         UpdateInvestmentTradeRequest? captured = null;
         string? path = null;

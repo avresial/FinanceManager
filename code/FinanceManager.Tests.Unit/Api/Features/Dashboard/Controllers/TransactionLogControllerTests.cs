@@ -31,6 +31,27 @@ public class TransactionLogControllerTests
         };
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Exists_ForTheOwner_ReturnsTheServiceAnswer(bool hasAny)
+    {
+        _transactionLogService.Setup(x => x.HasAny(_testUserId, TestContext.Current.CancellationToken)).ReturnsAsync(hasAny);
+
+        var result = await _controller.Exists(_testUserId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(hasAny, Assert.IsType<OkObjectResult>(result).Value);
+    }
+
+    [Fact]
+    public async Task Exists_ForAnotherUser_IsForbiddenWithoutReading()
+    {
+        var result = await _controller.Exists(_testUserId + 1, TestContext.Current.CancellationToken);
+
+        Assert.IsType<ForbidResult>(result);
+        _transactionLogService.Verify(x => x.HasAny(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Page_PassesSearchAlongsideExistingFilters()
     {

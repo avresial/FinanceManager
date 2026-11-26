@@ -12,6 +12,9 @@ public interface IInvestmentTransactionRepository
     /// <summary>Distinct currency codes of the user's trades.</summary>
     Task<IReadOnlyList<string>> GetCurrenciesByUser(long userId, CancellationToken ct = default);
 
+    /// <summary>Whether the user has at least one trade, linked to an account or not. Short-circuits in the database.</summary>
+    Task<bool> HasAnyByUser(long userId, CancellationToken ct = default);
+
     /// <summary>Get a transaction by its database id, or <c>null</c> if none exists.</summary>
     Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default);
 
@@ -46,12 +49,6 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentTransaction>> GetLatestUnpricedTradesByUserAsOf(long userId, DateOnly asOf, IReadOnlyCollection<long> listingIds, CancellationToken ct);
 
     public sealed record ListingTradePrice(long AssetListingId, string Currency, decimal UnitPrice);
-
-    /// <summary>
-    /// Gets the latest transaction on or before a date for each listing held by an account, with
-    /// listing and asset metadata eagerly loaded for holding-card rendering.
-    /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.

@@ -218,7 +218,7 @@ These files change frequently — make targeted edits and test carefully around 
 - `code/FinanceManager.Infrastructure/ServiceCollectionExtension.cs`
 - `code/FinanceManager.Api/Program.cs`
 - `code/FinanceManager.Api/Controllers/StockPriceController.cs`
-- `code/FinanceManager.Components/Components/FinancialAccounts/StockAccountComponents/StockAccountDetailsPageContent.razor(.cs)`
+- `code/FinanceManager.Components/Features/Dashboard/Components/Pages/AssetsPage.razor(.cs)`
 
 ## Environment Variables
 

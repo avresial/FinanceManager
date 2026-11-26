@@ -11,11 +11,6 @@
     display: none;
 }
 
-.onb-hero {
-    width: 100%;
-    height: auto;
-}
-
 /* Each slide keeps a strip free at the bottom for the carousel's bullets, so they never sit
    on top of the preview image. */
 .onb-slide {
@@ -38,5 +33,17 @@
 
     .onb-dark {
         display: block;
+    }
+}
+
+
+/* The carousel is as tall as its slides need on a phone; a fixed 460px left a gap above the letterboxed image there. */
+.onb-carousel-host ::deep .fm-onb-carousel {
+    height: 460px;
+}
+
+@media (max-width: 599.98px) {
+    .onb-carousel-host ::deep .fm-onb-carousel {
+        height: 300px;
     }
 }

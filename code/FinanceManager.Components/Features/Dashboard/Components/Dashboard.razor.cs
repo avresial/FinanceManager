@@ -95,7 +95,6 @@ public partial class Dashboard : ComponentBase
 
     private static bool IsRangeDependent(string cardId) => _rangeDependentCards.Contains(cardId);
 
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required DashboardHttpClient DashboardHttpClient { get; set; }
     [Inject] public required ISnapshotRefreshCoordinator SnapshotRefreshCoordinator { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }

@@ -51,9 +51,23 @@ public class GuestAccountSeederTests
         Assert.NotEqual(first, second);
     }
 
-    private static async Task<List<(DateTime PostingDate, decimal ValueChange, string Description)>> SeedCashEntries(DateTime utcNow)
+    [Fact]
+    public async Task SeedForGuest_SeedsASmallUsdCardDebt_SoTheLiabilitiesPageIsNotEmpty()
     {
         var saved = new List<CurrencyAccountEntry>();
+
+        await SeedCashEntries(new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc), saved);
+
+        var usd = saved.Where(e => e.CurrencyId == DefaultCurrency.USD.Id).ToList();
+        Assert.NotEmpty(usd);
+        Assert.All(usd, e => Assert.True(e.ValueChange < 0m));
+        Assert.True(usd.Sum(e => e.ValueChange) is < 0m and > -1_000m);
+        Assert.True(saved.Where(e => e.CurrencyId == DefaultCurrency.PLN.Id).Sum(e => e.ValueChange) > 0m);
+    }
+
+    private static async Task<List<(DateTime PostingDate, decimal ValueChange, string Description)>> SeedCashEntries(DateTime utcNow, List<CurrencyAccountEntry>? saved = null)
+    {
+        saved ??= [];
         var cashReader = new Mock<ICashTransactionReader>();
         cashReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var cashEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();

@@ -12,11 +12,9 @@ public partial class CurrencyEntryConflictResolver
     [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
     [Inject] public required ILogger<CurrencyEntryConflictResolver> Logger { get; set; }
 
-    [Parameter] public IReadOnlyCollection<ImportConflict> Conflicts { get; set; } = [];
-    [Parameter] public IReadOnlyCollection<ImportJobConflict>? JobConflicts { get; set; }
-    [Parameter] public Guid? JobId { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyCollection<ImportJobConflict> JobConflicts { get; set; } = [];
+    [Parameter, EditorRequired] public Guid JobId { get; set; }
     [Parameter] public bool SkipExactMatches { get; set; } = true;
-    [Parameter] public required string AccountName { get; set; }
     [Parameter] public EventCallback<IReadOnlyCollection<string>> OnConflictsResolved { get; set; }
     [Parameter] public EventCallback OnResolutionChanged { get; set; }
 
@@ -36,13 +34,9 @@ public partial class CurrencyEntryConflictResolver
         _isLoading = true;
         try
         {
-            var source = JobConflicts is { Count: > 0 }
-                ? JobConflicts
-                    .Where(jc => !string.IsNullOrWhiteSpace(jc.ConflictId))
-                    .Select(jc => new ResolverConflict(jc.Conflict, jc.ConflictId))
-                : Conflicts
-                    .Where(c => !string.IsNullOrWhiteSpace(c.ConflictId))
-                    .Select(c => new ResolverConflict(c, c.ConflictId!));
+            var source = JobConflicts
+                .Where(jc => !string.IsNullOrWhiteSpace(jc.ConflictId))
+                .Select(jc => new ResolverConflict(jc.Conflict, jc.ConflictId));
 
             _dayGroups = source
                 .Where(c => c.Conflict.ImportEntry is not null || c.Conflict.ExistingEntry is not null)
@@ -93,56 +87,33 @@ public partial class CurrencyEntryConflictResolver
         var resolvedConflictIds = new List<string>();
         try
         {
-            if (JobId.HasValue)
+            var decisions = new List<CurrencyImportConflictResolutionDecisionDto>();
+            foreach (var g in _dayGroups)
             {
-                var decisions = new List<CurrencyImportConflictResolutionDecisionDto>();
-                foreach (var g in _dayGroups)
+                if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
+                foreach (var c in g.Conflicts)
                 {
-                    if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
-                    foreach (var c in g.Conflicts)
-                    {
-                        decisions.Add(new CurrencyImportConflictResolutionDecisionDto(
-                            c.ConflictId,
-                            choice == ResolveChoice.Imported,
-                            choice == ResolveChoice.Existing));
-                        resolvedConflictIds.Add(c.ConflictId);
-                    }
+                    decisions.Add(new CurrencyImportConflictResolutionDecisionDto(
+                        c.ConflictId,
+                        choice == ResolveChoice.Imported,
+                        choice == ResolveChoice.Existing));
+                    resolvedConflictIds.Add(c.ConflictId);
                 }
-
-                if (decisions.Count == 0)
-                {
-                    _isLoading = false;
-                    return;
-                }
-
-                var request = new CurrencyImportResolveConflictsRequestDto
-                {
-                    JobId = JobId.Value,
-                    Decisions = decisions
-                };
-                await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
-                await OnConflictsResolved.InvokeAsync(resolvedConflictIds);
-            }
-            else
-            {
-                var resolvedImports = new List<ResolvedImportConflict>();
-                foreach (var g in _dayGroups)
-                {
-                    if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
-                    // The account import review only handles conflicts that carry an account.
-                    foreach (var c in g.Conflicts.Where(c => c.Conflict.AccountId is not null))
-                    {
-                        resolvedImports.Add(new ResolvedImportConflict(
-                            c.Conflict.AccountId!.Value,
-                            choice == ResolveChoice.Imported,
-                            c.Conflict.ImportEntry,
-                            choice == ResolveChoice.Existing,
-                            c.Conflict.ExistingEntry?.EntryId));
-                    }
-                }
-                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
             }
 
+            if (decisions.Count == 0)
+            {
+                _isLoading = false;
+                return;
+            }
+
+            var request = new CurrencyImportResolveConflictsRequestDto
+            {
+                JobId = JobId,
+                Decisions = decisions
+            };
+            await AccountImportHttpClient.ResolveAsyncCurrencyImportConflictsAsync(request);
+            await OnConflictsResolved.InvokeAsync(resolvedConflictIds);
             _dayChoices.Clear();
         }
         catch (Exception ex)

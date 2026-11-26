@@ -25,7 +25,37 @@ public class TransactionLogServiceTests
     private readonly Mock<IBondTransactionReader> _bonds = new(MockBehavior.Strict);
     private readonly Mock<IInvestmentTransactionRepository> _trades = new(MockBehavior.Strict);
 
-    private TransactionLogService Service => new(_cash.Object, _bonds.Object, _trades.Object);
+    private readonly Mock<IDividendPaymentRepository> _dividends = new(MockBehavior.Strict);
+
+    private TransactionLogService Service => new(_cash.Object, _bonds.Object, _trades.Object, _dividends.Object);
+
+    [Fact]
+    public async Task HasAny_StopsAtTheFirstSourceWithData()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _cash.Setup(r => r.HasAnyEntries(_guestId, ct)).ReturnsAsync(false);
+        _bonds.Setup(r => r.HasAnyEntries(_guestId, ct)).ReturnsAsync(true);
+
+        Assert.True(await Service.HasAny(_guestId, ct));
+        _trades.VerifyNoOtherCalls();
+        _dividends.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task HasAny_FallsThroughToDividends_WhenTheOwnerOnlyKeepsAPayout()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _cash.Setup(r => r.HasAnyEntries(_guestId, ct)).ReturnsAsync(false);
+        _bonds.Setup(r => r.HasAnyEntries(_guestId, ct)).ReturnsAsync(false);
+        _trades.Setup(r => r.HasAnyByUser(_guestId, ct)).ReturnsAsync(false);
+        _dividends.Setup(r => r.HasPayments(_guestId, ct)).ReturnsAsync(true);
+
+        Assert.True(await Service.HasAny(_guestId, ct));
+    }
+
+    [Fact]
+    public async Task HasAny_RejectsUserIdZero_WithoutReading() =>
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Service.HasAny(0, TestContext.Current.CancellationToken));
 
     [Fact]
     public async Task CompactFeedReadsSequentiallyAndReturnsSignedAmountsWithFallbackDescriptions()

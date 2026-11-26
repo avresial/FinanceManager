@@ -75,7 +75,7 @@ public class CurrencyAccountSeeder(
         await SeedCash(userId, labelByName, start, end, random, cancellationToken);
     }
 
-    // The demo owns one pooled PLN cash stream: no account, no loan account. The loan shows up as its monthly repayments,
+    // The demo owns one pooled PLN cash stream (plus a small USD card debt): no account, no loan account. The loan shows up as its monthly repayments,
     // a plain recurring outflow, so there is no disbursement inflow to inflate net worth. Monthly outflows stay below the
     // salary and the opening balance equals one salary, so the pooled balance never goes negative.
     private async Task SeedCash(int userId, Dictionary<string, FinancialLabel> labelByName, DateTime start, DateTime end, Random random, CancellationToken cancellationToken)
@@ -145,8 +145,30 @@ public class CurrencyAccountSeeder(
             }
         }
 
+        AddForeignCardDebt(entries, userId, start, end, LabelsFor(labelByName, "Travel"));
+
         // Unlinked entries carry no running value, so there is nothing to recalculate.
         await currencyEntryRepository.Add(entries, false, cancellationToken);
+    }
+
+    // A small card balance in a second currency that is never paid back inside the window, so the demo's pooled USD balance
+    // stays negative and the Liabilities page has something to show. PLN stays positive, so net worth is barely affected.
+    private static void AddForeignCardDebt(List<CurrencyAccountEntry> entries, int userId, DateTime start, DateTime end, List<FinancialLabel> labels)
+    {
+        foreach (var (date, amount, description) in new (DateTime, decimal, string)[]
+        {
+            (start.AddDays(15), -240m, "Conference registration (USD card)"),
+            (end.AddDays(-12), -85m, "Online software license (USD card)"),
+        })
+        {
+            entries.Add(new CurrencyAccountEntry(null, 0, date, 0m, amount)
+            {
+                UserId = userId,
+                CurrencyId = DefaultCurrency.USD.Id,
+                Description = description,
+                Labels = labels
+            });
+        }
     }
 
     private static decimal AddRandomNegatives(

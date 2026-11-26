@@ -24,19 +24,14 @@ Net worth, cash flow, savings rate, cash flow forecast, distributions, AI insigh
 ![Dashboard with net worth, cash flow, savings rate and distribution cards](ReadmeElements/Imgs/Dashboard.png)
 
 ### Assets
-Portfolio analytics for everything you own: value over time, distribution, money- and time-weighted returns, return attribution, investment paycheck, diversification and ETF fee drag.
+Portfolio analytics for everything you own: value over time, distribution, investments value against cost basis and a benchmark, holdings, dividend income, money- and time-weighted returns, return attribution, investment paycheck, diversification and ETF fee drag.
 
-![Assets page with portfolio return, return attribution and diversification cards](ReadmeElements/Imgs/Assets.png)
-
-### Account details
-Each account has its own balance chart, entry history and side cards. Investment accounts show trades, capital vs. value, holdings, top movers and dividend income.
-
-![Investment account details with balance chart, trades and holdings](ReadmeElements/Imgs/AccountDetails.png)
+![Assets page with investments value, holdings, portfolio return and dividend income cards](ReadmeElements/Imgs/Assets.png)
 
 ### Transactions
-Every entry across all accounts, grouped by day, with text search, date range and account filters.
+Every cash, bond and investment entry in one list grouped by day, with text search, date range and kind and currency filters. Add a transaction or import a CSV statement from the same page.
 
-![Transactions page listing entries from all accounts grouped by day](ReadmeElements/Imgs/Transactions.png)
+![Transactions page listing cash, bond and investment entries grouped by day](ReadmeElements/Imgs/Transactions.png)
 
 ### Cash flow forecast
 A deterministic 30, 60 or 90-day projection of your cash balance from recurring income, expenses and subscriptions.
@@ -54,20 +49,22 @@ A customizable grid of cards for the selected date range:
 - **Savings rate** — monthly salary, spending and savings with a salary-weighted yearly average
 - **Cash flow forecast** — upcoming balance with 30/60/90-day totals
 - **Money by label and expense distribution** — where income comes from and where spending goes
-- **Assets and liabilities distribution** — by type or by account
+- **Assets and liabilities distribution** — by type or by currency, bond or instrument
 - **Insights (AI)** — a carousel of generated observations about your finances
 - **Alerts, recurring transactions and transaction log** — what needs attention and what happened recently
 
 Every card has an info tooltip that explains what it shows.
 
-### Accounts
-| Account type | What it tracks |
+### Transactions
+There are no accounts to set up: every entry belongs to you, and balances are summed per currency, bond or instrument.
+
+| Kind | What it tracks |
 |---|---|
-| **Cash** | Bank balances, everyday transactions and loans |
+| **Cash** | Everyday money: salary, bills, spending and loan repayments, in the currency of each entry |
 | **Investment** | Stocks and ETFs, with buy/sell trades, live prices, holdings and manually recorded dividends |
 | **Bond** | Fixed-income securities, including inflation-linked bonds |
 
-Accounts can be added, renamed or deleted, and transactions keep their original currency.
+New users start from a welcome page that offers to add a first transaction or import a CSV statement.
 
 ### Assets and liabilities
 - **Portfolio return** — annualized money-weighted return (XIRR) and cumulative time-weighted return (TWR)
@@ -75,10 +72,10 @@ Accounts can be added, renamed or deleted, and transactions keep their original 
 - **Investment paycheck and investment rate** — what the portfolio could pay you monthly and how much of your salary you invest
 - **Asset diversification** — a 0–100 score across asset classes and holdings
 - **ETF fee drag** — annual expense-ratio cost projected over 10, 20 and 30 years
-- **Liabilities** — debt over time and by account
+- **Liabilities** — debt over time and by currency
 
 ### Money management
-- **Transactions** — all entries across accounts with search and filters
+- **Transactions** — all cash, bond and investment entries with search and filters
 - **Subscriptions** — detected recurring charges with monthly and annual cost; flag them for review, mute them or mark them as cancelled
 - **Cash flow forecast** — projected balance and expected activity by month
 - **Alerts and watchlists** — notify on balances, category or merchant spending, large transactions and subscription price changes
@@ -94,8 +91,8 @@ Accounts can be added, renamed or deleted, and transactions keep their original 
 - Prices are cached in the database to keep external API calls low
 
 ### AI
-- **Insights** — model-generated observations based on your accounts and transactions
-- **Automatic labelling** — suggests labels for cash account transactions
+- **Insights** — model-generated observations based on your transactions
+- **Automatic labelling** — suggests labels for cash transactions
 - **MCP integration** — connect ChatGPT, Claude and other MCP clients through OAuth, without copying an API key or password
 - Configurable providers and fallback order: **OpenRouter**, **GitHub Models**, **Ollama** and **LM Studio**
 

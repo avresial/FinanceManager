@@ -38,13 +38,10 @@ public partial class UpdateBondEntry
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    /// <summary>The account the entry belongs to. Null edits the entry through the owner route (Transactions page).</summary>
-    [Parameter] public BondAccount? BondAccount { get; set; }
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 
     [Inject] public required ILogger<UpdateBondEntry> Logger { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
@@ -106,23 +103,11 @@ public partial class UpdateBondEntry
             _errors = [];
             try
             {
-                if (BondAccount is null)
-                {
-                    await BondTransactionsHttpClient.UpdateAsync(BondAccountEntry.EntryId, new SaveBondEntryRequest(
-                        _selectedBond.Id, date, _valueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
-                }
-                else
-                {
-                    BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
-                    {
-                        Description = description,
-                        Labels = GetLabels().ToList()
-                    };
-                    await FinancialAccountService.UpdateEntry(bondAccountEntry);
-                }
+                await BondTransactionsHttpClient.UpdateAsync(BondAccountEntry.EntryId, new SaveBondEntryRequest(
+                    _selectedBond.Id, date, _valueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
             }
-            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
-            catch (HttpRequestException ex) when (BondAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            // The owner routes explain a rejection (plan quota, validation); show their message.
+            catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
             {
                 Logger.LogWarning(ex, "Rejected entry update");
                 _errors = [ex.Message];

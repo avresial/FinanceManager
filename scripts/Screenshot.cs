@@ -3,7 +3,7 @@
 //
 // Usage (from the repository root, with the API already running — see .claude/skills/ui-testing):
 //   dotnet run scripts/Screenshot.cs -- --list                       feature ids from docs/agents/features.json
-//   dotnet run scripts/Screenshot.cs -- transactions account-add-entry
+//   dotnet run scripts/Screenshot.cs -- transactions transactions-add-entry
 //   dotnet run scripts/Screenshot.cs -- Transactions --viewports mobile,desktop --theme both --out /tmp/shots
 // Targets are feature ids from the catalog or in-app routes ("" or "/" for the dashboard).
 // Options: --base-url <url>   app address (default: $FM_BASE_URL or http://localhost:5113)
@@ -11,6 +11,7 @@
 //          --theme <t>        light, dark or both (default: light)
 //          --out <dir>        output directory (default: ./screenshots)
 //          --login <name>     guest or testuser (default: guest)
+//          --scale <n>        device scale factor, e.g. 2 for retina-sharp images (default: 1)
 //          --full-page        capture the whole scrollable page, not just the viewport
 //          --list             print the feature catalog and exit
 //          --install          download the Chromium build this Playwright version needs, then exit
@@ -29,6 +30,7 @@ var theme = "light";
 var outDirectory = "screenshots";
 var login = "guest";
 var fullPage = false;
+var scale = 1f;
 var list = false;
 List<string> targets = [];
 
@@ -41,6 +43,7 @@ for (var i = 0; i < args.Length; i++)
         case "--theme" when i + 1 < args.Length: theme = args[++i]; break;
         case "--out" when i + 1 < args.Length: outDirectory = args[++i]; break;
         case "--login" when i + 1 < args.Length: login = args[++i]; break;
+        case "--scale" when i + 1 < args.Length && float.TryParse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture, out var parsedScale): scale = parsedScale; i++; break;
         case "--full-page": fullPage = true; break;
         case "--list": list = true; break;
         case "--install": return Microsoft.Playwright.Program.Main(["install", "chromium"]);
@@ -120,6 +123,7 @@ foreach (var colorScheme in themes)
         {
             ViewportSize = new() { Width = viewport.Width, Height = viewport.Height },
             ColorScheme = colorScheme == "dark" ? ColorScheme.Dark : ColorScheme.Light,
+            DeviceScaleFactor = scale,
             ReducedMotion = ReducedMotion.Reduce,
             IgnoreHTTPSErrors = true,
         });
@@ -136,11 +140,15 @@ foreach (var colorScheme in themes)
         {
             try
             {
-                var route = await ResolveRoute(page, feature.Route);
+                var route = feature.Route;
                 // Clear the readiness mark first so the wait below cannot see the previous page's.
                 await page.EvaluateAsync("route => { delete document.documentElement.dataset.fmReady; window.Blazor.navigateTo('/' + route); }", route);
-                await page.WaitForURLAsync(url => new Uri(url).AbsolutePath.Trim('/').Equals(route.Split('?')[0], StringComparison.OrdinalIgnoreCase), new() { Timeout = 30000 });
+                // A route may redirect (/Investments goes to /Assets, old account links to /Transactions), so settle on
+                // whichever page the app lands on instead of waiting for the requested path.
                 await WaitForPage(page, network);
+                var landedOn = new Uri(page.Url).AbsolutePath.Trim('/');
+                if (!landedOn.Equals(route.Split('?')[0], StringComparison.OrdinalIgnoreCase))
+                    Console.Error.WriteLine($"note: /{route} redirected to /{landedOn}");
                 if (feature.Ready is not null)
                     await page.Locator(feature.Ready).First.WaitForAsync(new() { Timeout = 30000 });
 
@@ -237,33 +245,6 @@ static async Task RevealLazyContent(IPage page, NetworkTracker network)
     await page.EvaluateAsync("() => window.scrollTo(0, 0)");
 }
 
-// Replaces {account:<name>} with the id of the account of that name, read from the nav menu links.
-async Task<string> ResolveRoute(IPage page, string route)
-{
-    var match = Regex.Match(route, @"\{account:([^}]+)\}");
-    if (!match.Success) return route;
-
-    const string script = """
-        name => [...document.querySelectorAll('a[href*="AccountDetails/"]')]
-            .filter(link => link.textContent.trim() === name)
-            .map(link => link.getAttribute('href').match(/AccountDetails\/(\d+)/)?.[1])
-            .find(id => id) ?? null
-        """;
-    var accountId = await page.EvaluateAsync<string?>(script, match.Groups[1].Value);
-    if (accountId is null)
-    {
-        // The nav drawer is closed on small viewports; open it to read the links, then close it again.
-        await page.Locator("header button").First.ClickAsync();
-        await page.Locator("a[href*='AccountDetails/']").First.WaitForAsync(new() { Timeout = 10000 });
-        accountId = await page.EvaluateAsync<string?>(script, match.Groups[1].Value);
-        await page.Keyboard.PressAsync("Escape");
-    }
-
-    return accountId is null
-        ? throw new InvalidOperationException($"No account named '{match.Groups[1].Value}' in the nav menu.")
-        : route.Replace(match.Value, accountId);
-}
-
 static Dictionary<string, Feature> LoadCatalog()
 {
     // File-based apps know their own path, so the catalog is found from any working directory.
@@ -284,7 +265,7 @@ static string Slug(string route) =>
 static int Usage(string? error)
 {
     if (error is not null) Console.Error.WriteLine($"error: {error}");
-    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <feature-id|route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--full-page] [--list] [--install]");
+    Console.Error.WriteLine("usage: dotnet run scripts/Screenshot.cs -- <feature-id|route>... [--viewports mobile,desktop] [--theme light|dark|both] [--out dir] [--base-url url] [--scale n] [--full-page] [--list] [--install]");
     return error is null ? 0 : 1;
 }
 

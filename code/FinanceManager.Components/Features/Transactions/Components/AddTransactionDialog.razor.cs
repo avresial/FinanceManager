@@ -20,7 +20,7 @@ public partial class AddTransactionDialog : ComponentBase
 
     /// <summary>
     /// Raised after an investment trade is saved. Cash and bond forms announce their saves through
-    /// <c>AccountDataSynchronizationService</c>; the investment form does not, so the host reloads on this.
+    /// <c>AccountDataSynchronizationService</c> themselves; the investment form does not, so the host announces this one.
     /// </summary>
     [Parameter] public EventCallback OnSaved { get; set; }
 

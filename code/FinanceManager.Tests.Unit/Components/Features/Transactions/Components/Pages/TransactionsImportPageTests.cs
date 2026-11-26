@@ -23,25 +23,24 @@ public class TransactionsImportPageTests
     [Theory]
     [InlineData("cash")]
     [InlineData("Cash")]
-    public async Task Cash_RendersTheCashWizardWithoutAnAccount(string kind)
+    public async Task Cash_RendersTheCashWizard(string kind)
     {
         await using var context = CreateContext();
 
         var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, kind));
 
-        var wizard = cut.FindComponent<ImportCurrencyEntriesComponent>();
-        Assert.Null(wizard.Instance.AccountId);
+        Assert.NotNull(cut.FindComponent<ImportCurrencyEntriesComponent>());
         Assert.Empty(cut.FindComponents<ImportBondEntriesComponent>());
     }
 
     [Fact]
-    public async Task Bond_RendersTheBondWizardWithoutAnAccount()
+    public async Task Bond_RendersTheBondWizard()
     {
         await using var context = CreateContext();
 
         var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, "bond"));
 
-        Assert.Null(cut.FindComponent<ImportBondEntriesComponent>().Instance.AccountId);
+        Assert.NotNull(cut.FindComponent<ImportBondEntriesComponent>());
         Assert.Empty(cut.FindComponents<ImportCurrencyEntriesComponent>());
     }
 
@@ -75,7 +74,7 @@ public class TransactionsImportPageTests
 
         var cut = context.Render<TransactionsImportPage>(p => p.Add(x => x.Kind, "cash"));
 
-        cut.WaitForAssertion(() => Assert.Contains("PLN cash", cut.FindComponent<ImportCurrencyEntriesComponent>().Instance.AccountName));
+        cut.WaitForAssertion(() => Assert.Contains(DefaultCurrency.PLN.ShortName, cut.FindComponent<MudSelect<Currency>>().Markup));
         Assert.NotEmpty(cut.FindAll("[data-testid=import-currency]"));
         Assert.True(cut.FindAll("button").Single(button => button.TextContent.Contains("Continue to mapping")).HasAttribute("disabled"));
     }
@@ -99,16 +98,6 @@ public class TransactionsImportPageTests
         cut.WaitForAssertion(() => Assert.Contains("Select a currency before continuing.", cut.Markup));
     }
 
-    [Fact]
-    public async Task CashWizardOfAnAccount_HasNoCurrencyChoice()
-    {
-        await using var context = CreateContext();
-
-        var cut = context.Render<ImportCurrencyEntriesComponent>(p => p.Add(x => x.AccountId, 1));
-
-        Assert.Empty(cut.FindAll("[data-testid=import-currency]"));
-    }
-
     private static BunitContext CreateContext() => CreateContext(RecordingHttpHandler.ForEntryForms());
 
     private static BunitContext CreateContext(RecordingHttpHandler handler)
@@ -119,17 +108,15 @@ public class TransactionsImportPageTests
         context.Services.AddMudServices();
         var http = handler.CreateClient();
         context.Services.AddSingleton(Mock.Of<ILoginService>());
-        context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(http);
         context.Services.AddSingleton(new CurrencyHttpClient(http));
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new CashTransactionsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
         context.Services.AddTransient<CurrencyAccountImportHttpClient>();
-        context.Services.AddTransient<CurrencyAccountHttpClient>();
-        context.Services.AddTransient<BondAccountImportHttpClient>();
         context.Services.AddTransient<CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<CurrencyImportJobTracker>();
+        context.Services.AddSingleton<AccountDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settings.Object);

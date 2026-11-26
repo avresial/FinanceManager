@@ -20,7 +20,7 @@ else if (_dayGroups.Any())
             <MudText Typo="Typo.subtitle2">Pick which data to keep</MudText>
             <MudText Typo="Typo.caption" Class="mud-text-secondary">
                 We found <b>@_dayGroups.Count conflict@(_dayGroups.Count == 1 ? string.Empty : "s")</b>
-                between imported and existing data in <b>@AccountName</b>.
+                between imported and existing transactions.
                 Choose what to keep for each day.
             </MudText>
         </MudStack>
@@ -133,7 +133,7 @@ else if (_dayGroups.Any())
                                     <MudSpacer />
                                     <MudChip T="string" Size="Size.Small"
                                              Variant="@(existingSelected ? Variant.Filled : Variant.Outlined)"
-                                             Color="@(existingSelected ? Color.Primary : Color.Default)">IN @AccountName.ToUpperInvariant()</MudChip>
+                                             Color="@(existingSelected ? Color.Primary : Color.Default)">IN YOUR TRANSACTIONS</MudChip>
                                 </MudStack>
                                 @if (existingEntries.Count == 0)
                                 {

@@ -10,6 +10,7 @@ using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
+using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
@@ -330,7 +331,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 20, listingId: 200, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m);
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(1, 20, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
+        var result = await new AssetsAccountHttpClient(Client).GetUnrealizedGainLossForAccount(1, 20, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
 
         Assert.NotNull(result);
         Assert.Equal(20, result.AccountId);
@@ -622,7 +623,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
-        var result = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(
+        var result = await new AssetsAccountHttpClient(Client).GetUnrealizedGainLossForAccount(
             1,
             21,
             DefaultCurrency.USD,
@@ -643,7 +644,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
-        var clientResult = await new AssetsHttpClient(Client).GetUnrealizedGainLossForAccount(1, 999999, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
+        var clientResult = await new AssetsAccountHttpClient(Client).GetUnrealizedGainLossForAccount(1, 999999, DefaultCurrency.USD, _nowUtc, TestContext.Current.CancellationToken);
         Assert.Null(clientResult);
     }
 

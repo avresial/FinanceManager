@@ -35,10 +35,6 @@ public partial class AddCurrencyEntry : ComponentBase
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public EventCallback ActionCompleted { get; set; }
 
-    /// <summary>The account to add to. Null adds to the owner's pool of the currency picked in the form (Transactions page).</summary>
-    [Parameter] public CurrencyAccount? CurrencyAccount { get; set; }
-
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddCurrencyEntry> Logger { get; set; }
@@ -55,17 +51,10 @@ public partial class AddCurrencyEntry : ComponentBase
     }
     protected override async Task OnParametersSetAsync()
     {
-        if (CurrencyAccount is null)
-        {
-            if (_currencies.Count > 0) return;
-            _currencies = [.. (await CurrencyHttpClient.GetAll()).OrderBy(x => x.ShortName)];
-            var preferred = SettingsService.GetCurrency();
-            _currency = _currencies.FirstOrDefault(x => x.Id == preferred.Id) ?? _currencies.FirstOrDefault() ?? preferred;
-            return;
-        }
-
-        var currencies = await CurrencyHttpClient.GetAll();
-        _currency = currencies.FirstOrDefault(x => x.Id == CurrencyAccount.CurrencyId) ?? SettingsService.GetCurrency();
+        if (_currencies.Count > 0) return;
+        _currencies = [.. (await CurrencyHttpClient.GetAll()).OrderBy(x => x.ShortName)];
+        var preferred = SettingsService.GetCurrency();
+        _currency = _currencies.FirstOrDefault(x => x.Id == preferred.Id) ?? _currencies.FirstOrDefault() ?? preferred;
     }
 
     public async Task Add()
@@ -104,24 +93,11 @@ public partial class AddCurrencyEntry : ComponentBase
 
             try
             {
-                if (CurrencyAccount is null)
-                {
-                    await CashTransactionsHttpClient.CreateAsync(new CreateCashEntryRequest(
-                        _currency.Id, date, BalanceChange.Value, Description, ContractorDetails, [.. GetLabels().Select(x => x.Id)]));
-                }
-                else
-                {
-                    CurrencyAccountEntry accountEntry = new(CurrencyAccount.AccountId, -1, date, -1, BalanceChange.Value)
-                    {
-                        Description = Description,
-                        ContractorDetails = ContractorDetails,
-                        Labels = GetLabels().ToList()
-                    };
-                    await FinancialAccountService.AddEntry(accountEntry);
-                }
+                await CashTransactionsHttpClient.CreateAsync(new CreateCashEntryRequest(
+                    _currency.Id, date, BalanceChange.Value, Description, ContractorDetails, [.. GetLabels().Select(x => x.Id)]));
             }
-            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
-            catch (HttpRequestException ex) when (CurrencyAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            // The owner routes explain a rejection (plan quota, validation); show their message.
+            catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
             {
                 Logger.LogWarning(ex, "Rejected entry add");
                 _errors = [ex.Message];

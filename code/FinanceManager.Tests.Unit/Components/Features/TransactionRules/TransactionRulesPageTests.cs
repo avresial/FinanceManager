@@ -180,7 +180,7 @@ public sealed class TransactionRulesPageTests
 
         cut.Find("button[aria-label='Edit Migrated rule']").Click();
 
-        Assert.Contains("lost it when accounts were removed", cut.Markup);
+        Assert.Contains("used a filter that no longer exists", cut.Markup);
         Assert.DoesNotContain("Condition 1", cut.Markup);
         var nameLabel = cut.FindAll("label").Single(label => label.TextContent.Contains("Rule name", StringComparison.Ordinal));
         cut.Find($"#{nameLabel.GetAttribute("for")}").Change("Renamed");

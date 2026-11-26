@@ -22,18 +22,7 @@
     <MudNavLink Icon="@Icons.Material.Filled.Timeline" Href="CashFlowForecast" data-testid="nav-cash-flow-forecast">Cash flow forecast</MudNavLink>
     <MudNavLink Icon="@Icons.Material.Filled.Notifications" Href="Alerts" data-testid="nav-alerts">Alerts</MudNavLink>
     <MudNavLink Icon="@Icons.Material.Filled.AutoFixHigh" Href="TransactionRules" data-testid="nav-transaction-rules">Automation</MudNavLink>
-    <MudDivider Class="my-2" />
 
-    <MudText Typo="Typo.h6" Class="px-5 mud-text-secondary">
-        @if (DrawerIsOpen)
-        {
-            @("Accounts")
-        }
-        else
-        {
-            @("A")
-        }
-    </MudText>
     @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="mx-2">
@@ -41,14 +30,4 @@
             <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="_isRetrying" OnClick="RetryAsync">Retry</MudButton>
         </MudAlert>
     }
-    @if (Accounts is not null && Accounts.Any())
-    {
-        @foreach (var account in Accounts)
-        {
-            <MudNavLink Icon="@Icons.Material.Filled.Wallet" Href="@($"AccountDetails/{account.Key}")">@account.Value</MudNavLink>
-        }
-    }
-
-    <MudNavLink Icon="@Icons.Material.Filled.Add" Href="AddAccount" data-testid="nav-add-account" aria-label="Add account">Add</MudNavLink>
-
 </MudNavMenu>

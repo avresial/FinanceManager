@@ -19,6 +19,12 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return await context.FinancialLabels.Where(x => ids.Contains(x.Id)).ToListAsync(cancellationToken);
     }
 
+    public async Task<bool> HasAnyByUser(long userId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        return await context.InvestmentTransactions.AnyAsync(x => x.UserId == userId, ct);
+    }
+
     public Task<InvestmentTransaction?> Get(long id, CancellationToken cancellationToken = default) =>
         context.InvestmentTransactions
             .AsSplitQuery().Include(x => x.Labels)
@@ -374,33 +380,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         // Recovery saves the trade through Update, which also copies its labels.
         return await LatestOwnerTrades(userId, asOf, listingIds).Where(t => t.UnitPrice <= 0)
             .Include(t => t.Labels).ToListAsync(ct);
-    }
-
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(
-        int accountId,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountId <= 0) return [];
-
-        var latestIds = context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId == accountId && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => x.AssetListingId)
-            .Select(group => group
-                .OrderByDescending(x => x.PostingDate)
-                .ThenByDescending(x => x.EntryId)
-                .Select(x => x.EntryId)
-                .First());
-
-        return await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => latestIds.Contains(x.EntryId))
-            .OrderBy(x => x.AssetListingId)
-            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<long>> GetDistinctAssetListingIds(CancellationToken cancellationToken = default) =>

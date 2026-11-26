@@ -8,7 +8,9 @@ namespace FinanceManager.Components.Features.Dashboard.Models;
 // so the smart cards can keep working standalone when no model is supplied.
 
 /// <summary>Prepared data for the time-series cards (net worth, net cash flow, closing balance).</summary>
-public record TimeSeriesCardModel(List<TimeSeriesModel> Series);
+/// <param name="Series">The points, ascending by date.</param>
+/// <param name="CurrencyCode">The one currency every contributing amount is in when the series is not converted (liabilities); null when they are mixed or already in the display currency.</param>
+public record TimeSeriesCardModel(List<TimeSeriesModel> Series, string? CurrencyCode = null);
 
 /// <summary>Prepared data for the distribution cards that toggle between a type and an account/wallet view (liabilities, assets).</summary>
 public record DistributionCardModel(List<NameValueResult> TypeData, List<NameValueResult> AccountData);

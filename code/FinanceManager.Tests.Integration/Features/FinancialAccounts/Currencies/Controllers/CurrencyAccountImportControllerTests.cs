@@ -9,6 +9,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
+using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -248,7 +249,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // arrange: a real overlap (the 10m exact match) puts the whole day under review, including the unrelated 7m
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new CurrencyAccountImportHttpClient(Client);
+        var client = new CurrencyAccountImportClient(Client);
         var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
         var unrelatedDate = existingDate.AddHours(1);
         await SeedExistingEntryExactMatch(existingDate, 10m);
@@ -279,7 +280,7 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // arrange: a real overlap (the 10m exact match) puts the whole day under review, including the unrelated 7m
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
-        var client = new CurrencyAccountImportHttpClient(Client);
+        var client = new CurrencyAccountImportClient(Client);
         var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
         var unrelatedDate = existingDate.AddHours(1);
         var importValue = 5m;

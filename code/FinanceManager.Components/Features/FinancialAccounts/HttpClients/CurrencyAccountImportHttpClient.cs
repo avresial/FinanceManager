@@ -1,19 +1,10 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class CurrencyAccountImportHttpClient(HttpClient httpClient)
 {
-    public async Task<CurrencyImportJobStartResponseDto?> StartAsyncCurrencyImportAsync(CurrencyDataImportDto importDto)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyAccountImport/StartAsyncImport", importDto);
-        if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
-        return await response.Content.ReadFromJsonAsync<CurrencyImportJobStartResponseDto?>();
-    }
-
     public async Task<CurrencyImportJobStatusDto?> GetCurrencyImportStatusAsync(Guid jobId)
     {
         var response = await httpClient.GetAsync($"{httpClient.BaseAddress}api/CurrencyAccountImport/ImportStatus/{jobId}");
@@ -26,12 +17,5 @@ public class CurrencyAccountImportHttpClient(HttpClient httpClient)
         var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyAccountImport/ResolveAsyncImportConflicts", request);
         if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
         return await response.Content.ReadFromJsonAsync<CurrencyImportJobStatusDto?>();
-    }
-
-    public async Task<bool> ResolveImportConflictsAsync(IEnumerable<ResolvedImportConflict> resolvedConflicts)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyAccountImport/ResolveImportConflicts", resolvedConflicts);
-        if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
-        return true;
     }
 }

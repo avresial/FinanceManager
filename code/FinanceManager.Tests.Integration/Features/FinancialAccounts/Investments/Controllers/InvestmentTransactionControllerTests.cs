@@ -15,6 +15,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
+using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -89,7 +90,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         _testDatabase!.Context.FinancialLabels.AddRange(first, second);
         await _testDatabase.Context.SaveChangesAsync(ct);
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
         var added = await client.AddAsync(AddRequest(_testAccountId) with { LabelIds = [first.Id] });
         Assert.NotNull(added);
         Assert.Equal(first.Id, Assert.Single(added.Labels!).Id);
@@ -249,7 +250,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedAccount();
         await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
 
         var result = await client.AddAsync(AddRequest(_testAccountId));
 
@@ -563,49 +564,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task GetHoldingMetadata_ReturnsLatestNonZeroTradeBeforeDate()
-    {
-        await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10), unitPrice: 100m);
-        var latestId = await SeedTransaction(InvestmentTransactionType.Sell, 2m, new DateOnly(2024, 1, 20), unitPrice: 120m);
-        await SeedTransaction(InvestmentTransactionType.Buy, 1m, new DateOnly(2024, 2, 10), unitPrice: 130m);
-        Authorize("testuser", _testUserId, UserRole.User);
-
-        var metadata = await new InvestmentTransactionHttpClient(Client).GetHoldingMetadataAsync(
-            _testAccountId,
-            new DateTime(2024, 2, 1),
-            TestContext.Current.CancellationToken);
-
-        var latest = Assert.Single(metadata);
-        Assert.Equal(latestId, latest.Id);
-        Assert.Equal(120m, latest.UnitPrice);
-        Assert.Equal("CSPX", latest.Ticker);
-        Assert.Equal(FinanceManager.Contracts.Assets.AssetTypeDto.ETF, latest.AssetType);
-    }
-
-    [Fact]
-    public async Task GetHoldingMetadata_RecoversMissingPriceForReturnedHolding()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var tradeDate = new DateOnly(2024, 1, 10);
-        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, tradeDate, unitPrice: 0m);
-        Authorize("testuser", _testUserId, UserRole.User);
-        _priceProvider
-            .Setup(x => x.GetPricePerUnitAsync(_listingId, It.Is<Currency>(c => c.ShortName == "USD"), tradeDate.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(321.45m);
-
-        var metadata = await new InvestmentTransactionHttpClient(Client).GetHoldingMetadataAsync(
-            _testAccountId,
-            new DateTime(2024, 2, 1),
-            ct);
-
-        var holding = Assert.Single(metadata);
-        Assert.Equal(id, holding.Id);
-        Assert.Equal(321.45m, holding.UnitPrice);
-        _testDatabase!.Context.ChangeTracker.Clear();
-        Assert.Equal(321.45m, (await _testDatabase.Context.InvestmentTransactions.AsNoTracking().SingleAsync(x => x.EntryId == id, ct)).UnitPrice);
-    }
-
-    [Fact]
     public async Task GetByAccount_RecoversAllMissingPrices()
     {
         var tradeDate = new DateOnly(2024, 1, 10);
@@ -696,7 +654,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
         var update = new UpdateInvestmentTransactionRequest(
             long.MaxValue, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
 
@@ -710,7 +668,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
 
         var result = await client.DeleteAsync(_testAccountId, long.MaxValue);
 
@@ -722,7 +680,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
         var update = new UpdateInvestmentTransactionRequest(
             id, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
 
@@ -741,7 +699,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await SeedAccount();
         await SeedListing();
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
 
         var withNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = "Monthly ETF contribution" });
         var withoutNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = null });
@@ -766,7 +724,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     {
         var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
         Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionHttpClient(Client);
+        var client = new InvestmentTransactionAccountClient(Client);
 
         var result = await client.DeleteAsync(_testAccountId, id);
 

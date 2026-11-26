@@ -38,9 +38,14 @@ public class LiabilitiesService(ICashTransactionReader cashTransactionReader, IC
 
     public async IAsyncEnumerable<NameValueResult> GetEndLiabilitiesPerType(int userId, DateTime start, DateTime end)
     {
-        var total = (await cashTransactionReader.GetPositions(userId, end)).Where(p => p.Value < 0m).Sum(p => p.Value);
-        if (total < 0m)
-            yield return new NameValueResult() { Name = "Cash", Value = total, AccountId = null };
+        var liabilities = (await cashTransactionReader.GetPositions(userId, end)).Where(p => p.Value < 0m).ToList();
+        if (liabilities.Count == 0) yield break;
+
+        // The total adds balances in their own currencies. When they all share one, the figure carries that code instead of
+        // posing as the display currency; a mix stays unlabelled and the card notes that it is not converted.
+        var currencyIds = liabilities.Select(p => p.PartitionId).Distinct().ToList();
+        var code = currencyIds.Count == 1 ? (await GetCurrencyNames()).GetValueOrDefault(currencyIds[0]) : null;
+        yield return new NameValueResult() { Name = "Cash", Value = liabilities.Sum(p => p.Value), AccountId = null, CurrencyCode = code };
     }
 
     public async IAsyncEnumerable<TimeSeriesModel> GetLiabilitiesTimeSeries(int userId, DateTime start, DateTime end)

@@ -19,6 +19,9 @@ public class TransactionLogHttpClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public async Task<bool> HasAnyTransactions(int userId, CancellationToken cancellationToken = default) =>
+        await httpClient.GetFromJsonAsync<bool>($"api/TransactionLog/Exists/{userId}", cancellationToken);
+
     public async Task<List<string>> GetCurrencies(int userId, CancellationToken cancellationToken = default) =>
         await httpClient.GetFromJsonAsync<List<string>>($"api/TransactionLog/Currencies/{userId}", cancellationToken) ?? [];
 

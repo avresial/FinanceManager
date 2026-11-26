@@ -1,7 +1,7 @@
 @using FinanceManager.Components.Features.Portfolio.Models
 @inherits PortfolioCardBase<InvestmentsValueModel>
 
-<TimeSeriesValueCard Title="Investments value" Data="@(Model?.Series ?? [])" Overlays="@(Model?.Overlays ?? [])"
+<TimeSeriesValueCard data-testid="investments-value-card" Title="Investments value" Data="@(Model?.Series ?? [])" Overlays="@(Model?.Overlays ?? [])"
                      SummaryValue="@Model?.CurrentValue" DeltaBaseline="@(Model is { HasPricedPositions: true } ? Model.CostBasis : null)"
                      CurrencyShortName="@(Model?.Currency ?? string.Empty)"
                      SummaryCaption="@Caption"

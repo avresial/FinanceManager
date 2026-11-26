@@ -19,8 +19,6 @@ public partial class InvestmentTransactionFormBody : ComponentBase
     private const string _unpricedInstrumentAddedMessage =
         "Added. Automatic prices aren't available yet; an administrator has been notified.";
 
-    /// <summary>The investment account to trade in. Null saves through the owner routes, where a trade belongs to its owner and needs no account.</summary>
-    [Parameter] public int? AccountId { get; set; }
     [Parameter] public InvestmentTransactionDto? Transaction { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -326,22 +324,8 @@ public partial class InvestmentTransactionFormBody : ComponentBase
             var tradeDate = DateOnly.FromDateTime(_formTradeDate!.Value);
             if (_editingId is long id)
             {
-                if (AccountId is int accountId)
-                {
-                    var updated = await TransactionHttpClient.UpdateAsync(new UpdateInvestmentTransactionRequest(
-                        id, accountId, _formListingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
-                    if (!updated)
-                    {
-                        _error = "Could not save the transaction.";
-                        Snackbar.Add(_error, Severity.Error);
-                        return;
-                    }
-                }
-                else
-                {
-                    await TradesHttpClient.UpdateAsync(id, new UpdateInvestmentTradeRequest(
-                        _formListingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
-                }
+                await TradesHttpClient.UpdateAsync(id, new UpdateInvestmentTradeRequest(
+                    _formListingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, GetLabelIdsForUpdate()));
 
                 Snackbar.Add("Transaction updated.", Severity.Success);
             }
@@ -349,11 +333,8 @@ public partial class InvestmentTransactionFormBody : ComponentBase
             {
                 var listingId = _selectedInstrument?.Source == InstrumentOptionSource.Existing ? _formListingId : (long?)null;
                 var externalResultId = _selectedInstrument?.Source == InstrumentOptionSource.External ? _selectedInstrument.ResultId : null;
-                var added = AccountId is int accountId
-                    ? await TransactionHttpClient.AddAsync(new AddInvestmentTransactionRequest(
-                        accountId, listingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, externalResultId, _selectedLabelIds.ToArray()))
-                    : await TradesHttpClient.CreateAsync(new CreateInvestmentTradeRequest(
-                        listingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, externalResultId, _selectedLabelIds.ToArray()));
+                var added = await TradesHttpClient.CreateAsync(new CreateInvestmentTradeRequest(
+                    listingId, (InvestmentTransactionTypeDto)_formType, _formQuantity, _formUnitPrice, _formCurrency, tradeDate, _formFee, _formNotes, externalResultId, _selectedLabelIds.ToArray()));
                 if (added is null)
                 {
                     _error = "Could not save the transaction.";

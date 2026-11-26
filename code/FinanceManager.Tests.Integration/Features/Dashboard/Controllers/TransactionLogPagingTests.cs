@@ -233,9 +233,8 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(("HIST", "Long term"), (trade.Ticker, Assert.Single(trade.Labels!).Name));
 
         // Saving the trade as the edit form does (labels from the row's DTO) keeps its label.
-        var investmentClient = new InvestmentTransactionHttpClient(Client);
-        Assert.True(await investmentClient.UpdateAsync(new UpdateInvestmentTransactionRequest(trade.Id, trade.AccountId!.Value, trade.AssetListingId,
-            trade.Type, 3m, trade.UnitPrice, trade.Currency, trade.TradeDate, trade.Fee, trade.Notes, [.. trade.Labels!.Select(l => l.Id)])));
+        await new InvestmentTradesHttpClient(Client).UpdateAsync(trade.Id, new UpdateInvestmentTradeRequest(trade.AssetListingId,
+            trade.Type, 3m, trade.UnitPrice, trade.Currency, trade.TradeDate, trade.Fee, trade.Notes, [.. trade.Labels!.Select(l => l.Id)]), ct);
         var reloaded = await client.GetItemsPage(641, query with { PageSize = 100, Kinds = [TransactionKind.Investment] }, ct);
         var edited = reloaded.Items.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
         Assert.Equal((3m, "Long term"), (edited.Quantity, Assert.Single(edited.Labels!).Name));

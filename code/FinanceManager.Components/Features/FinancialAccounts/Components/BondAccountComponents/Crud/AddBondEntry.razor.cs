@@ -39,10 +39,7 @@ public partial class AddBondEntry : ComponentBase
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    /// <summary>The account to add to. Null adds to the owner's pool of the selected bond (Transactions page).</summary>
-    [Parameter] public BondAccount? BondAccount { get; set; }
 
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddBondEntry> Logger { get; set; }
@@ -105,23 +102,11 @@ public partial class AddBondEntry : ComponentBase
             var description = _description?.Trim() ?? string.Empty;
             try
             {
-                if (BondAccount is null)
-                {
-                    await BondTransactionsHttpClient.CreateAsync(new SaveBondEntryRequest(
-                        _selectedBond.Id, date, ValueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
-                }
-                else
-                {
-                    BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
-                    {
-                        Description = description,
-                        Labels = GetLabels().ToList()
-                    };
-                    await FinancialAccountService.AddEntry(bondAccountEntry);
-                }
+                await BondTransactionsHttpClient.CreateAsync(new SaveBondEntryRequest(
+                    _selectedBond.Id, date, ValueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
             }
-            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
-            catch (HttpRequestException ex) when (BondAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            // The owner routes explain a rejection (plan quota, validation); show their message.
+            catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
             {
                 Logger.LogWarning(ex, "Rejected entry add");
                 _errors = [ex.Message];

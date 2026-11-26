@@ -35,13 +35,10 @@ public partial class UpdateCurrencyEntry
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    /// <summary>The account the entry belongs to. Null edits the entry through the owner route (Transactions page).</summary>
-    [Parameter] public CurrencyAccount? CurrencyAccount { get; set; }
     [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
 
     [Inject] public required ILogger<UpdateCurrencyEntry> Logger { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
     [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
@@ -74,7 +71,7 @@ public partial class UpdateCurrencyEntry
         try
         {
             var currencies = await CurrencyHttpClient.GetAll();
-            _currency = currencies.FirstOrDefault(x => x.Id == (CurrencyAccount?.CurrencyId ?? CurrencyAccountEntry.CurrencyId)) ?? SettingsService.GetCurrency();
+            _currency = currencies.FirstOrDefault(x => x.Id == CurrencyAccountEntry.CurrencyId) ?? SettingsService.GetCurrency();
         }
         catch (Exception ex)
         {
@@ -107,24 +104,11 @@ public partial class UpdateCurrencyEntry
             try
             {
                 var description = _description ?? string.Empty;
-                if (CurrencyAccount is null)
-                {
-                    await CashTransactionsHttpClient.UpdateAsync(CurrencyAccountEntry.EntryId, new UpdateCashEntryRequest(
-                        date, _balanceChange.Value, description, _contractorDetails, [.. GetLabels().Select(x => x.Id)]));
-                }
-                else
-                {
-                    CurrencyAccountEntry accountEntry = new(CurrencyAccountEntry.AccountId, CurrencyAccountEntry.EntryId, date, -1, _balanceChange.Value)
-                    {
-                        Description = description,
-                        ContractorDetails = _contractorDetails,
-                        Labels = GetLabels().ToList()
-                    };
-                    await FinancialAccountService.UpdateEntry(accountEntry);
-                }
+                await CashTransactionsHttpClient.UpdateAsync(CurrencyAccountEntry.EntryId, new UpdateCashEntryRequest(
+                    date, _balanceChange.Value, description, _contractorDetails, [.. GetLabels().Select(x => x.Id)]));
             }
-            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
-            catch (HttpRequestException ex) when (CurrencyAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            // The owner routes explain a rejection (plan quota, validation); show their message.
+            catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
             {
                 Logger.LogWarning(ex, "Rejected entry update");
                 _errors = [ex.Message];

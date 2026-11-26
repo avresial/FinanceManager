@@ -6,14 +6,14 @@
 {
     <div class="pa-6" role="status">
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-        <MudText Class="mt-2">Loading accounts…</MudText>
+        <MudText Class="mt-2">Loading…</MudText>
     </div>
 }
-else if (_hasAccountLoadingError)
+else if (_hasLoadingError)
 {
     <MudAlert Severity="Severity.Error" Class="ma-6">
-        Could not load accounts. Please retry.
-        <MudButton OnClick="LoadAccountsAsync" Color="Color.Primary">Retry</MudButton>
+        Could not load your data. Please retry.
+        <MudButton OnClick="LoadAsync" Color="Color.Primary">Retry</MudButton>
     </MudAlert>
 }
 else

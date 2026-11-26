@@ -14,9 +14,9 @@ public class DateRangeHelperTests
     [InlineData("3M", 2026, 4, 12)]
     [InlineData("6M", 2026, 1, 12)]
     [InlineData("YTD", 2026, 1, 1)]
-    public void GetAccountDetailsRange_ResolvesPresetDeterministically(string selection, int year, int month, int day)
+    public void GetRange_ResolvesPresetDeterministically(string selection, int year, int month, int day)
     {
-        var range = DateRangeHelper.GetAccountDetailsRange(selection, null, null, _now.AddMonths(-3), _now.AddYears(-1), _now);
+        var range = DateRangeHelper.GetRange(selection, null, null, _now.AddMonths(-3), _now.AddYears(-1), _now);
 
         var expected = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc);
         if (selection is not ("Month" or "YTD")) expected = expected.AddHours(_now.Hour);
@@ -25,10 +25,10 @@ public class DateRangeHelperTests
     }
 
     [Fact]
-    public void GetAccountDetailsRange_CustomRangeClampsFutureEnd()
+    public void GetRange_CustomRangeClampsFutureEnd()
     {
         var start = _now.AddDays(-10);
-        var range = DateRangeHelper.GetAccountDetailsRange(DateRangeHelper.CustomRangeKey, start, _now.AddDays(1), _now.AddMonths(-3), _now, _now);
+        var range = DateRangeHelper.GetRange(DateRangeHelper.CustomRangeKey, start, _now.AddDays(1), _now.AddMonths(-3), _now, _now);
 
         Assert.Equal(start, range.Start);
         Assert.Equal(_now, range.End);
@@ -36,26 +36,14 @@ public class DateRangeHelperTests
 
     // Pickers hand over midnight for the end day; the selected day itself must still be included.
     [Fact]
-    public void GetAccountDetailsRange_CustomRangeIncludesWholeEndDay()
+    public void GetRange_CustomRangeIncludesWholeEndDay()
     {
         var start = _now.AddMonths(-4);
         var end = _now.AddMonths(-3).Date;
-        var range = DateRangeHelper.GetAccountDetailsRange(DateRangeHelper.CustomRangeKey, start, end, _now.AddMonths(-3), _now, _now);
+        var range = DateRangeHelper.GetRange(DateRangeHelper.CustomRangeKey, start, end, _now.AddMonths(-3), _now, _now);
 
         Assert.Equal(start, range.Start);
         Assert.Equal(end.AddDays(1).AddTicks(-1), range.End);
-    }
-
-    // The hero's custom-range key must resolve as a custom selection in the helper —
-    // a mismatch silently falls back to the default range (regression guard).
-    [Fact]
-    public void GetAccountDetailsRange_HeroCustomRangeKeyResolvesCustomRange()
-    {
-        var start = _now.AddMonths(-4);
-        var range = DateRangeHelper.GetAccountDetailsRange(
-            AccountHistoryToolbar.CustomRangeKey, start, _now, _now.AddMonths(-3), _now.AddYears(-1), _now);
-
-        Assert.Equal(start, range.Start);
     }
 
     // The dashboard seeds a rolling 31-day window (counting today) anchored to midnight, so the

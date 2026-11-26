@@ -34,6 +34,19 @@ public class TransactionLogController(ITransactionLogService transactionLogServi
         return Ok(await transactionLogService.GetLastTransactions(ownerId, count, cancellationToken));
     }
 
+    /// <summary>Whether the user has recorded any cash, bond, investment or dividend transaction.</summary>
+    [HttpGet("Exists/{userId:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Exists(int userId, CancellationToken cancellationToken = default)
+    {
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var ownerId) || ownerId == 0 || ownerId != userId)
+            return Forbid();
+
+        return Ok(await transactionLogService.HasAny(ownerId, cancellationToken));
+    }
+
     [HttpGet("Currencies/{userId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<string>))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

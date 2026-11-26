@@ -103,7 +103,7 @@
                                                 </ul>
                                                 @if (rule.Conditions.Count == 0 && !rule.IsEnabled)
                                                 {
-                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Disabled with no conditions. Rules that relied on an Account condition were disabled when accounts were removed — review before enabling.</MudText>
+                                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Disabled with no conditions. This rule used a filter that no longer exists — review it before enabling.</MudText>
                                                 }
                                             </div>
                                         </div>
@@ -269,7 +269,7 @@
         @if (_draft.Conditions.Count == 0)
         {
             <MudAlert Severity="@(_draft.Enabled ? Severity.Warning : Severity.Info)" Dense="true" Class="mb-3" role="status">
-                No conditions: this rule matches every cash transaction@(_draft.Enabled ? ", and it is enabled" : ""). Rules that relied on an Account condition lost it when accounts were removed. Add a condition to narrow the rule.
+                No conditions: this rule matches every cash transaction@(_draft.Enabled ? ", and it is enabled" : ""). This rule used a filter that no longer exists. Add a condition to narrow the rule.
             </MudAlert>
         }
         @for (var index = 0; index < _draft.Conditions.Count; index++)

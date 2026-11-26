@@ -4,30 +4,27 @@
 @using FinanceManager.Infrastructure.Readers
 @using Microsoft.AspNetCore.Components.Forms
 @using System.Globalization
-@inherits ImportEntriesComponentBase<FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccount, ImportCurrencyEntriesComponent>
+@inherits ImportEntriesComponentBase<ImportCurrencyEntriesComponent>
 
 <div>
 
-    <PageHeader Title="@(AccountId is null ? "Import cash transactions" : $"Import to {AccountName}")" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
+    <PageHeader Title="Import cash transactions" Subtitle="Upload a CSV export, map your columns, and resolve any conflicts with existing entries." />
 
     <MudPaper Outlined="true" Elevation="0" Class="rounded-lg">
         <MudStepper Class="fm-import-stepper" @bind-ActiveIndex="_stepIndex" OnPreviewInteraction="OnPreviewInteraction">
             <ChildContent>
                 <MudStep Title="@StepTitles[0]" SecondaryText="CSV upload" @bind-Completed="_step1Complete">
                     <ImportStepCaption ActiveIndex="_stepIndex" Steps="StepTitles" />
-                    @if (AccountId is null)
-                    {
-                        <div class="px-4 pt-4">
-                            <MudSelect T="Currency" Label="Currency" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                       HelperText="The currency of the statement" Value="_currency" ValueChanged="OnCurrencySelected"
-                                       ToStringFunc="@(c => c?.ShortName)" data-testid="import-currency">
-                                @foreach (var currency in _currencies)
-                                {
-                                    <MudSelectItem T="Currency" Value="@currency">@currency.ShortName</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </div>
-                    }
+                    <div class="px-4 pt-4">
+                        <MudSelect T="Currency" Label="Currency" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   HelperText="The currency of the statement" Value="_currency" ValueChanged="OnCurrencySelected"
+                                   ToStringFunc="@(c => c?.ShortName)" data-testid="import-currency">
+                            @foreach (var currency in _currencies)
+                            {
+                                <MudSelectItem T="Currency" Value="@currency">@currency.ShortName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
                     <ImportCsvFileStep Errors="_erorrs"
                                        RawPreview="_rawPreview"
                                        Headers="_headers"
@@ -205,23 +202,17 @@
                             <MudAlert Severity="Severity.Error" Variant="Variant.Text" Dense="true">@JobError</MudAlert>
                         }
 
-                        @if (ActiveImportJobId.HasValue && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch))
+                        @if (ActiveImportJobId is Guid jobId && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch))
                         {
                             <CurrencyEntryConflictResolver @ref="_resolverRef"
                                 JobConflicts="@LiveConflicts.Where(x => !x.IsResolved && !x.Conflict.IsExactMatch).ToList()"
-                                JobId="ActiveImportJobId" AccountName="@AccountName"
+                                JobId="jobId"
                                 OnConflictsResolved="OnConflictsResolved"
-                                OnResolutionChanged="StateHasChanged" />
-                        }
-                        else if (_importResult is not null && _importResult.Conflicts.Any())
-                        {
-                            <CurrencyEntryConflictResolver @ref="_resolverRef"
-                                Conflicts="_importResult.Conflicts" AccountName="@AccountName"
                                 OnResolutionChanged="StateHasChanged" />
                         }
                         else if (ShowImportCompletedMessage)
                         {
-                            <ImportCompletePanel ReturnHref="@ReturnHref" ReturnText="@ReturnText" AccountName="@AccountName" Clear="Clear" />
+                            <ImportCompletePanel Clear="Clear" />
                         }
 
                         @if (ShowImportFailedActions)

@@ -31,6 +31,8 @@ public partial class TimeSeriesValueCard
     private List<(string Name, string Color, DateTime DateTime, decimal Value)> _drawnPoints = [];
 
     /// <summary>Card title shown top-left (e.g. "Assets value over time").</summary>
+    /// <summary>Extra attributes (such as <c>data-testid</c>) put on the card element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
     [Parameter] public string Title { get; set; } = string.Empty;
 
     /// <summary>Series points, ascending by <see cref="TimeSeriesModel.DateTime"/>.</summary>

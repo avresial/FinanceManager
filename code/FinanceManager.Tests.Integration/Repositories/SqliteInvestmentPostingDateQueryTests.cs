@@ -59,18 +59,6 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLatestByListingAsOf_ReturnsLatestTradeOnOrBeforeDate()
-    {
-        await Seed();
-
-        var latest = await _repository.GetLatestByListingAsOf(_accountId, _start, TestContext.Current.CancellationToken);
-
-        var transaction = Assert.Single(latest);
-        Assert.Equal(_start, transaction.TradeDate);
-        Assert.Equal(3, transaction.EntryId);
-    }
-
-    [Fact]
     public async Task GetCapitalFlowInputsByUser_ReturnsCalendarDatesUpToDate()
     {
         await Seed();

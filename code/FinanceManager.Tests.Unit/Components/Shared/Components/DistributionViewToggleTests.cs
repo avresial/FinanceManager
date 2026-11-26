@@ -40,7 +40,7 @@ public class DistributionViewToggleTests
     public async Task Render_MarksOnlyCurrentValueAsSelected()
     {
         await using var context = CreateContext();
-        var cut = context.Render<DistributionViewToggle>(p => p.Add(x => x.Value, DistributionViewToggle.AccountView));
+        var cut = context.Render<DistributionViewToggle>(p => p.Add(x => x.Value, DistributionViewToggle.DetailView));
 
         var selected = cut.FindAll(".mud-toggle-item-selected");
         Assert.Single(selected);
@@ -58,7 +58,7 @@ public class DistributionViewToggleTests
 
         cut.FindAll(".mud-toggle-item")[1].Click();
 
-        Assert.Equal(DistributionViewToggle.AccountView, changedTo);
+        Assert.Equal(DistributionViewToggle.DetailView, changedTo);
     }
 
     [Fact]

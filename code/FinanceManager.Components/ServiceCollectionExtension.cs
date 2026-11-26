@@ -34,7 +34,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<IBrowserCookieReader, BrowserCookieReader>()
                 .AddScoped<ILoginService, LoginService>()
 
-                .AddScoped<InvestmentAccountHttpClient>()
                 .AddScoped<AssetHttpClient>()
 
                 .AddScoped<InvestmentTransactionHttpClient>()
@@ -42,13 +41,8 @@ public static class ServiceCollectionExtension
 
                 .AddScoped<DividendPaymentHttpClient>()
 
-                .AddScoped<CurrencyAccountHttpClient>()
                 .AddScoped<CurrencyAccountImportHttpClient>()
-                .AddScoped<CurrencyEntryHttpClient>()
 
-                .AddScoped<BondAccountHttpClient>()
-                .AddScoped<BondAccountImportHttpClient>()
-                .AddScoped<BondEntryHttpClient>()
                 .AddScoped<BondDetailsHttpClient>()
 
                 .AddScoped<MoneyFlowHttpClient>()
@@ -86,10 +80,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<ISnapshotService, LocalStorageSnapshotService>()
                 .AddScoped<ISnapshotRefreshCoordinator, SnapshotRefreshCoordinator>()
                 .AddScoped<PageActivityTracker>()
-                .AddScoped<AccountDetailsSnapshotStore>()
-                .AddScoped<InvestmentAccountDetailsSnapshotStore>()
-                .AddScoped<AccountChartSnapshotStore>()
-                .AddScoped<InvestmentAccountChartLoader>()
                 .AddScoped<LiabilitiesSnapshotStore>()
                 .AddScoped<DashboardCardsSnapshotStore>()
                 .AddScoped<DiversificationSnapshotStore>()
@@ -99,7 +89,6 @@ public static class ServiceCollectionExtension
                 .AddScoped<AssetsPageCardsRequestCoordinator>()
                 .AddScoped<CurrencyHttpClient>()
                 .AddScoped<IUserService, UserService>()
-                .AddScoped<IFinancialAccountService, FinancialAccountService>()
                 .AddScoped<UserSettingsService>()
                 .AddScoped<ISettingsService>(sp => sp.GetRequiredService<UserSettingsService>());
 

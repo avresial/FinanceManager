@@ -37,8 +37,8 @@ description: Reference for MudBlazor 9.x components used in FinanceManager. Cons
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
             <MudNavLink Href="/" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudNavGroup Title="Accounts" Icon="@Icons.Material.Filled.AccountBalance" Expanded="true">
-                <MudNavLink Href="/AccountDetails/1">Cash 1</MudNavLink>
+            <MudNavGroup Title="Reports" Icon="@Icons.Material.Filled.Assessment" Expanded="true">
+                <MudNavLink Href="/Assets">Assets</MudNavLink>
             </MudNavGroup>
         </MudNavMenu>
     </MudDrawer>
@@ -577,8 +577,8 @@ Standalone chip with close button:
     List<BreadcrumbItem> _breadcrumbs =
     [
         new("Home", "/"),
-        new("Accounts", "/accounts"),
-        new("Cash 1", null, disabled: true),
+        new("Reports", "/reports"),
+        new("Assets", null, disabled: true),
     ];
 }
 ```

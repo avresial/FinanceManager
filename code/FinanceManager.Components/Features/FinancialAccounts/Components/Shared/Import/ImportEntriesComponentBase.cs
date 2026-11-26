@@ -1,10 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
-using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
-using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
@@ -12,8 +8,7 @@ using MudBlazor;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Import;
 
-public abstract class ImportEntriesComponentBase<TAccount, TComponent> : ComponentBase
-    where TAccount : class, IAccount
+public abstract class ImportEntriesComponentBase<TComponent> : ComponentBase
 {
     private const string _defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full mud-height-full";
 
@@ -39,15 +34,12 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
     private CancellationTokenSource? _regenCts;
     private string _delimiterBacking = ",";
 
-    public string AccountName { get; set; } = string.Empty;
-
-    /// <summary>The account to import into. Null imports into the owner's pooled entries (Transactions page), so the wizard picks the target itself.</summary>
-    [Parameter] public int? AccountId { get; set; }
-
-    [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
-    [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<TComponent> Logger { get; set; }
     [Inject] public required CsvHeaderMappingHttpClient MappingHttpClient { get; set; }
+    [Inject] public required AccountDataSynchronizationService DataSynchronization { get; set; }
+
+    /// <summary>Tells the menu (Assets and Liabilities links, Home's welcome check) that imported entries have been committed.</summary>
+    protected Task PublishCommittedImportAsync() => DataSynchronization.AccountChanged();
 
     protected string Delimiter
     {
@@ -63,10 +55,10 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
         }
     }
 
-    protected string ReturnHref => AccountId is int id ? $"AccountDetails/{id}" : "/Transactions";
-    protected string ReturnText => AccountId is null ? "Back to Transactions" : $"Return to {AccountName}";
+    protected const string ReturnHref = "/Transactions";
+    protected const string ReturnText = "Back to Transactions";
 
-    /// <summary>False while the wizard still needs a target (owner mode before a currency is picked), which keeps the first step from continuing.</summary>
+    /// <summary>False while the wizard still needs a target (cash before a currency is picked), which keeps the first step from continuing.</summary>
     protected virtual bool HasImportTarget => true;
 
     protected string PrimaryLabel => _stepIndex switch
@@ -105,32 +97,6 @@ public abstract class ImportEntriesComponentBase<TAccount, TComponent> : Compone
     protected abstract Task ApplySuggestedMappings();
     protected abstract Task BeginImport();
     protected abstract Task SubmitConflictsAsync();
-
-    protected async Task LoadAccountName()
-    {
-        if (AccountId is not int accountId)
-            return;
-
-        try
-        {
-            var user = await LoginService.GetLoggedUser();
-            if (user is null)
-                throw new Exception("User is null");
-
-            var existingAccount = await FinancialAccountService.GetAccount<TAccount>(
-                user.UserId,
-                accountId,
-                DateTime.UtcNow,
-                DateTime.UtcNow);
-
-            if (existingAccount is not null)
-                AccountName = existingAccount.Name;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, ex.Message);
-        }
-    }
 
     protected async Task RegeneratePreviewFromContentAsync(CancellationToken cancellationToken = default)
     {

@@ -6,5 +6,10 @@ public partial class WelcomePage : ComponentBase
 {
     [Inject] public required NavigationManager Navigation { get; set; }
 
-    private void AddAccount(string type) => Navigation.NavigateTo($"AddAccount?type={type}");
+    /// <param name="kind">cash, bond or investment: the kind the add dialog on Transactions opens on.</param>
+    private void AddTransaction(string kind) => Navigation.NavigateTo($"Transactions?dialog=add-entry&kind={kind}");
+
+    private void ImportCsv() => Navigation.NavigateTo("Transactions/Import/cash");
+
+    private void ImportBondCsv() => Navigation.NavigateTo("Transactions/Import/bond");
 }

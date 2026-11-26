@@ -68,7 +68,7 @@ public static class AlertPresentation
         var bestStart = DateTime.MinValue;
         foreach (var preset in _logRangePresets)
         {
-            var start = DateRangeHelper.GetAccountDetailsRange(preset, null, null, now, now, now).Start.Date;
+            var start = DateRangeHelper.GetRange(preset, null, null, now, now, now).Start.Date;
             if (start > postingDate.Date || start <= bestStart) continue;
             best = preset;
             bestStart = start;

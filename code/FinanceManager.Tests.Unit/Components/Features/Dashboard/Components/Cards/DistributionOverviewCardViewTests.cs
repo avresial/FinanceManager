@@ -180,14 +180,14 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task CurrencyView_LinksRowsWithAccountIds_AndKeepsOwnerRowsPlain()
+    public async Task CurrencyView_KeepsRowsPlain_EvenWhenSlicesCarryAccountIds()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
             .Add(x => x.TypeData, [new("Loan", 75m) { AccountId = 3 }, new("Mortgage", 25m) { AccountId = 4 }])
             .Add(x => x.AccountData, [new("Car loan", 75m) { AccountId = 7 }, new("PLN", 25m)]));
 
-        // Type rows never link, even when the data happens to carry ids.
+        // Account pages are gone, so no row links to one.
         Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
 
         cut.FindAll("button").Single(x => x.TextContent.Contains("Currency")).Click();
@@ -195,10 +195,9 @@ public class DistributionOverviewCardViewTests
         // Switching views replaces the chart, so the new rows arrive after the click's render completes.
         cut.WaitForAssertion(() =>
         {
-            var link = Assert.Single(cut.FindAll("a[data-testid=distribution-row]"));
-            Assert.Equal("/AccountDetails/7", link.GetAttribute("href"));
-            Assert.Contains("Car loan", link.TextContent);
             Assert.Equal(2, cut.FindAll("[data-testid=distribution-row]").Count);
+            Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));
+            Assert.DoesNotContain("AccountDetails", cut.Markup);
         }, TimeSpan.FromSeconds(3));
     }
 
