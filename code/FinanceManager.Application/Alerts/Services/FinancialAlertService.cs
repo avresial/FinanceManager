@@ -1,25 +1,31 @@
 using FinanceManager.Application.Alerts.Models;
+using FinanceManager.Application.Alerts.Services.Conditions;
 using FinanceManager.Domain.Alerts.Commands;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.Alerts.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.Labels.Services;
 using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Alerts.Services;
 
 public class FinancialAlertService(
     IFinancialAlertRepository alertRepository,
-    IFinancialAccountRepository accountRepository,
+    ICashTransactionReader cashTransactionReader,
+    ICurrencyRepository currencyRepository,
     IRecurringTransactionDetectorService recurringTransactionDetectorService,
     IFinancialAlertEvaluator evaluator,
     IDateTimeProvider dateTimeProvider,
     ILogger<FinancialAlertService> logger) : IFinancialAlertService
 {
+    private const int _recentEntriesPageSize = 500;
+
     public Task<IReadOnlyList<FinancialAlert>> GetAlertsAsync(int userId, CancellationToken cancellationToken = default) =>
         alertRepository.GetAlertsByUserId(userId, cancellationToken);
 
@@ -54,20 +60,45 @@ public class FinancialAlertService(
     public Task<bool> DeleteAlertAsync(int userId, Guid alertId, CancellationToken cancellationToken = default) =>
         alertRepository.Delete(userId, alertId, cancellationToken);
 
-    public async Task<bool> SetEnabledAsync(
+    public async Task<string?> ValidateCurrencyAsync(
+        AlertType alertType,
+        int? currencyId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!alertType.RequiresCurrency())
+            return currencyId is null ? null : "Subscription alerts do not use a currency.";
+
+        if (currencyId is not int id)
+            return "Select a currency for this alert.";
+
+        return await currencyRepository.GetCurrency(id, cancellationToken) is null
+            ? "The selected currency does not exist."
+            : null;
+    }
+
+    public async Task<SetAlertEnabledStatus> SetEnabledAsync(
         int userId,
         Guid alertId,
         bool isEnabled,
         CancellationToken cancellationToken = default)
     {
         var alert = await alertRepository.GetById(userId, alertId, cancellationToken);
-        if (alert is null) return false;
+        if (alert is null) return SetAlertEnabledStatus.NotFound;
+
+        // Migrated cash alerts come back disabled without a currency, or with one copied from a legacy account that has no
+        // currency foreign key. Enabling goes through the same currency check as saving, so neither can be switched on.
+        if (isEnabled && alert.AlertType.RequiresCurrency())
+        {
+            if (alert.CurrencyId is null) return SetAlertEnabledStatus.CurrencyRequired;
+            if (await ValidateCurrencyAsync(alert.AlertType, alert.CurrencyId, cancellationToken) is not null)
+                return SetAlertEnabledStatus.CurrencyInvalid;
+        }
 
         alert.IsEnabled = isEnabled;
         alert.UpdatedAt = dateTimeProvider.UtcNow;
         await alertRepository.Update(alert, cancellationToken);
 
-        return true;
+        return SetAlertEnabledStatus.Updated;
     }
 
     public async Task<IReadOnlyList<AlertEvaluationOutcome>> EvaluateAlertsAsync(
@@ -158,12 +189,11 @@ public class FinancialAlertService(
         bool includeAllMatchingTransactions = false)
     {
         var now = dateTimeProvider.UtcNow;
-        var start = now.Date.AddMonths(-12);
-        var end = now.Date.AddDays(1);
+        var enabled = alerts.Where(alert => alert.IsEnabled).ToList();
+        var cashAlerts = enabled.Where(alert => alert.AlertType.RequiresCurrency()).ToList();
 
-        var allTimeAlerts = alerts
-            .Where(alert => alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime
-                && alert.AlertType is AlertType.CategorySpending or AlertType.MerchantSpending or AlertType.LargeTransaction)
+        var allTimeAlerts = cashAlerts
+            .Where(alert => alert.EvaluationPeriod == AlertEvaluationPeriod.AllTime && IsSpendingOrLarge(alert.AlertType))
             .ToList();
         var allTimeEvaluationData = allTimeAlerts.Count == 0
             ? new Dictionary<Guid, FinancialAlertEvaluationData>()
@@ -174,20 +204,69 @@ public class FinancialAlertService(
                 cancellationToken,
                 includeAllMatchingTransactions);
 
-        var accounts = new List<CurrencyAccount>();
-        await foreach (var account in accountRepository.GetAccounts<CurrencyAccount>(userId, start, end).WithCancellation(cancellationToken))
+        var cashPositions = cashAlerts.Any(alert => alert.AlertType == AlertType.AccountBalance)
+            ? await cashTransactionReader.GetPositions(userId, now, cancellationToken)
+            : [];
+
+        var boundedAlerts = cashAlerts
+            .Where(alert => AlertPeriod.IsBounded(alert.EvaluationPeriod) && IsSpendingOrLarge(alert.AlertType))
+            .ToList();
+        var recentEntries = boundedAlerts.Count == 0
+            ? []
+            : await LoadRecentEntriesAsync(
+                userId,
+                boundedAlerts.Min(alert => AlertPeriod.GetRange(alert.EvaluationPeriod, now).Start),
+                now,
+                cancellationToken);
+
+        var currencyCodes = new Dictionary<int, string>();
+        if (cashAlerts.Count > 0)
         {
-            accounts.Add(account);
+            await foreach (var currency in currencyRepository.GetCurrencies(cancellationToken).WithCancellation(cancellationToken))
+                currencyCodes[currency.Id] = currency.ShortName;
         }
 
-        var subscriptions = (await recurringTransactionDetectorService.GetRecurringTransactions(userId, cancellationToken))
-            .Where(x => !x.IsIncome)
-            .ToList();
+        var subscriptions = enabled.Any(alert => alert.AlertType == AlertType.SubscriptionPriceChange)
+            ? (await recurringTransactionDetectorService.GetRecurringTransactions(userId, cancellationToken))
+                .Where(x => !x.IsIncome)
+                .ToList()
+            : [];
 
-        return new AlertEvaluationSnapshot(accounts, subscriptions, now)
+        return new AlertEvaluationSnapshot
         {
+            CashPositions = cashPositions,
+            CurrencyCodes = currencyCodes,
+            RecentEntries = recentEntries,
+            Subscriptions = subscriptions,
             AllTimeEvaluationData = allTimeEvaluationData,
+            EvaluationDate = now,
             IncludeAllMatchingTransactions = includeAllMatchingTransactions
         };
+    }
+
+    private static bool IsSpendingOrLarge(AlertType type) =>
+        type is AlertType.CategorySpending or AlertType.MerchantSpending or AlertType.LargeTransaction;
+
+    // The longest bounded period is the current month (at most 31 days), so this stays a short, keyset-paged read.
+    private async Task<IReadOnlyList<CashLogEntry>> LoadRecentEntriesAsync(
+        int userId,
+        DateTime start,
+        DateTime end,
+        CancellationToken cancellationToken)
+    {
+        var entries = new List<CashLogEntry>();
+        OwnerHistoryBoundary? boundary = null;
+        while (true)
+        {
+            var page = await cashTransactionReader.GetHistory(
+                userId,
+                new OwnerHistoryQuery(start, end, _recentEntriesPageSize, boundary, null, null, IncludeDetails: true),
+                cancellationToken);
+            entries.AddRange(page);
+            if (page.Count < _recentEntriesPageSize) return entries;
+
+            var last = page[^1];
+            boundary = new OwnerHistoryBoundary(last.PostingDate, last.EntryId, IncludeEqualId: false);
+        }
     }
 }

@@ -1,81 +1,85 @@
-using FinanceManager.Application.FinancialAccounts.Shared.Exports;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Exports;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
+using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
+using System.Globalization;
 using System.Text;
 
 namespace FinanceManager.Application.Insights.Generation;
 
+/// <summary>
+/// Builds the CSV context sent to the AI provider from the owner's recent cash and bond transactions.
+/// It sends no more than before the accounts were removed: no labels, no trades, bounded rows and characters.
+/// </summary>
 internal sealed class InsightsContextBuilder(
-    ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountRepository<BondAccount> bondAccountRepository,
-    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
-    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService)
+    ICashTransactionReader cashTransactionReader,
+    IBondTransactionReader bondTransactionReader,
+    IDateTimeProvider dateTimeProvider)
 {
-    private const int _maxEntriesPerAccount = 200;
-    private const int _maxAccounts = 50;
+    private const int _maxCashRows = 250;
+    private const int _maxBondRows = 200;
+    private const int _maxSectionChars = 44_000;
 
-    public async Task<string> BuildEntriesContextCsv(int userId, int? accountId, CancellationToken cancellationToken = default)
+    public async Task<string> BuildEntriesContextCsv(int userId, CancellationToken cancellationToken = default)
     {
-        var end = DateTime.UtcNow;
+        var end = dateTimeProvider.UtcNow;
         var start = end.AddMonths(-3);
+        var inv = CultureInfo.InvariantCulture;
 
         var sb = new StringBuilder();
         sb.AppendLine($"timeRangeUtcStart,{start:O}");
         sb.AppendLine($"timeRangeUtcEnd,{end:O}");
 
-        var addedAccounts = 0;
+        // Zero is not a real owner; guests (negative ids) are real owners with their own seeded data.
+        if (userId == 0)
+            return sb.ToString();
 
-        addedAccounts = await AppendAccountsSection(sb, currencyAccountRepository.GetAvailableAccounts(userId), "Currency",
-            exportAccountId => currencyAccountCsvExportService.GetExportResults(userId, exportAccountId, start, end, cancellationToken),
-            accountId, addedAccounts, cancellationToken);
+        var cashQuery = new OwnerHistoryQuery(start, end, _maxCashRows, IncludeDetails: false);
+        var cash = await cashTransactionReader.GetHistory(userId, cashQuery, cancellationToken);
+        AppendSection(sb, "cash", "PostingDate,Currency,ValueChange,ContractorDetails,Description",
+            cash.Select(e => string.Join(',',
+                e.PostingDate.ToString("yyyy-MM-dd", inv),
+                EscapeCsvValue(e.Currency),
+                e.ValueChange.ToString(inv),
+                EscapeCsvValue(e.ContractorDetails),
+                EscapeCsvValue(e.Description))));
 
-        addedAccounts = await AppendAccountsSection(sb, bondAccountRepository.GetAvailableAccounts(userId), "Bond",
-            exportAccountId => bondAccountCsvExportService.GetExportResults(userId, exportAccountId, start, end, cancellationToken),
-            accountId, addedAccounts, cancellationToken);
+        var bondQuery = new OwnerHistoryQuery(start, end, _maxBondRows, IncludeDetails: false);
+        var bonds = await bondTransactionReader.GetHistory(userId, bondQuery, cancellationToken);
+        AppendSection(sb, "bonds", "PostingDate,BondName,Currency,ValueChange,Description",
+            bonds.Select(e => string.Join(',',
+                e.PostingDate.ToString("yyyy-MM-dd", inv),
+                EscapeCsvValue(e.BondName),
+                EscapeCsvValue(e.Currency),
+                e.ValueChange.ToString(inv),
+                EscapeCsvValue(e.Description))));
 
         return sb.ToString();
     }
 
-    private static async Task<int> AppendAccountsSection(
-        StringBuilder sb,
-        IAsyncEnumerable<AvailableAccount> accounts,
-        string accountType,
-        Func<int, Task<string>> exportCsv,
-        int? accountId,
-        int addedAccounts,
-        CancellationToken cancellationToken)
+    private static void AppendSection(StringBuilder sb, string name, string header, IEnumerable<string> rows)
     {
-        await foreach (var account in accounts.OrderBy(x => x.AccountId).WithCancellation(cancellationToken))
+        var csv = new StringBuilder();
+        foreach (var row in rows)
         {
-            if (addedAccounts >= _maxAccounts)
+            if (csv.Length + row.Length + 1 > _maxSectionChars)
                 break;
 
-            if (accountId.HasValue && account.AccountId != accountId.Value)
-                continue;
-
-            var csv = await exportCsv(account.AccountId);
-
-            sb.AppendLine();
-            sb.AppendLine("[account]");
-            sb.AppendLine($"accountId,{account.AccountId}");
-            sb.AppendLine($"name,{EscapeCsvValue(account.AccountName)}");
-            sb.AppendLine($"accountType,{accountType}");
-            sb.AppendLine("csv:");
-            sb.AppendLine(Truncate(csv, _maxEntriesPerAccount * 220));
-
-            addedAccounts++;
+            csv.AppendLine(row);
         }
 
-        return addedAccounts;
+        // A section without rows is omitted entirely.
+        if (csv.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"[{name}]");
+        sb.AppendLine("csv:");
+        sb.AppendLine(header);
+        sb.Append(csv);
     }
 
-    private static string EscapeCsvValue(string value)
+    private static string EscapeCsvValue(string? value)
     {
         if (string.IsNullOrEmpty(value))
             return string.Empty;
@@ -85,7 +89,4 @@ internal sealed class InsightsContextBuilder(
 
         return $"\"{value.Replace("\"", "\"\"")}\"";
     }
-
-    private static string Truncate(string value, int maxLen) =>
-        value.Length <= maxLen ? value : value[..maxLen];
 }

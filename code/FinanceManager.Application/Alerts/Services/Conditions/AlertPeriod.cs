@@ -11,8 +11,13 @@ internal static class AlertPeriod
         AlertEvaluationPeriod.Last30Days => (evaluationDate.Date.AddDays(-30), evaluationDate),
         AlertEvaluationPeriod.Last7Days => (evaluationDate.Date.AddDays(-7), evaluationDate),
         AlertEvaluationPeriod.AllTime => (DateTime.MinValue, evaluationDate),
-        _ => (DateTime.MinValue, evaluationDate)
+        // A malformed stored period must not silently widen the range to the owner's whole ledger.
+        _ => throw new ArgumentOutOfRangeException(nameof(period), period, "Unsupported alert evaluation period.")
     };
+
+    /// <summary>True for the periods whose history read is limited to a short window (at most 31 days).</summary>
+    public static bool IsBounded(AlertEvaluationPeriod period) =>
+        period is AlertEvaluationPeriod.CurrentMonth or AlertEvaluationPeriod.Last30Days or AlertEvaluationPeriod.Last7Days;
 
     public static string FormatKey(AlertEvaluationPeriod period, DateTime start, DateTime end) => period switch
     {

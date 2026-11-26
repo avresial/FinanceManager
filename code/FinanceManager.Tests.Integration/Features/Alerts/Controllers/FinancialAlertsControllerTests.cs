@@ -174,7 +174,7 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
         var alertId = Guid.NewGuid();
         _serviceMock
             .Setup(x => x.SetEnabledAsync(_testUserId, alertId, false, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(SetAlertEnabledStatus.Updated);
         _serviceMock
             .Setup(x => x.DeleteAlertAsync(_testUserId, alertId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -186,6 +186,122 @@ public sealed class FinancialAlertsControllerTests(OptionsProvider optionsProvid
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
         _serviceMock.Verify(x => x.SetEnabledAsync(_testUserId, alertId, false, It.IsAny<CancellationToken>()), Times.Once);
         _serviceMock.Verify(x => x.DeleteAlertAsync(_testUserId, alertId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Create_WithCurrencyRuleViolation_ReturnsBadRequestWithoutCallingCreate()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new CreateFinancialAlert("Low cash", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 100m);
+        _serviceMock
+            .Setup(x => x.ValidateCurrencyAsync(AlertType.AccountBalance, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Select a currency for this alert.");
+
+        var response = await Client.PostAsJsonAsync("api/FinancialAlerts", command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Select a currency", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        _serviceMock.Verify(x => x.CreateAlertAsync(It.IsAny<int>(), It.IsAny<CreateFinancialAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Create_WithPlnCurrency_PassesTheCurrencyToTheService()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new CreateFinancialAlert("Low cash", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 100m, CurrencyId: 0);
+        _serviceMock
+            .Setup(x => x.CreateAlertAsync(_testUserId, It.IsAny<CreateFinancialAlert>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateAlert(_testUserId, command.Title));
+
+        var response = await Client.PostAsJsonAsync("api/FinancialAlerts", command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        _serviceMock.Verify(x => x.ValidateCurrencyAsync(AlertType.AccountBalance, 0, It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(x => x.CreateAlertAsync(_testUserId, It.Is<CreateFinancialAlert>(c => c.CurrencyId == 0), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Update_WithCurrencyRuleViolation_ReturnsBadRequestWithoutCallingUpdate()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var command = new UpdateFinancialAlert("Sub", AlertType.SubscriptionPriceChange, true, AlertComparisonOperator.GreaterThan, 0m, CurrencyId: 1);
+        _serviceMock
+            .Setup(x => x.ValidateCurrencyAsync(AlertType.SubscriptionPriceChange, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Subscription alerts do not use a currency.");
+
+        var response = await Client.PutAsJsonAsync($"api/FinancialAlerts/{Guid.NewGuid()}", command, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _serviceMock.Verify(x => x.UpdateAlertAsync(It.IsAny<int>(), It.IsAny<Guid>(), It.IsAny<UpdateFinancialAlert>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SetEnabled_ReturnsBadRequest_WhenTheAlertStillNeedsACurrency()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var alertId = Guid.NewGuid();
+        _serviceMock
+            .Setup(x => x.SetEnabledAsync(_testUserId, alertId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SetAlertEnabledStatus.CurrencyRequired);
+
+        var response = await Client.PatchAsJsonAsync($"api/FinancialAlerts/{alertId}/enabled", true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Select a currency before enabling", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SetEnabled_ReturnsBadRequest_WhenTheStoredCurrencyNoLongerExists()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        var alertId = Guid.NewGuid();
+        _serviceMock
+            .Setup(x => x.SetEnabledAsync(_testUserId, alertId, true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SetAlertEnabledStatus.CurrencyInvalid);
+
+        var response = await Client.PatchAsJsonAsync($"api/FinancialAlerts/{alertId}/enabled", true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("currency does not exist", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SetEnabled_ReturnsNotFound_ForUnknownAlert()
+    {
+        Authorize("user", _testUserId, UserRole.User);
+        _serviceMock
+            .Setup(x => x.SetEnabledAsync(_testUserId, It.IsAny<Guid>(), true, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SetAlertEnabledStatus.NotFound);
+
+        var response = await Client.PatchAsJsonAsync($"api/FinancialAlerts/{Guid.NewGuid()}/enabled", true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_ForGuestWithNegativeId_ReadsTheirAlerts()
+    {
+        const int guestId = -735;
+        _serviceMock
+            .Setup(x => x.GetAlertsAsync(guestId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([CreateAlert(guestId, "Guest alert")]);
+        Authorize("guest", guestId, UserRole.User);
+
+        var response = await Client.GetAsync("api/FinancialAlerts", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        _serviceMock.Verify(x => x.GetAlertsAsync(guestId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Get_ForUserIdZero_IsForbidden()
+    {
+        Authorize("zero", 0, UserRole.User);
+
+        var response = await Client.GetAsync("api/FinancialAlerts", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        _serviceMock.Verify(x => x.GetAlertsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

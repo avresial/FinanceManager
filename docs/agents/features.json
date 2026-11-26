@@ -12,7 +12,7 @@
     { "id": "transactions-import-bond", "page": "/Transactions/Import/{Kind}", "route": "Transactions/Import/bond", "description": "Import bond entries from CSV (the file names the bond per row), without choosing an account.", "ready": ".fm-import-stepper" },
     { "id": "subscriptions", "page": "/Subscriptions", "route": "Subscriptions", "description": "Detected recurring payments (subscriptions)." },
     { "id": "cash-flow-forecast", "page": "/CashFlowForecast", "route": "CashFlowForecast", "description": "Cash flow forecast: projected balance chart and horizon deltas." },
-    { "id": "alerts", "page": "/Alerts", "route": "Alerts", "description": "Balance alerts and their configuration." },
+    { "id": "alerts", "page": "/Alerts", "route": "Alerts", "description": "Cash balance, spending, large transaction and subscription alerts." },
     { "id": "automation", "page": "/TransactionRules", "route": "TransactionRules", "description": "Automation: transaction labeling rules." },
     { "id": "account-cash", "page": "/AccountDetails/{AccountId:int}", "route": "AccountDetails/{account:Cash 1}", "description": "Account details of the cash (currency) account Cash 1: balance chart and history." },
     { "id": "account-loan", "page": "/AccountDetails/{AccountId:int}", "route": "AccountDetails/{account:Loan 1}", "description": "Account details of the loan account Loan 1." },

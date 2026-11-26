@@ -34,7 +34,7 @@ public class FinancialAlertTests
             comparisonOperator: AlertComparisonOperator.GreaterThanOrEqual,
             threshold: 500m,
             evaluationPeriod: AlertEvaluationPeriod.CurrentMonth,
-            accountId: 2,
+            currencyId: 2,
             labelId: 10,
             labelName: "Dining",
             merchantName: null,
@@ -46,7 +46,8 @@ public class FinancialAlertTests
         Assert.Equal(AlertComparisonOperator.GreaterThanOrEqual, alert.ComparisonOperator);
         Assert.Equal(500m, alert.Threshold);
         Assert.Equal(AlertEvaluationPeriod.CurrentMonth, alert.EvaluationPeriod);
-        Assert.Equal(2, alert.AccountId);
+        Assert.Equal(2, alert.CurrencyId);
+        Assert.Null(alert.AccountId);
         Assert.Equal(10, alert.LabelId);
         Assert.Equal("Dining", alert.LabelName);
         Assert.True(alert.IsEnabled);
@@ -68,7 +69,7 @@ public class FinancialAlertTests
             ComparisonOperator: AlertComparisonOperator.LessThanOrEqual,
             Threshold: 1500m,
             EvaluationPeriod: AlertEvaluationPeriod.Last30Days,
-            AccountId: 5,
+            CurrencyId: 5,
             LabelId: null,
             LabelName: null,
             MerchantName: "Amazon",
@@ -83,7 +84,8 @@ public class FinancialAlertTests
         Assert.Equal(1500m, alert.Threshold);
         Assert.Equal(AlertType.MerchantSpending, alert.AlertType);
         Assert.Equal(AlertEvaluationPeriod.Last30Days, alert.EvaluationPeriod);
-        Assert.Equal(5, alert.AccountId);
+        Assert.Equal(5, alert.CurrencyId);
+        Assert.Null(alert.AccountId);
         Assert.Equal("Amazon", alert.MerchantName);
         Assert.NotNull(alert.UpdatedAt);
     }
@@ -93,7 +95,7 @@ public class FinancialAlertTests
     {
         var alert = new FinancialAlert(1, "Balance", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m);
         var triggeredTime = new DateTime(2026, 9, 11, 12, 0, 0, DateTimeKind.Utc);
-        var fingerprint = "AccountBalance:AccountId=1:Balance=500.00";
+        var fingerprint = "AccountBalance:CurrencyId=1:Balance=500.00";
 
         alert.RecordTrigger(500m, fingerprint, triggeredTime);
 
@@ -141,7 +143,7 @@ public class FinancialAlertTests
             comparisonOperator: AlertComparisonOperator.GreaterThan,
             threshold: 2000m,
             evaluationPeriod: AlertEvaluationPeriod.Last7Days,
-            accountId: 3);
+            currencyId: 3);
 
         var dto = FinancialAlertDto.FromEntity(alert);
 
@@ -152,6 +154,38 @@ public class FinancialAlertTests
         Assert.Equal(AlertComparisonOperator.GreaterThan, dto.ComparisonOperator);
         Assert.Equal(2000m, dto.Threshold);
         Assert.Equal(AlertEvaluationPeriod.Last7Days, dto.EvaluationPeriod);
-        Assert.Equal(3, dto.AccountId);
+        Assert.Equal(3, dto.CurrencyId);
+    }
+
+    [Fact]
+    public void UpdateFrom_ClearsTheLegacyAccountScope()
+    {
+        var alert = new FinancialAlert(1, "Old", AlertType.AccountBalance, AlertComparisonOperator.LessThan, 1000m) { AccountId = 9 };
+
+        alert.UpdateFrom(new UpdateFinancialAlert("New", AlertType.AccountBalance, true, AlertComparisonOperator.LessThan, 1000m, CurrencyId: 0));
+
+        Assert.Null(alert.AccountId);
+        Assert.Equal(0, alert.CurrencyId);
+    }
+
+    [Fact]
+    public void FromCommand_CopiesCurrencyAndLeavesTheLegacyAccountEmpty()
+    {
+        var alert = FinancialAlert.FromCommand(-2, new CreateFinancialAlert("Guest", AlertType.LargeTransaction, AlertComparisonOperator.GreaterThan, 10m, CurrencyId: 0));
+
+        Assert.Equal(-2, alert.UserId);
+        Assert.Equal(0, alert.CurrencyId);
+        Assert.Null(alert.AccountId);
+    }
+
+    [Theory]
+    [InlineData(AlertType.AccountBalance, true)]
+    [InlineData(AlertType.CategorySpending, true)]
+    [InlineData(AlertType.MerchantSpending, true)]
+    [InlineData(AlertType.LargeTransaction, true)]
+    [InlineData(AlertType.SubscriptionPriceChange, false)]
+    public void RequiresCurrency_IsTrueOnlyForCashAlertTypes(AlertType type, bool expected)
+    {
+        Assert.Equal(expected, type.RequiresCurrency());
     }
 }

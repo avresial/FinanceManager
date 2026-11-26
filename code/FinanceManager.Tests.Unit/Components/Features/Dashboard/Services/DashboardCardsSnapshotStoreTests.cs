@@ -21,7 +21,7 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task Insights_PaintsBeforeFetch_AlwaysFetches_AndSkipsUnchangedWrite()
     {
-        const string key = "financial-insights:1:all:3";
+        const string key = "financial-insights:v2:1:3";
         _snapshots.Setup(x => x.GetAsync<FinancialInsightsSnapshot>(key))
             .ReturnsAsync(new FinancialInsightsSnapshot { UserId = 1, Count = 3, Insights = [Insight(1)] });
         var painted = false;
@@ -30,7 +30,6 @@ public class DashboardCardsSnapshotStoreTests
         var result = await CreateStore().RefreshInsightsAsync(
             1,
             3,
-            null,
             new RefreshVersionGate(),
             null,
             () =>
@@ -50,21 +49,20 @@ public class DashboardCardsSnapshotStoreTests
     }
 
     [Fact]
-    public async Task Insights_Changed_WritesCountAndAccountScopedSnapshot()
+    public async Task Insights_Changed_WritesCountScopedSnapshot()
     {
-        const string key = "financial-insights:1:7:5";
+        const string key = "financial-insights:v2:1:5";
 
         var result = await CreateStore().RefreshInsightsAsync(
             1,
             5,
-            7,
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<List<FinancialInsight>?>([Insight(2)]));
 
         Assert.Equal(SnapshotRefreshOutcome.Refreshed, result.Outcome);
         _snapshots.Verify(x => x.SetAsync(key, It.Is<FinancialInsightsSnapshot>(
-            s => s.UserId == 1 && s.Count == 5 && s.AccountId == 7 && s.Insights.Single().Id == 2)), Times.Once);
+            s => s.UserId == 1 && s.Count == 5 && s.Insights.Single().Id == 2)), Times.Once);
     }
 
     [Fact]
@@ -124,14 +122,13 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task Insights_FailedRefresh_KeepsStoredSnapshotAndDoesNotOverwriteIt()
     {
-        const string key = "financial-insights:1:all:3";
+        const string key = "financial-insights:v2:1:3";
         _snapshots.Setup(x => x.GetAsync<FinancialInsightsSnapshot>(key))
             .ReturnsAsync(new FinancialInsightsSnapshot { UserId = 1, Count = 3, Insights = [Insight(1)] });
 
         var result = await CreateStore().RefreshInsightsAsync(
             1,
             3,
-            null,
             new RefreshVersionGate(),
             null,
             () => throw new HttpRequestException());
@@ -145,14 +142,13 @@ public class DashboardCardsSnapshotStoreTests
     [Fact]
     public async Task Insights_GenuinelyEmptyResponse_ClearsCardAndOverwritesSnapshot()
     {
-        const string key = "financial-insights:1:all:3";
+        const string key = "financial-insights:v2:1:3";
         _snapshots.Setup(x => x.GetAsync<FinancialInsightsSnapshot>(key))
             .ReturnsAsync(new FinancialInsightsSnapshot { UserId = 1, Count = 3, Insights = [Insight(1)] });
 
         var result = await CreateStore().RefreshInsightsAsync(
             1,
             3,
-            null,
             new RefreshVersionGate(),
             null,
             () => Task.FromResult<List<FinancialInsight>?>([]));
@@ -168,7 +164,6 @@ public class DashboardCardsSnapshotStoreTests
         var result = await CreateStore().RefreshInsightsAsync(
             1,
             3,
-            null,
             new RefreshVersionGate(),
             null,
             () => throw new HttpRequestException());

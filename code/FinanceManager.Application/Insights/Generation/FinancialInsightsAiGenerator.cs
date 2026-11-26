@@ -16,11 +16,11 @@ internal sealed class FinancialInsightsAiGenerator(
     private const string _systemPrompt = "You are a finance assistant that outputs strict JSON.";
     private const string _modelId = "gpt-5-mini";
 
-    public async Task<List<FinancialInsight>> GenerateInsights(int userId, int? accountId, int count, CancellationToken cancellationToken = default)
+    public async Task<List<FinancialInsight>> GenerateInsights(int userId, int count, CancellationToken cancellationToken = default)
     {
         if (count <= 0) return [];
 
-        var entriesContextCsv = await insightsContextBuilder.BuildEntriesContextCsv(userId, accountId, cancellationToken);
+        var entriesContextCsv = await insightsContextBuilder.BuildEntriesContextCsv(userId, cancellationToken);
         var prompt = await insightsPromptProvider.BuildPromptAsync(entriesContextCsv, cancellationToken);
 
         try
@@ -44,7 +44,7 @@ internal sealed class FinancialInsightsAiGenerator(
             if (parsed.Count == 0)
                 return [];
 
-            return financialInsightNormalizer.Normalize(parsed, userId, accountId, count);
+            return financialInsightNormalizer.Normalize(parsed, userId, count);
         }
         catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {

@@ -5,5 +5,5 @@ namespace FinanceManager.Application.Insights.Generation;
 
 public interface IFinancialInsightsAiGenerator
 {
-    Task<List<FinancialInsight>> GenerateInsights(int userId, int? accountId, int count, CancellationToken cancellationToken = default);
+    Task<List<FinancialInsight>> GenerateInsights(int userId, int count, CancellationToken cancellationToken = default);
 }

@@ -151,7 +151,7 @@ screen a moment later. Splitting the request must not split the snapshot either.
 | Account transaction lists (currency, bond) | [AccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/AccountDetailsSnapshotStore.cs) |
 | Investment account trade list | [InvestmentAccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentAccountDetailsSnapshotStore.cs) |
 | Liabilities cards | [LiabilitiesSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/LiabilitiesSnapshotStore.cs) |
-| Dashboard insights / recurring / transaction-log cards | [DashboardCardsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardsSnapshotStore.cs) |
+| Dashboard insights / recurring / transaction-log cards (`financial-insights:v2:{user}:{count}`; alerts card `financial-alerts:v2:{user}`; Alerts page `alerts-page:v2:{user}`; the `v2` keys retire snapshots keyed per account) | [DashboardCardsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardsSnapshotStore.cs) |
 | Subscriptions page summary tiles and list | [SubscriptionsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Labels/Services/SubscriptionsSnapshotStore.cs) |
 
 `AccountDetailsSnapshotStore` shows the recommended shape for a surface with several callers: a thin

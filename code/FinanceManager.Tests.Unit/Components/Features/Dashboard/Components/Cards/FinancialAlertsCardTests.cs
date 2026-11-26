@@ -23,7 +23,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Components.Car
 [Trait("Category", "Unit")]
 public sealed class FinancialAlertsCardTests
 {
-    private const string _key = "financial-alerts:1";
+    private const string _key = "financial-alerts:v2:1";
     private static readonly Guid _storedAlertId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(5);
     private readonly Mock<ISnapshotService> _snapshots = new();
@@ -134,7 +134,6 @@ public sealed class FinancialAlertsCardTests
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Large transaction");
         var tx = new AlertTransactionReference(
-            AccountId: 5,
             EntryId: 42,
             PostingDate: new DateTime(2026, 9, 10),
             Amount: 5000m,
@@ -167,12 +166,11 @@ public sealed class FinancialAlertsCardTests
 
         var detail = cut.Find("[data-testid='alert-detail-occurrences']");
         Assert.Contains("10 Sep 2026", detail.TextContent);
-        Assert.Contains("Account", detail.TextContent);
-        Assert.Contains("#5", detail.TextContent);
-        Assert.Contains("Transaction #42", detail.TextContent);
+        Assert.DoesNotContain("Account", detail.TextContent);
+        Assert.DoesNotContain("Transaction #", detail.TextContent);
         Assert.Contains(5_000m.ToString("N2"), detail.TextContent);
 
-        var link = detail.QuerySelector("a[href='/AccountDetails/5?entryId=42']");
+        var link = detail.QuerySelector("a[href^='/Transactions?search=Tech%20Store']");
         Assert.NotNull(link);
         Assert.Equal("Apple Inc", link.TextContent.Trim());
         Assert.Equal("Inspect Apple Inc · 10 Sep 2026", link.GetAttribute("aria-label"));
@@ -188,7 +186,6 @@ public sealed class FinancialAlertsCardTests
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Long title test");
         var tx = new AlertTransactionReference(
-            AccountId: 1,
             EntryId: 2,
             PostingDate: new DateTime(2026, 9, 1),
             Amount: 100m,
@@ -213,13 +210,13 @@ public sealed class FinancialAlertsCardTests
         Assert.NotNull(container);
         Assert.Contains("pa-2", container.ClassName);
 
-        var link = cut.Find("a[href='/AccountDetails/1?entryId=2']");
+        var link = cut.Find("a[href^='/Transactions?search=A%20Very%20Long%20Contractor%20Details%20And%20Description%20Exceeding%20Bounds']");
         Assert.Contains("d-block", link.ClassName);
         var linkStyle = link.GetAttribute("style")?.Replace(" ", "") ?? "";
         Assert.Contains("min-width:0", linkStyle);
         Assert.Contains("white-space:normal", linkStyle);
         Assert.Contains("overflow-wrap:anywhere", linkStyle);
-        Assert.Contains("Transaction #2", container.TextContent);
+        Assert.DoesNotContain("Transaction #", container.TextContent);
     }
 
     [Fact]
@@ -248,7 +245,6 @@ public sealed class FinancialAlertsCardTests
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Card debit");
         var tx = new AlertTransactionReference(
-            AccountId: 3,
             EntryId: 17,
             PostingDate: new DateTime(2026, 9, 8),
             Amount: 200m,
@@ -269,7 +265,7 @@ public sealed class FinancialAlertsCardTests
 
         await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
 
-        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/3?entryId=17']");
+        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href^='/Transactions?search=Online%20Service%20Monthly']");
         Assert.Equal("Online Service Monthly", link.TextContent.Trim());
         Assert.Contains("8 Sep 2026", cut.Markup);
     }
@@ -280,7 +276,6 @@ public sealed class FinancialAlertsCardTests
         var alertId = Guid.NewGuid();
         var alert = CreateAlertDto(id: alertId, title: "Unknown fee");
         var tx = new AlertTransactionReference(
-            AccountId: 4,
             EntryId: 88,
             PostingDate: new DateTime(2026, 9, 5),
             Amount: 15m,
@@ -301,7 +296,7 @@ public sealed class FinancialAlertsCardTests
 
         await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
 
-        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href='/AccountDetails/4?entryId=88']");
+        var link = cut.Find("[data-testid='alert-detail-occurrences'] a[href^='/Transactions']");
         Assert.Equal("Transaction", link.TextContent.Trim());
         Assert.Contains("5 Sep 2026", cut.Markup);
     }
@@ -573,14 +568,14 @@ public sealed class FinancialAlertsCardTests
     public async Task ClickOpenDetail_WorksOnPaintedSnapshot_AndIsNeverSnapshotted()
     {
         Stored();
-        var tx = new AlertTransactionReference(5, 42, new DateTime(2026, 9, 10), 5000m, "Tech Store", "Apple Inc");
+        var tx = new AlertTransactionReference(42, new DateTime(2026, 9, 10), 5000m, "Tech Store", "Apple Inc");
         var detailed = StoredOutcome() with { MatchingTransactions = [tx], OccurrenceCount = 1 };
         var handler = new AlertsHandler(new Dictionary<Guid, AlertEvaluationOutcome> { [_storedAlertId] = detailed });
         await using var context = NewContext(handler);
         var cut = context.Render<FinancialAlertsCard>();
         cut.WaitForAssertion(() => Assert.Equal(1, handler.EvaluationCount), _timeout);
         await cut.Find("[data-testid='alert-summary-row']").ClickAsync();
-        cut.WaitForAssertion(() => Assert.Contains("Transaction #42", cut.Find("[data-testid='alert-detail-occurrences']").TextContent), _timeout);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='alert-detail-occurrences'] a[href^='/Transactions?']")), _timeout);
         Assert.Contains("Stored alert", cut.Find(".fm-card-header").TextContent);
 
         handler.Complete(0, [StoredOutcome()], StoredAlerts());
@@ -724,7 +719,7 @@ public sealed class FinancialAlertsCardTests
             ComparisonOperator: AlertComparisonOperator.GreaterThan,
             Threshold: 50m,
             EvaluationPeriod: AlertEvaluationPeriod.CurrentMonth,
-            AccountId: null,
+            CurrencyId: 0,
             LabelId: null,
             LabelName: null,
             MerchantName: null,

@@ -13,6 +13,8 @@ namespace FinanceManager.Tests.Integration.Features.Insights.Controllers;
 [Trait("Category", "Integration")]
 public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
+    // The API host is reused across test instances and keeps the first instance's registrations, so the stub is shared and reset per instance.
+    private static readonly StubInsightsAiGenerator _generator = new();
     private TestDatabase? _testDatabase;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -25,13 +27,20 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
 
         services.AddSingleton(_testDatabase.Context);
 
-        services.AddSingleton<IFinancialInsightsAiGenerator>(new StubInsightsAiGenerator());
+        services.AddSingleton<IFinancialInsightsAiGenerator>(_generator);
     }
 
     private sealed class StubInsightsAiGenerator : IFinancialInsightsAiGenerator
     {
-        public Task<List<FinancialInsight>> GenerateInsights(int userId, int? accountId, int count, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new List<FinancialInsight>());
+        public int Calls { get; private set; }
+
+        public void Reset() => Calls = 0;
+
+        public Task<List<FinancialInsight>> GenerateInsights(int userId, int count, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(new List<FinancialInsight>());
+        }
     }
 
     [Fact]
@@ -49,7 +58,7 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
         Authorize("TestUser", 1, UserRole.User);
 
         var client = new FinancialInsightsHttpClient(Client);
-        var result = await client.GetLatestAsync(3, null, TestContext.Current.CancellationToken);
+        var result = await client.GetLatestAsync(3, TestContext.Current.CancellationToken);
 
         Assert.Equal(3, result.Count);
         Assert.All(result, x => Assert.Equal(1, x.UserId));
@@ -57,24 +66,49 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task GetLatest_WithAccountFilter_ReturnsFilteredInsights()
+    public async Task GetLatest_ReturnsHistoricalAccountInsightsAlongsideOwnerWideOnes()
     {
         var now = DateTime.UtcNow;
         _testDatabase!.Context.FinancialInsights.AddRange(
-            new FinancialInsight { UserId = 1, AccountId = 10, Title = "A", Message = "M", Tags = "t1", CreatedAt = now.AddDays(-1) },
-            new FinancialInsight { UserId = 1, AccountId = 20, Title = "B", Message = "M", Tags = "t1", CreatedAt = now },
-            new FinancialInsight { UserId = 1, AccountId = 20, Title = "C", Message = "M", Tags = "t1", CreatedAt = now.AddDays(-2) }
+            new FinancialInsight { UserId = 1, AccountId = 10, Title = "Legacy", Message = "M", Tags = "t1", CreatedAt = now.AddDays(-1) },
+            new FinancialInsight { UserId = 1, AccountId = null, Title = "Owner wide", Message = "M", Tags = "t1", CreatedAt = now },
+            new FinancialInsight { UserId = 2, AccountId = 10, Title = "Other user", Message = "M", Tags = "t1", CreatedAt = now }
         );
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Authorize("TestUser", 1, UserRole.User);
 
         var client = new FinancialInsightsHttpClient(Client);
-        var result = await client.GetLatestAsync(3, 20, TestContext.Current.CancellationToken);
+        var result = await client.GetLatestAsync(3, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, result.Count);
-        Assert.All(result, x => Assert.Equal(20, x.AccountId));
-        Assert.Equal("B", result[0].Title);
+        Assert.Equal(["Owner wide", "Legacy"], result.Select(x => x.Title));
+        Assert.All(result, x => Assert.Null(x.AccountId));
+    }
+
+    [Theory]
+    [InlineData("POST", "api/FinancialInsights/generate?accountId=7")]
+    [InlineData("GET", "api/FinancialInsights/get-latest?accountId=7")]
+    public async Task RetiredAccountScope_IsRejected_InsteadOfBecomingAnOwnerWideRequest(string method, string url)
+    {
+        _generator.Reset();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.SendAsync(new HttpRequestMessage(new HttpMethod(method), url), TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, _generator.Calls);
+    }
+
+    [Fact]
+    public async Task Generate_WithoutTheRetiredScope_StillRunsOwnerWide()
+    {
+        _generator.Reset();
+        Authorize("TestUser", 1, UserRole.User);
+
+        var response = await Client.PostAsync("api/FinancialInsights/generate?count=2", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, _generator.Calls);
     }
 
     public override void Dispose()

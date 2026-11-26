@@ -3,6 +3,8 @@ using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
 using FinanceManager.Domain.Alerts.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -102,7 +104,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         var evaluationQuery = matchingQuery is null
             ? aggregateQuery
             : aggregateQuery.Concat(matchingQuery);
-        var matchingTransactions = new Dictionary<Guid, List<CurrencyAccountEntry>>();
+        var matchingTransactions = new Dictionary<Guid, List<CashLogEntry>>();
         foreach (var row in await evaluationQuery.ToListAsync(cancellationToken))
         {
             if (row.MatchingEntryId is long)
@@ -133,12 +135,12 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
     private IQueryable<CurrencyAccountEntry> GetUserEntries(int userId, DateTime endDate) =>
         context.CurrencyEntries
             .AsNoTracking()
-            .Where(entry => entry.PostingDate <= endDate)
-            .Where(entry => entry.AccountId.HasValue && context.Accounts
-                .AsNoTracking()
-                .Where(account => account.UserId == userId)
-                .Select(account => account.AccountId)
-                .Contains(entry.AccountId.Value));
+            .Where(entry => entry.UserId == userId && entry.CurrencyId != null && entry.PostingDate <= endDate);
+
+    private static IQueryable<CurrencyAccountEntry> InCurrency(IQueryable<CurrencyAccountEntry> entries, FinancialAlert alert) =>
+        alert.CurrencyId is int currencyId
+            ? entries.Where(entry => entry.CurrencyId == currencyId)
+            : entries.Where(_ => false);
 
     private static IQueryable<CurrencyAccountEntry> BuildMatchingEntries(
         IQueryable<CurrencyAccountEntry> entries,
@@ -168,17 +170,15 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
             AlertId = alert.Id,
             TotalSpend = 0m,
             TransactionCount = 0,
-            LargestAccountId = null,
+            LargestCurrencyId = null,
             LargestEntryId = null,
             LargestPostingDate = null,
-            LargestValue = null,
             LargestValueChange = null,
             LargestDescription = null,
             LargestContractorDetails = null,
-            MatchingAccountId = entry.AccountId,
+            MatchingCurrencyId = entry.CurrencyId,
             MatchingEntryId = entry.EntryId,
             MatchingPostingDate = entry.PostingDate,
-            MatchingValue = entry.Value,
             MatchingValueChange = entry.ValueChange,
             MatchingDescription = entry.Description,
             MatchingContractorDetails = entry.ContractorDetails
@@ -189,9 +189,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
-        entries = entries.Where(entry => entry.ValueChange < 0);
-        if (alert.AccountId is int accountId)
-            entries = entries.Where(entry => entry.AccountId == accountId);
+        entries = InCurrency(entries, alert).Where(entry => entry.ValueChange < 0);
 
         if (alert.LabelId is int labelId)
         {
@@ -214,9 +212,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
-        entries = entries.Where(entry => entry.ValueChange < 0);
-        if (alert.AccountId is int accountId)
-            entries = entries.Where(entry => entry.AccountId == accountId);
+        entries = InCurrency(entries, alert).Where(entry => entry.ValueChange < 0);
 
         var merchantName = alert.MerchantName?.Trim().ToLowerInvariant() ?? string.Empty;
         if (merchantName.Length > 0)
@@ -233,8 +229,7 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         IQueryable<CurrencyAccountEntry> entries,
         FinancialAlert alert)
     {
-        if (alert.AccountId is int accountId)
-            entries = entries.Where(entry => entry.AccountId == accountId);
+        entries = InCurrency(entries, alert);
         if (alert.CreatedAt != default)
             entries = entries.Where(entry => entry.PostingDate >= alert.CreatedAt.Date);
 
@@ -265,17 +260,15 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 AlertId = alert.Id,
                 TotalSpend = group.Sum(entry => -entry.ValueChange),
                 TransactionCount = group.Count(),
-                LargestAccountId = null,
+                LargestCurrencyId = null,
                 LargestEntryId = null,
                 LargestPostingDate = null,
-                LargestValue = null,
                 LargestValueChange = null,
                 LargestDescription = null,
                 LargestContractorDetails = null,
-                MatchingAccountId = null,
+                MatchingCurrencyId = null,
                 MatchingEntryId = null,
                 MatchingPostingDate = null,
-                MatchingValue = null,
                 MatchingValueChange = null,
                 MatchingDescription = null,
                 MatchingContractorDetails = null
@@ -295,17 +288,15 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 AlertId = alert.Id,
                 TotalSpend = group.Sum(entry => -entry.ValueChange),
                 TransactionCount = group.Count(),
-                LargestAccountId = null,
+                LargestCurrencyId = null,
                 LargestEntryId = null,
                 LargestPostingDate = null,
-                LargestValue = null,
                 LargestValueChange = null,
                 LargestDescription = null,
                 LargestContractorDetails = null,
-                MatchingAccountId = null,
+                MatchingCurrencyId = null,
                 MatchingEntryId = null,
                 MatchingPostingDate = null,
-                MatchingValue = null,
                 MatchingValueChange = null,
                 MatchingDescription = null,
                 MatchingContractorDetails = null
@@ -327,17 +318,15 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
                 AlertId = alert.Id,
                 TotalSpend = 0m,
                 TransactionCount = entries.Count(),
-                LargestAccountId = entry.AccountId,
+                LargestCurrencyId = entry.CurrencyId,
                 LargestEntryId = entry.EntryId,
                 LargestPostingDate = entry.PostingDate,
-                LargestValue = entry.Value,
                 LargestValueChange = entry.ValueChange,
                 LargestDescription = entry.Description,
                 LargestContractorDetails = entry.ContractorDetails,
-                MatchingAccountId = null,
+                MatchingCurrencyId = null,
                 MatchingEntryId = null,
                 MatchingPostingDate = null,
-                MatchingValue = null,
                 MatchingValueChange = null,
                 MatchingDescription = null,
                 MatchingContractorDetails = null
@@ -350,56 +339,48 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
         public Guid AlertId { get; init; }
         public decimal TotalSpend { get; init; }
         public int TransactionCount { get; init; }
-        public int? LargestAccountId { get; init; }
+        public int? LargestCurrencyId { get; init; }
         public long? LargestEntryId { get; init; }
         public DateTime? LargestPostingDate { get; init; }
-        public decimal? LargestValue { get; init; }
         public decimal? LargestValueChange { get; init; }
         public string? LargestDescription { get; init; }
         public string? LargestContractorDetails { get; init; }
-        public int? MatchingAccountId { get; init; }
+        public int? MatchingCurrencyId { get; init; }
         public long? MatchingEntryId { get; init; }
         public DateTime? MatchingPostingDate { get; init; }
-        public decimal? MatchingValue { get; init; }
         public decimal? MatchingValueChange { get; init; }
         public string? MatchingDescription { get; init; }
         public string? MatchingContractorDetails { get; init; }
 
         public FinancialAlertEvaluationData ToEvaluationData()
         {
-            CurrencyAccountEntry? largestTransaction = null;
-            if (LargestAccountId is int accountId
+            CashLogEntry? largestTransaction = null;
+            if (LargestCurrencyId is int currencyId
                 && LargestEntryId is long entryId
                 && LargestPostingDate is DateTime postingDate
-                && LargestValue is decimal value
                 && LargestValueChange is decimal valueChange)
             {
-                largestTransaction = new CurrencyAccountEntry(accountId, entryId, postingDate, value, valueChange)
-                {
-                    Description = LargestDescription ?? string.Empty,
-                    ContractorDetails = LargestContractorDetails
-                };
+                largestTransaction = ToLogEntry(entryId, postingDate, valueChange, LargestDescription, currencyId, LargestContractorDetails);
             }
 
             return new FinancialAlertEvaluationData(TotalSpend, TransactionCount, largestTransaction);
         }
 
-        public CurrencyAccountEntry ToMatchingTransaction()
+        public CashLogEntry ToMatchingTransaction()
         {
-            if (MatchingAccountId is not int accountId
+            if (MatchingCurrencyId is not int currencyId
                 || MatchingEntryId is not long entryId
                 || MatchingPostingDate is not DateTime postingDate
-                || MatchingValue is not decimal value
                 || MatchingValueChange is not decimal valueChange)
             {
                 throw new InvalidOperationException("A matching transaction row is incomplete.");
             }
 
-            return new CurrencyAccountEntry(accountId, entryId, postingDate, value, valueChange)
-            {
-                Description = MatchingDescription ?? string.Empty,
-                ContractorDetails = MatchingContractorDetails
-            };
+            return ToLogEntry(entryId, postingDate, valueChange, MatchingDescription, currencyId, MatchingContractorDetails);
         }
+
+        // The currency code stays null so the whole evaluation remains one SQL command; the evaluators resolve it from the snapshot.
+        private static CashLogEntry ToLogEntry(long entryId, DateTime postingDate, decimal valueChange, string? description, int currencyId, string? contractorDetails) =>
+            new(null, entryId, postingDate, valueChange, description ?? string.Empty, currencyId, null, contractorDetails, Array.Empty<FinancialLabel>());
     }
 }

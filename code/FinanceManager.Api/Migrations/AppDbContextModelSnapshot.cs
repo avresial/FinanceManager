@@ -136,6 +136,9 @@ namespace FinanceManager.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("CurrencyId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("EvaluationPeriod")
                         .HasColumnType("integer");
 

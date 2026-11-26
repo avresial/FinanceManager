@@ -46,7 +46,7 @@ public partial class FinancialAlertsCard : IDisposable
 
             var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<FinancialAlertsSnapshot, FinancialAlertsSummaryModel>
             {
-                Key = $"financial-alerts:{user.UserId}",
+                Key = $"financial-alerts:v2:{user.UserId}",
                 Gate = _gate,
                 ClaimedVersion = version,
                 ToModel = snapshot => snapshot.UserId == user.UserId ? snapshot.Summary : null,

@@ -1,53 +1,18 @@
 using FinanceManager.Domain.Alerts.Models;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Application.Alerts.Models;
 
 public class AlertEvaluationSnapshot
 {
-    public IReadOnlyList<CurrencyAccount> Accounts { get; init; } = [];
-    public IReadOnlyList<CurrencyAccountEntry> RecentEntries { get; init; } = [];
+    /// <summary>Pooled cash balance per currency (partition id = currency id).</summary>
+    public IReadOnlyList<OwnerLedgerPosition> CashPositions { get; init; } = [];
+    public IReadOnlyDictionary<int, string> CurrencyCodes { get; init; } = new Dictionary<int, string>();
+    public IReadOnlyList<CashLogEntry> RecentEntries { get; init; } = [];
     public IReadOnlyList<RecurringTransactionResult> Subscriptions { get; init; } = [];
     public IReadOnlyDictionary<Guid, FinancialAlertEvaluationData> AllTimeEvaluationData { get; init; } = new Dictionary<Guid, FinancialAlertEvaluationData>();
     public DateTime EvaluationDate { get; init; } = DateTime.UtcNow;
     public bool IncludeAllMatchingTransactions { get; init; }
-
-    public AlertEvaluationSnapshot()
-    {
-    }
-
-    public AlertEvaluationSnapshot(
-        IReadOnlyList<CurrencyAccount> accounts,
-        IReadOnlyList<RecurringTransactionResult> subscriptions,
-        DateTime? evaluationDate = null)
-    {
-        Accounts = accounts;
-        Subscriptions = subscriptions;
-        EvaluationDate = evaluationDate ?? DateTime.UtcNow;
-    }
-
-    public AlertEvaluationSnapshot(
-        IReadOnlyList<CurrencyAccount> accounts,
-        IReadOnlyList<CurrencyAccountEntry> recentEntries,
-        IReadOnlyList<RecurringTransactionResult> subscriptions,
-        DateTime? evaluationDate = null)
-    {
-        Accounts = accounts;
-        RecentEntries = recentEntries;
-        Subscriptions = subscriptions;
-        EvaluationDate = evaluationDate ?? DateTime.UtcNow;
-    }
-
-    public IReadOnlyList<CurrencyAccountEntry> GetAllEntries()
-    {
-        var entriesByAccount = Accounts
-            .Where(a => a.Entries is not null)
-            .SelectMany(a => a.Entries);
-
-        return entriesByAccount
-            .Concat(RecentEntries)
-            .DistinctBy(e => (e.AccountId, e.EntryId))
-            .ToList();
-    }
 }

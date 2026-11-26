@@ -9,15 +9,15 @@ public class FinancialInsightNormalizerTests
     private readonly FinancialInsightNormalizer _normalizer = new();
 
     [Fact]
-    public void Normalize_ValidItems_MapsUserAccountAndContent()
+    public void Normalize_ValidItems_MapsUserAndContent()
     {
         List<InsightItem> items = [new("Title", "Message", ["Spending"])];
 
-        var result = _normalizer.Normalize(items, userId: 7, accountId: 3, count: 5);
+        var result = _normalizer.Normalize(items, userId: 7, count: 5);
 
         var insight = Assert.Single(result);
         Assert.Equal(7, insight.UserId);
-        Assert.Equal(3, insight.AccountId);
+        Assert.Null(insight.AccountId);
         Assert.Equal("Title", insight.Title);
         Assert.Equal("Message", insight.Message);
         Assert.Equal("spending", insight.Tags);
@@ -29,7 +29,7 @@ public class FinancialInsightNormalizerTests
     {
         List<InsightItem> items = [new("A", "M", null), new("B", "M", null), new("C", "M", null)];
 
-        var result = _normalizer.Normalize(items, userId: 1, accountId: null, count: 2);
+        var result = _normalizer.Normalize(items, userId: 1, count: 2);
 
         Assert.Equal(2, result.Count);
         Assert.Equal("A", result[0].Title);
@@ -45,7 +45,7 @@ public class FinancialInsightNormalizerTests
     {
         List<InsightItem> items = [new(title, message, null)];
 
-        var result = _normalizer.Normalize(items, userId: 1, accountId: null, count: 5);
+        var result = _normalizer.Normalize(items, userId: 1, count: 5);
 
         Assert.Empty(result);
     }
@@ -55,7 +55,7 @@ public class FinancialInsightNormalizerTests
     {
         List<InsightItem> items = [new(new string('t', 200), new string('m', 2000), null)];
 
-        var result = _normalizer.Normalize(items, userId: 1, accountId: null, count: 1);
+        var result = _normalizer.Normalize(items, userId: 1, count: 1);
 
         var insight = Assert.Single(result);
         Assert.Equal(128, insight.Title.Length);
@@ -67,7 +67,7 @@ public class FinancialInsightNormalizerTests
     {
         List<InsightItem> items = [new("T", "M", null), new("T", "M", ["  ", ""])];
 
-        var result = _normalizer.Normalize(items, userId: 1, accountId: null, count: 5);
+        var result = _normalizer.Normalize(items, userId: 1, count: 5);
 
         Assert.Equal(2, result.Count);
         Assert.All(result, i => Assert.Equal("summary", i.Tags));
@@ -78,7 +78,7 @@ public class FinancialInsightNormalizerTests
     {
         List<InsightItem> items = [new("T", "M", ["Spending", "spending", "SAVINGS", "budget", "extra"])];
 
-        var result = _normalizer.Normalize(items, userId: 1, accountId: null, count: 1);
+        var result = _normalizer.Normalize(items, userId: 1, count: 1);
 
         var insight = Assert.Single(result);
         Assert.Equal("spending,savings,budget", insight.Tags);

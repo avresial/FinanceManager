@@ -1,25 +1,27 @@
 using FinanceManager.Application.Alerts.Models;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Application.Alerts.Services.Conditions;
 
 /// <summary>
-/// Outgoing spend in the alert's period, shared by the category and merchant spending conditions.
+/// Outgoing spend in the alert's period and currency, shared by the category and merchant spending conditions.
 /// All-time alerts reuse pre-aggregated totals from the snapshot when they are available.
 /// </summary>
 internal sealed record AlertSpendingTotals(
+    int CurrencyId,
     decimal TotalSpend,
     int TransactionCount,
-    IReadOnlyList<CurrencyAccountEntry> MatchingEntries,
+    IReadOnlyList<CashLogEntry> MatchingEntries,
     string PeriodKey)
 {
     public static AlertSpendingTotals Compute(
         FinancialAlert alert,
         AlertEvaluationSnapshot snapshot,
-        Func<CurrencyAccountEntry, bool> matchesTarget)
+        Func<CashLogEntry, bool> matchesTarget)
     {
+        var currencyId = AlertCurrency.Require(alert);
         var (startDate, endDate) = AlertPeriod.GetRange(alert.EvaluationPeriod, snapshot.EvaluationDate);
         var periodKey = AlertPeriod.FormatKey(alert.EvaluationPeriod, startDate, endDate);
 
@@ -27,20 +29,22 @@ internal sealed record AlertSpendingTotals(
             && snapshot.AllTimeEvaluationData.TryGetValue(alert.Id, out var allTimeData))
         {
             return new AlertSpendingTotals(
+                currencyId,
                 allTimeData.TotalSpend,
                 allTimeData.TransactionCount,
                 allTimeData.MatchingTransactions ?? [],
                 periodKey);
         }
 
-        var qualifyingEntries = snapshot.GetAllEntries()
+        var qualifyingEntries = snapshot.RecentEntries
             .Where(e => e.PostingDate >= startDate && e.PostingDate <= endDate)
-            .Where(e => alert.AccountId is not int accId || e.AccountId == accId)
+            .Where(e => e.CurrencyId == currencyId)
             .Where(e => e.ValueChange < 0)
             .Where(matchesTarget)
             .ToList();
 
         return new AlertSpendingTotals(
+            currencyId,
             qualifyingEntries.Sum(e => Math.Abs(e.ValueChange)),
             qualifyingEntries.Count,
             qualifyingEntries,
