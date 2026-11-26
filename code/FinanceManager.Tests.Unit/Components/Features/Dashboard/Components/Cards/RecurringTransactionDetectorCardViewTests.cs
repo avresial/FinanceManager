@@ -1,7 +1,7 @@
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
 using FinanceManager.Components.Shared.Components.Loading;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -154,7 +154,7 @@ public sealed class RecurringTransactionDetectorCardViewTests
         var cut = context.Render<RecurringTransactionDetectorCardView>(parameters => parameters
             .Add(x => x.Currency, "PLN")
             .Add(x => x.SelectedItem, selected)
-            .Add(x => x.DetailEntries, [new CurrencyAccountEntry(1, 1, new DateTime(2026, 1, 1), 0, -200m)])
+            .Add(x => x.DetailEntries, [new CurrencyTransactionLogItemDto(null, 1, new DateTime(2026, 1, 1), -200m, "Rent", 1, "PLN", null, [])])
             .Add(x => x.OnBack, () => backInvoked = true));
 
         Assert.Contains(amount, cut.Markup);

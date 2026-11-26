@@ -157,7 +157,7 @@ public sealed class DashboardCardsSnapshotStore(ISnapshotRefreshCoordinator coor
     private static string BuildInsightsKey(int userId, int? accountId, int count) =>
         $"financial-insights:{userId}:{accountId?.ToString() ?? "all"}:{count}";
 
-    private static string BuildRecurringTransactionsKey(int userId) => $"recurring-transactions:{userId}";
+    private static string BuildRecurringTransactionsKey(int userId) => $"recurring-transactions:v2:{userId}";
 
     private static string BuildTransactionLogKey(int userId, int count) => $"transaction-log:v2:{userId}:{count}";
 }

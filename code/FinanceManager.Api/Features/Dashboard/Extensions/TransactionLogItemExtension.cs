@@ -6,6 +6,7 @@ using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 
 namespace FinanceManager.Api.Features.Dashboard.Extensions;
 
@@ -17,13 +18,17 @@ public static class TransactionLogItemExtension
 
     public static TransactionLogItemDto ToDto(this TransactionLogItem item) => item switch
     {
-        CurrencyTransactionLogItem { Entry: var e } => new CurrencyTransactionLogItemDto(
-            e.LegacyAccountId, e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.CurrencyId, e.Currency, e.ContractorDetails, [.. e.Labels.Select(label => label.ToLabelDto())]),
+        CurrencyTransactionLogItem { Entry: var e } => e.ToLogItemDto(),
         BondTransactionLogItem { Entry: var e } => new BondTransactionLogItemDto(
             e.LegacyAccountId, e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId, e.Currency, e.BondName, [.. e.Labels.Select(label => label.ToLabelDto())]),
         InvestmentTransactionLogItem investment => new InvestmentTransactionLogItemDto(investment.LegacyAccountId, investment.Transaction.ToDto()),
         _ => throw new NotSupportedException($"Transaction log item {item.GetType().Name} is not supported."),
     };
+
+    /// <summary>The log item for a cash history row.</summary>
+    public static CurrencyTransactionLogItemDto ToLogItemDto(this CashLogEntry entry) => new(
+        entry.LegacyAccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, entry.Currency, entry.ContractorDetails,
+        [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted cash entry (labels loaded) and its currency code.</summary>
     public static CurrencyTransactionLogItemDto ToLogItemDto(this CurrencyAccountEntry entry, string? currency) => new(

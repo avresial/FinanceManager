@@ -44,7 +44,9 @@
 .facts-column dd { margin: 0 0 .75rem; overflow-wrap: anywhere; font-size: .875rem; }
 .facts-arrow { align-self: center; color: var(--fm-primary-text); }
 .changed-value { font-weight: 700; }
-.delete-confirmation { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.delete-confirmation, ::deep .enable-confirmation .mud-alert-message { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+/* Confirmation buttons are the only way forward on a phone: keep them at the 44px touch target. */
+.delete-confirmation ::deep .mud-button-root, ::deep .enable-confirmation .mud-button-root { min-height: 44px; min-width: 44px; }
 .creation-workspace { border: 1px solid var(--mud-palette-divider); border-radius: 8px; padding: 1rem; }
 /* The editor's MudGrid columns follow viewport breakpoints, not the column width, and the page
    container caps the width, so beside the preview the editor squeezed the Match select to "C"

@@ -2,8 +2,8 @@ using FinanceManager.Api.Features.Mcp;
 using FinanceManager.Api.Features.Mcp.Tools;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
@@ -11,8 +11,11 @@ using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using OpenIddict.Abstractions;
@@ -49,93 +52,211 @@ public sealed class McpToolsTests
         Assert.Throws<InvalidOperationException>(() => UserContext().GetUserId());
         Assert.Throws<InvalidOperationException>(() =>
             UserContext(new Claim(OpenIddictConstants.Claims.Subject, "not-a-user-id")).GetUserId());
+        Assert.Throws<InvalidOperationException>(() =>
+            UserContext(new Claim(OpenIddictConstants.Claims.Subject, "0")).GetUserId());
     }
 
     [Fact]
-    public async Task FinancialAccounts_UseSubjectAndFilterForeignRepositoryRows()
+    public void UserContext_AcceptsNegativeGuestIds()
     {
-        var currencies = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
-        var bonds = new Mock<IAccountRepository<BondAccount>>();
-        var investments = new Mock<IAccountRepository<InvestmentAccount>>();
-        currencies.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
-            new CurrencyAccount(_userId, 1, "Cash", AccountLabel.Cash),
-            new CurrencyAccount(999, 2, "Foreign cash", AccountLabel.Cash)
-        ]);
-        bonds.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        investments.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        var tools = new FinancialAccountTools(UserContext(Subject()), currencies.Object, bonds.Object, investments.Object);
+        Assert.Equal(-5, UserContext(new Claim(OpenIddictConstants.Claims.Subject, "-5")).GetUserId());
+    }
 
-        var result = await tools.ListFinancialAccounts();
+    private readonly Mock<ITransactionLogService> _log = new();
+    private readonly Mock<ICashTransactionReader> _cash = new();
+    private readonly Mock<IBondTransactionReader> _bonds = new();
+    private readonly Mock<IInvestmentTransactionRepository> _trades = new();
 
-        var account = Assert.Single(result);
-        Assert.Equal(1, account.AccountId);
-        Assert.Equal("Cash", account.Name);
-        Assert.Equal("currency", account.Type);
-        currencies.Verify(repository => repository.GetAll(_userId), Times.Once);
-        bonds.Verify(repository => repository.GetAll(_userId), Times.Once);
-        investments.Verify(repository => repository.GetAll(_userId), Times.Once);
+    private TransactionTools Tools(int userId = _userId) =>
+        new(UserContext(new Claim(OpenIddictConstants.Claims.Subject, userId.ToString())), _log.Object, _cash.Object, _bonds.Object, _trades.Object);
+
+    private static readonly DateTime _noon = new(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
+
+    private static TransactionLogItem Cash(long id, DateTime? at = null, string description = "Lunch", string? contractor = "private raw counterparty", string currency = "PLN", params string[] labels) =>
+        new CurrencyTransactionLogItem(new CashLogEntry(null, id, at ?? _noon, -10m, description, 1, currency, contractor,
+            [.. labels.Select((name, index) => new FinancialLabel { Id = index + 1, Name = name })]));
+
+    private static TransactionLogItem Bond(long id, DateTime? at = null) =>
+        new BondTransactionLogItem(new BondLogEntry(null, id, at ?? _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
+
+    private static TransactionLogItem Trade(long id, DateTime? at = null) =>
+        new InvestmentTransactionLogItem(Owned(_userId, id, at ?? _noon));
+
+    private void SetupPages(params TransactionLogItemsPage[] pages)
+    {
+        var next = 0;
+        _log.Setup(service => service.GetItemsPage(It.IsAny<int>(), It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => pages[Math.Min(next++, pages.Length - 1)]);
+    }
+
+    private static TransactionLogItemsPage Page(TransactionLogCursor? next, params TransactionLogItem[] items) => new(items, next);
+
+    private static TransactionLogCursor Cursor(long id) => new(_noon, TransactionKind.Cash, id);
+
+    [Fact]
+    public async Task ListTransactions_MapsEveryKindWithoutAccounts_AndKeepsTheStreamOrder()
+    {
+        SetupPages(Page(null, Cash(3, description: "Lunch", labels: ["Food", "Daily"]), Bond(2), Trade(1)));
+
+        var result = await Tools().ListTransactions(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(["cash", "bond", "investment"], result.Transactions.Select(item => item.Kind));
+        Assert.Equal([3L, 2, 1], result.Transactions.Select(item => item.TransactionId));
+        Assert.Equal(["Daily", "Food"], result.Transactions[0].Labels);
+        Assert.Equal("PLN", result.Transactions[0].Currency);
+        Assert.Equal("Treasury 2030", result.Transactions[1].Description);
+        Assert.Equal("Buy SAFE", result.Transactions[2].Description);
+        Assert.Equal(2m, result.Transactions[2].Quantity);
+        Assert.False(result.HasMore);
+        var json = JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.DoesNotContain("account", json, StringComparison.OrdinalIgnoreCase);
+        _log.Verify(service => service.GetItemsPage(_userId, It.Is<TransactionLogQuery>(query => query.PageSize == 100 && query.Kinds == null && query.Currencies == null), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task Transactions_ReturnEmptyForForeignAccountWithoutReadingItsEntries()
+    public async Task ListTransactions_PassesKindCurrencyAndDatesToTheReaders_AndDefaultsToTheLast90UtcDays()
     {
-        var currencies = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
-        var bonds = new Mock<IAccountRepository<BondAccount>>();
-        var investments = new Mock<IAccountRepository<InvestmentAccount>>();
-        var currencyEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        var bondEntries = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
-        var investmentTransactions = new Mock<IInvestmentTransactionRepository>();
-        var bondDetails = new Mock<IBondDetailsRepository>();
-        currencies.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
-            new CurrencyAccount(_userId, 1, "Cash", AccountLabel.Cash)
-        ]);
-        bonds.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        investments.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        var tools = new TransactionTools(
-            UserContext(Subject()), currencies.Object, bonds.Object, investments.Object,
-            currencyEntries.Object, bondEntries.Object, investmentTransactions.Object, bondDetails.Object);
+        SetupPages(Page(null));
 
-        var result = await tools.ListTransactions(
-            accountId: 999,
-            cancellationToken: TestContext.Current.CancellationToken);
+        await Tools().ListTransactions(new DateOnly(2026, 1, 2), new DateOnly(2026, 2, 3), kind: " Bond ", currency: "usd", cancellationToken: TestContext.Current.CancellationToken);
+        await Tools().ListTransactions(cancellationToken: TestContext.Current.CancellationToken);
+
+        _log.Verify(service => service.GetItemsPage(_userId, It.Is<TransactionLogQuery>(query =>
+            query.Start == new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc) && query.End.Date == new DateTime(2026, 2, 3) &&
+            query.Kinds!.SequenceEqual(new[] { TransactionKind.Bond }) && query.Currencies!.SequenceEqual(new[] { "usd" })), It.IsAny<CancellationToken>()), Times.Once);
+        _log.Verify(service => service.GetItemsPage(_userId, It.Is<TransactionLogQuery>(query =>
+            (query.End.Date - query.Start.Date).TotalDays == 90 && query.End.Date == DateTime.UtcNow.Date), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ListTransactions_NeverSearchesOrMatchesThePrivateCounterpartyOrTradeNotes()
+    {
+        var trade = InvestmentTransaction(_userId, 10, 100, "SAFE", 2);
+        trade.Description = "private trade note";
+        SetupPages(Page(null, Cash(1, description: "Lunch", contractor: "secret-merchant"), new InvestmentTransactionLogItem(trade)));
+
+        var byCounterparty = await Tools().ListTransactions(query: "secret-merchant", cancellationToken: TestContext.Current.CancellationToken);
+        var byNote = await Tools().ListTransactions(query: "private trade note", cancellationToken: TestContext.Current.CancellationToken);
+        var visible = await Tools().ListTransactions(query: "lunch", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(byCounterparty.Transactions);
+        Assert.Empty(byNote.Transactions);
+        Assert.Equal(1L, Assert.Single(visible.Transactions).TransactionId);
+        // The search text is matched in the tool, on description and labels only; the readers' SQL search (which also covers the counterparty) never sees it.
+        _log.Verify(service => service.GetItemsPage(It.IsAny<int>(), It.Is<TransactionLogQuery>(query => query.Search != null), It.IsAny<CancellationToken>()), Times.Never);
+        var json = JsonSerializer.Serialize(visible, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.DoesNotContain("secret-merchant", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("private trade note", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListTransactions_FiltersByLabel_AndPagesWithHasMore()
+    {
+        SetupPages(Page(null, Cash(5, labels: ["Food"]), Cash(4, labels: ["Rent"]), Cash(3, labels: ["food"]), Cash(2, labels: ["Food"])));
+
+        var first = await Tools().ListTransactions(label: "FOOD", limit: 2, cancellationToken: TestContext.Current.CancellationToken);
+        var second = await Tools().ListTransactions(label: "FOOD", offset: 2, limit: 2, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal([5L, 3], first.Transactions.Select(item => item.TransactionId));
+        Assert.True(first.HasMore);
+        Assert.Equal([2L], second.Transactions.Select(item => item.TransactionId));
+        Assert.False(second.HasMore);
+    }
+
+    [Fact]
+    public async Task ListTransactions_ReadsSeveralStreamPagesUntilThePageIsFull_WithStableSameDayOrder()
+    {
+        var sameDay = new DateTime(2026, 7, 10, 0, 0, 0, DateTimeKind.Utc);
+        // Same posting time across kinds and ids: the order is entry id descending, then kind, exactly as the streams return it.
+        SetupPages(
+            Page(Cursor(9), Cash(9, sameDay), Cash(8, sameDay), Trade(8, sameDay)),
+            Page(null, Bond(8, sameDay), Cash(7, sameDay)));
+
+        var result = await Tools().ListTransactions(limit: 4, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal([("cash", 9L), ("cash", 8), ("investment", 8), ("bond", 8)], result.Transactions.Select(item => (item.Kind, item.TransactionId)));
+        Assert.True(result.HasMore);
+        _log.Verify(service => service.GetItemsPage(_userId, It.Is<TransactionLogQuery>(query => query.Cursor == Cursor(9)), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ListTransactions_HugeOffsetDoesNotOverflowAndReturnsAnEmptyPage()
+    {
+        SetupPages(Page(null, Cash(1)));
+
+        var result = await Tools().ListTransactions(offset: int.MaxValue, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Transactions);
-        currencyEntries.Verify(repository => repository.GetRange(
-            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
-        bondEntries.Verify(repository => repository.GetRange(
-            It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
-        investmentTransactions.Verify(repository => repository.GetByUser(
-            It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.False(result.HasMore);
+    }
+
+    [Theory]
+    [InlineData(-1, 50)]
+    [InlineData(0, 0)]
+    [InlineData(0, 101)]
+    public async Task ListTransactions_RejectsInvalidPaging(int offset, int limit)
+    {
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => Tools().ListTransactions(offset: offset, limit: limit, cancellationToken: TestContext.Current.CancellationToken));
+        _log.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task Transactions_DiscardForeignRowsReturnedByRepository()
+    public async Task ListTransactions_RejectsInvalidKindsAndRanges()
     {
-        var currencies = new Mock<ICurrencyAccountRepository<CurrencyAccount>>();
-        var bonds = new Mock<IAccountRepository<BondAccount>>();
-        var investments = new Mock<IAccountRepository<InvestmentAccount>>();
-        var currencyEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        var bondEntries = new Mock<IBondAccountEntryRepository<BondAccountEntry>>();
-        var investmentTransactions = new Mock<IInvestmentTransactionRepository>();
-        var bondDetails = new Mock<IBondDetailsRepository>();
-        currencies.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
-            new CurrencyAccount(_userId, 1, "Cash", AccountLabel.Cash)
-        ]);
-        bonds.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        investments.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([]);
-        currencyEntries.Setup(repository => repository.GetRange(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .ReturnsAsync([new CurrencyAccountEntry(999, 17, DateTime.UtcNow, 10, -10)]);
-        investmentTransactions.Setup(repository => repository.GetByUser(
-                _userId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
-        var tools = new TransactionTools(
-            UserContext(Subject()), currencies.Object, bonds.Object, investments.Object,
-            currencyEntries.Object, bondEntries.Object, investmentTransactions.Object, bondDetails.Object);
+        await Assert.ThrowsAsync<ArgumentException>(() => Tools().ListTransactions(kind: "currency", cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => Tools().ListTransactions(new DateOnly(2026, 2, 1), new DateOnly(2026, 1, 1), cancellationToken: TestContext.Current.CancellationToken));
+        _log.VerifyNoOtherCalls();
+    }
 
-        var result = await tools.ListTransactions(cancellationToken: TestContext.Current.CancellationToken);
+    [Fact]
+    public async Task ListTransactions_ForAGuestUser_ReadsTheGuestsOwnRows()
+    {
+        SetupPages(Page(null, Cash(1)));
 
-        Assert.Empty(result.Transactions);
+        await Tools(-9).ListTransactions(cancellationToken: TestContext.Current.CancellationToken);
+
+        _log.Verify(service => service.GetItemsPage(-9, It.IsAny<TransactionLogQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTransaction_ReadsOwnedRowsByKindAndId()
+    {
+        var cashRow = new CashLogEntry(null, 4, _noon, -10m, "Lunch", 1, "PLN", "private raw counterparty", []);
+        _cash.Setup(reader => reader.GetByIds(_userId, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 4 })), It.IsAny<CancellationToken>())).ReturnsAsync([cashRow]);
+        _bonds.Setup(reader => reader.GetById(_userId, 5, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BondLogEntry(null, 5, _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
+        _trades.Setup(repository => repository.Get(6, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Owned(_userId, 6, _noon));
+
+        var cash = await Tools().GetTransaction(" Cash ", 4, TestContext.Current.CancellationToken);
+        var bond = await Tools().GetTransaction("bond", 5, TestContext.Current.CancellationToken);
+        var trade = await Tools().GetTransaction("INVESTMENT", 6, TestContext.Current.CancellationToken);
+
+        Assert.Equal(("cash", 4L, "Lunch"), (cash!.Kind, cash.TransactionId, cash.Description));
+        Assert.Equal(("bond", 5L, "Treasury 2030"), (bond!.Kind, bond.TransactionId, bond.Description));
+        Assert.Equal(("investment", 6L, "Buy SAFE"), (trade!.Kind, trade.TransactionId, trade.Description));
+        Assert.DoesNotContain("private raw counterparty", JsonSerializer.Serialize(cash, new JsonSerializerOptions(JsonSerializerDefaults.Web)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetTransaction_ReturnsNullForMissingForeignOrNonPositiveIds()
+    {
+        _cash.Setup(reader => reader.GetByIds(_userId, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _bonds.Setup(reader => reader.GetById(_userId, It.IsAny<long>(), It.IsAny<CancellationToken>())).ReturnsAsync((BondLogEntry?)null);
+        _trades.Setup(repository => repository.Get(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Owned(999, 7, _noon));
+
+        Assert.Null(await Tools().GetTransaction("cash", 4, TestContext.Current.CancellationToken));
+        Assert.Null(await Tools().GetTransaction("bond", 5, TestContext.Current.CancellationToken));
+        Assert.Null(await Tools().GetTransaction("investment", 7, TestContext.Current.CancellationToken));
+        Assert.Null(await Tools().GetTransaction("cash", 0, TestContext.Current.CancellationToken));
+        Assert.Null(await Tools().GetTransaction("investment", 8, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetTransaction_RejectsAnInvalidKind()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => Tools().GetTransaction("currency", 1, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -224,24 +345,15 @@ public sealed class McpToolsTests
     public void ResponseMappings_OmitOwnershipAndInternalPersistenceFields()
     {
         var label = new FinancialLabel { Id = 4, Name = "Food" };
-        var currencyEntry = new CurrencyAccountEntry(1, 5, DateTime.UtcNow, 100, -20)
-        {
-            Description = "Lunch",
-            ContractorDetails = "private raw counterparty",
-            Labels = [label]
-        };
         var investment = InvestmentTransaction(_userId, 10, 100, "SAFE", 2);
         investment.Description = "private note";
         investment.CreatedAt = DateTimeOffset.UtcNow;
         investment.AssetListing.MarketDataSymbols = [new MarketDataSymbol { Symbol = "provider-secret" }];
         var payload = new object[]
         {
-            McpResponseMapper.Account(new CurrencyAccount(_userId, 1, "Cash", AccountLabel.Cash)),
-            McpResponseMapper.Transaction(currencyEntry, "Cash"),
-            McpResponseMapper.Transaction(new CurrencyAccountEntry(1, 6, DateTime.UtcNow, 100, -20)
-            {
-                ContractorDetails = "fallback-sensitive counterparty"
-            }, "Cash"),
+            McpResponseMapper.Transaction(new CashLogEntry(3, 5, DateTime.UtcNow, -20, "Lunch", 1, "PLN", "private raw counterparty", [label])),
+            McpResponseMapper.Transaction(new CashLogEntry(3, 6, DateTime.UtcNow, -20, "", 1, "PLN", "fallback-sensitive counterparty", [])),
+            McpResponseMapper.Transaction(investment),
             McpResponseMapper.InvestmentPosition(investment.AssetListing, 2, 40),
             McpResponseMapper.Currency(DefaultCurrency.USD),
             McpResponseMapper.Label(label)
@@ -252,6 +364,7 @@ public sealed class McpToolsTests
         Assert.Contains("Lunch", json, StringComparison.Ordinal);
         Assert.Contains("SAFE", json, StringComparison.Ordinal);
         Assert.DoesNotContain("userId", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("accountId", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("contractorDetails", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("private raw counterparty", json, StringComparison.Ordinal);
         Assert.DoesNotContain("fallback-sensitive counterparty", json, StringComparison.Ordinal);
@@ -279,6 +392,14 @@ public sealed class McpToolsTests
         ExchangeName = "New York Stock Exchange",
         TradingCurrency = "USD"
     };
+
+    private static InvestmentTransaction Owned(int userId, long id, DateTime at)
+    {
+        var transaction = InvestmentTransaction(userId, 10, 100, "SAFE", 2);
+        transaction.EntryId = id;
+        transaction.PostingDate = at;
+        return transaction;
+    }
 
     private static InvestmentTransaction InvestmentTransaction(int userId, int accountId, long listingId, string ticker, decimal quantity) => new()
     {

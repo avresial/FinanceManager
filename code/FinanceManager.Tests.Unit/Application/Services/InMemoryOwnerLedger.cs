@@ -79,9 +79,15 @@ internal sealed class InMemoryOwnerLedger : ICashTransactionReader, IBondTransac
         ArgumentOutOfRangeException.ThrowIfZero(userId);
         IReadOnlyList<RecurringCashCandidate> candidates = [.. _rows
             .Where(r => r.PostingDate >= startInclusive && r.PostingDate < endExclusive && r.ValueChange != 0)
-            .Select(r => new RecurringCashCandidate(r.EntryId, r.AccountId, r.PostingDate, r.ValueChange, r.Description, r.ContractorDetails))];
+            .Select(r => new RecurringCashCandidate(r.EntryId, r.PostingDate, r.ValueChange, r.Description, r.ContractorDetails))];
         return Task.FromResult(candidates);
     }
+
+    Task<IReadOnlyList<CashLogEntry>> ICashTransactionReader.GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    Task<BondLogEntry?> IBondTransactionReader.GetById(int userId, long entryId, CancellationToken ct) =>
+        throw new NotSupportedException();
 
     public Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default) => throw new NotSupportedException();
 

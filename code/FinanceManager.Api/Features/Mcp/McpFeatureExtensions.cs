@@ -19,7 +19,6 @@ public static class McpFeatureExtensions
                 "Call who_am_i to confirm the current identity before working with user-specific data.")
             .WithHttpTransport(transport => transport.Stateless = true)
             .WithTools<IdentityTools>()
-            .WithTools<FinancialAccountTools>()
             .WithTools<TransactionTools>()
             .WithTools<InvestmentTools>()
             .WithTools<ReferenceDataTools>();

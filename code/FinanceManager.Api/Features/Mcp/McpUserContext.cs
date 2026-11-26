@@ -12,7 +12,8 @@ public sealed class McpUserContext(IHttpContextAccessor httpContextAccessor)
     {
         var subject = Principal.FindFirstValue(OpenIddictConstants.Claims.Subject)
             ?? Principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(subject, out var userId)
+        // Guest users have negative ids, so only zero or a malformed subject is rejected.
+        return int.TryParse(subject, out var userId) && userId != 0
             ? userId
             : throw new InvalidOperationException("The authenticated MCP identity has no valid user id.");
     }

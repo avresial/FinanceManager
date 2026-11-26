@@ -20,7 +20,9 @@ public interface IAccountEntryRepository<T>
     /// </summary>
     Task<(List<T> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0);
     Task<T?> Get(int accountId, long entryId);
-    Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
+
+    /// <summary>The owner's entries with exactly these ids (linked or not), with their labels. Ids that are missing or belong to someone else are skipped; a zero owner id returns nothing.</summary>
+    Task<IReadOnlyList<T>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
 
 
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
@@ -80,8 +82,9 @@ public interface IAccountEntryRepository<T>
     Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
     Task<bool> Add(IEnumerable<T> entries, bool recalculate, CancellationToken cancellationToken);
-    Task<bool> AddLabel(long entryId, int labelId);
-    Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
+
+    /// <summary>Attaches labels to the owner's entries (linked or not) and returns how many were newly attached. Assignments for missing or foreign entries are ignored.</summary>
+    Task<int> AddLabels(int userId, IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
     Task<bool> Update(T entry);
 
     // ----- Owner-scoped access: the entry's own UserId is the only ownership check -----

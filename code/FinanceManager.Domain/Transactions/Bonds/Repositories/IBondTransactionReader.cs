@@ -7,6 +7,9 @@ public interface IBondTransactionReader
 {
     Task<IReadOnlyList<BondLogEntry>> GetHistory(int userId, OwnerHistoryQuery query, CancellationToken ct = default);
 
+    /// <summary>One entry of the owner (linked to an account or not) with its bond name, currency and labels; null when it is missing or belongs to someone else.</summary>
+    Task<BondLogEntry?> GetById(int userId, long entryId, CancellationToken ct = default);
+
     /// <summary>Distinct short names of the currencies of the bonds the user has entries in.</summary>
     Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default);
 

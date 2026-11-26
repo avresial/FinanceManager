@@ -9,24 +9,35 @@ namespace FinanceManager.Application.TransactionRules;
 
 internal static class TransactionRuleRuntimeBuilder
 {
+    private const string _retiredAccountConditionType = "account";
+
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public static TransactionRule FromDefinition(TransactionRuleDefinition definition)
+    /// <summary>
+    /// Builds the runtime rule of a persisted definition. A residual retired <c>account</c> condition (the data migration removes the
+    /// app-written ones, but exotic historical JSON can survive) makes the rule never match: it is built disabled, so it can neither
+    /// throw nor apply more broadly than the user once configured. <paramref name="hasRetiredCondition"/> reports that case.
+    /// </summary>
+    public static TransactionRule FromDefinition(TransactionRuleDefinition definition, out bool hasRetiredCondition)
     {
         var conditions = JsonSerializer.Deserialize<List<TransactionRuleConditionDto>>(definition.ConditionsJson, _jsonOptions) ?? [];
         var actions = JsonSerializer.Deserialize<List<TransactionRuleActionDto>>(definition.ActionsJson, _jsonOptions) ?? [];
+        hasRetiredCondition = conditions.Any(IsRetiredAccountCondition);
         return new TransactionRule(
             definition.Id,
             definition.Name,
             definition.Order,
-            BuildConditions(conditions),
+            hasRetiredCondition ? [] : BuildConditions(conditions),
             BuildActions(actions),
             definition.StopProcessing,
-            definition.IsEnabled);
+            definition.IsEnabled && !hasRetiredCondition);
     }
+
+    private static bool IsRetiredAccountCondition(TransactionRuleConditionDto? dto) =>
+        dto is not null && string.Equals(dto.Type?.Trim(), _retiredAccountConditionType, StringComparison.OrdinalIgnoreCase);
 
     public static void ValidateConditions(IEnumerable<TransactionRuleConditionDto> source)
     {
@@ -70,18 +81,11 @@ internal static class TransactionRuleRuntimeBuilder
                 dto.Pattern ?? throw new ArgumentException("Description pattern is required."),
                 dto.MatchOperator,
                 dto.IgnoreCase)],
-            "account" => BuildAccountCondition(dto),
+            _retiredAccountConditionType => throw new ArgumentException("The Account condition has been retired. Remove it from the rule."),
             "direction" => BuildDirectionCondition(dto),
             "amount" => BuildAmountConditions(dto),
             _ => throw new ArgumentException($"Unknown transaction rule condition type '{dto.Type}'.")
         };
-    }
-
-    private static IReadOnlyCollection<ITransactionRuleCondition> BuildAccountCondition(TransactionRuleConditionDto dto)
-    {
-        if (dto.AccountIds is null || dto.AccountIds.Count == 0)
-            throw new ArgumentException("At least one account id is required.");
-        return [new AccountCondition(dto.AccountIds)];
     }
 
     private static IReadOnlyCollection<ITransactionRuleCondition> BuildDirectionCondition(TransactionRuleConditionDto dto)

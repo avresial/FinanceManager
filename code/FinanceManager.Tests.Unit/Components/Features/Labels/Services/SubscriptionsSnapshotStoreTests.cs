@@ -12,7 +12,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Labels.Services;
 public class SubscriptionsSnapshotStoreTests
 {
     private const string _summaryKey = "subscriptions-summary:1:PLN";
-    private const string _listKey = "subscriptions-list:1:PLN";
+    private const string _listKey = "subscriptions-list:v2:1:PLN";
 
     private static readonly DateTime _nextCharge = new(2026, 8, 1);
 
@@ -303,7 +303,7 @@ public class SubscriptionsSnapshotStoreTests
             () => Task.FromResult<List<RecurringTransactionResult>?>([Subscription("Netflix", 30m)]));
 
         _snapshots.Verify(x => x.SetAsync("subscriptions-summary:7:USD", It.IsAny<SubscriptionsSummarySnapshot>()), Times.Once);
-        _snapshots.Verify(x => x.SetAsync("subscriptions-list:7:USD", It.IsAny<SubscriptionsListSnapshot>()), Times.Once);
+        _snapshots.Verify(x => x.SetAsync("subscriptions-list:v2:7:USD", It.IsAny<SubscriptionsListSnapshot>()), Times.Once);
     }
 
     // ---- helpers ----

@@ -56,6 +56,19 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
         return [.. page.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
     }
 
+    public async Task<BondLogEntry?> GetById(int userId, long entryId, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        // A bond definition that is missing keeps its entry visible, just without a currency or name.
+        return await (from e in context.BondEntries.AsNoTracking().Where(e => e.UserId == userId && e.EntryId == entryId)
+                      join b in context.Bonds on e.BondDetailsId equals b.Id into bonds
+                      from b in bonds.DefaultIfEmpty()
+                      select new BondLogEntry(e.AccountId, e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId,
+                          b != null ? b.Currency.ShortName : null, b != null ? b.Name : null,
+                          e.Labels.Select(l => new FinancialLabel { Id = l.Id, Name = l.Name, Classifications = l.Classifications.ToList() }).ToList()))
+            .AsSplitQuery().FirstOrDefaultAsync(ct);
+    }
+
     public async Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(userId);

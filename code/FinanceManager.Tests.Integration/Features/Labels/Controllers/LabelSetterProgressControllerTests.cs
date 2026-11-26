@@ -16,7 +16,7 @@ public class LabelSetterProgressControllerTests(OptionsProvider optionsProvider)
     {
         var trackerMock = new Mock<ILabelSetterProgressTracker>();
         trackerMock.Setup(x => x.GetSnapshot())
-            .Returns(new LabelSetterProgressSnapshot(new LabelSetterJobProgress(10, 20, 30, 12, DateTime.UtcNow), 2));
+            .Returns(new LabelSetterProgressSnapshot(new LabelSetterJobProgress(20, 30, 12, DateTime.UtcNow), 2));
         services.AddSingleton(trackerMock.Object);
     }
 

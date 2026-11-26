@@ -129,7 +129,7 @@
                         </MudTd>
                         <MudTd DataLabel="Amount" Style="text-align:right">
                             <MudText Color="@(SelectedItem.IsIncome ? Color.Success : Color.Error)">
-                                @FormatFlow(SelectedItem.IsIncome, context.ValueChange)
+                                @FormatFlow(SelectedItem.IsIncome, context.ValueChange, context.Currency)
                             </MudText>
                         </MudTd>
                     </RowTemplate>

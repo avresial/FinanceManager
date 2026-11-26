@@ -191,7 +191,7 @@ public class CachedAccountEntryRepository<T>(
     public Task<T?> GetByOwner(int userId, long entryId, CancellationToken cancellationToken = default) => inner.GetByOwner(userId, entryId, cancellationToken);
     public IAsyncEnumerable<T> GetByOwner(int userId, int partitionId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default) =>
         inner.GetByOwner(userId, partitionId, startDate, endDate, cancellationToken);
-    public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
+    public Task<IReadOnlyList<T>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(userId, entryIds, cancellationToken);
 
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
     public Task<T?> GetNextYounger(int accountId, long entryId) => inner.GetNextYounger(accountId, entryId);
@@ -325,20 +325,13 @@ public class CachedAccountEntryRepository<T>(
         }
     }
 
-    public async Task<bool> AddLabel(long entryId, int labelId)
-    {
-        var result = await inner.AddLabel(entryId, labelId);
-        await InvalidateEntries([entryId]);
-        return result;
-    }
-
-    public async Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
+    public async Task<int> AddLabels(int userId, IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
     {
         var assignments = labelAssignments as IList<(long entryId, int labelId)> ?? labelAssignments.ToList();
-        var result = await inner.AddLabels(assignments, cancellationToken);
-        // Decouple the post-write cache bust from the caller's token: once the write has committed the
-        // cache must be invalidated even if the request is being cancelled, or stale entries would linger.
-        await InvalidateEntries(assignments.Select(a => a.entryId), CancellationToken.None);
+        var result = await inner.AddLabels(userId, assignments, cancellationToken);
+        // The owner's cache tags cover linked and unlinked entries alike, and the invalidation is decoupled from the caller's token:
+        // once the write has committed the cache must be invalidated even if the request is being cancelled.
+        if (result > 0) await InvalidateOwner(userId);
         return result;
     }
 
@@ -452,14 +445,5 @@ public class CachedAccountEntryRepository<T>(
             if (await userResolver.GetUserId(accountId, cancellationToken) is int userId && invalidatedUsers.Add(userId))
                 await cacheInvalidator.InvalidateUser(userId, cancellationToken);
         }
-    }
-
-    private async Task InvalidateEntries(IEnumerable<long> entryIds, CancellationToken cancellationToken = default)
-    {
-        // Label writes only carry entry ids; resolve the owning accounts so the per-user tag can be built.
-        var ids = entryIds.Distinct().ToList();
-        if (ids.Count == 0) return;
-
-        await InvalidateEntryOwners(await inner.GetByIds(ids, cancellationToken), cancellationToken);
     }
 }

@@ -11,13 +11,12 @@ public class TransactionRuleEngineTests
     private static TransactionFacts Facts(
         string contractor = "ACME Corp. - March invoice",
         string description = "Invoice #123",
-        int accountId = 10,
         decimal amount = 100m,
         TransactionDirection direction = TransactionDirection.Expense,
         IReadOnlyList<string>? labels = null)
     {
         IReadOnlyList<string> labelList = labels ?? [];
-        return new TransactionFacts(contractor, description, accountId, amount, direction, labelList);
+        return new TransactionFacts(contractor, description, amount, direction, labelList);
     }
 
     private static TransactionRule Rule(int order, params object[] conditionsAndActions)
@@ -63,19 +62,6 @@ public class TransactionRuleEngineTests
         Assert.True(result.HasChanges);
         IReadOnlyList<string> expected = ["Bills"];
         Assert.Equal(expected, result.FinalFacts.Labels);
-    }
-
-    [Theory]
-    [InlineData(11, true)]
-    [InlineData(5, true)]
-    [InlineData(12, false)]
-    public void Run_AccountCondition_MatchesOnlyConfiguredAccounts(int accountId, bool expectedMatch)
-    {
-        var rule = Rule(1, new AccountCondition([5, 11]), new NormalizeContractorAction("Changed"));
-
-        var result = TransactionRuleEngine.Run([rule], Facts(accountId: accountId));
-
-        Assert.Equal(expectedMatch, result.RuleOutcomes[0].Status is TransactionRuleOutcomeStatus.Applied or TransactionRuleOutcomeStatus.StoppedProcessing);
     }
 
     [Theory]

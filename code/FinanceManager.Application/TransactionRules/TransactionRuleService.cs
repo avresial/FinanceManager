@@ -1,11 +1,9 @@
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
-using FinanceManager.Domain.Shared;
 using FinanceManager.Domain.TransactionRules;
 using FinanceManager.Domain.TransactionRules.Commands;
 using FinanceManager.Domain.TransactionRules.Dtos;
@@ -13,6 +11,10 @@ using FinanceManager.Domain.TransactionRules.Entities;
 using FinanceManager.Domain.TransactionRules.Models;
 using FinanceManager.Domain.TransactionRules.Repositories;
 using FinanceManager.Domain.TransactionRules.Services;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace FinanceManager.Application.TransactionRules;
 
@@ -20,10 +22,17 @@ public sealed class TransactionRuleService(
     ITransactionRuleRepository repository,
     ITransactionRuleEngineService engineService,
     IFinancialLabelsRepository labelsRepository,
-    ICurrencyAccountRepository<CurrencyAccount> accountRepository,
+    ICashTransactionReader cashTransactionReader,
     IAccountEntryRepository<CurrencyAccountEntry> entryRepository,
-    IFinancialAlertService financialAlertService) : ITransactionRuleService
+    IFinancialAlertService financialAlertService,
+    ILogger<TransactionRuleService> logger) : ITransactionRuleService
 {
+    private const int _historyPageSize = 200;
+    private const int _maxTestResults = 5;
+
+    // A rule that still carries a retired condition is reported once per process, not on every transaction write.
+    private static readonly ConcurrentDictionary<Guid, byte> _reportedRetiredRules = new();
+
     public async Task<IReadOnlyList<TransactionRuleDto>> GetRulesAsync(int userId, CancellationToken cancellationToken = default)
     {
         var rules = await repository.GetByUserId(userId, cancellationToken);
@@ -76,55 +85,40 @@ public sealed class TransactionRuleService(
         if (!rule.IsEnabled)
             return [];
 
-        var accounts = await accountRepository.GetAll(userId);
-        var constrainedAccountIds = command.Conditions
-            .Where(condition => condition.Type.Equals("Account", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(condition => condition.AccountIds)
-            .ToHashSet();
-        if (constrainedAccountIds.Count > 0)
-            accounts = accounts.Where(account => constrainedAccountIds.Contains(account.AccountId)).ToList();
-        var availableLabels = await LoadLabelsAsync(cancellationToken);
-        var application = new TransactionRuleApplication([rule], availableLabels);
-        var results = new List<TransactionRuleTestResultDto>(5);
+        if (userId == 0)
+            return [];
 
-        foreach (var account in accounts)
+        var application = new TransactionRuleApplication([rule], await LoadLabelsAsync(cancellationToken));
+        var results = new List<TransactionRuleTestResultDto>(_maxTestResults);
+
+        // Newest first, one bounded page at a time, until enough matches are found or the history ends.
+        OwnerHistoryBoundary? boundary = null;
+        while (true)
         {
-            var months = (await entryRepository.GetPostingDates(account.AccountId))
-                .Select(date => CalendarMonth.Of(date).Start(date.Kind))
-                .Distinct()
-                .OrderDescending();
-
-            foreach (var monthStart in months)
+            cancellationToken.ThrowIfCancellationRequested();
+            var page = await cashTransactionReader.GetHistory(userId,
+                new OwnerHistoryQuery(null, null, _historyPageSize, boundary, IncludeDetails: true), cancellationToken);
+            foreach (var entry in page)
             {
-                var monthEnd = CalendarMonth.Of(monthStart).EndInclusive(monthStart.Kind);
-                await foreach (var entry in entryRepository.Get(account.AccountId, monthStart, monthEnd, cancellationToken))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var before = TransactionRuleApplication.ToFacts(entry);
-                    if (!rule.Matches(before))
-                        continue;
+                var before = TransactionRuleApplication.ToFacts(entry);
+                if (!rule.Matches(before))
+                    continue;
 
-                    var sandboxEntry = entry.GetCopy();
-                    sandboxEntry.Labels = entry.Labels.ToList();
-                    _ = application.ApplyTo(sandboxEntry);
-                    var after = TransactionRuleApplication.ToFacts(sandboxEntry);
-                    results.Add(new(
-                        account.AccountId,
-                        account.Name,
-                        entry.EntryId,
-                        entry.PostingDate,
-                        entry.ValueChange,
-                        before,
-                        after,
-                        before != after));
+                var sandboxEntry = TransactionRuleApplication.ToSandboxEntry(entry);
+                _ = application.ApplyTo(sandboxEntry);
+                var after = TransactionRuleApplication.ToFacts(sandboxEntry);
+                results.Add(new(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Currency, before, after, before != after));
 
-                    if (results.Count == 5)
-                        return results;
-                }
+                if (results.Count == _maxTestResults)
+                    return results;
             }
-        }
 
-        return results;
+            if (page.Count < _historyPageSize)
+                return results;
+
+            var last = page[^1];
+            boundary = new OwnerHistoryBoundary(last.PostingDate, last.EntryId, IncludeEqualId: false);
+        }
     }
 
     public async Task<bool> SetEnabledAsync(int userId, Guid id, bool enabled, CancellationToken cancellationToken = default)
@@ -161,9 +155,9 @@ public sealed class TransactionRuleService(
     {
         ArgumentNullException.ThrowIfNull(facts);
         var rules = await repository.GetByUserId(userId, cancellationToken);
-        var runtimeRules = rules.Select(TransactionRuleRuntimeBuilder.FromDefinition).ToList();
+        var runtimeRules = rules.Select(BuildRuntimeRule).ToList();
         var transactionFacts = new TransactionFacts(facts.Contractor ?? string.Empty, facts.Description ?? string.Empty,
-            facts.AccountId, facts.Amount, facts.Direction, facts.Labels ?? []);
+            facts.Amount, facts.Direction, facts.Labels ?? []);
         return engineService.RunRules(runtimeRules, transactionFacts);
     }
 
@@ -177,7 +171,7 @@ public sealed class TransactionRuleService(
     public async Task<TransactionRuleApplication> LoadApplicationAsync(int userId, CancellationToken cancellationToken = default)
     {
         var definitions = await repository.GetByUserId(userId, cancellationToken);
-        var runtimeRules = definitions.Select(TransactionRuleRuntimeBuilder.FromDefinition).ToList();
+        var runtimeRules = definitions.Select(BuildRuntimeRule).ToList();
         var labels = await LoadLabelsAsync(cancellationToken);
         return new(runtimeRules, labels);
     }
@@ -187,39 +181,45 @@ public sealed class TransactionRuleService(
         ArgumentNullException.ThrowIfNull(command);
         if (!command.Confirmed)
             throw new ArgumentException("Retroactive application requires explicit confirmation.", nameof(command));
-        if (command.EntryId is not null && command.AccountId is null)
-            throw new ArgumentException("AccountId is required when EntryId is supplied.", nameof(command));
-
-        var accounts = await accountRepository.GetAll(userId);
-        if (command.AccountId is int requestedAccountId)
-            accounts = accounts.Where(account => account.AccountId == requestedAccountId).ToList();
+        if (userId == 0)
+            throw new ArgumentOutOfRangeException(nameof(userId), "A user is required.");
+        if (command.EntryId is <= 0)
+            throw new ArgumentException("EntryId must be positive.", nameof(command));
 
         var application = await LoadApplicationAsync(userId, cancellationToken);
         var examined = 0;
         var updated = 0;
 
-        foreach (var account in accounts)
+        if (command.EntryId is long requestedEntryId)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (command.EntryId is long requestedEntryId)
+            if (await entryRepository.GetByOwner(userId, requestedEntryId, cancellationToken) is CurrencyAccountEntry entry)
             {
-                var entry = await entryRepository.Get(account.AccountId, requestedEntryId);
-                if (entry is not null)
+                examined++;
+                if (application.ApplyTo(entry) && await entryRepository.UpdateByOwner(userId, entry, cancellationToken))
+                    updated++;
+            }
+        }
+        else
+        {
+            // Every owned cash entry, linked to an account or not, newest first in bounded keyset pages.
+            OwnerHistoryBoundary? boundary = null;
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var page = await cashTransactionReader.GetHistory(userId,
+                    new OwnerHistoryQuery(null, null, _historyPageSize, boundary, IncludeDetails: false), cancellationToken);
+                foreach (var entry in await entryRepository.GetByIds(userId, [.. page.Select(row => row.EntryId)], cancellationToken))
                 {
                     examined++;
-                    if (application.ApplyTo(entry) && await entryRepository.Update(entry))
+                    if (application.ApplyTo(entry) && await entryRepository.UpdateByOwner(userId, entry, cancellationToken))
                         updated++;
                 }
 
-                continue;
-            }
+                if (page.Count < _historyPageSize)
+                    break;
 
-            await foreach (var entry in entryRepository.Get(account.AccountId, DateTime.UnixEpoch, DateTime.MaxValue, cancellationToken))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                examined++;
-                if (application.ApplyTo(entry) && await entryRepository.Update(entry))
-                    updated++;
+                var last = page[^1];
+                boundary = new OwnerHistoryBoundary(last.PostingDate, last.EntryId, IncludeEqualId: false);
             }
         }
 
@@ -227,6 +227,14 @@ public sealed class TransactionRuleService(
             await financialAlertService.EvaluateAlertsAsync(userId, cancellationToken);
 
         return new(examined, updated);
+    }
+
+    private TransactionRule BuildRuntimeRule(TransactionRuleDefinition definition)
+    {
+        var rule = TransactionRuleRuntimeBuilder.FromDefinition(definition, out var hasRetiredCondition);
+        if (hasRetiredCondition && _reportedRetiredRules.TryAdd(definition.Id, 0))
+            logger.LogWarning("Transaction rule {RuleId} still has a retired Account condition and is skipped. Edit the rule to re-enable it.", definition.Id);
+        return rule;
     }
 
     private async Task<List<FinancialLabel>> LoadLabelsAsync(CancellationToken cancellationToken)

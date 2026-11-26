@@ -24,7 +24,6 @@ public class SupportingReadBenchmarks : ApiBenchmark
         await Currency_GetAll();
         await FinancialLabel_GetCount();
         await FinancialLabel_GetPage();
-        await FinancialLabel_GetByAccount();
         await TransactionLog_Get();
     }
 
@@ -40,10 +39,6 @@ public class SupportingReadBenchmarks : ApiBenchmark
     [Benchmark(Description = "GET api/FinancialLabel/get-by-index-and-count")]
     public Task<long> FinancialLabel_GetPage() =>
         Get($"api/FinancialLabel/get-by-index-and-count?index=0&count={_labelPageSize}");
-
-    [Benchmark(Description = "GET api/FinancialLabel/get-by-account-id")]
-    public Task<long> FinancialLabel_GetByAccount() =>
-        Get($"api/FinancialLabel/get-by-account-id?accountId={Scenario.PrimaryCurrencyAccountId}");
 
     [Benchmark(Description = "GET api/TransactionLog/Get/{userId}")]
     public Task<long> TransactionLog_Get() =>

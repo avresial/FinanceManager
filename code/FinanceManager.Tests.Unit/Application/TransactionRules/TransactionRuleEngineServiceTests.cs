@@ -14,13 +14,12 @@ public class TransactionRuleEngineServiceTests
     private static TransactionFacts Facts(
         string contractor = "ACME Corp. - March invoice",
         string description = "Invoice #123",
-        int accountId = 10,
         decimal amount = 100m,
         TransactionDirection direction = TransactionDirection.Expense,
         IReadOnlyList<string>? labels = null)
     {
         IReadOnlyList<string> labelList = labels ?? [];
-        return new TransactionFacts(contractor, description, accountId, amount, direction, labelList);
+        return new TransactionFacts(contractor, description, amount, direction, labelList);
     }
 
     [Fact]

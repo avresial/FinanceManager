@@ -11,7 +11,6 @@ internal sealed class ConditionEditorModel
     public string? Pattern { get; set; }
     public TextMatchOperator MatchOperator { get; set; } = TextMatchOperator.Contains;
     public bool IgnoreCase { get; set; } = true;
-    public IReadOnlyCollection<int> AccountIds { get; set; } = [];
     public TransactionDirection Direction { get; set; } = TransactionDirection.Expense;
     public decimal? Threshold { get; set; }
     public AmountComparison Comparison { get; set; } = AmountComparison.GreaterThan;
@@ -24,7 +23,6 @@ internal sealed class ConditionEditorModel
         Pattern = source.Pattern,
         MatchOperator = source.MatchOperator,
         IgnoreCase = source.IgnoreCase,
-        AccountIds = source.AccountIds,
         Direction = source.Direction,
         Threshold = source.Threshold,
         Comparison = source.Comparison,
@@ -40,7 +38,6 @@ internal sealed class ConditionEditorModel
             Pattern = Pattern,
             MatchOperator = MatchOperator,
             IgnoreCase = IgnoreCase,
-            AccountIds = Type.Equals("Account", StringComparison.OrdinalIgnoreCase) ? AccountIds.Distinct().ToList() : [],
             Direction = Direction,
             Threshold = Threshold,
             Comparison = Comparison,

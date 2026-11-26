@@ -3,11 +3,10 @@ using FinanceManager.Domain.TransactionRules.Models;
 namespace FinanceManager.Domain.TransactionRules.Dtos;
 
 public sealed record TransactionRuleTestResultDto(
-    int AccountId,
-    string AccountName,
     long TransactionId,
     DateTime Date,
     decimal Amount,
+    string? CurrencyCode,
     TransactionFacts Before,
     TransactionFacts After,
     bool HasChanges);

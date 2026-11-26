@@ -1,6 +1,5 @@
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -20,10 +19,11 @@ internal sealed class LabelSetterAiService(
     private const string _modelId = "gpt-5-mini";
 
     public async Task<Dictionary<long, string>> AssignLabels(
+        int userId,
         IReadOnlyCollection<long> entryIds,
         CancellationToken cancellationToken = default)
     {
-        if (entryIds.Count == 0)
+        if (userId == 0 || entryIds.Count == 0)
             return [];
 
         var allLabels = await financialLabelsRepository.GetLabels(cancellationToken).ToListAsync(cancellationToken);
@@ -38,7 +38,7 @@ internal sealed class LabelSetterAiService(
 
         logger.LogTrace("Retrieving {Count} entries for label assignment.", entryIds.Count);
 
-        var entries = await currencyEntryRepository.GetByIds(entryIds, cancellationToken);
+        var entries = await currencyEntryRepository.GetByIds(userId, entryIds, cancellationToken);
         if (entries.Count == 0)
         {
             logger.LogTrace("No entries found for {Count} entry IDs.", entryIds.Count);
@@ -75,7 +75,7 @@ internal sealed class LabelSetterAiService(
             var parsed = responseParser.Parse(content);
             logger.LogDebug("Parsed {Count} assignments from AI response.", parsed.Count);
 
-            var result = assignmentValidator.Validate(parsed, entryIds, labelNameSet);
+            var result = assignmentValidator.Validate(parsed, [.. entries.Select(e => e.EntryId)], labelNameSet);
 
             logger.LogDebug("Valid assignments after filtering: {Count} out of {ParsedCount}.", result.Count, parsed.Count);
 

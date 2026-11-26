@@ -26,13 +26,6 @@ internal class FinancialLabelsRepository(AppDbContext context) : IFinancialLabel
     public IAsyncEnumerable<FinancialLabel> GetLabels(CancellationToken cancellationToken = default) =>
         context.FinancialLabels.AsNoTracking().Include(x => x.Classifications).AsAsyncEnumerable();
 
-    public IAsyncEnumerable<FinancialLabel> GetLabelsByAccountId(int accountId, CancellationToken cancellationToken = default) =>
-        context.CurrencyEntries.AsNoTracking().Where(x => x.AccountId == accountId)
-            .SelectMany(x => x.Labels)
-            .Include(x => x.Classifications)
-            .Distinct()
-            .AsAsyncEnumerable();
-
     public Task<FinancialLabel> GetLabelsById(int id, CancellationToken cancellationToken = default) =>
         context.FinancialLabels.AsNoTracking().Include(x => x.Classifications).SingleAsync(x => x.Id == id, cancellationToken);
 

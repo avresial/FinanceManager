@@ -1,5 +1,3 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -25,25 +23,22 @@ internal sealed class LabelSetterStartupService(
                 var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
 
-                var guestUser = await userRepository.GetUser(configuration["DefaultUser:Login"]!);
+                var defaultUserLogin = configuration["DefaultUser:Login"];
+                var excludedUserId = string.IsNullOrWhiteSpace(defaultUserLogin)
+                    ? null
+                    : (await userRepository.GetUser(defaultUserLogin))?.UserId;
 
-                var unlabeledQuery = from entry in dbContext.CurrencyEntries.AsNoTracking()
-                                    .Include(x => x.Labels)
-                                     join account in dbContext.Accounts.AsNoTracking()
-                                         on entry.AccountId equals account.AccountId
-                                     where !entry.Labels.Any()
-                                         && account.AccountType == AccountType.Currency
-                                         && (entry.Description != ""
-                                             || (entry.ContractorDetails != null && entry.ContractorDetails != ""))
-                                     select new { account.AccountId, entry.EntryId, account.UserId };
-
-
-                var unlabeledEntries = await unlabeledQuery
-                    .Select(entry => new { entry.AccountId, entry.EntryId })
+                // Owned entries without a label, linked to an account or not. Ephemeral guest sandboxes (negative ids)
+                // and the configured demo user never go through the shared AI labeling queue.
+                var unlabeledEntries = await dbContext.CurrencyEntries.AsNoTracking()
+                    .Where(entry => entry.UserId != null && entry.UserId > 0
+                        && (excludedUserId == null || entry.UserId != excludedUserId)
+                        && !entry.Labels.Any()
+                        && (entry.Description != ""
+                            || (entry.ContractorDetails != null && entry.ContractorDetails != "")))
+                    .OrderBy(entry => entry.UserId).ThenBy(entry => entry.EntryId)
+                    .Select(entry => new { UserId = entry.UserId!.Value, entry.EntryId })
                     .ToListAsync(cancellationToken);
-
-                if (guestUser is not null)
-                    unlabeledEntries.RemoveAll(entry => entry.AccountId == guestUser.UserId);
 
                 if (unlabeledEntries.Count == 0)
                 {
@@ -52,22 +47,22 @@ internal sealed class LabelSetterStartupService(
                     return;
                 }
 
-                // One job per account — the background service already chunks into AI-sized
+                // One job per user — the background service already chunks into AI-sized
                 // batches internally, so pre-splitting here just multiplies queued-job count.
-                foreach (var group in unlabeledEntries.GroupBy(entry => entry.AccountId))
+                foreach (var group in unlabeledEntries.GroupBy(entry => entry.UserId))
                 {
                     var entryIds = group.Select(entry => entry.EntryId).ToList();
                     logger.LogDebug(
-                        "Queueing {Count} unlabeled entries as a single job for account {AccountId}.",
+                        "Queueing {Count} unlabeled entries as a single job for user {UserId}.",
                         entryIds.Count,
                         group.Key);
                     await labelSetterChannel.QueueEntries(group.Key, entryIds, cancellationToken);
                 }
 
                 logger.LogInformation(
-                    "Queued {Count} unlabeled entries across {Accounts} accounts for labeling on startup.",
+                    "Queued {Count} unlabeled entries across {Users} users for labeling on startup.",
                     unlabeledEntries.Count,
-                    unlabeledEntries.Select(entry => entry.AccountId).Distinct().Count());
+                    unlabeledEntries.Select(entry => entry.UserId).Distinct().Count());
                 logger.LogInformation("Label setter startup scan completed.");
             }
             catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)

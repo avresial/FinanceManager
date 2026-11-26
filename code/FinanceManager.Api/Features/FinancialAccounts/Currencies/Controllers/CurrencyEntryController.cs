@@ -11,6 +11,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,7 +24,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
-    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel,
+    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel, IGuestSessionAccessor guestSessionAccessor,
     ICacheInvalidator dashboardCacheInvalidator,
     IFinancialAlertService financialAlertService,
     ITransactionRuleService transactionRuleService) : ControllerBase
@@ -93,7 +94,8 @@ public class CurrencyEntryController(
         await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
 
         var result = await accountEntryRepository.Add(newEntry);
-        if (result) await labelSetterChannel.QueueEntries(addEntry.AccountId, [newEntry.EntryId]);
+        // Guest sandboxes are ephemeral and never reach the shared label worker.
+        if (result && !guestSessionAccessor.IsGuest && userId > 0) await labelSetterChannel.QueueEntries(userId, [newEntry.EntryId]);
         await dashboardCacheInvalidator.InvalidateUser(account.UserId);
         if (result)
             await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);

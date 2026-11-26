@@ -111,5 +111,5 @@ public sealed class SubscriptionsSnapshotStore(ISnapshotRefreshCoordinator coord
     // Currency-scoped so a snapshot saved before a preferred-currency change is never painted with new labels.
     private static string BuildSummaryKey(int userId, string currency) => $"subscriptions-summary:{userId}:{currency}";
 
-    private static string BuildListKey(int userId, string currency) => $"subscriptions-list:{userId}:{currency}";
+    private static string BuildListKey(int userId, string currency) => $"subscriptions-list:v2:{userId}:{currency}";
 }

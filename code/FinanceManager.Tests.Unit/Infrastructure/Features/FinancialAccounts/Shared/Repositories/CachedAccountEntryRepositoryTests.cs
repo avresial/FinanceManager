@@ -251,33 +251,45 @@ public class CachedAccountEntryRepositoryTests
     }
 
     [Fact]
-    public async Task AddLabel_ResolvesOwnerFromEntry_AndInvalidates()
+    public async Task AddLabels_InvalidatesTheOwnerDirectly_ForLinkedAndUnlinkedEntries()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.AddLabel(11, 3)).ReturnsAsync(true);
-        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([Entry(11)]);
+        inner.Setup(r => r.AddLabels(_userId, It.IsAny<IEnumerable<(long, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
         var invalidator = new Mock<ICacheInvalidator>();
-        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
+        // The resolver knows no account at all: an unlinked entry must still be invalidated through its owner.
+        var sut = CreateSut(inner.Object, Mock.Of<IAccountUserResolver>(), invalidator.Object, CreateCache());
 
-        await sut.AddLabel(11, 3);
+        var added = await sut.AddLabels(_userId, [(11, 3), (12, 3)], TestContext.Current.CancellationToken);
 
+        Assert.Equal(2, added);
         invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(r => r.GetByIds(It.IsAny<int>(), It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task AddLabels_ResolvesOwnersFromEntries_AndInvalidates()
+    public async Task AddLabels_WithoutNewAssignments_LeavesTheCacheAlone()
     {
         var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        inner.Setup(r => r.AddLabels(It.IsAny<IEnumerable<(long, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(2);
-        inner.Setup(r => r.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([Entry(11), Entry(12)]);
+        inner.Setup(r => r.AddLabels(_userId, It.IsAny<IEnumerable<(long, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(0);
         var invalidator = new Mock<ICacheInvalidator>();
         var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), invalidator.Object, CreateCache());
 
-        await sut.AddLabels([(11, 3), (12, 3)], TestContext.Current.CancellationToken);
+        await sut.AddLabels(_userId, [(11, 3)], TestContext.Current.CancellationToken);
 
-        invalidator.Verify(i => i.InvalidateUser(_userId, It.IsAny<CancellationToken>()), Times.Once);
+        invalidator.Verify(i => i.InvalidateUser(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIds_PassesTheOwnerStraightThrough()
+    {
+        var inner = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        inner.Setup(r => r.GetByIds(_userId, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([Entry(11)]);
+        var sut = CreateSut(inner.Object, ResolverFor(_accountId, _userId), Mock.Of<ICacheInvalidator>(), CreateCache());
+
+        var entries = await sut.GetByIds(_userId, [11], TestContext.Current.CancellationToken);
+
+        Assert.Equal(11, Assert.Single(entries).EntryId);
+        inner.Verify(r => r.GetByIds(_userId, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // -------------------------------------------------------------------------

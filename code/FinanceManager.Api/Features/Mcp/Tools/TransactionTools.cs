@@ -1,10 +1,11 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 
@@ -13,22 +14,24 @@ namespace FinanceManager.Api.Features.Mcp.Tools;
 [McpServerToolType]
 public sealed class TransactionTools(
     McpUserContext userContext,
-    ICurrencyAccountRepository<CurrencyAccount> currencyAccounts,
-    IAccountRepository<BondAccount> bondAccounts,
-    IAccountRepository<InvestmentAccount> investmentAccounts,
-    IAccountEntryRepository<CurrencyAccountEntry> currencyEntries,
-    IBondAccountEntryRepository<BondAccountEntry> bondEntries,
-    IInvestmentTransactionRepository investmentTransactions,
-    IBondDetailsRepository bondDetails)
+    ITransactionLogService transactionLog,
+    ICashTransactionReader cashTransactions,
+    IBondTransactionReader bondTransactions,
+    IInvestmentTransactionRepository investmentTransactions)
 {
+    private const int _pageSize = 100;
+    private const int _maxScannedTransactions = 5000;
+
     [McpServerTool(Name = "list_transactions", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("List the authenticated user's transactions with optional date, account, label, text, and paging filters. Defaults to the last 90 days.")]
+    [Description("List the authenticated user's cash, bond and investment transactions with optional date, kind, currency, label, text and paging filters. " +
+        "Newest first (by posting time, then id, then kind). Defaults to the last 90 days. Scans at most 5000 transactions of the range per call; narrow the dates to reach older rows.")]
     public async Task<McpTransactionPage> ListTransactions(
         [Description("Inclusive start date. Defaults to 90 days before endDate.")] DateOnly? startDate = null,
-        [Description("Inclusive end date. Defaults to today.")] DateOnly? endDate = null,
-        [Description("Optional owned account id.")] int? accountId = null,
+        [Description("Inclusive end date. Defaults to today (UTC).")] DateOnly? endDate = null,
+        [Description("Optional kind: cash, bond or investment.")] string? kind = null,
+        [Description("Optional ISO currency code, case-insensitive.")] string? currency = null,
         [Description("Optional exact label/category name, case-insensitive.")] string? label = null,
-        [Description("Optional text contained in description, account name, or ticker.")] string? query = null,
+        [Description("Optional text contained in the description, bond name, ticker or a label.")] string? query = null,
         [Description("Number of matching rows to skip, from 0.")] int offset = 0,
         [Description("Page size from 1 to 100.")] int limit = 50,
         CancellationToken cancellationToken = default)
@@ -39,108 +42,88 @@ public sealed class TransactionTools(
         var end = endDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var start = startDate ?? end.AddDays(-90);
         if (start > end) throw new ArgumentException("Start date cannot be after end date.");
+        var kinds = kind is null ? null : new[] { ParseKind(kind) };
 
         var userId = userContext.GetUserId();
-        var currencyAccountMap = (await currencyAccounts.GetAll(userId)).Where(account => account.UserId == userId).ToDictionary(account => account.AccountId);
-        var bondAccountMap = (await bondAccounts.GetAll(userId)).Where(account => account.UserId == userId).ToDictionary(account => account.AccountId);
-        var investmentAccountMap = (await investmentAccounts.GetAll(userId)).Where(account => account.UserId == userId).ToDictionary(account => account.AccountId);
-        var ownedAccountIds = currencyAccountMap.Keys.Concat(bondAccountMap.Keys).Concat(investmentAccountMap.Keys).ToHashSet();
-        if (accountId is not null && !ownedAccountIds.Contains(accountId.Value))
-            return new McpTransactionPage([], offset, limit, false);
+        // The search text is matched here, on description and labels only, and is never handed to the readers: their SQL search also covers the private cash counterparty.
+        var logQuery = new TransactionLogQuery(
+            start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+            end.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc),
+            _pageSize,
+            Kinds: kinds,
+            Currencies: string.IsNullOrWhiteSpace(currency) ? null : [currency]);
 
-        List<McpTransaction> transactions = [];
-        var rangeStart = start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var rangeEnd = end.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
-        var currencyIds = SelectedIds(currencyAccountMap.Keys, accountId);
-        if (currencyIds.Count != 0)
+        // Enough matches to fill the page and prove whether another one follows; long arithmetic cannot overflow for any offset.
+        var wanted = (long)offset + limit + 1;
+        List<McpTransaction> matches = [];
+        var scanned = 0;
+        while (matches.Count < wanted && scanned < _maxScannedTransactions)
         {
-            transactions.AddRange((await currencyEntries.GetRange(currencyIds, rangeStart, rangeEnd))
-                .Where(entry => entry.AccountId.HasValue && currencyAccountMap.ContainsKey(entry.AccountId.Value))
-                .Select(entry => McpResponseMapper.Transaction(entry, currencyAccountMap[entry.AccountId!.Value].Name)));
-        }
-
-        var bondIds = SelectedIds(bondAccountMap.Keys, accountId);
-        if (bondIds.Count != 0)
-        {
-            var bondNames = new Dictionary<int, string>();
-            foreach (var entry in await bondEntries.GetRange(bondIds, rangeStart, rangeEnd))
+            cancellationToken.ThrowIfCancellationRequested();
+            var page = await transactionLog.GetItemsPage(userId, logQuery, cancellationToken);
+            foreach (var item in page.Items)
             {
-                if (entry.AccountId is not int bondAccountId || !bondAccountMap.ContainsKey(bondAccountId)) continue;
-                if (!bondNames.TryGetValue(entry.BondDetailsId, out var bondName))
-                {
-                    bondName = (await bondDetails.GetByIdAsync(entry.BondDetailsId, cancellationToken))?.Name ?? "Bond";
-                    bondNames[entry.BondDetailsId] = bondName;
-                }
-                transactions.Add(McpResponseMapper.Transaction(entry, bondAccountMap[bondAccountId].Name, bondName));
+                scanned++;
+                if (ToTransaction(item) is not McpTransaction transaction) continue;
+                if (!string.IsNullOrWhiteSpace(label) && !transaction.Labels.Contains(label.Trim(), StringComparer.OrdinalIgnoreCase)) continue;
+                if (!MatchesQuery(transaction, query)) continue;
+                matches.Add(transaction);
             }
+
+            if (page.NextCursor is null) break;
+            logQuery = logQuery with { Cursor = page.NextCursor };
         }
 
-        var investments = await investmentTransactions.GetByUser(userId, start, end, cancellationToken);
-        transactions.AddRange(investments
-            .Where(transaction => transaction.UserId == userId)
-            .Where(transaction => accountId is null || transaction.AccountId == accountId)
-            .Where(transaction => transaction.AccountId.HasValue && investmentAccountMap.ContainsKey(transaction.AccountId.Value))
-            .Select(transaction => McpResponseMapper.Transaction(transaction, investmentAccountMap[transaction.AccountId!.Value].Name)));
-
-        var filtered = transactions
-            .Where(transaction => string.IsNullOrWhiteSpace(label) || transaction.Labels.Contains(label, StringComparer.OrdinalIgnoreCase))
-            .Where(transaction => MatchesQuery(transaction, query))
-            .OrderByDescending(transaction => transaction.Date)
-            .ThenByDescending(transaction => transaction.TransactionId)
-            .ToList();
-        var page = filtered.Skip(offset).Take(limit).ToList();
-        return new McpTransactionPage(page, offset, limit, filtered.Count > offset + page.Count);
+        var rows = matches.Skip(offset).Take(limit).ToList();
+        return new McpTransactionPage(rows, offset, limit, matches.Count > offset + rows.Count);
     }
 
     [McpServerTool(Name = "get_transaction", ReadOnly = true, Idempotent = true, OpenWorld = false, UseStructuredContent = true)]
-    [Description("Get transaction details only when the account and transaction belong to the authenticated user. Returns null for missing or foreign data.")]
+    [Description("Get one transaction by kind and id, only when it belongs to the authenticated user. Returns null for missing or foreign data.")]
     public async Task<McpTransaction?> GetTransaction(
-        [Description("Account type: currency, bond, or investment.")] string accountType,
-        [Description("Owned account id.")] int accountId,
-        [Description("Transaction id returned by list_transactions.")] long transactionId,
+        [Description("Transaction kind: cash, bond or investment.")] string kind,
+        [Description("Transaction id returned by list_transactions; ids are unique per kind.")] long transactionId,
         CancellationToken cancellationToken = default)
     {
+        var parsedKind = ParseKind(kind);
         var userId = userContext.GetUserId();
-        switch (accountType.Trim().ToLowerInvariant())
+        if (transactionId <= 0) return null;
+
+        switch (parsedKind)
         {
-            case "currency":
-                {
-                    var account = (await currencyAccounts.GetAll(userId)).SingleOrDefault(item => item.UserId == userId && item.AccountId == accountId);
-                    if (account is null) return null;
-                    var entry = await currencyEntries.Get(accountId, transactionId);
-                    return entry is null || entry.AccountId != accountId
-                        ? null
-                        : McpResponseMapper.Transaction(entry, account.Name);
-                }
-            case "bond":
-                {
-                    var account = (await bondAccounts.GetAll(userId)).SingleOrDefault(item => item.UserId == userId && item.AccountId == accountId);
-                    if (account is null) return null;
-                    var entry = await bondEntries.Get(accountId, transactionId);
-                    if (entry is null || entry.AccountId != accountId) return null;
-                    var name = (await bondDetails.GetByIdAsync(entry.BondDetailsId, cancellationToken))?.Name ?? "Bond";
-                    return McpResponseMapper.Transaction(entry, account.Name, name);
-                }
-            case "investment":
-                {
-                    var account = (await investmentAccounts.GetAll(userId)).SingleOrDefault(item => item.UserId == userId && item.AccountId == accountId);
-                    if (account is null) return null;
-                    var transaction = await investmentTransactions.Get(transactionId, cancellationToken);
-                    return transaction is null || transaction.UserId != userId || transaction.AccountId != accountId
-                        ? null
-                        : McpResponseMapper.Transaction(transaction, account.Name);
-                }
+            case TransactionKind.Cash:
+                return (await cashTransactions.GetByIds(userId, [transactionId], cancellationToken)).SingleOrDefault() is CashLogEntry cash
+                    ? McpResponseMapper.Transaction(cash)
+                    : null;
+            case TransactionKind.Bond:
+                return await bondTransactions.GetById(userId, transactionId, cancellationToken) is BondLogEntry bond
+                    ? McpResponseMapper.Transaction(bond)
+                    : null;
             default:
-                throw new ArgumentException("Account type must be currency, bond, or investment.", nameof(accountType));
+                return await investmentTransactions.Get(transactionId, cancellationToken) is InvestmentTransaction trade && trade.UserId == userId
+                    ? McpResponseMapper.Transaction(trade)
+                    : null;
         }
     }
 
-    private static IReadOnlyCollection<int> SelectedIds(IEnumerable<int> accountIds, int? selectedAccountId) =>
-        [.. accountIds.Where(id => selectedAccountId is null || id == selectedAccountId)];
+    private static TransactionKind ParseKind(string? kind) => (kind ?? throw new ArgumentException("Kind must be cash, bond, or investment.", nameof(kind))).Trim().ToLowerInvariant() switch
+    {
+        "cash" => TransactionKind.Cash,
+        "bond" => TransactionKind.Bond,
+        "investment" => TransactionKind.Investment,
+        _ => throw new ArgumentException("Kind must be cash, bond, or investment.", nameof(kind))
+    };
+
+    private static McpTransaction? ToTransaction(TransactionLogItem item) => item switch
+    {
+        CurrencyTransactionLogItem { Entry: var cash } => McpResponseMapper.Transaction(cash),
+        BondTransactionLogItem { Entry: var bond } => McpResponseMapper.Transaction(bond),
+        InvestmentTransactionLogItem { Transaction: var trade } => McpResponseMapper.Transaction(trade),
+        _ => null
+    };
 
     private static bool MatchesQuery(McpTransaction transaction, string? query) =>
         string.IsNullOrWhiteSpace(query) ||
-        transaction.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-        transaction.AccountName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-        transaction.Labels.Any(label => label.Contains(query, StringComparison.OrdinalIgnoreCase));
+        transaction.Description.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase) ||
+        transaction.Labels.Any(label => label.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase));
 }

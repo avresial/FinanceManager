@@ -12,6 +12,28 @@ public class CashTransactionsHttpClient(HttpClient httpClient)
 {
     private string Endpoint => $"{httpClient.BaseAddress}api/transactions/cash";
 
+    private const int _maxEntryIdsPerRequest = 100;
+
+    /// <summary>
+    /// The caller's entries with exactly these ids, newest first. Ids are de-duplicated, an empty list makes no request,
+    /// and long lists are split into requests of at most 100 ids. Entries that are missing or not the caller's are skipped.
+    /// </summary>
+    public async Task<IReadOnlyList<CurrencyTransactionLogItemDto>> GetByIdsAsync(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
+    {
+        var ids = entryIds.Distinct().ToArray();
+        List<CurrencyTransactionLogItemDto> entries = [];
+        foreach (var chunk in ids.Chunk(_maxEntryIdsPerRequest))
+        {
+            var query = string.Join('&', chunk.Select(id => $"entryIds={id}"));
+            using var response = await httpClient.GetAsync($"{Endpoint}?{query}", cancellationToken);
+            await OwnerTransactionsHttpResponse.EnsureSuccess(response, cancellationToken);
+            entries.AddRange(await response.Content.ReadFromJsonAsync<List<CurrencyTransactionLogItemDto>>(cancellationToken)
+                ?? throw new InvalidOperationException("The server returned no entries."));
+        }
+
+        return [.. entries.OrderByDescending(entry => entry.PostingDate).ThenByDescending(entry => entry.EntryId)];
+    }
+
     public async Task<CurrencyTransactionLogItemDto> CreateAsync(CreateCashEntryRequest request, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PostAsJsonAsync(Endpoint, request, cancellationToken);

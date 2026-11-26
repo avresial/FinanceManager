@@ -23,11 +23,6 @@ public class FinancialLabelController(
     public async Task<IActionResult> GetById([FromQuery] int id, CancellationToken cancellationToken = default) =>
         Ok(await financialLabelsRepository.GetLabelsById(id, cancellationToken));
 
-    [HttpGet("get-by-account-id")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<FinancialLabel>))]
-    public async Task<IActionResult> GetByAccountId([FromQuery] int accountId, CancellationToken cancellationToken = default) =>
-        Ok(await financialLabelsRepository.GetLabelsByAccountId(accountId, cancellationToken).ToListAsync(cancellationToken));
-
     [HttpGet("get-by-index-and-count")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<FinancialLabel>))]
     public async Task<IActionResult> GetByIndexAndCount([FromQuery] int index, [FromQuery] int count, CancellationToken cancellationToken = default) =>

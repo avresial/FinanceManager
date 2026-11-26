@@ -1,10 +1,10 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
@@ -25,7 +25,7 @@ public partial class RecurringTransactionDetectorCard : IDisposable
     private List<RecurringTransactionResult> _data = [];
     private decimal _totalMonthlySpend;
     private RecurringTransactionResult? _selectedItem;
-    private List<CurrencyAccountEntry> _detailEntries = [];
+    private List<CurrencyTransactionLogItemDto> _detailEntries = [];
     private int _detailRequestVersion;
     private readonly RefreshVersionGate _refreshGate = new();
 
@@ -35,7 +35,7 @@ public partial class RecurringTransactionDetectorCard : IDisposable
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required RecurringTransactionDetectorHttpClient RecurringTransactionDetectorHttpClient { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
-    [Inject] public required CurrencyEntryHttpClient CurrencyEntryHttpClient { get; set; }
+    [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required DashboardCardsSnapshotStore SnapshotStore { get; set; }
 
     protected override async Task OnInitializedAsync()
@@ -113,12 +113,11 @@ public partial class RecurringTransactionDetectorCard : IDisposable
 
         try
         {
-            var tasks = item.Entries.Select(r => CurrencyEntryHttpClient.GetEntry(r.AccountId, r.EntryId));
-            var results = await Task.WhenAll(tasks);
+            var results = await CashTransactionsHttpClient.GetByIdsAsync([.. item.Entries.Select(r => r.EntryId)]);
 
             if (requestVersion != _detailRequestVersion) return;
 
-            _detailEntries = [.. results.OfType<CurrencyAccountEntry>().OrderByDescending(e => e.PostingDate)];
+            _detailEntries = [.. results];
         }
         catch (Exception ex)
         {

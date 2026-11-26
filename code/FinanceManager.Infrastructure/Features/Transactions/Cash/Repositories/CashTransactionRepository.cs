@@ -41,19 +41,31 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
                 x.Entry.ValueChange, x.Entry.Description, x.Entry.CurrencyId!.Value, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>())).ToListAsync(ct);
         if (!query.IncludeDetails || page.Count == 0) return page;
 
-        var ids = page.Select(x => x.EntryId).ToArray();
-        var labels = await context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && ids.Contains(e.EntryId))
-            .AsSplitQuery().Select(e => new
-            {
-                e.EntryId,
-                Labels = e.Labels.Select(l => new FinancialLabel
-                {
-                    Id = l.Id,
-                    Name = l.Name,
-                    Classifications = l.Classifications.ToList()
-                }).ToList()
-            }).ToDictionaryAsync(x => x.EntryId, x => x.Labels, ct);
+        var labels = await LabelsByEntry(userId, [.. page.Select(x => x.EntryId)], ct);
         return [.. page.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
+    }
+
+    public async Task<IReadOnlyList<CashLogEntry>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var ids = entryIds.Distinct().ToArray();
+        if (ids.Length == 0) return [];
+
+        var rows = await context.CurrencyEntries.AsNoTracking()
+            .Where(e => e.UserId == userId && e.CurrencyId != null && ids.Contains(e.EntryId))
+            .Select(e => new
+            {
+                Entry = e,
+                Currency = context.Currencies.Where(c => c.Id == e.CurrencyId).Select(c => c.ShortName).FirstOrDefault()
+            })
+            .OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
+            .Select(x => new CashLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate, x.Entry.ValueChange,
+                x.Entry.Description, x.Entry.CurrencyId!.Value, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>()))
+            .ToListAsync(ct);
+        if (rows.Count == 0) return rows;
+
+        var labels = await LabelsByEntry(userId, [.. rows.Select(x => x.EntryId)], ct);
+        return [.. rows.Select(x => x with { Labels = labels.GetValueOrDefault(x.EntryId) ?? [] })];
     }
 
     public async Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default)
@@ -132,8 +144,22 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         if (endUtc <= startUtc) return [];
 
         return await EntriesBetween(userId, startUtc, endUtc, endInclusive: false).Where(e => e.ValueChange != 0)
-            .Select(e => new RecurringCashCandidate(e.EntryId, e.AccountId, e.PostingDate, e.ValueChange, e.Description, e.ContractorDetails)).ToListAsync(ct);
+            .Select(e => new RecurringCashCandidate(e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.ContractorDetails)).ToListAsync(ct);
     }
+
+    // The labels of the owner's given entries in a second, split query, so the history rows stay one flat read.
+    private async Task<Dictionary<long, List<FinancialLabel>>> LabelsByEntry(int userId, long[] ids, CancellationToken ct) =>
+        await context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId && ids.Contains(e.EntryId))
+            .AsSplitQuery().Select(e => new
+            {
+                e.EntryId,
+                Labels = e.Labels.Select(l => new FinancialLabel
+                {
+                    Id = l.Id,
+                    Name = l.Name,
+                    Classifications = l.Classifications.ToList()
+                }).ToList()
+            }).ToDictionaryAsync(x => x.EntryId, x => x.Labels, ct);
 
     // The entries' label links as plain join-table rows: a join the database plans freely, where navigating the collection would need APPLY.
     private IQueryable<EntryLabelLink> LabelLinks(IQueryable<CurrencyAccountEntry> entries) =>

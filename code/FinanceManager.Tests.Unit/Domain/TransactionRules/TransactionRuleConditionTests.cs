@@ -24,7 +24,7 @@ public class TransactionRuleConditionTests
     {
         var condition = new ContractorCondition(pattern, matchOperator, ignoreCase);
 
-        Assert.Equal(expected, condition.Matches(new TransactionFacts(value, "d", 1, 1m, TransactionDirection.Expense, [])));
+        Assert.Equal(expected, condition.Matches(new TransactionFacts(value, "d", 1m, TransactionDirection.Expense, [])));
     }
 
     [Fact]
@@ -70,14 +70,14 @@ public class TransactionRuleConditionTests
     {
         var condition = new ContractorCondition("[", TextMatchOperator.Contains);
 
-        Assert.True(condition.Matches(new TransactionFacts("ACME [test]", "d", 1, 1m, TransactionDirection.Expense, [])));
+        Assert.True(condition.Matches(new TransactionFacts("ACME [test]", "d", 1m, TransactionDirection.Expense, [])));
     }
 
     [Fact]
     public void ContractorCondition_TimedOutRegex_DoesNotBlockRuleEvaluation()
     {
         var condition = new ContractorCondition("^(a+)+$", TextMatchOperator.RegularExpression, false);
-        var facts = new TransactionFacts(new string('a', 100_000) + "!", "d", 1, 1m, TransactionDirection.Expense, []);
+        var facts = new TransactionFacts(new string('a', 100_000) + "!", "d", 1m, TransactionDirection.Expense, []);
 
         Assert.False(condition.Matches(facts));
     }
@@ -90,26 +90,7 @@ public class TransactionRuleConditionTests
     {
         var condition = new DescriptionCondition(pattern, matchOperator, ignoreCase);
 
-        Assert.Equal(expected, condition.Matches(new TransactionFacts("c", value, 1, 1m, TransactionDirection.Expense, [])));
-    }
-
-    [Theory]
-    [InlineData(5, true)]
-    [InlineData(11, true)]
-    [InlineData(12, false)]
-    public void AccountCondition_MatchesConfiguredAccountIds(int accountId, bool expected)
-    {
-        var condition = new AccountCondition([5, 11]);
-
-        Assert.Equal(expected, condition.Matches(new TransactionFacts("c", "d", accountId, 1m, TransactionDirection.Expense, [])));
-    }
-
-    [Fact]
-    public void AccountCondition_WithoutAccountIds_MatchesNothing()
-    {
-        var condition = new AccountCondition([]);
-
-        Assert.False(condition.Matches(new TransactionFacts("c", "d", 5, 1m, TransactionDirection.Expense, [])));
+        Assert.Equal(expected, condition.Matches(new TransactionFacts("c", value, 1m, TransactionDirection.Expense, [])));
     }
 
     [Theory]
@@ -120,26 +101,17 @@ public class TransactionRuleConditionTests
     {
         var condition = new DirectionCondition(TransactionDirection.Expense);
 
-        Assert.Equal(expected, condition.Matches(new TransactionFacts("c", "d", 1, 1m, factsDirection, [])));
+        Assert.Equal(expected, condition.Matches(new TransactionFacts("c", "d", 1m, factsDirection, [])));
     }
 
     [Fact]
     public void AmountCondition_RequiresMatchingDirection()
     {
         var condition = new AmountCondition(TransactionDirection.Expense, 50m, AmountComparison.GreaterThan);
-        var expense = new TransactionFacts("c", "d", 1, 60m, TransactionDirection.Expense, []);
-        var income = new TransactionFacts("c", "d", 1, 60m, TransactionDirection.Income, []);
+        var expense = new TransactionFacts("c", "d", 60m, TransactionDirection.Expense, []);
+        var income = new TransactionFacts("c", "d", 60m, TransactionDirection.Income, []);
 
         Assert.True(condition.Matches(expense));
         Assert.False(condition.Matches(income));
-    }
-
-    [Fact]
-    public void AccountCondition_NeverMatchesAnEntryWithoutAnAccountLink()
-    {
-        // Account id 0 is a real id for no account; a missing link must not be confused with it.
-        var condition = new AccountCondition([0, 5]);
-
-        Assert.False(condition.Matches(new TransactionFacts("c", "d", null, 1m, TransactionDirection.Expense, [])));
     }
 }

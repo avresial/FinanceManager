@@ -58,7 +58,7 @@ internal static class RecurringPatternDetector
             .Select(group => new Occurrence(
                 group.Key,
                 group.Sum(x => x.Amount),
-                group.Select(x => new RecurringTransactionEntryReference(x.AccountId, x.EntryId)).ToList()))
+                group.Select(x => new RecurringTransactionEntryReference(x.EntryId)).ToList()))
             .OrderBy(x => x.Date)
             .ToList();
         if (occurrences.Count < 2) return null;

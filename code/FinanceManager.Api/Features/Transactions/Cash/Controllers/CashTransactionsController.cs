@@ -1,5 +1,6 @@
 using FinanceManager.Api.Features.Dashboard.Extensions;
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
+using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Api.Features.Transactions.Shared.Validation;
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
@@ -18,6 +19,7 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -42,8 +44,29 @@ public class CashTransactionsController(
     IUserPlanVerifier userPlanVerifier,
     ITransactionRuleService transactionRuleService,
     IFinancialAlertService financialAlertService,
+    ICashTransactionReader cashTransactionReader,
+    ILabelSetterChannel labelSetterChannel,
+    IGuestSessionAccessor guestSessionAccessor,
     IAccountCsvExportService<CurrencyAccountExportDto> csvExportService) : ControllerBase
 {
+    private const int _maxBatchEntryIds = 100;
+
+    /// <summary>The caller's entries with exactly these ids (1 to 100), newest first. Ids that are missing or belong to someone else are skipped.</summary>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<CurrencyTransactionLogItemDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetByIds([FromQuery] long[] entryIds, CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var ownerId)) return Forbid();
+
+        var ids = entryIds.Distinct().ToArray();
+        if (ids.Length is 0 or > _maxBatchEntryIds || ids.Any(id => id <= 0))
+            return BadRequest($"Provide between 1 and {_maxBatchEntryIds} positive entry ids.");
+
+        var entries = await cashTransactionReader.GetByIds(ownerId, ids, cancellationToken);
+        return Ok(entries.Select(entry => entry.ToLogItemDto()).ToList());
+    }
+
     [HttpPost]
     [ProducesResponseType<CurrencyTransactionLogItemDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -72,6 +95,7 @@ public class CashTransactionsController(
 
         if (!await entryRepository.Add(entry, recalculate: false, cancellationToken)) return BadRequest("Cannot add this entry.");
 
+        await QueueLabeling(ownerId, entry, cancellationToken);
         await financialAlertService.EvaluateAlertsAsync(ownerId, cancellationToken);
         return await Persisted(ownerId, entry.EntryId, currency.ShortName, cancellationToken);
     }
@@ -135,7 +159,6 @@ public class CashTransactionsController(
         [FromBody] IReadOnlyList<CurrencyEntryImportRecordDto> entries,
         [FromServices] ICurrencyImportJobStore jobStore,
         [FromServices] ICurrencyImportJobChannel jobChannel,
-        [FromServices] IGuestSessionAccessor guestSessionAccessor,
         CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var ownerId)) return Forbid();
@@ -167,6 +190,15 @@ public class CashTransactionsController(
         var csv = await csvExportService.GetOwnerExportResults(ownerId, currencyId, start, end, cancellationToken);
         var fileName = $"cash-{currency.ShortName.ToLowerInvariant()}-{start:yyyyMMdd}-{end:yyyyMMdd}.csv";
         return File(Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
+    }
+
+    // Guest sandboxes are ephemeral and never reach the shared label worker; only real owners' unlabelled, described entries are queued.
+    private async Task QueueLabeling(int ownerId, CurrencyAccountEntry entry, CancellationToken cancellationToken)
+    {
+        if (guestSessionAccessor.IsGuest || ownerId <= 0 || entry.EntryId == 0 || entry.Labels.Count != 0) return;
+        if (string.IsNullOrWhiteSpace(entry.Description) && string.IsNullOrWhiteSpace(entry.ContractorDetails)) return;
+
+        await labelSetterChannel.QueueEntries(ownerId, [entry.EntryId], cancellationToken);
     }
 
     // The exact row the write produced, read back by its generated id with its labels.

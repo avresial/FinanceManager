@@ -193,9 +193,7 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
 
         Assert.Equal(["Rent", "Salary"], candidates.OrderBy(c => c.PostingDate).Select(c => c.Description));
         var rent = candidates.Single(c => c.Description == "Rent");
-        Assert.Equal(9, rent.AccountId);
         Assert.Equal("Landlord", rent.ContractorDetails);
-        Assert.Null(candidates.Single(c => c.Description == "Salary").AccountId);
         Assert.Empty(await _cash.GetRecurringCandidates(_owner, _jan1.AddDays(3), _jan1, TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _cash.GetRecurringCandidates(0, _jan1, _jan1.AddDays(1), TestContext.Current.CancellationToken));
     }

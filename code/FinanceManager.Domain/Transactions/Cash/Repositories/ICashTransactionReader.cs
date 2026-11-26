@@ -7,6 +7,12 @@ public interface ICashTransactionReader
 {
     Task<IReadOnlyList<CashLogEntry>> GetHistory(int userId, OwnerHistoryQuery query, CancellationToken ct = default);
 
+    /// <summary>
+    /// The owner's entries with exactly these ids, linked to an account or not, with their labels, newest first (posting date, then entry id, descending).
+    /// Ids that are missing or belong to someone else are skipped; duplicates count once.
+    /// </summary>
+    Task<IReadOnlyList<CashLogEntry>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken ct = default);
+
     /// <summary>Distinct short names of the currencies the user has cash entries in.</summary>
     Task<IReadOnlyList<string>> GetCurrencies(int userId, CancellationToken ct = default);
 

@@ -7,7 +7,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.TransactionRules;
 public class TransactionRuleDraftTests
 {
     [Fact]
-    public void LoadFrom_RuleWithoutConditionsOrActions_KeepsOneEditableItemEach()
+    public void LoadFrom_RuleWithoutConditionsOrActions_KeepsNoConditionsAndOneEditableAction()
     {
         var draft = new TransactionRuleDraft();
         var rule = Rule() with { IsEnabled = false, StopProcessing = true };
@@ -17,20 +17,19 @@ public class TransactionRuleDraftTests
         Assert.Equal(rule.Id, draft.EditingId);
         Assert.False(draft.Enabled);
         Assert.True(draft.StopProcessing);
-        Assert.Single(draft.Conditions);
+        Assert.Empty(draft.Conditions);
         Assert.Single(draft.Actions);
     }
 
     [Fact]
-    public void RemoveCondition_KeepsTheLastOne()
+    public void RemoveCondition_CanRemoveTheLastOne_SoAMigratedRuleCanDropItsPlaceholder()
     {
         var draft = new TransactionRuleDraft();
         var only = draft.Conditions[0];
 
-        Assert.False(draft.RemoveCondition(only));
-        draft.AddCondition();
         Assert.True(draft.RemoveCondition(only));
-        Assert.Single(draft.Conditions);
+        Assert.Empty(draft.Conditions);
+        Assert.False(draft.RemoveCondition(only));
     }
 
     [Fact]

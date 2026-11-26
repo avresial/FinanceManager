@@ -42,10 +42,10 @@ public class RecurringDetectionRulesTests
     {
         RecurringEntry[] entries =
         [
-            new("Netflix", new DateTime(2026, 7, 5), 49m, 1, 1),
-            new("NETFLIX", new DateTime(2026, 8, 5), 49m, 1, 2),
-            new("Netflix", new DateTime(2026, 9, 5), 49m, 1, 3),
-            new("Coffee", new DateTime(2026, 9, 6), 12m, 1, 4),
+            new("Netflix", new DateTime(2026, 7, 5), 49m, 1),
+            new("NETFLIX", new DateTime(2026, 8, 5), 49m, 2),
+            new("Netflix", new DateTime(2026, 9, 5), 49m, 3),
+            new("Coffee", new DateTime(2026, 9, 6), 12m, 4),
         ];
 
         var pattern = Assert.Single(RecurringPatternDetector.Detect(entries, new DateTime(2026, 9, 20), isIncome: false));

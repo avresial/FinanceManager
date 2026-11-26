@@ -177,12 +177,10 @@ public class RecurringTransactionDetectorService(
                 : candidate.ContractorDetails;
             if (string.IsNullOrWhiteSpace(merchant)) continue;
 
-            // Unlinked entries have no account; 0 is the transitional placeholder until recurring references stop carrying an account id (#1135).
             rawEntries.Add(new(
                 merchant.Trim(),
                 candidate.PostingDate,
                 Math.Abs(candidate.ValueChange),
-                candidate.AccountId ?? 0,
                 candidate.EntryId));
         }
 

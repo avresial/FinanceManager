@@ -474,25 +474,9 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
             await transaction.CommitAsync(cancellationToken);
     }
 
-    public async Task<bool> AddLabel(long entryId, int labelId)
+    public async Task<int> AddLabels(int userId, IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
     {
-        var entry = await context.CurrencyEntries
-            .Include(e => e.Labels)
-            .FirstOrDefaultAsync(e => e.AccountId.HasValue && e.EntryId == entryId);
-        var label = await context.FinancialLabels.FirstOrDefaultAsync(l => l.Id == labelId);
-
-        if (entry is null || label is null) return false;
-
-        // Check if label already exists before adding
-        if (entry.Labels.Any(l => l.Id == labelId)) return true;
-
-        entry.Labels.Add(label);
-        await context.SaveChangesAsync();
-
-        return true;
-    }
-    public async Task<int> AddLabels(IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default)
-    {
+        if (userId == 0) return 0;
         var assignments = labelAssignments.ToList();
         if (assignments.Count == 0) return 0;
 
@@ -501,7 +485,7 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
 
         // Fetch all relevant entries and labels at once
         var entries = await context.CurrencyEntries
-            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
+            .Where(e => e.UserId == userId && entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
             .ToListAsync(cancellationToken);
 
@@ -570,14 +554,14 @@ public class CurrencyEntryRepository(AppDbContext context) : IAccountEntryReposi
     private async Task RecalculateValues(int accountId, DateTime startDate, CancellationToken cancellationToken)
         => await _valueCalculator.Recalculate(accountId, startDate, cancellationToken);
 
-    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CurrencyAccountEntry>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default)
     {
-        if (entryIds.Count == 0)
+        if (userId == 0 || entryIds.Count == 0)
             return [];
 
         return await context.CurrencyEntries
             .AsNoTracking()
-            .Where(e => e.AccountId.HasValue && entryIds.Contains(e.EntryId))
+            .Where(e => e.UserId == userId && entryIds.Contains(e.EntryId))
             .Include(e => e.Labels)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);

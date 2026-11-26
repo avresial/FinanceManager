@@ -4,8 +4,9 @@ using FinanceManager.Domain.TransactionRules.Dtos;
 namespace FinanceManager.Components.Features.TransactionRules.Models;
 
 /// <summary>
-/// The rule currently being created or edited. Always holds at least one condition and one action
-/// so the editor never renders an empty list.
+/// The rule currently being created or edited. A new rule starts with one blank condition and one action.
+/// A rule may have no conditions (it then matches every cash transaction, e.g. a migrated rule that lost its
+/// retired Account condition) but always keeps at least one action.
 /// </summary>
 internal sealed class TransactionRuleDraft
 {
@@ -36,16 +37,13 @@ internal sealed class TransactionRuleDraft
         StopProcessing = rule.StopProcessing;
         Conditions = rule.Conditions.Select(ConditionEditorModel.FromDto).ToList();
         Actions = rule.Actions.Select(ActionEditorModel.FromDto).ToList();
-        if (Conditions.Count == 0)
-            Conditions.Add(new());
         if (Actions.Count == 0)
             Actions.Add(new());
     }
 
     public void AddCondition() => Conditions.Add(new());
 
-    /// <summary>Returns false when <paramref name="condition"/> is the last one and was kept.</summary>
-    public bool RemoveCondition(ConditionEditorModel condition) => Conditions.Count > 1 && Conditions.Remove(condition);
+    public bool RemoveCondition(ConditionEditorModel condition) => Conditions.Remove(condition);
 
     public void AddAction() => Actions.Add(new());
 
