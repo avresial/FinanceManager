@@ -19,7 +19,7 @@ public class InvestmentTransactionNotesMappingTests
     {
         var request = new AddInvestmentTransactionRequest(1, 2, InvestmentTransactionTypeDto.Buy, 1m, 10m, "USD", _tradeDate, Notes: notes);
 
-        var entity = request.ToEntity(userId: 7, assetListingId: 2);
+        var entity = request.ToEntity(userId: 7, accountId: request.AccountId, assetListingId: 2);
 
         Assert.Equal(expectedDescription, entity.Description);
     }

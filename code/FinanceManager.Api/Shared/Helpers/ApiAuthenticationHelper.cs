@@ -12,6 +12,12 @@ public static class ApiAuthenticationHelper
         return int.Parse(user.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
     }
 
+    /// <summary>
+    /// Reads the caller's id. Guest users have negative ids, so only zero or a malformed claim is rejected.
+    /// </summary>
+    public static bool TryGetOwnerId(ClaimsPrincipal user, out int ownerId) =>
+        int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out ownerId) && ownerId != 0;
+
     public static bool IsAuthenticatedUser(ClaimsPrincipal user, int userId) =>
         int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var authenticatedUserId) &&
         authenticatedUserId == userId;

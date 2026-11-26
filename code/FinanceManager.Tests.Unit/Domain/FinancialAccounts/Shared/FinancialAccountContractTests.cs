@@ -101,7 +101,7 @@ public class FinancialAccountContractTests
             Assert.Null(request.Notes);
             Assert.Null(request.ExternalInstrumentResultId);
             Assert.Null(request.LabelIds);
-            Assert.Equal(InvestmentTransactionType.Sell, request.ToEntity(2, 5_000_000_001L).Type);
+            Assert.Equal(InvestmentTransactionType.Sell, request.ToEntity(2, request.AccountId, 5_000_000_001L).Type);
             Assert.Equal("""{"accountId":3,"assetListingId":5000000001,"type":1,"quantity":2,"unitPrice":10,"currency":"USD","tradeDate":"2026-05-17","fee":null,"notes":null,"externalInstrumentResultId":null,"labelIds":[9]}""", JsonSerializer.Serialize(request with { LabelIds = [9] }, _options));
         }
     }

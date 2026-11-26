@@ -1,4 +1,5 @@
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 
@@ -94,6 +95,28 @@ public interface IInvestmentTransactionRepository
         InvestmentTransactionType? type = null,
         string? search = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Owner-wide counterpart of the account <see cref="GetHistoryPage(int, int, DateOnly?, long?, DateOnly?, DateOnly?, InvestmentTransactionType?, string?, CancellationToken)"/>:
+    /// every trade of <paramref name="userId"/>, linked to an account or not, with the same ordering, cursor and filters plus an optional listing.
+    /// </summary>
+    Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPageByUser(
+        long userId,
+        int pageSize,
+        DateOnly? cursorTradeDate = null,
+        long? cursorId = null,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        long? assetListingId = null,
+        InvestmentTransactionType? type = null,
+        string? search = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Non-zero signed units per listing as of a date, pooled across all of the owner's trades regardless of price or account,
+    /// summed in the database and ordered by listing id. Oversold positions stay negative.
+    /// </summary>
+    Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     public sealed record ValuationTradeInput(
         int AccountId,

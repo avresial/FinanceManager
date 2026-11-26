@@ -82,4 +82,34 @@ public class DividendPaymentServiceTests
     [InlineData(2147483647, 20)]
     public async Task InvalidPaging_IsRejected(int page, int size) =>
         await Assert.ThrowsAsync<ArgumentException>(() => Service.GetHistory(1, 4, page, size, TestContext.Current.CancellationToken));
+
+    [Fact]
+    public async Task OwnerWide_NewPaymentIsUnlinked_AndNoAccountIsLookedUp()
+    {
+        _payments.Setup(x => x.HasHolding(1, null, 8, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        await Service.Save(1, null, null, Request(), TestContext.Current.CancellationToken);
+        _payments.Verify(x => x.Add(It.Is<DividendPayment>(p => p.AccountId == null && p.UserId == 1 && p.Currency == "USD"), It.IsAny<CancellationToken>()), Times.Once);
+        _accounts.Verify(x => x.Get(It.IsAny<int>()), Times.Never);
+    }
+    [Fact]
+    public async Task OwnerWide_ForeignRecord_IsReportedAsMissing_AndLinkedRecordOfTheOwnerIsEditable()
+    {
+        _payments.Setup(x => x.Get(9, It.IsAny<CancellationToken>())).ReturnsAsync(new DividendPayment { Id = 9, UserId = 2, AccountId = null });
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Save(1, null, 9, Request(), TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Service.Delete(1, null, 9, TestContext.Current.CancellationToken));
+
+        var linked = new DividendPayment { Id = 10, UserId = 1, AccountId = 4, AssetListingId = 8 };
+        _payments.Setup(x => x.Get(10, It.IsAny<CancellationToken>())).ReturnsAsync(linked);
+        await Service.Save(1, null, 10, Request(), TestContext.Current.CancellationToken);
+        Assert.Equal(4, linked.AccountId);
+        Assert.Equal(12.34m, linked.Amount);
+    }
+    [Fact]
+    public async Task OwnerWide_SharesTheScalarValidationWithTheAccountPath()
+    {
+        var request = Request(); request.Amount = 0;
+        await Assert.ThrowsAsync<ArgumentException>(() => Service.Save(1, null, null, request, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => Service.GetHistory(1, null, 0, 20, TestContext.Current.CancellationToken));
+        _payments.Verify(x => x.Add(It.IsAny<DividendPayment>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

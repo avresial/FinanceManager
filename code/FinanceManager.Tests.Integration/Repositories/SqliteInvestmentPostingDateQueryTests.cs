@@ -93,6 +93,80 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         Assert.Equal([2L], second.Select(t => t.EntryId));
     }
 
+    [Fact]
+    public async Task GetHoldingsByUserAsOf_PoolsLinkedAndUnlinkedTrades_OmitsZeroUnitsAndOrdersByListing()
+    {
+        await SeedOwnerPool();
+
+        var holdings = await _repository.GetHoldingsByUserAsOf(_userId, _end, TestContext.Current.CancellationToken);
+
+        // Listing 700 nets 3 (linked buy 2 + unlinked buy 2 - sell 1); 702 is closed out; 703 is negative (oversold); other users and later trades are excluded.
+        Assert.Equal([_listingId, 703L], holdings.Select(h => h.AssetListingId));
+        Assert.Equal([3m, -1m], holdings.Select(h => h.Units));
+        Assert.Empty(await _repository.GetHoldingsByUserAsOf(_userId, _start.AddYears(-5), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetHistoryPageByUser_PagesAcrossLinkedAndUnlinkedTrades_ForOneOwnerOnly()
+    {
+        await SeedOwnerPool();
+        var ct = TestContext.Current.CancellationToken;
+
+        var first = await _repository.GetHistoryPageByUser(_userId, 2, cancellationToken: ct);
+        var last = first.Items[^1];
+        var second = await _repository.GetHistoryPageByUser(_userId, 2, last.TradeDate, last.EntryId, cancellationToken: ct);
+        var filtered = await _repository.GetHistoryPageByUser(_userId, 10, assetListingId: _listingId, type: InvestmentTransactionType.Buy, cancellationToken: ct);
+
+        Assert.True(first.HasMore);
+        Assert.Equal(2, first.Items.Count);
+        Assert.DoesNotContain(second.Items, t => first.Items.Any(f => f.EntryId == t.EntryId));
+        var all = first.Items.Concat(second.Items).ToList();
+        Assert.All(all, t => Assert.Equal(_userId, t.UserId));
+        Assert.Contains(all, t => t.AccountId is null);
+        Assert.All(filtered.Items, t => Assert.Equal(_listingId, t.AssetListingId));
+        Assert.Equal(3, filtered.Items.Count);
+    }
+
+    private async Task SeedOwnerPool()
+    {
+        AssetListing Listing(long id) => new()
+        {
+            Id = id,
+            Asset = new Asset { Id = id + 1000, Name = $"Pool {id}", Type = AssetType.ETF },
+            Ticker = $"P{id}",
+            ExchangeMic = "XNAS",
+            ExchangeName = "Test",
+            TradingCurrency = "USD",
+            PriceMultiplier = 1
+        };
+        var main = Listing(_listingId);
+        var closed = Listing(702);
+        var oversold = Listing(703);
+        InvestmentTransaction Row(long id, long user, int? account, AssetListing listing, InvestmentTransactionType type, decimal quantity, DateOnly date) => new()
+        {
+            EntryId = id,
+            UserId = user,
+            AccountId = account,
+            AssetListing = listing,
+            Currency = "USD",
+            Quantity = quantity,
+            UnitPrice = 10,
+            Type = type,
+            TradeDate = date
+        };
+        _context.InvestmentTransactions.AddRange(
+            Row(1, _userId, _accountId, main, InvestmentTransactionType.Buy, 2, _start),
+            Row(2, _userId, null, main, InvestmentTransactionType.Buy, 2, _start),
+            Row(3, _userId, null, main, InvestmentTransactionType.Sell, 1, _start.AddDays(1)),
+            Row(4, _userId, _accountId, closed, InvestmentTransactionType.Buy, 4, _start),
+            Row(5, _userId, null, closed, InvestmentTransactionType.Sell, 4, _start.AddDays(2)),
+            Row(6, _userId, null, oversold, InvestmentTransactionType.Sell, 1, _start.AddDays(3)),
+            Row(7, _userId + 1, null, main, InvestmentTransactionType.Buy, 50, _start),
+            Row(8, _userId, null, main, InvestmentTransactionType.Buy, 9, _end.AddDays(1)));
+        await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _context.ChangeTracker.Clear();
+    }
+
     private async Task Seed()
     {
         var listing = new AssetListing

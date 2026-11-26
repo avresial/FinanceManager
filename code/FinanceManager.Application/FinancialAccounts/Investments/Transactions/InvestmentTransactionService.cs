@@ -1,6 +1,7 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
 using FinanceManager.Application.Shared.Persistence;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
@@ -25,10 +26,27 @@ public sealed class InvestmentTransactionService(
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _externalAddGates = new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<InvestmentTransactionDto> AddAsync(
+    public Task<InvestmentTransactionDto> AddAsync(
         AddInvestmentTransactionRequest request,
         long userId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        AddAsync(request, userId, request.AccountId, cancellationToken);
+
+    public Task<InvestmentTransactionDto> AddOwnerAsync(
+        CreateInvestmentTradeRequest request,
+        long userId,
+        CancellationToken cancellationToken = default) =>
+        AddAsync(request.ToAddRequest(), userId, null, cancellationToken);
+
+    /// <summary>
+    /// Shared add pipeline. <paramref name="accountId"/> is the trade's account link; <c>null</c> adds an unlinked owner trade.
+    /// It replaces <see cref="AddInvestmentTransactionRequest.AccountId"/>, which owner requests leave unset.
+    /// </summary>
+    private async Task<InvestmentTransactionDto> AddAsync(
+        AddInvestmentTransactionRequest request,
+        long userId,
+        int? accountId,
+        CancellationToken cancellationToken)
     {
         ValidateRequest(request);
         var normalizedCurrency = request.Currency.Trim().ToUpperInvariant();
@@ -120,7 +138,7 @@ public sealed class InvestmentTransactionService(
                 try
                 {
                     var transaction = await transactionRepository.Add(
-                        request.ToEntity(userId, listingId),
+                        request.ToEntity(userId, accountId, listingId),
                         transactionCancellationToken);
                     var saved = await transactionRepository.Get(transaction.EntryId, transactionCancellationToken);
                     if (saved is null)
@@ -164,12 +182,12 @@ public sealed class InvestmentTransactionService(
         }
         catch (OperationCanceledException ex)
         {
-            logger.LogDebug(ex, "Adding investment transaction cancelled for account {AccountId}.", request.AccountId);
+            logger.LogDebug(ex, "Adding investment transaction cancelled for user {UserId}.", userId);
             throw;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to add investment transaction for account {AccountId}", request.AccountId);
+            logger.LogError(ex, "Failed to add investment transaction for user {UserId}", userId);
             throw new InvestmentTransactionCommandException(
                 external ? "instrument_import_failed" : "transaction_creation_failed",
                 external
