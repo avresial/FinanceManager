@@ -41,7 +41,6 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
         // Mock user plan verifier to allow any number of entries
         var planVerifierMock = new Mock<IUserPlanVerifier>();
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.GetUsedRecordsCapacity(_testUserId)).ReturnsAsync(0);
         services.AddSingleton(planVerifierMock.Object);
     }
@@ -224,20 +223,40 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task ImportCurrencyEntries_UnrelatedExistingEntryOnTheSameDay_ImportsWithoutConflict()
+    {
+        // arrange: an existing entry that matches nothing imported must not hold the import back
+        await SeedAccount();
+        Authorize("user", _testUserId, UserRole.User);
+        var date = _utcNow.Date.AddDays(-4).AddHours(8);
+        await SeedExistingEntryExactMatch(date, 10m);
+
+        // act
+        var result = await ImportEntriesAsync(new(_testAccountId, [new(date, 5m)]));
+
+        // assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.Imported);
+        Assert.Empty(result.Conflicts);
+        Assert.NotNull(_testDatabase);
+        Assert.Equal(2, await _testDatabase!.Context.CurrencyEntries.CountAsync(e => e.AccountId == _testAccountId && e.PostingDate == date, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ResolveImportConflicts_PickingExisting_ReturnsOk()
     {
-        // arrange create conflict
+        // arrange: a real overlap (the 10m exact match) puts the whole day under review, including the unrelated 7m
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new CurrencyAccountImportHttpClient(Client);
         var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
-        var existingValue = 10m;
-        var importValue = 5m;
-        await SeedExistingEntryExactMatch(existingDate, existingValue);
-        var dto = new CurrencyDataImportDto(_testAccountId, [new(existingDate, importValue)]);
+        var unrelatedDate = existingDate.AddHours(1);
+        await SeedExistingEntryExactMatch(existingDate, 10m);
+        await SeedExistingEntryExactMatch(unrelatedDate, 7m);
+        var dto = new CurrencyDataImportDto(_testAccountId, [new(existingDate, 10m), new(existingDate, 5m)]);
         var importResult = await ImportEntriesAsync(dto);
         Assert.NotNull(importResult);
-        var existingEntry = importResult.Conflicts[1].ExistingEntry;
+        var existingEntry = importResult.Conflicts.Single(x => x.ImportEntry is null).ExistingEntry;
         Assert.NotNull(existingEntry);
 
         var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: false, importData: null,
@@ -248,27 +267,27 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
 
         // assert
         Assert.True(resolveResult);
-        // ensure still exactly one entry in DB matching existing
+        // the picked existing entry stays
         Assert.NotNull(_testDatabase);
-        var result = await _testDatabase!.Context.CurrencyEntries.FirstAsync(e => e.AccountId == _testAccountId && e.PostingDate == existingDate, TestContext.Current.CancellationToken);
-        Assert.Equal(existingValue, result.ValueChange);
+        var result = await _testDatabase!.Context.CurrencyEntries.SingleAsync(e => e.AccountId == _testAccountId && e.PostingDate == unrelatedDate, TestContext.Current.CancellationToken);
+        Assert.Equal(7m, result.ValueChange);
     }
 
     [Fact]
     public async Task ResolveImportConflicts_PickingImport_ReturnsOk()
     {
-        // arrange create conflict
+        // arrange: a real overlap (the 10m exact match) puts the whole day under review, including the unrelated 7m
         await SeedAccount();
         Authorize("user", _testUserId, UserRole.User);
         var client = new CurrencyAccountImportHttpClient(Client);
         var existingDate = _utcNow.Date.AddDays(-4).AddHours(8);
-        var existingValue = 10m;
+        var unrelatedDate = existingDate.AddHours(1);
         var importValue = 5m;
-        var importDescription = "Import description";
-        await SeedExistingEntryExactMatch(existingDate, existingValue);
-        var importResult = await ImportEntriesAsync(new(_testAccountId, [new(existingDate, importValue, Description: importDescription)]));
+        await SeedExistingEntryExactMatch(existingDate, 10m);
+        await SeedExistingEntryExactMatch(unrelatedDate, 7m);
+        var importResult = await ImportEntriesAsync(new(_testAccountId, [new(existingDate, 10m), new(existingDate, importValue, Description: "Import description")]));
         Assert.NotNull(importResult);
-        var existingEntry = importResult.Conflicts[1].ExistingEntry;
+        var existingEntry = importResult.Conflicts.Single(x => x.ImportEntry is null).ExistingEntry;
         Assert.NotNull(existingEntry);
 
         var resolution = new ResolvedImportConflict(_testAccountId, importIsPicked: true, importData: new CurrencyEntryImport(existingDate, importValue),
@@ -279,10 +298,12 @@ public class CurrencyAccountImportControllerTests(OptionsProvider optionsProvide
 
         // assert
         Assert.True(resolveResult);
-        // ensure still exactly one entry in DB matching existing
+        // the picked import replaces the unrelated existing entry; the exact match stays
         Assert.NotNull(_testDatabase);
-        var result = await _testDatabase!.Context.CurrencyEntries.SingleAsync(e => e.AccountId == _testAccountId && e.PostingDate == existingDate, TestContext.Current.CancellationToken);
-        Assert.Equal(importValue, result.ValueChange);
+        var onDay = await _testDatabase!.Context.CurrencyEntries
+            .Where(e => e.AccountId == _testAccountId && e.PostingDate >= existingDate.Date && e.PostingDate < existingDate.Date.AddDays(1))
+            .Select(e => e.ValueChange).ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal([5m, 10m], onDay.Order());
     }
 
     public override void Dispose()

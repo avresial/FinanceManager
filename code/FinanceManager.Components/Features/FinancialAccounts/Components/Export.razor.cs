@@ -1,5 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Shared.Helpers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -163,10 +164,7 @@ public partial class Export : ComponentBase
         try
         {
             // Interpret selected dates as local calendar days and convert to UTC start/end-of-day.
-            var localStart = DateTime.SpecifyKind(selectedStartDate.Date, DateTimeKind.Local);
-            var localEnd = DateTime.SpecifyKind(selectedEndDate.Date.AddDays(1).AddTicks(-1), DateTimeKind.Local);
-            var startDate = localStart.ToUniversalTime();
-            var endDate = localEnd.ToUniversalTime();
+            var (startDate, endDate) = DateRangeHelper.LocalDaysToUtc(selectedStartDate, selectedEndDate);
 
             var url = $"{endpoint}?startDate={Uri.EscapeDataString(startDate.ToString("O"))}&endDate={Uri.EscapeDataString(endDate.ToString("O"))}";
             var response = await HttpClient.GetAsync(url);

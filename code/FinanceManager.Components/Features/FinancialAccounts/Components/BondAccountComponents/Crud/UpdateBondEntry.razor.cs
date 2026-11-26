@@ -1,6 +1,8 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -36,12 +38,14 @@ public partial class UpdateBondEntry
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    [Parameter] public required BondAccount BondAccount { get; set; }
+    /// <summary>The account the entry belongs to. Null edits the entry through the owner route (Transactions page).</summary>
+    [Parameter] public BondAccount? BondAccount { get; set; }
     [Parameter] public required BondAccountEntry BondAccountEntry { get; set; }
 
     [Inject] public required ILogger<UpdateBondEntry> Logger { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
@@ -61,8 +65,10 @@ public partial class UpdateBondEntry
         _loadedEntryId = BondAccountEntry.EntryId;
 
         _currency = SettingsService.GetCurrency();
-        _postingDate = BondAccountEntry.PostingDate;
-        _time = new TimeSpan(BondAccountEntry.PostingDate.Hour, BondAccountEntry.PostingDate.Minute, BondAccountEntry.PostingDate.Second);
+        // Entries are stored as UTC and the rows show them in local time, so the form edits the same local wall-clock time.
+        var posted = BondAccountEntry.PostingDate.ToLocalTime();
+        _postingDate = posted;
+        _time = new TimeSpan(posted.Hour, posted.Minute, posted.Second);
         _valueChange = BondAccountEntry.ValueChange;
         _description = BondAccountEntry.Description;
 
@@ -94,17 +100,32 @@ public partial class UpdateBondEntry
             if (_selectedBond is null) return;
 
             DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-            BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
-            {
-                Description = _description?.Trim() ?? string.Empty,
-                Labels = GetLabels().ToList()
-            };
+            var description = _description?.Trim() ?? string.Empty;
 
             // Clear a previous failure so a successful retry closes the editor.
             _errors = [];
             try
             {
-                await FinancialAccountService.UpdateEntry(bondAccountEntry);
+                if (BondAccount is null)
+                {
+                    await BondTransactionsHttpClient.UpdateAsync(BondAccountEntry.EntryId, new SaveBondEntryRequest(
+                        _selectedBond.Id, date, _valueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
+                }
+                else
+                {
+                    BondAccountEntry bondAccountEntry = new(BondAccountEntry.AccountId, BondAccountEntry.EntryId, date, -1, _valueChange.Value, _selectedBond.Id)
+                    {
+                        Description = description,
+                        Labels = GetLabels().ToList()
+                    };
+                    await FinancialAccountService.UpdateEntry(bondAccountEntry);
+                }
+            }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (BondAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry update");
+                _errors = [ex.Message];
             }
             catch (Exception ex)
             {

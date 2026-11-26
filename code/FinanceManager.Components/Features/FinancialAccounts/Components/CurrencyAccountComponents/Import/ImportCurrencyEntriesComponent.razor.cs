@@ -2,10 +2,12 @@ using FinanceManager.Components.Features.FinancialAccounts.Components.Shared.Imp
 using FinanceManager.Components.Features.FinancialAccounts.DtoMapping;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
+using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Infrastructure.Readers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
@@ -22,9 +24,13 @@ public partial class ImportCurrencyEntriesComponent :
     private string? _selectedDescriptionHeader;
     private List<(DateTime PostingDate, decimal ValueChange, string? ContractorDetails, string? Description)> _mappedPreview = [];
     private ImportResult? _importResult;
+    private List<Currency> _currencies = [];
+    private Currency? _currency;
 
     [Inject] public required CurrencyAccountImportHttpClient AccountImportHttpClient { get; set; }
-    [Inject] public required CurrencyAccountHttpClient AccountHttpClient { get; set; }
+    [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
+    [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required CurrencyImportJobTracker JobTracker { get; set; }
 
     private IReadOnlyList<ImportJobConflict> LiveConflicts => JobTracker.Conflicts;
@@ -36,6 +42,7 @@ public partial class ImportCurrencyEntriesComponent :
 
     protected override int MinimumHeaderCount => 2;
     protected override bool HasMappedPreview => _mappedPreview.Any();
+    protected override bool HasImportTarget => AccountId is not null || _currency is not null;
     protected override bool CanSubmitConflicts => _resolverRef?.AllResolved == true;
     protected override bool HasUnresolvedConflicts =>
         (ActiveImportJobId.HasValue && LiveConflicts.Any(x => !x.IsResolved && !x.Conflict.IsExactMatch)) ||
@@ -71,6 +78,33 @@ public partial class ImportCurrencyEntriesComponent :
     {
         JobTracker.Changed += OnTrackingChanged;
         await LoadAccountName();
+        if (AccountId is null)
+            await LoadCurrenciesAsync();
+    }
+
+    // Owner mode imports into the pool of one currency, so the wizard asks for it, starting on the user's own.
+    private async Task LoadCurrenciesAsync()
+    {
+        try
+        {
+            _currencies = [.. (await CurrencyHttpClient.GetAll()).OrderBy(x => x.ShortName)];
+            var preferred = SettingsService.GetCurrency();
+            OnCurrencySelected(_currencies.FirstOrDefault(x => x.Id == preferred.Id) ?? _currencies.FirstOrDefault());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load currencies for the import.");
+            _erorrs.Add("Could not load the currencies. Reload the page and try again.");
+        }
+    }
+
+    private void OnCurrencySelected(Currency? currency)
+    {
+        _currency = currency;
+        // A parsed file only counts as a finished step 1 while a currency is selected: the stepper header can jump ahead otherwise.
+        _step1Complete = HasImportTarget && _rawPreview.Count != 0;
+        if (HasImportTarget) _erorrs.Clear();
+        AccountName = currency is null ? string.Empty : $"{currency.ShortName} cash";
     }
 
     private void OnTrackingChanged() => _ = InvokeAsync(StateHasChanged);
@@ -169,7 +203,12 @@ public partial class ImportCurrencyEntriesComponent :
                 .Select(x => new CurrencyEntryImportRecordDto(x.PostingDate, x.ValueChange, x.ContractorDetails, x.Description))
                 .ToList();
 
-            var startResponse = await AccountImportHttpClient.StartAsyncCurrencyImportAsync(new(AccountId, entries));
+            if (AccountId is null && _currency is null)
+                throw new InvalidOperationException("Select a currency before importing.");
+
+            var startResponse = AccountId is int accountId
+                ? await AccountImportHttpClient.StartAsyncCurrencyImportAsync(new(accountId, entries))
+                : await CashTransactionsHttpClient.StartImportAsync(_currency!.Id, entries);
             if (startResponse is null)
                 throw new Exception("Async import could not be started.");
 

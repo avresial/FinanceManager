@@ -286,6 +286,17 @@ code {
     font-weight: 600;
 }
 
+/* Full-width variant for dialogs: the items share the row equally (kind pickers). */
+.fm-view-toggle--block .mud-toggle-group {
+    display: flex;
+    width: 100%;
+}
+
+.fm-view-toggle--block .mud-toggle-group .mud-toggle-item {
+    flex: 1 1 0;
+    justify-content: center;
+}
+
 /* Compact variant for narrow side cards (Top movers), whose header gives the aside at most 55% of the width. */
 .fm-view-toggle--compact .mud-toggle-group .mud-toggle-item {
     padding: 2px 5px !important;
@@ -296,6 +307,11 @@ code {
     .fm-view-toggle .mud-toggle-group .mud-toggle-item {
         min-height: 36px;
     }
+}
+
+/* Kind pickers are the dialogs' primary control, so they keep a 40px target on every viewport and pointer. */
+.fm-view-toggle--block .mud-toggle-group .mud-toggle-item {
+    min-height: 40px;
 }
 
 .fm-view-toggle .mud-toggle-item:focus-visible {
@@ -370,4 +386,27 @@ code {
     width: min(600px, 92vw);
     max-height: 90vh;
     overflow-y: auto;
+}
+
+/* The Add dialog hosts forms of different heights; anchoring it to the top keeps the kind toggle from jumping. */
+.fm-entry-overlay--top {
+    align-items: flex-start !important;
+}
+
+.fm-entry-overlay--top .fm-entry-dialog {
+    margin-top: min(8vh, 64px);
+    max-height: calc(100vh - min(8vh, 64px) - 16px);
+}
+
+.fm-entry-dialog-body:focus {
+    outline: none;
+}
+
+/* Save and Cancel stay visible while a tall form scrolls (only where the actions' parent spans the whole form). */
+.fm-entry-dialog .form-actions {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0 4px;
+    background: var(--mud-palette-surface);
+    z-index: 1;
 }

@@ -1,8 +1,6 @@
 using FinanceManager.Application.MoneyFlow.NetWorth;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -11,88 +9,124 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class LiabilitiesServiceTests
 {
-    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
-    private readonly LiabilitiesService _liabilitiesService;
+    private const int _plnId = 0;
+    private const int _eurId = 2;
+    private static readonly DateTime _day = new(2024, 3, 10, 0, 0, 0, DateTimeKind.Utc);
 
-    public LiabilitiesServiceTests() => _liabilitiesService = new(_financialAccountRepositoryMock.Object);
+    private readonly InMemoryOwnerLedger _ledger = new();
+    private readonly LiabilitiesService _service;
 
-    [Fact]
-    public async Task IsAnyAccountWithLiabilities_ReturnsTrue_WhenAccountHasNegativeValue()
+    public LiabilitiesServiceTests()
     {
-        // Arrange
-        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
-
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
-        // Act
-        var result = await _liabilitiesService.IsAnyAccountWithLiabilities(1);
-
-        // Assert
-        Assert.True(result);
+        var currencies = new Mock<ICurrencyRepository>();
+        currencies.Setup(x => x.GetCurrencies(It.IsAny<CancellationToken>()))
+            .Returns(() => new[] { new Currency(_plnId, "PLN", "zł"), new Currency(_eurId, "EUR", "€") }.ToAsyncEnumerable());
+        _service = new(_ledger, currencies.Object);
     }
 
     [Fact]
-    public async Task GetEndLiabilitiesPerAccount_YieldsLiabilities_ForNegativeValueAccounts()
+    public async Task IsAnyAccountWithLiabilities_IsTrue_WhenACurrencyNetsNegative()
     {
-        // Arrange
-        var account = new CurrencyAccount(1, 42, "loan", AccountLabel.Loan);
-        account.Add(new CurrencyAccountEntry(42, 1, DateTime.UtcNow, -200, -200));
+        _ledger.Add(_plnId, DateTime.UtcNow.AddDays(-1), -100m);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-        .Returns(new[] { account }.ToAsyncEnumerable());
-
-        // Act
-        var list = await _liabilitiesService.GetEndLiabilitiesPerAccount(1, DateTime.UtcNow, DateTime.UtcNow)
-        .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(list);
-        Assert.Equal("loan", list[0].Name);
-        Assert.Equal(-200m, list[0].Value);
-        Assert.Equal(42, list[0].AccountId);
+        Assert.True(await _service.IsAnyAccountWithLiabilities(1));
     }
 
     [Fact]
-    public async Task GetEndLiabilitiesPerType_AggregatesByType_ForNegativeValues()
+    public async Task IsAnyAccountWithLiabilities_IsFalse_WhenPositiveCashOffsetsTheLoanInTheSameCurrency()
     {
-        // Arrange
-        var account1 = new CurrencyAccount(1, 1, "loan1", AccountLabel.Loan);
-        account1.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
+        _ledger.Add(_plnId, DateTime.UtcNow.AddDays(-2), 1000m).Add(_plnId, DateTime.UtcNow.AddDays(-1), -400m);
 
-        var account2 = new CurrencyAccount(1, 2, "loan2", AccountLabel.Loan);
-        account2.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -50, -50));
-
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-        .Returns(new[] { account1, account2 }.ToAsyncEnumerable());
-
-        // Act
-        var list = await _liabilitiesService.GetEndLiabilitiesPerType(1, DateTime.UtcNow, DateTime.UtcNow)
-        .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Single(list);
-        Assert.Equal(AccountLabel.Loan.ToString(), list[0].Name);
-        Assert.Equal(-150m, list[0].Value);
+        Assert.False(await _service.IsAnyAccountWithLiabilities(1));
     }
 
     [Fact]
-    public async Task GetLiabilitiesTimeSeries_YieldsTimeSeries_ForNegativeValues()
+    public async Task IsAnyAccountWithLiabilities_AcceptsNegativeGuestIds()
     {
-        // Arrange
-        var account = new CurrencyAccount(1, 1, "loan", AccountLabel.Loan);
-        account.Add(new CurrencyAccountEntry(1, 1, DateTime.UtcNow, -100, -100));
+        _ledger.Add(_plnId, DateTime.UtcNow.AddDays(-1), -100m);
 
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-        .Returns(new[] { account }.ToAsyncEnumerable());
+        Assert.True(await _service.IsAnyAccountWithLiabilities(-7));
+    }
 
-        // Act
-        var list = await _liabilitiesService.GetLiabilitiesTimeSeries(1, DateTime.UtcNow, DateTime.UtcNow)
-        .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+    [Fact]
+    public async Task GetEndLiabilitiesPerAccount_NamesEachNegativeCurrencyByItsCode()
+    {
+        _ledger.Add(_plnId, _day, -200m).Add(_eurId, _day, -30m).Add(_eurId, _day.AddHours(1), 10m);
 
-        // Assert
-        Assert.NotEmpty(list);
-        Assert.Contains(list, ts => ts.Value < 0);
+        var list = await _service.GetEndLiabilitiesPerAccount(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([("PLN", -200m), ("EUR", -20m)], list.Select(x => (x.Name, x.Value)));
+        Assert.Equal(["PLN", "EUR"], list.Select(x => x.CurrencyCode));
+        Assert.All(list, x => Assert.Null(x.AccountId));
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerAccount_SkipsCurrenciesThatNetPositive()
+    {
+        _ledger.Add(_plnId, _day, 500m).Add(_plnId, _day.AddHours(1), -200m).Add(_eurId, _day, -50m);
+
+        var list = await _service.GetEndLiabilitiesPerAccount(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("EUR", Assert.Single(list).Name);
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerAccount_FallsBackToTheCurrencyIdForAnUnknownCurrency()
+    {
+        _ledger.Add(77, _day, -5m);
+
+        var list = await _service.GetEndLiabilitiesPerAccount(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Currency 77", Assert.Single(list).Name);
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerType_SumsNegativeCurrenciesUnderCash()
+    {
+        _ledger.Add(_plnId, _day, -100m).Add(_eurId, _day, -50m).Add(3, _day, 900m);
+
+        var list = await _service.GetEndLiabilitiesPerType(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken);
+
+        var result = Assert.Single(list);
+        Assert.Equal("Cash", result.Name);
+        Assert.Equal(-150m, result.Value);
+        Assert.Null(result.AccountId);
+    }
+
+    [Fact]
+    public async Task GetEndLiabilitiesPerType_IsEmpty_WhenNothingIsNegative()
+    {
+        _ledger.Add(_plnId, _day, 100m);
+
+        Assert.Empty(await _service.GetEndLiabilitiesPerType(1, _day, _day.AddDays(1)).ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetLiabilitiesTimeSeries_SumsNegativeCurrencyBalancesPerDay()
+    {
+        _ledger.Add(_plnId, _day, -100m).Add(_eurId, _day.AddDays(1), -30m).Add(_plnId, _day.AddDays(1), -20m);
+
+        var list = await _service.GetLiabilitiesTimeSeries(1, _day, _day.AddDays(2)).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([-150m, -150m, -100m], list.Select(x => x.Value));
+        Assert.Equal([_day.AddDays(2), _day.AddDays(1), _day], list.Select(x => x.DateTime));
+    }
+
+    [Fact]
+    public async Task GetLiabilitiesTimeSeries_ShowsTheBalanceTurningNegativeMidRange()
+    {
+        _ledger.Add(_plnId, _day.AddHours(-1), 100m).Add(_plnId, _day.AddDays(1).AddHours(8), -300m);
+
+        var list = await _service.GetLiabilitiesTimeSeries(1, _day, _day.AddDays(2)).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([-200m, -200m, 0m], list.Select(x => x.Value));
+    }
+
+    [Fact]
+    public async Task GetLiabilitiesTimeSeries_IsEmpty_WhenEveryBalanceStaysPositive()
+    {
+        _ledger.Add(_plnId, _day, 100m);
+
+        Assert.Empty(await _service.GetLiabilitiesTimeSeries(1, _day, _day.AddDays(2)).ToListAsync(TestContext.Current.CancellationToken));
     }
 }

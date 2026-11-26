@@ -33,7 +33,7 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase();
+        _database = new TestDatabase(stampOwnerKeys: true);
         services.AddSingleton(_database.Context);
         var clock = new Mock<IDateTimeProvider>();
         clock.SetupGet(x => x.UtcNow).Returns(_asOf);
@@ -59,6 +59,8 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
             new CurrencyAccountEntry(_cashAccountId, 4, _asOf.AddMinutes(1), 9634m, 9000m),
             new CurrencyAccountEntry(_loanAccountId, 5, _asOf.Date.AddDays(-2), -200m, -200m));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        // From here on every write goes through the real repositories, which must stamp the owner keys themselves.
+        _database.StopStampingOwnerKeys();
         Authorize("current-balances", _userId, UserRole.User);
 
         await AssertCurrentBalances(634m);
@@ -98,8 +100,9 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
 
         Assert.Equal(expectedCash, account!.Entries.First().Value);
         Assert.Equal(expectedCash, cashSeries![^1].Value);
-        Assert.Equal(expectedCash, forecast!.HistoricalSeries[^1].Value);
-        Assert.Equal(expectedCash, forecast.ForecastSeries[0].Value);
+        // The forecast pools every owned cash entry, including the one on the loan-typed account, like net worth does.
+        Assert.Equal(expectedCash - 200m, forecast!.HistoricalSeries[^1].Value);
+        Assert.Equal(expectedCash - 200m, forecast.ForecastSeries[0].Value);
         Assert.Equal(expectedCash - 200m, overview!.NetWorthSeries[^1].Value);
         Assert.Equal(overview.NetWorthSeries[^1].Value, overview.ClosingBalanceSeries[^1].Value);
     }

@@ -11,12 +11,18 @@ internal static class RequestBodySizeLimits
     public const string BondImportPath = "/api/BondAccountImport/ImportBondEntries";
     public const string CurrencyStartAsyncImportPath = "/api/CurrencyAccountImport/StartAsyncImport";
     public const string CurrencyImportEntriesPath = "/api/CurrencyAccountImport/ImportCurrencyEntries";
+    public const string OwnerCashImportPath = "/api/transactions/cash/import";
+    public const string OwnerBondImportPath = "/api/transactions/bonds/import";
+    public const string OwnerBondImportResolvePath = "/api/transactions/bonds/import/resolve";
 
     private static readonly HashSet<string> _importEndpointPaths = new(StringComparer.OrdinalIgnoreCase)
     {
         BondImportPath,
         CurrencyStartAsyncImportPath,
         CurrencyImportEntriesPath,
+        OwnerCashImportPath,
+        OwnerBondImportPath,
+        OwnerBondImportResolvePath,
     };
 
     public static long GetLimitForPath(PathString path)

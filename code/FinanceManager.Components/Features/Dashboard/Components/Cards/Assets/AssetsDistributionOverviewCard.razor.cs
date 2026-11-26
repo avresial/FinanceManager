@@ -95,7 +95,7 @@ public partial class AssetsDistributionOverviewCard : IDisposable
             };
             var result = await Coordinator.RunAsync(new SnapshotRefreshRequest<AssetsDistributionSnapshot, DistributionCardModel>
             {
-                Key = $"assets-distribution:{user.UserId}:{currency.Id}",
+                Key = $"assets-distribution:v2:{user.UserId}:{currency.Id}",
                 Gate = _gate,
                 ClaimedVersion = version,
                 ToModel = snapshot => snapshot.UserId == user.UserId && snapshot.CurrencyId == currency.Id

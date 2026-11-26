@@ -188,6 +188,9 @@ public class CachedAccountEntryRepository<T>(
     public Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true) =>
         inner.Get(accountId, date, count, olderThenDate);
     public Task<T?> Get(int accountId, long entryId) => inner.Get(accountId, entryId);
+    public Task<T?> GetByOwner(int userId, long entryId, CancellationToken cancellationToken = default) => inner.GetByOwner(userId, entryId, cancellationToken);
+    public IAsyncEnumerable<T> GetByOwner(int userId, int partitionId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default) =>
+        inner.GetByOwner(userId, partitionId, startDate, endDate, cancellationToken);
     public Task<IReadOnlyList<T>> GetByIds(IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default) => inner.GetByIds(entryIds, cancellationToken);
 
     public Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default) => inner.GetRecentUnlabelled(count, cancellationToken);
@@ -240,7 +243,7 @@ public class CachedAccountEntryRepository<T>(
         }
         finally
         {
-            await InvalidateAccounts([entry.AccountId], CancellationToken.None);
+            await InvalidateEntryOwners([entry]);
         }
     }
 
@@ -259,7 +262,7 @@ public class CachedAccountEntryRepository<T>(
         }
         finally
         {
-            await InvalidateAccounts(entryList.Select(e => e.AccountId), CancellationToken.None);
+            await InvalidateEntryOwners(entryList);
         }
     }
 
@@ -268,6 +271,30 @@ public class CachedAccountEntryRepository<T>(
         var result = await inner.Update(entry);
         await InvalidateAccounts([entry.AccountId]);
         return result;
+    }
+
+    public async Task<bool> UpdateByOwner(int userId, T entry, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await inner.UpdateByOwner(userId, entry, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateOwner(userId);
+        }
+    }
+
+    public async Task<bool> DeleteByOwner(int userId, long entryId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await inner.DeleteByOwner(userId, entryId, cancellationToken);
+        }
+        finally
+        {
+            await InvalidateOwner(userId);
+        }
     }
 
     public Task<bool> Delete(int accountId, long entryId) => Delete(accountId, entryId, CancellationToken.None);
@@ -392,9 +419,32 @@ public class CachedAccountEntryRepository<T>(
             tags: [Tag(userId)]);
     }
 
-    private async Task InvalidateAccounts(IEnumerable<int?> accountIds, CancellationToken cancellationToken = default)
+    // Guest owners have negative ids, so only zero is rejected. A committed write must bust the cache even when
+    // the request is being cancelled, hence no caller token.
+    private async Task InvalidateOwner(int userId)
     {
+        if (userId != 0)
+            await cacheInvalidator.InvalidateUser(userId, CancellationToken.None);
+    }
+
+    // Invalidates the stamped owner of each entry directly (an unlinked entry has no account to resolve it from)
+    // and falls back to the account's owner for linked entries that carry no stamp on the caller's instance.
+    private async Task InvalidateEntryOwners(IEnumerable<T> entries, CancellationToken cancellationToken = default)
+    {
+        var entryList = entries as IList<T> ?? entries.ToList();
         var invalidatedUsers = new HashSet<int>();
+        foreach (var ownerId in entryList.Select(e => e.UserId).OfType<int>().Where(id => id != 0).Distinct())
+        {
+            await cacheInvalidator.InvalidateUser(ownerId, cancellationToken);
+            invalidatedUsers.Add(ownerId);
+        }
+
+        await InvalidateAccounts(entryList.Where(e => e.UserId is null or 0).Select(e => e.AccountId), cancellationToken, invalidatedUsers);
+    }
+
+    private async Task InvalidateAccounts(IEnumerable<int?> accountIds, CancellationToken cancellationToken = default, ISet<int>? invalidatedUsers = null)
+    {
+        invalidatedUsers ??= new HashSet<int>();
         foreach (var accountId in accountIds.OfType<int>().Distinct())
         {
             await cache.RemoveByTagAsync(AccountTag(accountId), cancellationToken);
@@ -410,7 +460,6 @@ public class CachedAccountEntryRepository<T>(
         var ids = entryIds.Distinct().ToList();
         if (ids.Count == 0) return;
 
-        var accountIds = (await inner.GetByIds(ids, cancellationToken)).Select(e => e.AccountId);
-        await InvalidateAccounts(accountIds, cancellationToken);
+        await InvalidateEntryOwners(await inner.GetByIds(ids, cancellationToken), cancellationToken);
     }
 }

@@ -11,8 +11,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Reposito
 
 internal class BondAccountRepository(AppDbContext context) : IAccountRepository<BondAccount>
 {
-    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Bond).CountAsync();
-
     public async Task<int?> Add(int userId, string accountName)
     {
         var result = context.Accounts.Add(new FinancialAccountBaseDto

@@ -23,6 +23,7 @@ internal static class Registration
                 .AddScoped<IInvestmentRateService, InvestmentRateService>()
                 .AddScoped<ISavingsRateService, SavingsRateService>()
                 .AddScoped<ILiabilitiesService, LiabilitiesService>()
+                .AddScoped<IUnconvertedCurrencyService, UnconvertedCurrencyService>()
                 .AddScoped<IInvestmentPaycheckEstimatorService, InvestmentPaycheckEstimatorService>()
                 .AddScoped<IEssentialSpendingServiceTyped, CurrencyEssentialSpendingService>()
                 .AddScoped<IEssentialSpendingService, EssentialSpendingService>()

@@ -1,7 +1,9 @@
 using Bunit;
 using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.TransactionHistory;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Tests.Unit.Components.Features.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -61,6 +63,44 @@ public class TransactionRowTests
         Assert.Contains(description, cut.Markup);
     }
 
+    [Fact]
+    public async Task RowWithoutAnAccount_OffersEditAndDelete_AndDeletesThroughTheOwnerRoute()
+    {
+        var handler = new RecordingHttpHandler();
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionRow>(p => p
+            .Add(x => x.Entry, new CurrencyAccountEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, -20m) { Description = "Groceries" })
+            .Add(x => x.Currency, "PLN")
+            .Add(x => x.ShowBalance, false)
+            .Add(x => x.InitiallyExpanded, true));
+        var published = 0;
+        context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;
+
+        Assert.Contains(cut.FindAll("button"), button => button.TextContent.Trim() == "Edit");
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
+        // The confirm button is labelled like the row action that opened it; it renders after the row.
+        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(1, published));
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal((HttpMethod.Delete, "/api/transactions/cash/7"), (request.Method, request.PathAndQuery));
+    }
+
+    [Fact]
+    public async Task RowWithAnAccount_StillDeletesThroughTheAccountService()
+    {
+        var handler = new RecordingHttpHandler();
+        await using var context = CreateContext(handler);
+        var cut = RenderRow(context, initiallyExpanded: true);
+
+        cut.FindAll("button").Single(button => button.TextContent.Trim() == "Delete").Click();
+        // The confirm button is labelled like the row action that opened it; it renders after the row.
+        cut.FindAll("button").Last(button => button.TextContent.Trim() == "Delete").Click();
+
+        Mock.Get(context.Services.GetRequiredService<IFinancialAccountService>()).Verify(service => service.RemoveEntry(7, 1), Times.Once);
+        Assert.Empty(handler.Requests);
+    }
+
     private static IRenderedComponent<TransactionRow> RenderRow(BunitContext context, bool initiallyExpanded, string description = "Groceries")
     {
         var account = new CurrencyAccount(1, 1, "Cash");
@@ -77,7 +117,7 @@ public class TransactionRowTests
             .Add(x => x.InitiallyExpanded, initiallyExpanded));
     }
 
-    private static BunitContext CreateContext()
+    private static BunitContext CreateContext(RecordingHttpHandler? handler = null)
     {
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -85,6 +125,7 @@ public class TransactionRowTests
         context.Services.AddSingleton(Mock.Of<IFinancialAccountService>());
         context.Services.AddSingleton(new AccountDataSynchronizationService());
         context.Services.AddSingleton(NullLogger<TransactionRow>.Instance);
+        context.Services.AddSingleton(new CashTransactionsHttpClient((handler ?? new RecordingHttpHandler()).CreateClient()));
         return context;
     }
 }

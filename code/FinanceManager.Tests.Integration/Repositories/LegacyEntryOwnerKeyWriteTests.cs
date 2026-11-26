@@ -45,10 +45,15 @@ public class LegacyEntryOwnerKeyWriteTests
         Assert.True(await cash.Add([Cash(1), Cash(2)], recalculate, ct));
         Assert.True(await bonds.Add([Bond(3), Bond(4)], recalculate, ct));
 
-        foreach (var invalid in new int?[] { null, 99, 3, 5 })
+        foreach (var invalid in new int?[] { 99, 3, 5 })
             Assert.False(await cash.Add([Cash(1), Cash(invalid)], recalculate, ct));
-        foreach (var invalid in new int?[] { null, 99, 1, 6 })
+        foreach (var invalid in new int?[] { 99, 1, 6 })
             Assert.False(await bonds.Add([Bond(3), Bond(invalid)], recalculate, ct));
+        // An entry without a link needs a stamped owner (and currency); the caller's keys are what is checked, not an account.
+        foreach (var unowned in new CurrencyAccountEntry[] { new(null, 0, date, 0, 10), new(null, 0, date, 0, 10) { UserId = 0, CurrencyId = 7 }, new(null, 0, date, 0, 10) { UserId = 6 } })
+            Assert.False(await cash.Add([Cash(1), unowned], recalculate, ct));
+        foreach (var unowned in new BondAccountEntry[] { new(null, 0, date, 0, 3, 10), new(null, 0, date, 0, 3, 10) { UserId = 0 } })
+            Assert.False(await bonds.Add([Bond(3), unowned], recalculate, ct));
 
         var cashRows = await context.CurrencyEntries.AsNoTracking().OrderBy(e => e.EntryId).ToListAsync(ct);
         var bondRows = await context.BondEntries.AsNoTracking().OrderBy(e => e.EntryId).ToListAsync(ct);

@@ -8,6 +8,10 @@ using FinanceManager.Components.Features.FinancialAccounts.Components.Investment
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Components;
+using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
@@ -16,6 +20,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Tests.Unit.Components.Features.Transactions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -501,40 +506,52 @@ public sealed class TransactionsPageTests
     }
 
     [Fact]
-    public async Task InvestmentRows_GetTheirValuation_RequestedPerAccountForPurchases()
+    public async Task InvestmentRows_GetTheirValuation_InOneRequestCoveringLinkedAndUnlinkedPurchases()
     {
         using var handler = new PageHandler((_, _) => Respond(Page(
-            [Entry(3, _oct15, TransactionKind.Investment, accountId: 30), Entry(4, _oct15, TransactionKind.Investment, accountId: 31)], null)));
-        // Account 31's valuation request times out; account 30's valuation must still reach its row.
-        using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/31/")
-            ? Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout"))
-            : Task.FromResult(uri.AbsolutePath.Contains("TransactionValuations")
-                ? new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = JsonContent.Create<IReadOnlyList<InvestmentTransactionValuationDto>>(
-                        [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true)])
-                }
-                : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
+            [Entry(3, _oct15, TransactionKind.Investment, accountId: 30), Entry(4, _oct15, TransactionKind.Investment, accountId: null)], null)));
+        using var services = new PageHandler((_, uri) => Task.FromResult(uri.AbsolutePath.Contains("TransactionValuations")
+            ? new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create<IReadOnlyList<InvestmentTransactionValuationDto>>(
+                    [new(3, 10m, 20m, 12m, 24m, 4m, 20m, "PLN", false, true), new(4, 10m, 20m, 13m, 26m, 6m, 30m, "PLN", false, true)])
+            }
+            : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
         await using var context = CreateContext(handler, services);
 
         var cut = context.Render<TransactionsPage>();
 
-        cut.WaitForAssertion(() => Assert.Equal(24m,
-            cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 3).Instance.Valuation?.CurrentValuation));
-        Assert.Null(cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 4).Instance.Valuation);
-        Assert.Equal(["/api/InvestmentValuation/TransactionValuations/30/0", "/api/InvestmentValuation/TransactionValuations/31/0"],
-            services.Requests.Select(uri => uri.AbsolutePath).Order());
-        Assert.Equal("?transactionIds=3", services.Requests.Single(uri => uri.AbsolutePath.EndsWith("/30/0")).Query);
+        cut.WaitForAssertion(() => Assert.Equal(26m,
+            cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 4).Instance.Valuation?.CurrentValuation));
+        Assert.Equal(24m, cut.FindComponents<InvestmentTransactionRow>().Single(row => row.Instance.Transaction.Id == 3).Instance.Valuation?.CurrentValuation);
+        // One user-scoped request values every visible purchase, whether or not it is linked to an account.
+        var request = Assert.Single(services.Requests);
+        Assert.Equal("/api/InvestmentValuation/TransactionValuations/0", request.AbsolutePath);
+        Assert.Equal(["3", "4"], QueryHelpers.ParseQuery(request.Query)["transactionIds"].Order().Select(id => id!));
     }
 
     [Fact]
-    public async Task DeletingAnInvestmentRow_UsesItsOwnAccount_AndReloads()
+    public async Task InvestmentRows_StayOnTheirFallbacks_WhenTheValuationRequestTimesOut()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page(
+            [Entry(3, _oct15, TransactionKind.Investment, accountId: null)], null)));
+        using var services = new PageHandler((_, _) => Task.FromException<HttpResponseMessage>(new TaskCanceledException("timeout")));
+        await using var context = CreateContext(handler, services);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.Single(services.Requests));
+        Assert.Null(cut.FindComponent<InvestmentTransactionRow>().Instance.Valuation);
+    }
+
+    [Fact]
+    public async Task DeletingAnInvestmentRow_UsesTheOwnerRoute_AndReloads()
     {
         using var handler = new PageHandler((count, _) => Respond(count == 1
             ? Page([Entry(3, _oct15, TransactionKind.Investment, accountId: 30)], null)
             : Page([], null)));
         using var services = new PageHandler((_, uri) => Task.FromResult(new HttpResponseMessage(
-            uri.AbsolutePath.Contains("/Delete/") ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable)));
+            uri.AbsolutePath.StartsWith("/api/transactions/investment/") ? HttpStatusCode.NoContent : HttpStatusCode.ServiceUnavailable)));
         await using var context = CreateContext(handler, services);
         var cut = context.Render<TransactionsPage>();
         cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<InvestmentTransactionRow>()));
@@ -543,8 +560,10 @@ public sealed class TransactionsPageTests
         await cut.InvokeAsync(() => row.Instance.OnDelete.InvokeAsync(row.Instance.Transaction));
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
-        Assert.Contains(services.Requests, uri => uri.AbsolutePath == "/api/InvestmentTransaction/Delete/30/3");
+        Assert.Contains(services.Requests, uri => uri.AbsolutePath == "/api/transactions/investment/3");
         Assert.Equal(2, handler.Requests.Count);
+        // Deleting the last trade of a currency must drop it from the filter options.
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.CurrencyRequests.Count));
     }
 
     [Fact]
@@ -552,7 +571,7 @@ public sealed class TransactionsPageTests
     {
         using var handler = new PageHandler((_, _) => Respond(Page([Entry(3, _oct15, TransactionKind.Investment, accountId: 30)], null)));
         var deleted = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var services = new PageHandler((_, uri) => uri.AbsolutePath.Contains("/Delete/")
+        using var services = new PageHandler((_, uri) => uri.AbsolutePath.StartsWith("/api/transactions/investment/")
             ? deleted.Task
             : Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
         await using var context = CreateContext(handler, services);
@@ -563,16 +582,16 @@ public sealed class TransactionsPageTests
         var onDelete = row.Instance.OnDelete;
 
         var deleting = cut.InvokeAsync(() => onDelete.InvokeAsync(transaction));
-        cut.WaitForAssertion(() => Assert.Contains(services.Requests, uri => uri.AbsolutePath.Contains("/Delete/")));
+        cut.WaitForAssertion(() => Assert.Contains(services.Requests, uri => uri.AbsolutePath.StartsWith("/api/transactions/investment/")));
         await context.DisposeComponentsAsync();
-        deleted.SetResult(new HttpResponseMessage(HttpStatusCode.OK));
+        deleted.SetResult(new HttpResponseMessage(HttpStatusCode.NoContent));
         await deleting;
 
         Assert.Single(handler.Requests);
     }
 
     [Fact]
-    public async Task UnlinkedRowsExpandWithoutAccountCommandsOrRunningValues()
+    public async Task UnlinkedRowsExpandWithOwnerCommandsAndWithoutRunningValues()
     {
         using var handler = new PageHandler((_, _) => Respond(Page([
             Entry(1, _oct15, accountId: null), Entry(2, _oct15, TransactionKind.Bond, null),
@@ -585,7 +604,118 @@ public sealed class TransactionsPageTests
         Assert.Contains("Units change", cut.Markup);
         Assert.DoesNotContain("Running balance", cut.Markup);
         Assert.DoesNotContain("position ", cut.Markup, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain(cut.FindAll("button"), button => button.TextContent.Trim() is "Edit" or "Remove" or "Delete");
+        var actions = cut.FindAll("button").Select(button => button.TextContent.Trim()).ToList();
+        Assert.Equal(3, actions.Count(action => action == "Edit"));
+        Assert.Equal(3, actions.Count(action => action == "Delete"));
+        Assert.DoesNotContain("Remove", actions);
+    }
+
+    [Fact]
+    public async Task HeaderOffersAddAndImportExport()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+
+        var cut = context.Render<TransactionsPage>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-add']")));
+        Assert.NotEmpty(cut.FindAll("[data-testid='transactions-import-export']"));
+    }
+
+    [Fact]
+    public async Task Add_OpensTheDialogOnCash()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-add']")));
+        var dialog = cut.FindComponent<AddTransactionDialog>();
+        Assert.False(dialog.Instance.Visible);
+
+        cut.Find("[data-testid='transactions-add']").Click();
+
+        Assert.True(dialog.Instance.Visible);
+        Assert.Equal(TransactionKind.Cash, dialog.Instance.InitialKind);
+    }
+
+    [Fact]
+    public async Task Add_OpensOnTheSingleKindTheListIsFilteredTo()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[data-testid='transaction-history-row']")));
+        var toolbar = cut.FindComponent<TransactionLogToolbar>();
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Bond], [])));
+
+        cut.Find("[data-testid='transactions-add']").Click();
+
+        Assert.Equal(TransactionKind.Bond, cut.FindComponent<AddTransactionDialog>().Instance.InitialKind);
+    }
+
+    [Fact]
+    public async Task DialogQuery_OpensTheDialogOnTheRequestedKind_WithoutFiltering()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?dialog=add-entry&kind=bond");
+
+        var cut = context.Render<TransactionsPage>();
+
+        var dialog = cut.FindComponent<AddTransactionDialog>();
+        Assert.True(dialog.Instance.Visible);
+        Assert.Equal(TransactionKind.Bond, dialog.Instance.InitialKind);
+        cut.WaitForAssertion(() => Assert.False(QueryHelpers.ParseQuery(handler.Requests.Last().Query).ContainsKey("kinds")));
+    }
+
+    [Fact]
+    public async Task InvestmentSavedInTheAddDialog_ReloadsTheList()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.Single(handler.Requests));
+
+        await cut.InvokeAsync(() => cut.FindComponent<AddTransactionDialog>().Instance.OnSaved.InvokeAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.Requests.Count));
+        // A first trade in a new currency must reach the filter options too.
+        cut.WaitForAssertion(() => Assert.Equal(2, handler.CurrencyRequests.Count));
+    }
+
+    [Fact]
+    public async Task DialogQuery_WithAnUndefinedKind_OpensOnCash()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([Entry(1, _oct15)], null)));
+        await using var context = CreateContext(handler);
+        context.Services.GetRequiredService<NavigationManager>().NavigateTo("/Transactions?dialog=add-entry&kind=999");
+
+        var cut = context.Render<TransactionsPage>();
+
+        Assert.Equal(TransactionKind.Cash, cut.FindComponent<AddTransactionDialog>().Instance.InitialKind);
+    }
+
+    [Fact]
+    public async Task EmptyList_OffersImportAndAdd_AndClearFiltersOnlyWhenFiltered()
+    {
+        using var handler = new PageHandler((_, _) => Respond(Page([], null)));
+        await using var context = CreateContext(handler);
+        var cut = context.Render<TransactionsPage>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-empty']")));
+        Assert.Contains(cut.FindAll("[data-testid='transactions-empty'] a"), link => link.GetAttribute("href") == "/Transactions/Import/cash");
+        Assert.Contains(cut.FindAll("[data-testid='transactions-empty'] button"), button => button.TextContent.Contains("Add transaction"));
+        Assert.Empty(cut.FindAll("[data-testid='transactions-clear-filters']"));
+
+        var toolbar = cut.FindComponent<TransactionLogToolbar>();
+        await cut.InvokeAsync(() => toolbar.Instance.FilterChanged.InvokeAsync(new([TransactionKind.Cash], [])));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid='transactions-clear-filters']")));
+        // The header already offers Import and Add, so a filtered view shows only the way out of the filters.
+        Assert.Empty(cut.FindAll("[data-testid='transactions-empty'] a"));
+        Assert.Single(cut.FindAll("[data-testid='transactions-empty'] button"));
+        cut.Find("[data-testid='transactions-clear-filters']").Click();
+
+        cut.WaitForAssertion(() => Assert.False(toolbar.Instance.Filter.IsActive));
+        Assert.Empty(cut.FindAll("[data-testid='transactions-clear-filters']"));
     }
 
     private static TransactionLogItemDto Entry(long id, DateTime date, TransactionKind type = TransactionKind.Cash, int? accountId = 10)
@@ -633,9 +763,16 @@ public sealed class TransactionsPageTests
         // Row enrichment (bond definitions, valuations) and the rows' own services. Enrichment requests fail,
         // which the page tolerates, so the paged-feed handler only ever sees feed requests.
         var unavailable = new HttpClient(services ?? new UnavailableHandler()) { BaseAddress = new Uri("http://localhost/") };
-        context.Services.AddSingleton(new BondDetailsHttpClient(unavailable));
         context.Services.AddSingleton(new InvestmentValuationHttpClient(unavailable));
         context.Services.AddSingleton(new InvestmentTransactionHttpClient(unavailable));
+        context.Services.AddSingleton(new InvestmentTradesHttpClient(unavailable));
+        context.Services.AddSingleton(new CashTransactionsHttpClient(unavailable));
+        context.Services.AddSingleton(new BondTransactionsHttpClient(unavailable));
+        // What the add dialog's forms load when they open.
+        var forms = RecordingHttpHandler.ForEntryForms().CreateClient();
+        context.Services.AddSingleton(new CurrencyHttpClient(forms));
+        context.Services.AddSingleton(new BondDetailsHttpClient(forms));
+        context.Services.AddSingleton(new FinanceManager.Components.Features.Labels.HttpClients.FinancialLabelHttpClient(forms));
         context.Services.AddSingleton<AccountDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.PLN);

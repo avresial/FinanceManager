@@ -28,21 +28,17 @@ public sealed record McpTransactionPage(
     bool HasMore);
 
 public sealed record McpInvestmentPosition(
-    int AccountId,
-    string AccountName,
     long AssetListingId,
     string Ticker,
     string Exchange,
     string TradingCurrency,
-    decimal Quantity);
-
-public sealed record McpInvestmentAccountValue(int AccountId, string AccountName, decimal Value);
+    decimal Quantity,
+    decimal Value);
 
 public sealed record McpInvestmentPortfolio(
     DateOnly AsOfDate,
     string ValuationCurrency,
     decimal TotalValue,
-    IReadOnlyList<McpInvestmentAccountValue> Accounts,
     IReadOnlyList<McpInvestmentPosition> Positions);
 
 public sealed record McpCurrency(int Id, string Code, string Symbol);
@@ -95,17 +91,15 @@ internal static class McpResponseMapper
         transaction.UnitPrice);
 
     public static McpInvestmentPosition InvestmentPosition(
-        int accountId,
-        string accountName,
         AssetListing listing,
-        decimal quantity) => new(
-            accountId,
-            accountName,
+        decimal quantity,
+        decimal value) => new(
             listing.Id,
             listing.Ticker,
             listing.ExchangeName,
             listing.TradingCurrency ?? string.Empty,
-            quantity);
+            quantity,
+            value);
 
     public static McpCurrency Currency(Currency currency) =>
         new(currency.Id, currency.ShortName, currency.Symbol);

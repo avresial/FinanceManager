@@ -1,11 +1,16 @@
 @page "/Transactions"
 @using FinanceManager.Components.Shared.Helpers
 @using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents
+@using FinanceManager.Components.Features.Transactions.Components
 
 <PageTitle>Transactions</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6 fm-txlog-scope">
-    <PageHeader Title="Transactions" />
+    <PageHeader Title="Transactions">
+        <Actions>
+            <TransactionsPageActions IsMobile="@_isMobile" OnAdd="OpenAdd" OnExport="OpenExportAsync" />
+        </Actions>
+    </PageHeader>
 
     <TransactionLogToolbar SelectedRange="@_selectedRange" SelectedRangeChanged="OnRangeChanged"
                            CustomDateRange="@_customRange" CustomDateRangeChanged="OnCustomRangeChanged"
@@ -62,6 +67,23 @@
             <MudText Typo="Typo.body2" Class="fm-muted" Align="Align.Center">
                 @EmptyMessage
             </MudText>
+            @* The header already offers Import and Add; a filtered view only needs the way back out of the filters. *@
+            @if (_filter.IsActive || !string.IsNullOrWhiteSpace(_search))
+            {
+                <MudStack Row Justify="Justify.Center" Class="mt-3">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearFilters"
+                               data-testid="transactions-clear-filters">Clear filters</MudButton>
+                </MudStack>
+            }
+            else
+            {
+                <MudStack Row Wrap="Wrap.Wrap" Justify="Justify.Center" Spacing="2" Class="mt-3">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Upload"
+                               Href="/Transactions/Import/cash">Import statement</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenAdd">Add transaction</MudButton>
+                </MudStack>
+            }
         </div>
     }
     else
@@ -100,10 +122,12 @@
     }
 </MudContainer>
 
-@if (_editingInvestment?.AccountId is int accountId)
+<AddTransactionDialog @bind-Visible="_addVisible" InitialKind="_addKind" OnSaved="OnInvestmentSavedAsync" />
+
+@if (_editingInvestment is not null)
 {
-    @* One form for the whole page, bound to the selected trade's own account. *@
-    <InvestmentTransactionForm @key="_editingInvestment.Id" AccountId="@accountId" Visible="@_investmentFormVisible"
+    @* One form for the whole page; a trade is edited through its owner route, whichever account it is linked to. *@
+    <InvestmentTransactionForm @key="_editingInvestment.Id" Visible="@_investmentFormVisible"
                                VisibleChanged="OnInvestmentFormVisibleChanged" Transaction="@_editingInvestment"
                                OnSaved="OnInvestmentSavedAsync" />
 }

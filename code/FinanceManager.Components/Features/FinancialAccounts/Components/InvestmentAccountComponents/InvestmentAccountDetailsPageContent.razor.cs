@@ -309,7 +309,7 @@ public partial class InvestmentAccountDetailsPageContent : ComponentBase, IAsync
         {
             return transactionIds.Count == 0
                 ? []
-                : await ValuationHttpClient.GetTransactionValuationsAsync(accountId, currency.Id, transactionIds);
+                : await ValuationHttpClient.GetTransactionValuationsAsync(currency.Id, transactionIds);
         }
         catch (Exception ex)
         {

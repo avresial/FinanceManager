@@ -52,7 +52,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         services.AddSingleton(_testDatabase.Context);
 
         var planVerifierMock = new Mock<IUserPlanVerifier>();
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
         services.AddSingleton(_priceProvider.Object);

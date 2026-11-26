@@ -25,7 +25,6 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
     ICurrencyRepository currencyRepository,
-    IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
     ICacheInvalidator dashboardCacheInvalidator,
     IFinancialAlertService financialAlertService) : ControllerBase
@@ -99,9 +98,6 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
     public async Task<IActionResult> Add(AddAccount addAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
-
-        if (!await userPlanVerifier.CanAddMoreAccounts(userId))
-            return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
         if (await currencyRepository.GetCurrency(addAccount.CurrencyId, HttpContext.RequestAborted) is null)
             return BadRequest("Select a valid account currency.");

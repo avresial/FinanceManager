@@ -21,6 +21,12 @@ public interface IInvestmentTransactionRepository
     /// <summary>Get a user's transactions whose <see cref="InvestmentTransaction.TradeDate"/> falls within [startDate, endDate].</summary>
     Task<IReadOnlyList<InvestmentTransaction>> GetByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The number of trades per user in one grouped query, linked to an account or not. Users without trades are omitted,
+    /// so callers should treat a missing key as zero. Id 0 is never a user and is ignored.
+    /// </summary>
+    Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Insert a new transaction and return the persisted entity (with its generated id).</summary>
     Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default);
 
@@ -43,33 +49,20 @@ public interface IInvestmentTransactionRepository
     Task<IReadOnlyList<InvestmentTransaction>> GetLatestByListingAsOf(int accountId, DateOnly asOf, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets only the requested transactions belonging to an account, with the listing and asset
-    /// metadata required for valuation. The account predicate is applied before materialisation.
+    /// Gets only the requested transactions of <paramref name="userId"/> (linked to an account or not), ordered by posting date then id.
+    /// The owner predicate is applied before materialisation, so ids of other users are never returned.
     /// </summary>
-    Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
-        int accountId,
+    Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
+        long userId,
         IReadOnlyCollection<long> transactionIds,
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Signed-quantity holdings per account and <see cref="AssetListing"/> as of a date for the given accounts,
-    /// projected and aggregated at the database level.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Aggregated opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within
-    /// [<paramref name="startDate"/>, <paramref name="endDate"/>] for the given accounts, projected and aggregated
-    /// at the database boundary without loading out-of-range rows or full entity graphs.
-    /// </summary>
-    Task<AccountValuationInputs> GetValuationInputs(IReadOnlyCollection<int> accountIds, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Bounded historical capital reconstruction inputs for transactions on or before <paramref name="toDate"/>
-    /// across the given accounts. The projection includes the stable transaction/listing identity so
+    /// Bounded historical capital reconstruction inputs: every trade of <paramref name="userId"/> on or before <paramref name="toDate"/>,
+    /// linked to an account or not, ordered by posting date then id. The projection includes the stable transaction/listing identity so
     /// the application can replay same-day history deterministically without loading entity graphs.
     /// </summary>
-    Task<IReadOnlyList<CapitalFlowInput>> GetCapitalFlowInputs(IReadOnlyCollection<int> accountIds, DateOnly toDate, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserCapitalFlowInput>> GetCapitalFlowInputsByUser(long userId, DateOnly toDate, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The distinct <see cref="AssetListing"/> ids referenced by any investment transaction across all
@@ -118,30 +111,28 @@ public interface IInvestmentTransactionRepository
     /// </summary>
     Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default);
 
-    public sealed record ValuationTradeInput(
-        int AccountId,
-        long AssetListingId,
-        DateOnly TradeDate,
-        decimal SignedQuantity);
+    /// <summary>
+    /// Opening holdings before <paramref name="startDate"/> and daily signed-quantity deltas within [<paramref name="startDate"/>,
+    /// <paramref name="endDate"/>], pooled per listing across all of the owner's trades (linked to an account or not). Positions and days
+    /// that net to zero are omitted.
+    /// </summary>
+    Task<UserValuationInputs> GetValuationInputsByUser(long userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
-    public sealed record ValuationOpeningPosition(
-        int AccountId,
-        long AssetListingId,
-        decimal Quantity);
+    public sealed record UserValuationOpeningPosition(long AssetListingId, decimal Quantity);
 
-    public sealed record AccountValuationInputs(
-        IReadOnlyList<ValuationOpeningPosition> OpeningPositions,
-        IReadOnlyList<ValuationTradeInput> InWindowTrades);
+    public sealed record UserValuationTradeInput(long AssetListingId, DateOnly TradeDate, decimal SignedQuantity);
 
-    public sealed record CapitalFlowInput(
+    public sealed record UserValuationInputs(
+        IReadOnlyList<UserValuationOpeningPosition> OpeningPositions,
+        IReadOnlyList<UserValuationTradeInput> InWindowTrades);
+
+    public sealed record UserCapitalFlowInput(
         long TransactionId,
-        int AccountId,
         long AssetListingId,
         DateOnly TradeDate,
         InvestmentTransactionType Type,
         decimal Quantity,
         decimal UnitPrice,
         decimal? Fee,
-        string Currency,
-        decimal? ListingPriceMultiplier);
+        string Currency);
 }

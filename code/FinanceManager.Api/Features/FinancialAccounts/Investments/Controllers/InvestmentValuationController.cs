@@ -3,84 +3,80 @@ using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 
+/// <summary>
+/// Values the caller's pooled investment holdings: every trade of the authenticated user counts, whether or not it is linked to an account.
+/// The owner comes from the authenticated principal only.
+/// </summary>
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Investment Valuation")]
 public class InvestmentValuationController(
-    IAccountRepository<InvestmentAccount> accountRepository,
+    IInvestmentTransactionRepository transactionRepository,
     IInvestmentValuationService valuationService,
     IInvestmentBenchmarkService benchmarkService,
     IInvestmentTransactionValuationService transactionValuationService,
     ICurrencyRepository currencyRepository,
     IAssetListingRepository assetListingRepository) : ControllerBase
 {
-    [HttpGet("Holdings/{accountId:int}/{date:DateTime}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<long, decimal>))]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetHoldings(int accountId, DateTime date, CancellationToken cancellationToken = default)
-    {
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+    /// <summary>The most trades one valuation request may name; the largest caller page is 100.</summary>
+    public const int MaxTransactionValuationIds = 200;
 
-        var holdings = await valuationService.GetHoldingsAsOfAsync(accountId, DateOnly.FromDateTime(date), cancellationToken);
-        return Ok(holdings);
+    [HttpGet("Holdings/{date:DateTime}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<long, decimal>))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetHoldings(DateTime date, CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(date), cancellationToken);
+        return Ok(holdings.ToDictionary(holding => holding.AssetListingId, holding => holding.Units));
     }
 
-    [HttpGet("Value/{accountId:int}/{currencyId:int}/{date:DateTime}")]
+    [HttpGet("Value/{currencyId:int}/{date:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetValue(int accountId, int currencyId, DateTime date, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetValue(int currencyId, DateTime date, CancellationToken cancellationToken = default)
     {
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var value = await valuationService.GetAccountValueAsync(accountId, currency, date, cancellationToken);
-        return Ok(value);
+        var values = await valuationService.GetUserValueByListingAsync(userId, currency, date, cancellationToken);
+        return Ok(values.Values.Sum());
     }
 
-    [HttpGet("ValueSeries/{accountId:int}/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
+    [HttpGet("ValueSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<DateTime, decimal>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> GetValueSeries(int accountId, int currencyId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetValueSeries(int currencyId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
     {
         if (endDate < startDate) return BadRequest("End date must be on or after start date.");
-
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var series = await valuationService.GetAccountValueSeriesAsync(accountId, currency, startDate, endDate, cancellationToken);
-        return Ok(series);
+        return Ok(await valuationService.GetUserValueSeriesAsync(userId, currency, startDate, endDate, cancellationToken));
     }
 
-    [HttpGet("BenchmarkSeries/{accountId:int}/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
+    [HttpGet("BenchmarkSeries/{currencyId:int}/{startDate:DateTime}/{endDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyDictionary<DateTime, decimal>))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetBenchmarkSeries(
-        int accountId,
         int currencyId,
         DateTime startDate,
         DateTime endDate,
@@ -88,10 +84,7 @@ public class InvestmentValuationController(
         CancellationToken cancellationToken = default)
     {
         if (endDate < startDate) return BadRequest("End date must be on or after start date.");
-
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
@@ -99,28 +92,29 @@ public class InvestmentValuationController(
             return NotFound("Investment benchmark not found.");
 
         return Ok(await benchmarkService.GetBenchmarkSeriesAsync(
-            listingId, accountId, currency, startDate, endDate, cancellationToken));
+            listingId, userId, currency, startDate, endDate, cancellationToken));
     }
 
-    [HttpGet("TransactionValuations/{accountId:int}/{currencyId:int}")]
+    /// <summary>Valuations of the Buy trades named by <paramref name="transactionIds"/> (1 to <see cref="MaxTransactionValuationIds"/>); other users' ids are ignored.</summary>
+    [HttpGet("TransactionValuations/{currencyId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<InvestmentTransactionValuationDto>))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetTransactionValuations(
-        int accountId,
         int currencyId,
         [FromQuery] long[]? transactionIds = null,
         CancellationToken cancellationToken = default)
     {
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
+        if (transactionIds is null || transactionIds.Length == 0)
+            return BadRequest("At least one transaction id is required.");
+        if (transactionIds.Length > MaxTransactionValuationIds)
+            return BadRequest($"At most {MaxTransactionValuationIds} transaction ids can be valued per request.");
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
         if (currency is null) return NotFound("Currency not found.");
 
-        var valuations = await transactionValuationService.GetForAccountAsync(
-            accountId, currency, cancellationToken, transactionIds);
-        return Ok(valuations);
+        return Ok(await transactionValuationService.GetForUserAsync(userId, currency, transactionIds, cancellationToken));
     }
 }

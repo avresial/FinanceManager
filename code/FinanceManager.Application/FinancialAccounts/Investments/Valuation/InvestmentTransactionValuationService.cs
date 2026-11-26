@@ -21,18 +21,18 @@ internal class InvestmentTransactionValuationService(
     IInvestmentPriceProvider priceProvider,
     ICurrencyExchangeService currencyExchangeService) : IInvestmentTransactionValuationService
 {
-    public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForAccountAsync(
-        int accountId,
+    public async Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForUserAsync(
+        int userId,
         Currency targetCurrency,
-        CancellationToken cancellationToken = default,
-        IReadOnlyCollection<long>? transactionIds = null)
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default)
     {
-        var transactions = transactionIds is null
-            ? await transactionRepository.GetByAccount(accountId, cancellationToken)
-            : await transactionRepository.GetByAccountAndIds(accountId, transactionIds, cancellationToken);
+        if (userId == 0 || transactionIds.Count == 0) return [];
+
+        var transactions = await transactionRepository.GetByUserAndIds(userId, transactionIds, cancellationToken);
 
         var now = DateTime.UtcNow;
-        // Memoise the two external lookups so an account with many trades in the same instrument
+        // Memoise the two external lookups so a user with many trades in the same instrument
         // and currency issues one price call per (listing, display currency) and one FX call per
         // (currency, trade date) instead of one per transaction.
         var currentPriceByKey = new Dictionary<(long ListingId, string Currency), decimal>();

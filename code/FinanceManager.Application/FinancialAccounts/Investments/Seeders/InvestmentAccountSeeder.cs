@@ -3,18 +3,16 @@ using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 
 /// <summary>
-/// Seeds a demo investment account on the new asset model for the guest user: an iShares Core S&amp;P 500
+/// Seeds demo investment trades on the asset model for the guest user, owned by the user and not linked to an account: an iShares Core S&amp;P 500
 /// asset with a single primary listing, an AlphaVantage market-data symbol, a daily price-quote series,
 /// and monthly Buy transactions (plus one Sell) so the new investment UI renders a life-like portfolio.
 /// </summary>
 public class InvestmentAccountSeeder(
-    IAccountRepository<InvestmentAccount> accountRepository,
     IAssetRepository assetRepository,
     IAssetListingRepository assetListingRepository,
     IMarketDataSymbolRepository marketDataSymbolRepository,
@@ -30,29 +28,15 @@ public class InvestmentAccountSeeder(
 
     public async Task Seed(long userId, DateTime start, DateTime end, Random random, CancellationToken cancellationToken = default)
     {
-        if (userId is > int.MaxValue or < int.MinValue)
-        {
-            logger.LogWarning("Skipping investment account seed: user id {UserId} is outside Int32 range.", userId);
-            return;
-        }
-
-        var userIdInt = (int)userId;
-        if ((await transactionRepository.GetByUser(userId, DateOnly.FromDateTime(start.AddYears(-1)), DateOnly.FromDateTime(end.AddYears(1)), cancellationToken)).Count != 0)
+        if (userId == 0 || (await transactionRepository.GetByUser(userId, DateOnly.FromDateTime(start.AddYears(-1)), DateOnly.FromDateTime(end.AddYears(1)), cancellationToken)).Count != 0)
             return;
 
-        logger.LogTrace("Seeding investment account for user {UserId}.", userId);
-
-        var accountId = await accountRepository.Add(userIdInt, "Investments");
-        if (accountId is not int newAccountId)
-        {
-            logger.LogWarning("Could not create investment account for user {UserId}; skipping seed.", userId);
-            return;
-        }
+        logger.LogTrace("Seeding investment trades for user {UserId}.", userId);
 
         var listing = await SeedAssetAndListing(cancellationToken);
         var prices = await SeedPriceQuotes(listing.Id, start, end, random, cancellationToken);
 
-        await SeedTransactions(userId, newAccountId, listing.Id, start, end, prices, cancellationToken);
+        await SeedTransactions(userId, listing.Id, start, end, prices, cancellationToken);
     }
 
     private async Task<AssetListing> SeedAssetAndListing(CancellationToken cancellationToken)
@@ -124,7 +108,7 @@ public class InvestmentAccountSeeder(
         return prices;
     }
 
-    private async Task SeedTransactions(long userId, int accountId, long listingId, DateTime start, DateTime end, IReadOnlyDictionary<DateTime, decimal> prices, CancellationToken cancellationToken)
+    private async Task SeedTransactions(long userId, long listingId, DateTime start, DateTime end, IReadOnlyDictionary<DateTime, decimal> prices, CancellationToken cancellationToken)
     {
         // Mirror the cash account's recurring "Investment" outflow: buy the matching value of shares each month
         // at that day's price, then sell a small slice near the end so the history shows both directions.
@@ -141,7 +125,6 @@ public class InvestmentAccountSeeder(
             await transactionRepository.Add(new InvestmentTransaction
             {
                 UserId = userId,
-                AccountId = accountId,
                 AssetListingId = listingId,
                 Type = InvestmentTransactionType.Buy,
                 Quantity = units,
@@ -160,7 +143,6 @@ public class InvestmentAccountSeeder(
             await transactionRepository.Add(new InvestmentTransaction
             {
                 UserId = userId,
-                AccountId = accountId,
                 AssetListingId = listingId,
                 Type = InvestmentTransactionType.Sell,
                 Quantity = 0.25m,

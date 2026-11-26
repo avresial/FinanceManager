@@ -11,9 +11,6 @@ public class EssentialSpendingService(IEnumerable<IEssentialSpendingServiceTyped
     public Task<List<TimeSeriesModel>> GetEssentialSpending(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetEssentialSpending(userId, currency, start, end));
 
-    public Task<List<TimeSeriesModel>> GetEssentialSpending(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetEssentialSpending(userId, currency, start, end, accountIds));
-
     private async Task<List<TimeSeriesModel>> Aggregate(Func<IEssentialSpendingServiceTyped, Task<List<TimeSeriesModel>>> getter)
     {
         Dictionary<DateTime, decimal> aggregated = [];

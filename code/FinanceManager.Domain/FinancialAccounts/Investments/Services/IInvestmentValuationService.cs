@@ -1,11 +1,12 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 
 namespace FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
 /// <summary>
-/// Values an investment account on the new asset model. Holdings are computed on read from the
-/// account's <see cref="Entities.InvestmentTransaction"/> rows (signed Buy/Sell quantities per
+/// Values the owner's pooled investment holdings. Holdings are computed on read from every
+/// <see cref="Entities.InvestmentTransaction"/> of the user (linked to an account or not; signed Buy/Sell quantities per
 /// <see cref="AssetListing"/>) rather than from a stored running balance, and valued through
 /// <see cref="Services.IInvestmentPriceProvider"/> (which already normalises GBX-style quotes and
 /// converts to the requested currency).
@@ -13,57 +14,28 @@ namespace FinanceManager.Domain.FinancialAccounts.Investments.Services;
 public interface IInvestmentValuationService
 {
     /// <summary>
-    /// Net holdings per <see cref="AssetListing"/> for an account as of <paramref name="asOf"/>:
-    /// the signed sum of Buy (+) and Sell (−) quantities for transactions on or before that date.
-    /// Listings whose net holding is zero are omitted. Returns an empty map for an account with no
-    /// transactions.
+    /// Value per <see cref="AssetListing"/> of the owner's pooled holdings (every trade of <paramref name="userId"/>, linked to an account or not)
+    /// converted to <paramref name="targetCurrency"/> as of <paramref name="asOf"/>. Listings without a net holding or without a price are omitted;
+    /// an oversold listing keeps a negative value.
     /// </summary>
-    Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOfAsync(int accountId, DateOnly asOf, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<long, decimal>> GetUserValueByListingAsync(int userId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
 
     /// <summary>
-    /// Total value of an account's holdings converted to <paramref name="targetCurrency"/> as of
-    /// <paramref name="asOf"/>. Each listing's holding is valued at its price per unit on that date.
-    /// Returns 0 when the account holds nothing or no prices can be determined.
+    /// Same valuation as <see cref="GetUserValueByListingAsync(int, Currency, DateTime, CancellationToken)"/> for holdings the caller
+    /// already read, which avoids reading them a second time.
     /// </summary>
-    Task<decimal> GetAccountValueAsync(int accountId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<long, decimal>> GetValueByListingAsync(IReadOnlyList<InvestmentHolding> holdings, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
 
     /// <summary>
-    /// Daily account value in <paramref name="targetCurrency"/> over [<paramref name="start"/>,
-    /// <paramref name="end"/>]. Holdings are carried forward on days without a transaction and each
-    /// listing is priced from its own per-day series, so a day's value reflects the holdings held
-    /// that day at that day's price. Days that value to zero are omitted.
+    /// The same pooled valuation as <see cref="GetUserValueByListingAsync"/>, with each listing's display metadata (ticker, exchange) kept next to its value
+    /// so callers that name rows read the owner's holdings once.
     /// </summary>
-    Task<IReadOnlyDictionary<DateTime, decimal>> GetAccountValueSeriesAsync(
-        int accountId,
-        Currency targetCurrency,
-        DateTime start,
-        DateTime end,
-        CancellationToken ct = default);
+    Task<IReadOnlyList<InvestmentHoldingValue>> GetUserHoldingValuesAsync(int userId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default);
 
     /// <summary>
-    /// Total value per account of the given accounts' holdings converted to
-    /// <paramref name="targetCurrency"/> as of <paramref name="asOf"/>. Equivalent to calling
-    /// <see cref="GetAccountValueAsync(int, Currency, DateTime, CancellationToken)"/> once per
-    /// account, but issues a single transactions query and prices each distinct listing once across
-    /// all accounts. Accounts that hold nothing are omitted from the result.
+    /// Daily value of the owner's pooled holdings in <paramref name="targetCurrency"/> over [<paramref name="start"/>, <paramref name="end"/>], each listing priced from its own per-day series
+    /// (holdings are carried forward on days without a trade) with an explicit zero on the last day.
+    /// Empty when the owner has no holding or trade in the window.
     /// </summary>
-    Task<IReadOnlyDictionary<int, decimal>> GetAccountValueAsync(
-        IReadOnlyCollection<int> accountIds,
-        Currency targetCurrency,
-        DateTime asOf,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Daily account value per account for the given accounts over [<paramref name="start"/>,
-    /// <paramref name="end"/>]. Equivalent to calling
-    /// <see cref="GetAccountValueSeriesAsync(int, Currency, DateTime, DateTime, CancellationToken)"/>
-    /// once per account, but issues a single transactions query and prices each distinct listing once
-    /// across all accounts. Accounts whose whole series is empty are omitted from the result.
-    /// </summary>
-    Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetAccountValueSeriesAsync(
-        IReadOnlyCollection<int> accountIds,
-        Currency targetCurrency,
-        DateTime start,
-        DateTime end,
-        CancellationToken ct = default);
+    Task<IReadOnlyDictionary<DateTime, decimal>> GetUserValueSeriesAsync(int userId, Currency targetCurrency, DateTime start, DateTime end, CancellationToken ct = default);
 }

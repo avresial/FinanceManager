@@ -1,195 +1,122 @@
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 
 /// <summary>
-/// Values an investment account by computing holdings on read from its
-/// <see cref="Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction"/> rows and
-/// pricing each listing through <see cref="IInvestmentPriceProvider"/>.
+/// Values the owner's pooled investment holdings: holdings are computed on read from every
+/// <see cref="Domain.FinancialAccounts.Investments.Entities.InvestmentTransaction"/> of the user (linked to an account or not)
+/// and each listing is priced through <see cref="IInvestmentPriceProvider"/>. Queries run strictly sequentially because the scoped
+/// <c>AppDbContext</c> cannot service concurrent operations.
 /// </summary>
-/// <remarks>
-/// The single-account overloads are thin wrappers over the batched overloads (passing a
-/// single-element collection). The batched implementations issue one transactions query for all
-/// requested accounts and price each distinct <c>AssetListing</c> once across the whole set, so a
-/// dashboard paint no longer re-prices the same listing once per owning account. Queries are still
-/// issued strictly sequentially: the scoped <c>AppDbContext</c> cannot service concurrent operations,
-/// so the win comes from doing fewer, wider queries — never from parallel awaits.
-/// </remarks>
 internal class InvestmentValuationService(
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider) : IInvestmentValuationService
 {
-    public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOfAsync(int accountId, DateOnly asOf, CancellationToken ct = default)
-    {
-        var holdings = await transactionRepository.GetHoldingsAsOf([accountId], asOf, ct);
-        return holdings
-            .Where(kvp => kvp.Value != 0m)
-            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-    }
+    public async Task<IReadOnlyDictionary<long, decimal>> GetUserValueByListingAsync(
+        int userId,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct = default) =>
+        (await GetUserHoldingValuesAsync(userId, targetCurrency, asOf, ct))
+        .ToDictionary(x => x.Holding.AssetListingId, x => x.Value);
 
-    public async Task<decimal> GetAccountValueAsync(int accountId, Currency targetCurrency, DateTime asOf, CancellationToken ct = default)
-    {
-        var holdings = await transactionRepository.GetHoldingsAsOf([accountId], DateOnly.FromDateTime(asOf), ct);
-        decimal total = 0m;
-
-        foreach (var (listingId, holding) in holdings)
-        {
-            if (holding == 0m) continue;
-
-            var price = await priceProvider.GetPricePerUnitAsync(listingId, targetCurrency, asOf, ct);
-            if (price > 0m)
-                total += holding * price;
-        }
-
-        return total;
-    }
-
-    public async Task<IReadOnlyDictionary<int, decimal>> GetAccountValueAsync(
-        IReadOnlyCollection<int> accountIds,
+    public async Task<IReadOnlyList<InvestmentHoldingValue>> GetUserHoldingValuesAsync(
+        int userId,
         Currency targetCurrency,
         DateTime asOf,
         CancellationToken ct = default)
     {
-        var result = new Dictionary<int, decimal>();
-        if (accountIds.Count == 0) return result;
+        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(asOf), ct);
+        return await ValueHoldingsAsync(holdings, targetCurrency, asOf, ct);
+    }
 
-        var asOfDate = DateOnly.FromDateTime(asOf);
-        var rawHoldingsByAccount = await transactionRepository.GetHoldingsByAccountAsOf(accountIds, asOfDate, ct);
-        if (rawHoldingsByAccount.Count == 0) return result;
+    public async Task<IReadOnlyDictionary<long, decimal>> GetValueByListingAsync(
+        IReadOnlyList<InvestmentHolding> holdings,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct = default) =>
+        (await ValueHoldingsAsync(holdings, targetCurrency, asOf, ct))
+        .ToDictionary(x => x.Holding.AssetListingId, x => x.Value);
 
-        // Net holding per (account, listing) as of the date, dropping zero net positions so fully
-        // closed holdings never trigger a (wasted, potentially failing) price fetch.
-        var holdingsByAccount = new Dictionary<int, Dictionary<long, decimal>>();
-        foreach (var (accountId, holdings) in rawHoldingsByAccount)
+    private async Task<List<InvestmentHoldingValue>> ValueHoldingsAsync(
+        IReadOnlyList<InvestmentHolding> holdings,
+        Currency targetCurrency,
+        DateTime asOf,
+        CancellationToken ct)
+    {
+        var result = new List<InvestmentHoldingValue>();
+
+        foreach (var holding in holdings)
         {
-            var nonZero = holdings.Where(kvp => kvp.Value != 0m).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-            if (nonZero.Count > 0)
-                holdingsByAccount[accountId] = nonZero;
-        }
+            // Closed positions never trigger a (wasted, potentially failing) price fetch.
+            if (holding.Units == 0m) continue;
 
-        if (holdingsByAccount.Count == 0) return result;
-
-        // Price each distinct listing across all accounts once, not once per owning account.
-        var prices = new Dictionary<long, decimal>();
-        foreach (var listingId in holdingsByAccount.Values.SelectMany(h => h.Keys).Distinct())
-            prices[listingId] = await priceProvider.GetPricePerUnitAsync(listingId, targetCurrency, asOf, ct);
-
-        foreach (var (accountId, holdings) in holdingsByAccount)
-        {
-            decimal total = 0m;
-            foreach (var (listingId, holding) in holdings)
-            {
-                if (prices.TryGetValue(listingId, out var price) && price > 0)
-                    total += holding * price;
-            }
-
-            if (total != 0m) result[accountId] = total;
+            var price = await priceProvider.GetPricePerUnitAsync(holding.AssetListingId, targetCurrency, asOf, ct);
+            if (price > 0m)
+                result.Add(new InvestmentHoldingValue(holding, holding.Units * price));
         }
 
         return result;
     }
 
-    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetAccountValueSeriesAsync(
-        int accountId,
+    public async Task<IReadOnlyDictionary<DateTime, decimal>> GetUserValueSeriesAsync(
+        int userId,
         Currency targetCurrency,
         DateTime start,
         DateTime end,
         CancellationToken ct = default)
     {
-        var byAccount = await GetAccountValueSeriesAsync([accountId], targetCurrency, start, end, ct);
-        return byAccount.TryGetValue(accountId, out var series) ? series : new Dictionary<DateTime, decimal>();
-    }
-
-    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<DateTime, decimal>>> GetAccountValueSeriesAsync(
-        IReadOnlyCollection<int> accountIds,
-        Currency targetCurrency,
-        DateTime start,
-        DateTime end,
-        CancellationToken ct = default)
-    {
-        var result = new Dictionary<int, IReadOnlyDictionary<DateTime, decimal>>();
-        if (accountIds.Count == 0 || start == default || end == default || end < start) return result;
+        if (start == default || end == default || end < start) return new Dictionary<DateTime, decimal>();
 
         var startDate = start.Date;
         var endDate = end.Date;
-        var startDateOnly = DateOnly.FromDateTime(startDate);
-        var endDateOnly = DateOnly.FromDateTime(endDate);
+        var inputs = await transactionRepository.GetValuationInputsByUser(
+            userId, DateOnly.FromDateTime(startDate), DateOnly.FromDateTime(endDate), ct);
 
-        var inputs = await transactionRepository.GetValuationInputs(accountIds, startDateOnly, endDateOnly, ct);
-        if (inputs.OpeningPositions.Count == 0 && inputs.InWindowTrades.Count == 0) return result;
+        var opening = inputs.OpeningPositions.ToDictionary(p => p.AssetListingId, p => p.Quantity);
+        var tradesByListing = inputs.InWindowTrades
+            .GroupBy(t => t.AssetListingId)
+            .ToDictionary(g => g.Key, g => g.Select(t => (t.TradeDate, t.SignedQuantity)).ToList());
 
-        var openingByAccountListing = inputs.OpeningPositions
-            .ToDictionary(p => (p.AccountId, p.AssetListingId), p => p.Quantity);
-
-        var tradesByAccountListing = inputs.InWindowTrades
-            .GroupBy(t => (t.AccountId, t.AssetListingId))
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Retain each (account, listing) pair when its opening holding before the range is non-zero
-        // OR it has trades in the range. Exclude positions fully closed before the window so they
-        // never trigger unneeded price-series fetches.
-        var allKeys = openingByAccountListing.Keys.Union(tradesByAccountListing.Keys).ToList();
-        var retainedKeys = allKeys
-            .Where(k => (openingByAccountListing.TryGetValue(k, out var openQty) && openQty != 0m)
-                || tradesByAccountListing.ContainsKey(k))
+        // Exclude positions fully closed before the window so they never trigger unneeded price-series fetches.
+        var listingIds = opening.Keys.Union(tradesByListing.Keys)
+            .Where(id => opening.GetValueOrDefault(id) != 0m || tradesByListing.ContainsKey(id))
             .ToList();
-        if (retainedKeys.Count == 0) return result;
+        if (listingIds.Count == 0) return new Dictionary<DateTime, decimal>();
 
-        // One price-series fetch per distinct listing across all accounts (target currency already
-        // applied). Accounts holding the same instrument share this series instead of re-fetching it.
         var priceSeries = new Dictionary<long, IReadOnlyDictionary<DateTime, decimal>>();
-        foreach (var listingId in retainedKeys.Select(k => k.AssetListingId).Distinct())
+        foreach (var listingId in listingIds)
             priceSeries[listingId] = await priceProvider.GetPricePerUnitSeriesAsync(listingId, targetCurrency, start, end, ct);
 
-        foreach (var accountGroup in retainedKeys.GroupBy(k => k.AccountId))
-        {
-            var series = BuildAccountSeries(
-                accountGroup.Key,
-                accountGroup.Select(k => k.AssetListingId),
-                openingByAccountListing,
-                tradesByAccountListing,
-                startDate,
-                endDate,
-                priceSeries);
-            if (series.Count > 0) result[accountGroup.Key] = series;
-        }
-
-        return result;
+        return BuildSeries(listingIds, opening, tradesByListing, startDate, endDate, priceSeries);
     }
 
-    // Fold one account's transactions against the shared per-listing price series: carry each
-    // listing's holding forward across days without a trade and value it at that day's price.
-    private static Dictionary<DateTime, decimal> BuildAccountSeries(
-        int accountId,
-        IEnumerable<long> listingIds,
-        IReadOnlyDictionary<(int AccountId, long AssetListingId), decimal> openingByAccountListing,
-        IReadOnlyDictionary<(int AccountId, long AssetListingId), List<IInvestmentTransactionRepository.ValuationTradeInput>> tradesByAccountListing,
+    // Carry each listing's holding forward across days without a trade and value it at that day's price.
+    private static Dictionary<DateTime, decimal> BuildSeries(
+        IReadOnlyList<long> listings,
+        IReadOnlyDictionary<long, decimal> openingByListing,
+        IReadOnlyDictionary<long, List<(DateOnly TradeDate, decimal SignedQuantity)>> tradesByListing,
         DateTime startDate,
         DateTime endDate,
         IReadOnlyDictionary<long, IReadOnlyDictionary<DateTime, decimal>> priceSeries)
     {
         var result = new Dictionary<DateTime, decimal>();
-        var listings = listingIds.ToList();
 
         var holdings = new Dictionary<long, decimal>();
         var dailyDeltas = new Dictionary<long, Dictionary<DateTime, decimal>>();
 
         foreach (var listingId in listings)
         {
-            holdings[listingId] = openingByAccountListing.GetValueOrDefault((accountId, listingId), 0m);
-            if (tradesByAccountListing.TryGetValue((accountId, listingId), out var trades))
-            {
-                dailyDeltas[listingId] = trades
+            holdings[listingId] = openingByListing.GetValueOrDefault(listingId, 0m);
+            dailyDeltas[listingId] = tradesByListing.TryGetValue(listingId, out var trades)
+                ? trades
                     .GroupBy(t => t.TradeDate.ToDateTime(TimeOnly.MinValue))
-                    .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity));
-            }
-            else
-            {
-                dailyDeltas[listingId] = [];
-            }
+                    .ToDictionary(g => g.Key, g => g.Sum(t => t.SignedQuantity))
+                : [];
         }
 
         for (var date = startDate; date <= endDate; date = date.AddDays(1))

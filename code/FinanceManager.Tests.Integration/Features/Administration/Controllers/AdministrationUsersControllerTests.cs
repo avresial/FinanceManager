@@ -25,7 +25,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         if (descriptor != null)
             services.Remove(descriptor);
 
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
         services.AddSingleton(_testDatabase!.Context);
     }
 
@@ -146,21 +146,6 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetAccountsCount_WithAuth_ReturnsCorrectCount()
-    {
-        // Arrange
-        await SeedTestAccounts(5);
-        Authorize("AdminUser", 1, UserRole.Admin);
-        var context = new AdministrationUsersHttpClient(Client);
-
-        // Act
-        var result = await context.GetAccountsCount();
-
-        // Assert
-        Assert.Equal(5, result);
-    }
-
-    [Fact]
     public async Task GetTotalTrackedMoney_WithData_ReturnsValue()
     {
         // Arrange
@@ -177,6 +162,20 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
 
         // Assert
         Assert.Equal(12.25m, result);
+    }
+
+    [Fact]
+    public async Task GetTotalTrackedMoney_CountsEntriesThatAreNotLinkedToAnAccount()
+    {
+        await SeedTestUsers();
+        Authorize("AdminUser", 1, UserRole.Admin);
+        _testDatabase!.Context.Currencies.Add(DefaultCurrency.PLN);
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-10), 0m, 20m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-5), 0m, -5.5m) { UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(14.5m, await new AdministrationUsersHttpClient(Client).GetTotalTrackedMoney());
     }
 
     [Fact]

@@ -1,0 +1,14 @@
+@* "Includes EUR, not converted": net worth, assets and liabilities add cash and bond amounts in their own currency, so a currency other than
+   the display one makes the total approximate. Renders nothing when there is none. *@
+@if (Codes.Count > 0)
+{
+    <span class="fm-unconverted-chip" data-testid="unconverted-chip"
+          title="@($"These amounts are added as they are, without an exchange rate: {string.Join(", ", Codes)}.")">
+        Includes @string.Join(", ", Codes), not converted
+    </span>
+}
+
+@code {
+    /// <summary>The currencies whose amounts are summed unconverted.</summary>
+    [Parameter] public IReadOnlyList<string> Codes { get; set; } = [];
+}

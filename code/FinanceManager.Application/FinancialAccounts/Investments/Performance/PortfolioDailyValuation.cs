@@ -1,6 +1,5 @@
 using FinanceManager.Application.FinancialAccounts.Shared;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 
@@ -14,26 +13,25 @@ internal static class PortfolioDailyValuation
 {
     public static async Task<PortfolioValuationSeries> BuildInvestmentValuesAsync(
         IInvestmentPriceProvider investmentPriceProvider,
-        IInvestmentTransactionRepository.AccountValuationInputs inputs,
+        IInvestmentTransactionRepository.UserValuationInputs inputs,
         Currency targetCurrency,
         DateTime startDate,
         DateTime endDate,
         CancellationToken cancellationToken)
     {
         var openingHoldings = inputs.OpeningPositions
-            .GroupBy(position => (position.AccountId, position.AssetListingId))
+            .GroupBy(position => position.AssetListingId)
             .ToDictionary(group => group.Key, group => group.Sum(position => position.Quantity));
         var tradesByDate = inputs.InWindowTrades
             .GroupBy(trade => trade.TradeDate)
             .ToDictionary(
                 group => group.Key.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                 group => group
-                    .GroupBy(trade => (trade.AccountId, trade.AssetListingId))
+                    .GroupBy(trade => trade.AssetListingId)
                     .ToDictionary(tradeGroup => tradeGroup.Key, tradeGroup => tradeGroup.Sum(trade => trade.SignedQuantity)));
 
         var listingIds = openingHoldings.Keys
-            .Select(key => key.AssetListingId)
-            .Concat(tradesByDate.Values.SelectMany(day => day.Keys).Select(key => key.AssetListingId))
+            .Concat(tradesByDate.Values.SelectMany(day => day.Keys))
             .Distinct()
             .ToList();
         var priceSeries = new Dictionary<long, IReadOnlyDictionary<DateTime, decimal>>();
@@ -48,10 +46,10 @@ internal static class PortfolioDailyValuation
         }
 
         decimal openingValue = 0m;
-        foreach (var (key, quantity) in openingHoldings)
+        foreach (var (listingId, quantity) in openingHoldings)
         {
             if (quantity == 0m) continue;
-            if (!TryGetPrice(priceSeries, key.AssetListingId, startDate, out var price))
+            if (!TryGetPrice(priceSeries, listingId, startDate, out var price))
                 return PortfolioValuationSeries.Incomplete;
 
             openingValue += quantity * price;
@@ -63,15 +61,15 @@ internal static class PortfolioDailyValuation
         {
             if (tradesByDate.TryGetValue(date, out var dailyTrades))
             {
-                foreach (var (key, quantity) in dailyTrades)
-                    holdings[key] = holdings.GetValueOrDefault(key) + quantity;
+                foreach (var (listingId, quantity) in dailyTrades)
+                    holdings[listingId] = holdings.GetValueOrDefault(listingId) + quantity;
             }
 
             decimal value = 0m;
-            foreach (var (key, quantity) in holdings)
+            foreach (var (listingId, quantity) in holdings)
             {
                 if (quantity == 0m) continue;
-                if (!TryGetPrice(priceSeries, key.AssetListingId, date, out var price))
+                if (!TryGetPrice(priceSeries, listingId, date, out var price))
                     return PortfolioValuationSeries.Incomplete;
 
                 value += quantity * price;
@@ -83,107 +81,30 @@ internal static class PortfolioDailyValuation
         return new(values, openingValue, true);
     }
 
+    /// <summary>
+    /// Pooled bond value per day: the opening value is the position before <paramref name="startDate"/> priced on it, each day is
+    /// priced from the positions as they stand at the end of that day.
+    /// </summary>
     public static PortfolioValuationSeries BuildBondValues(
-        IReadOnlyList<BondAccount> accounts,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
+        PortfolioBondInputs bonds,
         IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
         Currency targetCurrency,
         DateTime startDate,
         DateTime endDate)
     {
-        var entriesByAccount = accounts
-            .Select(account => account.Entries
-                .Concat(account.NextOlderEntries.Values)
-                .GroupBy(entry => entry.BondDetailsId)
-                .ToDictionary(
-                    group => group.Key,
-                    group => (IReadOnlyList<BondAccountEntry>)group
-                        .OrderByDescending(entry => entry.PostingDate)
-                        .ThenByDescending(entry => entry.EntryId)
-                        .ToList()))
-            .ToList();
-
-        decimal openingValue = 0m;
-        foreach (var entries in entriesByAccount)
-        {
-            var result = GetBondValueAt(
-                entries,
-                bondDetails,
-                ratesByCurrency,
-                targetCurrency,
-                DateOnly.FromDateTime(startDate),
-                includeDate: false);
-            if (!result.Complete)
-                return PortfolioValuationSeries.Incomplete;
-
-            openingValue += result.Value;
-        }
+        if (!bonds.TryValue(bonds.Range.Opening, ratesByCurrency, targetCurrency, DateOnly.FromDateTime(startDate), out var openingValue))
+            return PortfolioValuationSeries.Incomplete;
 
         Dictionary<DateTime, decimal> values = [];
-        for (var date = startDate; date <= endDate; date = date.AddDays(1))
+        foreach (var (day, positions) in bonds.Walk.EachDayEnd(startDate, endDate))
         {
-            decimal value = 0m;
-            foreach (var entries in entriesByAccount)
-            {
-                var result = GetBondValueAt(
-                    entries,
-                    bondDetails,
-                    ratesByCurrency,
-                    targetCurrency,
-                    DateOnly.FromDateTime(date),
-                    includeDate: true);
-                if (!result.Complete)
-                    return PortfolioValuationSeries.Incomplete;
+            if (!bonds.TryValue(positions, ratesByCurrency, targetCurrency, DateOnly.FromDateTime(day), out var value))
+                return PortfolioValuationSeries.Incomplete;
 
-                value += result.Value;
-            }
-
-            values[date] = value;
+            values[day] = value;
         }
 
         return new(values, openingValue, true);
-    }
-
-    private static (decimal Value, bool Complete) GetBondValueAt(
-        IReadOnlyDictionary<int, IReadOnlyList<BondAccountEntry>> entriesByBond,
-        IReadOnlyDictionary<int, BondDetails> bondDetails,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<DateTime, decimal>> ratesByCurrency,
-        Currency targetCurrency,
-        DateOnly valuationDate,
-        bool includeDate)
-    {
-        decimal total = 0m;
-        foreach (var entries in entriesByBond.Values)
-        {
-            var entry = entries
-                .Where(candidate =>
-                {
-                    var postingDate = DateOnly.FromDateTime(candidate.PostingDate);
-                    return includeDate ? postingDate <= valuationDate : postingDate < valuationDate;
-                })
-                .FirstOrDefault();
-            if (entry is null || entry.Value == 0m) continue;
-
-            if (!bondDetails.TryGetValue(entry.BondDetailsId, out var details))
-                return (0m, false);
-
-            var value = entry.GetPriceAt(valuationDate, details);
-            if (value <= 0m)
-                return (0m, false);
-
-            if (!TryConvert(
-                    value,
-                    details.Currency.ShortName,
-                    valuationDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-                    targetCurrency,
-                    ratesByCurrency,
-                    out var converted))
-                return (0m, false);
-
-            total += converted;
-        }
-
-        return (total, true);
     }
 
     private static bool TryGetPrice(

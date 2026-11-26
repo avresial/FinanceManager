@@ -73,6 +73,16 @@ public class TimeSeriesValueCardDeltaTests
     }
 
     [Fact]
+    public async Task Debt_HeaderShowsThePositiveMagnitude_LikeTheDistributionCard()
+    {
+        await using var context = CreateContext();
+
+        var cut = RenderCard(context, isDebt: true, -22_000m, -21_600m);
+
+        Assert.Equal("21,600.00 PLN", cut.Find(".fm-tsvc-value").TextContent.Replace("\u00A0", " "));
+    }
+
+    [Fact]
     public async Task NonDebt_FromZero_HidesUndefinedPercentageBadge()
     {
         await using var context = CreateContext();

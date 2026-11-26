@@ -1,22 +1,22 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 
 namespace FinanceManager.Application.MoneyFlow.InvestmentPaycheck;
 
 public class InvestmentPaycheckEstimatorService(
-    IFinancialAccountRepository financialAccountRepository,
+    ICashTransactionReader cashTransactionReader,
     IFinancialLabelsRepository financialLabelsRepository,
     IInvestmentValuationService investmentValuationService,
-    IBondDetailsRepository bondDetailsRepository) : IInvestmentPaycheckEstimatorService
+    IBondTransactionReader bondTransactionReader,
+    BondDashboardContext bondDashboardContext) : IInvestmentPaycheckEstimatorService
 {
     public async Task<InvestmentPaycheckEstimate> GetEstimate(int userId, Currency currency, DateTime asOfDate, decimal annualWithdrawalRate = 0.05m, int salaryMonths = 3)
     {
@@ -50,37 +50,22 @@ public class InvestmentPaycheckEstimatorService(
         };
     }
 
+    // Bonds stay in their own currency like before (no FX on this sum); investments are valued in the requested currency.
+    // Both read the owner's pooled positions, so entries and trades not linked to an account count as well.
     private async Task<decimal> GetInvestableAssetsValue(int userId, Currency currency, DateTime asOfDate)
     {
         decimal result = 0;
-        var bondDetails = await bondDetailsRepository.GetAllAsync().ToDictionaryAsync(x => x.Id);
 
-        await foreach (var account in financialAccountRepository.GetAccounts<BondAccount>(userId, asOfDate.Date, asOfDate))
+        var heldBonds = (await bondTransactionReader.GetPositions(userId, asOfDate)).Where(p => p.Value > 0m).ToList();
+        if (heldBonds.Count > 0)
         {
-            foreach (var detailsId in account.GetStoredBondsIds())
-            {
-                var newestEntry = account.GetThisOrNextOlder(asOfDate, detailsId);
-                if (newestEntry is null)
-                    continue;
-                if (!bondDetails.TryGetValue(detailsId, out var details))
-                    throw new InvalidOperationException($"Bond valuation requires details for bond id {detailsId}.");
-
-                result += newestEntry.GetPriceAt(DateOnly.FromDateTime(asOfDate), details);
-            }
+            await PooledBondValuation.LoadDetailsAsync(bondDashboardContext, heldBonds);
+            var date = DateOnly.FromDateTime(asOfDate);
+            var valuation = new PooledBondValuation(bondDashboardContext, date);
+            result += heldBonds.Sum(position => valuation.ValueOn(position, date));
         }
 
-        List<int> investmentAccountIds = [];
-        await foreach (var account in financialAccountRepository.GetAccounts<InvestmentAccount>(userId, asOfDate.Date, asOfDate))
-            investmentAccountIds.Add(account.AccountId);
-
-        if (investmentAccountIds.Count > 0)
-        {
-            // Batched point valuation: one transactions query, each distinct listing priced once
-            // across all accounts. The total sums across accounts, so no per-account breakdown needed.
-            var valuesByAccount = await investmentValuationService.GetAccountValueAsync(investmentAccountIds, currency, asOfDate);
-            result += valuesByAccount.Values.Sum();
-        }
-
+        result += (await investmentValuationService.GetUserValueByListingAsync(userId, currency, asOfDate)).Values.Sum();
         return result;
     }
 
@@ -97,27 +82,13 @@ public class InvestmentPaycheckEstimatorService(
         DateTime start = firstDayOfCurrentMonth.AddMonths(-salaryMonths);
         DateTime endExclusive = firstDayOfCurrentMonth;
 
-        decimal salary = 0;
-        HashSet<(int Year, int Month)> salaryMonthsUsed = [];
-
-        await foreach (CurrencyAccount account in financialAccountRepository.GetAccounts<CurrencyAccount>(userId, start, endExclusive))
-        {
-            if (account.Entries is null || account.Entries.Count == 0)
-                continue;
-
-            var salaryEntries = account.Entries
-                .Where(x => x.PostingDate >= start && x.PostingDate < endExclusive && x.Labels is not null && x.Labels.Any(y => y.Id == salaryLabel.Id));
-
-            salary += salaryEntries.Sum(x => x.ValueChange);
-
-            foreach (var entry in salaryEntries)
-            {
-                salaryMonthsUsed.Add((entry.PostingDate.Year, entry.PostingDate.Month));
-            }
-        }
-
-        if (salaryMonthsUsed.Count == 0)
+        var salaryEntries = await cashTransactionReader.GetLabeledEntries(userId, start, endExclusive, labelId: salaryLabel.Id);
+        if (salaryEntries.Count == 0)
             return (null, 0);
+
+        // The salary is summed as stored (no FX), like before; a month counts once however many paychecks landed in it.
+        var salary = salaryEntries.Sum(entry => entry.ValueChange);
+        var salaryMonthsUsed = salaryEntries.Select(entry => (entry.PostingDate.Year, entry.PostingDate.Month)).Distinct().ToList();
 
         var monthsUsed = salaryMonthsUsed.Count;
         var averageMonthlySalary = Math.Round(salary / monthsUsed, 2);

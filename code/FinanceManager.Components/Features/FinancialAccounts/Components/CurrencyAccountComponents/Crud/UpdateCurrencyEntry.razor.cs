@@ -1,6 +1,8 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Services;
@@ -33,12 +35,14 @@ public partial class UpdateCurrencyEntry
     private List<FinancialLabel> _possibleLabels = [];
 
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    [Parameter] public required CurrencyAccount CurrencyAccount { get; set; }
+    /// <summary>The account the entry belongs to. Null edits the entry through the owner route (Transactions page).</summary>
+    [Parameter] public CurrencyAccount? CurrencyAccount { get; set; }
     [Parameter] public required CurrencyAccountEntry CurrencyAccountEntry { get; set; }
 
     [Inject] public required ILogger<UpdateCurrencyEntry> Logger { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required CashTransactionsHttpClient CashTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
@@ -56,8 +60,10 @@ public partial class UpdateCurrencyEntry
         _loadedEntryId = CurrencyAccountEntry.EntryId;
 
         // Fill the form before awaiting the currency lookup so the editor never shows (or submits) defaults.
-        _postingDate = CurrencyAccountEntry.PostingDate;
-        _time = new TimeSpan(CurrencyAccountEntry.PostingDate.Hour, CurrencyAccountEntry.PostingDate.Minute, CurrencyAccountEntry.PostingDate.Second);
+        // Entries are stored as UTC and the rows show them in local time, so the form edits the same local wall-clock time.
+        var posted = CurrencyAccountEntry.PostingDate.ToLocalTime();
+        _postingDate = posted;
+        _time = new TimeSpan(posted.Hour, posted.Minute, posted.Second);
         _description = CurrencyAccountEntry.Description;
         _contractorDetails = CurrencyAccountEntry.ContractorDetails;
         _balanceChange = CurrencyAccountEntry.ValueChange;
@@ -68,11 +74,11 @@ public partial class UpdateCurrencyEntry
         try
         {
             var currencies = await CurrencyHttpClient.GetAll();
-            _currency = currencies.FirstOrDefault(x => x.Id == CurrencyAccount.CurrencyId) ?? SettingsService.GetCurrency();
+            _currency = currencies.FirstOrDefault(x => x.Id == (CurrencyAccount?.CurrencyId ?? CurrencyAccountEntry.CurrencyId)) ?? SettingsService.GetCurrency();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Could not resolve the currency of account {AccountId}; falling back to the user currency.", CurrencyAccount.AccountId);
+            Logger.LogWarning(ex, "Could not resolve the currency of the entry; falling back to the user currency.");
             _currency = SettingsService.GetCurrency();
         }
         finally
@@ -95,18 +101,33 @@ public partial class UpdateCurrencyEntry
             if (!_time.HasValue) return;
 
             DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
-            CurrencyAccountEntry accountEntry = new(CurrencyAccountEntry.AccountId, CurrencyAccountEntry.EntryId, date, -1, _balanceChange.Value)
-            {
-                Description = this._description is null ? string.Empty : this._description,
-                ContractorDetails = this._contractorDetails,
-                Labels = GetLabels().ToList()
-            };
 
             // Clear a previous failure so a successful retry closes the editor.
             _errors = [];
             try
             {
-                await FinancialAccountService.UpdateEntry(accountEntry);
+                var description = _description ?? string.Empty;
+                if (CurrencyAccount is null)
+                {
+                    await CashTransactionsHttpClient.UpdateAsync(CurrencyAccountEntry.EntryId, new UpdateCashEntryRequest(
+                        date, _balanceChange.Value, description, _contractorDetails, [.. GetLabels().Select(x => x.Id)]));
+                }
+                else
+                {
+                    CurrencyAccountEntry accountEntry = new(CurrencyAccountEntry.AccountId, CurrencyAccountEntry.EntryId, date, -1, _balanceChange.Value)
+                    {
+                        Description = description,
+                        ContractorDetails = _contractorDetails,
+                        Labels = GetLabels().ToList()
+                    };
+                    await FinancialAccountService.UpdateEntry(accountEntry);
+                }
+            }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (CurrencyAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry update");
+                _errors = [ex.Message];
             }
             catch (Exception ex)
             {

@@ -37,7 +37,6 @@ public class BondAccountControllerTests(OptionsProvider optionsProvider) : Contr
 
         // Mock user plan verifier to allow operations
         var planVerifierMock = new Mock<IUserPlanVerifier>();
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
     }

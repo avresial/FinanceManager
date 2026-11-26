@@ -23,7 +23,7 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
 
     protected override void ConfigureServices(IServiceCollection services)
     {
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
 
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor != null)
@@ -120,11 +120,32 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
         await SeedEssentialSpendingAccount();
         Authorize("TestUser", 1, UserRole.User);
 
-        var result = await new EssentialSpendingHttpClient(Client).GetEssentialSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-1), _nowUtc, []);
+        var result = await new EssentialSpendingHttpClient(Client).GetEssentialSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-1), _nowUtc);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(-50m, result.Single(x => x.DateTime == _nowUtc.AddDays(-1)).Value);
         Assert.Equal(-20m, result.Single(x => x.DateTime == _nowUtc).Value);
+    }
+
+    [Fact]
+    public async Task GetEssentialSpending_CountsEntriesThatAreNotLinkedToAnAccount()
+    {
+        var essential = new FinancialLabel
+        {
+            Name = "Rent",
+            Classifications = [new FinancialLabelClassification { Kind = FinancialLabelClassificationCatalog.SpendingNecessityKind, Value = FinancialLabelClassificationCatalog.EssentialValue }]
+        };
+        _testDatabase!.Context.FinancialLabels.Add(essential);
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _testDatabase.Context.CurrencyEntries.AddRange(
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, -75m) { Labels = [essential], UserId = 1, CurrencyId = 0 },
+            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, -999m) { Labels = [essential], UserId = 2, CurrencyId = 0 });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new EssentialSpendingHttpClient(Client).GetEssentialSpending(1, DefaultCurrency.USD, _nowUtc.AddDays(-1), _nowUtc);
+
+        Assert.Equal(-75m, result.Sum(x => x.Value));
     }
 
     [Fact]

@@ -117,6 +117,7 @@ public class RangeRefreshFailureTests
         context.Services.AddSingleton(new LiabilitiesSnapshotStore(coordinator));
         var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
         context.Services.AddSingleton(new LiabilitiesHttpClient(http));
+        context.Services.AddSingleton(new UnconvertedCurrenciesHttpClient(http));
         context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(http), NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
         return context;
     }

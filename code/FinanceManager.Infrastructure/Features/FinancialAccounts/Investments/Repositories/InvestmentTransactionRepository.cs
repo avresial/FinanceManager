@@ -39,19 +39,15 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccountAndIds(
-        int accountId,
+    public async Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
+        long userId,
         IReadOnlyCollection<long> transactionIds,
         CancellationToken cancellationToken = default)
     {
-        if (accountId <= 0 || transactionIds.Count == 0) return [];
+        if (userId == 0 || transactionIds.Count == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => x.AccountId == accountId && transactionIds.Contains(x.EntryId))
+            .Where(x => x.UserId == userId && transactionIds.Contains(x.EntryId))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
     }
@@ -61,6 +57,20 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Include(x => x.AssetListing)
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<int, int>> GetCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
+    {
+        // Trades carry their owner as a long; ids are ints everywhere else, so the grouped keys narrow back safely.
+        var owners = userIds.Where(id => id != 0).Select(id => (long)id).Distinct().ToList();
+        if (owners.Count == 0) return new Dictionary<int, int>();
+
+        var rows = await context.InvestmentTransactions.AsNoTracking()
+            .Where(x => owners.Contains(x.UserId))
+            .GroupBy(x => x.UserId)
+            .Select(grouped => new { UserId = grouped.Key, Count = grouped.Count() })
+            .ToListAsync(cancellationToken);
+        return rows.ToDictionary(x => (int)x.UserId, x => x.Count);
+    }
 
     private IQueryable<InvestmentTransaction> OwnedTrades(long userId, DateTime? start, DateTime? end)
     {
@@ -268,49 +278,24 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
         return [.. units.Select(x => new InvestmentHolding(x.ListingId, listings[x.ListingId].Ticker, listings[x.ListingId].ExchangeName, listings[x.ListingId].Type, x.Units))];
     }
 
-    public async Task<IReadOnlyDictionary<int, IReadOnlyDictionary<long, decimal>>> GetHoldingsByAccountAsOf(
-        IReadOnlyCollection<int> accountIds,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0) return new Dictionary<int, IReadOnlyDictionary<long, decimal>>();
-
-        var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
-            .Select(g => new
-            {
-                g.Key.AccountId,
-                g.Key.AssetListingId,
-                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Buy
-                    ? t.Quantity
-                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
-            })
-            .ToListAsync(cancellationToken);
-
-        return rows
-            .GroupBy(x => x.AccountId)
-            .ToDictionary(
-                g => g.Key,
-                g => (IReadOnlyDictionary<long, decimal>)g.ToDictionary(x => x.AssetListingId, x => x.Holding));
-    }
-
-    public async Task<IInvestmentTransactionRepository.AccountValuationInputs> GetValuationInputs(
-        IReadOnlyCollection<int> accountIds,
+    public async Task<IInvestmentTransactionRepository.UserValuationInputs> GetValuationInputsByUser(
+        long userId,
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default)
     {
-        if (accountIds.Count == 0 || startDate > endDate)
-            return new IInvestmentTransactionRepository.AccountValuationInputs([], []);
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        if (startDate > endDate) return new IInvestmentTransactionRepository.UserValuationInputs([], []);
+
+        var start = startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var end = endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
         var openingRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate < startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId })
+            .Where(x => x.UserId == userId && x.PostingDate < start)
+            .GroupBy(x => x.AssetListingId)
             .Select(g => new
             {
-                g.Key.AccountId,
-                g.Key.AssetListingId,
+                AssetListingId = g.Key,
                 Quantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
                     ? t.Quantity
                     : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
@@ -319,11 +304,10 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ToListAsync(cancellationToken);
 
         var tradeRows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate >= startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) && x.PostingDate <= endDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => new { AccountId = x.AccountId!.Value, x.AssetListingId, x.PostingDate })
+            .Where(x => x.UserId == userId && x.PostingDate >= start && x.PostingDate <= end)
+            .GroupBy(x => new { x.AssetListingId, x.PostingDate })
             .Select(g => new
             {
-                g.Key.AccountId,
                 g.Key.AssetListingId,
                 g.Key.PostingDate,
                 SignedQuantity = g.Sum(t => t.Type == InvestmentTransactionType.Buy
@@ -333,38 +317,30 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Where(x => x.SignedQuantity != 0m)
             .ToListAsync(cancellationToken);
 
-        var openingPositions = openingRows
-            .Select(x => new IInvestmentTransactionRepository.ValuationOpeningPosition(x.AccountId, x.AssetListingId, x.Quantity))
-            .ToList();
-
-        var trades = tradeRows
-            .Select(x => new IInvestmentTransactionRepository.ValuationTradeInput(x.AccountId, x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))
-            .ToList();
-
-        return new IInvestmentTransactionRepository.AccountValuationInputs(openingPositions, trades);
+        return new IInvestmentTransactionRepository.UserValuationInputs(
+            [.. openingRows.Select(x => new IInvestmentTransactionRepository.UserValuationOpeningPosition(x.AssetListingId, x.Quantity))],
+            [.. tradeRows.Select(x => new IInvestmentTransactionRepository.UserValuationTradeInput(x.AssetListingId, DateOnly.FromDateTime(x.PostingDate), x.SignedQuantity))]);
     }
 
-    public async Task<IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput>> GetCapitalFlowInputs(
-        IReadOnlyCollection<int> accountIds,
+    public async Task<IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput>> GetCapitalFlowInputsByUser(
+        long userId,
         DateOnly toDate,
         CancellationToken cancellationToken = default)
     {
-        if (accountIds.Count == 0) return [];
+        if (userId == 0) return [];
 
         return await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            .Where(x => x.UserId == userId && x.PostingDate <= toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
-            .Select(x => new IInvestmentTransactionRepository.CapitalFlowInput(
+            .Select(x => new IInvestmentTransactionRepository.UserCapitalFlowInput(
                 x.EntryId,
-                x.AccountId!.Value,
                 x.AssetListingId,
                 DateOnly.FromDateTime(x.PostingDate),
                 x.Type,
                 x.Quantity,
                 x.UnitPrice,
                 x.Fee,
-                x.Currency,
-                (decimal?)x.AssetListing.PriceMultiplier))
+                x.Currency))
             .ToListAsync(cancellationToken);
     }
 

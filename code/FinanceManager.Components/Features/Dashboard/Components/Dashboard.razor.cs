@@ -266,6 +266,6 @@ public partial class Dashboard : ComponentBase
     // Per-user key with no date component, so a single snapshot per user is overwritten each save.
     // The key is currency-scoped so a snapshot saved before a preferred-currency change is never
     // painted with the new currency's labels.
-    private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:{userId}:{currencyId}";
+    private static string BuildSnapshotKey(int userId, int currencyId) => $"dashboard-overview:v2:{userId}:{currencyId}";
 
 }

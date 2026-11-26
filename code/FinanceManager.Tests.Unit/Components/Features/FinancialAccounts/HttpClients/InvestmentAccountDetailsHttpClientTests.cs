@@ -89,7 +89,7 @@ public class InvestmentAccountDetailsHttpClientTests
         var client = new InvestmentValuationHttpClient(CreateHttpClient(new HttpResponseMessage(HttpStatusCode.InternalServerError)));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => client.GetTransactionValuationsAsync(
-            1, 1, cancellationToken: TestContext.Current.CancellationToken));
+            1, [5], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -100,7 +100,29 @@ public class InvestmentAccountDetailsHttpClientTests
             Content = JsonContent.Create(Array.Empty<object>())
         }));
 
-        Assert.Empty(await client.GetTransactionValuationsAsync(1, 1, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Empty(await client.GetTransactionValuationsAsync(1, [5], TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetTransactionValuationsAsync_CallsTheUserScopedRoute_WithEveryRequestedId()
+    {
+        var handler = new StubHandler(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) });
+        var client = new InvestmentValuationHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+
+        await client.GetTransactionValuationsAsync(2, [5, 6], TestContext.Current.CancellationToken);
+
+        Assert.Equal("/api/InvestmentValuation/TransactionValuations/2", handler.LastRequest!.RequestUri!.AbsolutePath);
+        Assert.Equal("?transactionIds=5&transactionIds=6", handler.LastRequest.RequestUri.Query);
+    }
+
+    [Fact]
+    public async Task GetTransactionValuationsAsync_WithoutIds_SendsNothing()
+    {
+        var handler = new StubHandler(new HttpResponseMessage(HttpStatusCode.OK));
+        var client = new InvestmentValuationHttpClient(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") });
+
+        Assert.Empty(await client.GetTransactionValuationsAsync(2, [], TestContext.Current.CancellationToken));
+        Assert.Null(handler.LastRequest);
     }
 
     [Fact]

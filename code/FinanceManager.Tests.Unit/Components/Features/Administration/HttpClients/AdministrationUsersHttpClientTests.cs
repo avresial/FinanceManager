@@ -26,38 +26,6 @@ public class AdministrationUsersHttpClientTests
     }
 
     [Fact]
-    public async Task GetAccountsCount_Success_ReturnsCount()
-    {
-        var client = CreateClient(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(5)
-        });
-
-        Assert.Equal(5, await client.GetAccountsCount());
-    }
-
-    [Fact]
-    public async Task GetAccountsCount_GenuinelyZero_ReturnsZero()
-    {
-        var client = CreateClient(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(0)
-        });
-
-        Assert.Equal(0, await client.GetAccountsCount());
-    }
-
-    [Fact]
-    public async Task GetAccountsCount_FailedRequest_ReturnsNull()
-    {
-        var client = CreateClient(new HttpResponseMessage(HttpStatusCode.InternalServerError));
-
-        // The admin dashboard snapshot surface relies on null to mean "no usable response" so a failed
-        // refresh keeps the painted count instead of overwriting it with a fake zero.
-        Assert.Null(await client.GetAccountsCount());
-    }
-
-    [Fact]
     public async Task GetUsersCount_Success_ReturnsCount()
     {
         var client = CreateClient(new HttpResponseMessage(HttpStatusCode.OK)

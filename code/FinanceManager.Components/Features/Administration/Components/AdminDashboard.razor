@@ -10,7 +10,7 @@
 <PageTitle>Admin dashboard</PageTitle>
 
 <MudGrid Spacing="3">
-    <MudItem xs="12" sm="6" md="3">
+    <MudItem xs="12" sm="6" md="4">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
@@ -39,41 +39,12 @@
         </MudCard>
     </MudItem>
 
-    <MudItem xs="12" sm="6" md="3">
+    <MudItem xs="12" sm="6" md="4">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
                     <div class="fm-card-info-header">
-                        <CardInfoTooltip Text="All financial accounts created across all users."
-                                         AriaLabel="About accounts count card">
-                            <MudText>Accounts count</MudText>
-                        </CardInfoTooltip>
-                    </div>
-                    <ComponentStateView ErrorMessage="@(_accountsCountLoadFailed && !_accountsCount.HasValue ? "Unable to load this metric. Reload the page to try again." : null)">
-                        <MudText Typo="Typo.h3" Color="MudBlazor.Color.Primary" Style="font-size: clamp(1.25rem, 5.5vw, 3rem);">
-                            <b>
-                                @if (_accountsCount.HasValue)
-                                {
-                                    @_accountsCount
-                                }
-                                else
-                                {
-                                    <StringSpinner CharactersCount="3" />
-                                }
-                            </b>
-                        </MudText>
-                    </ComponentStateView>
-                </MudPaper>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Outlined Class="h-100">
-            <MudCardContent>
-                <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">
-                    <div class="fm-card-info-header">
-                        <CardInfoTooltip Text="Combined balance of all tracked accounts across all users, converted to PLN."
+                        <CardInfoTooltip Text="Combined value of all tracked transactions across all users, converted to PLN."
                                          AriaLabel="About total tracked money card">
                             <MudText>Total tracked money</MudText>
                         </CardInfoTooltip>
@@ -97,7 +68,7 @@
         </MudCard>
     </MudItem>
 
-    <MudItem xs="12" sm="6" md="3">
+    <MudItem xs="12" sm="6" md="4">
         <MudCard Outlined Class="h-100">
             <MudCardContent>
                 <MudPaper Class="d-flex justify-start gap-3 flex-grow-1 flex-column px-3 py-1" Elevation="0">

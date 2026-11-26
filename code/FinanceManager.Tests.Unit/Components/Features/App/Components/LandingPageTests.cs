@@ -38,6 +38,9 @@ public class LandingPageTests
             Assert.True(button.HasAttribute("disabled"));
             Assert.Equal("Available by gift code", button.TextContent.Trim());
         });
+        // Plans are limited by transactions only; no plan promises an account count any more.
+        Assert.Contains(cut.FindAll(".mud-list-item"), item => item.TextContent.Contains("transactions", StringComparison.OrdinalIgnoreCase));
+        Assert.All(cut.FindAll(".mud-list-item"), item => Assert.DoesNotContain("account", item.TextContent, StringComparison.OrdinalIgnoreCase));
         Assert.Equal(6, cut.FindAll(".landing-preview img[alt]").Count);
 
         var pictures = cut.FindAll(".landing-preview picture");

@@ -8,10 +8,12 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -20,7 +22,8 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class AdministrationUsersServiceTests
 {
-    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly Mock<ICashTransactionReader> _cash = new();
+    private readonly Mock<IBondTransactionReader> _bondReader = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly Mock<IActiveUsersRepository> _activeUsersRepositoryMock = new();
     private readonly Mock<IUserPlanVerifier> _userPlanVerifierMock = new();
@@ -37,12 +40,11 @@ public class AdministrationUsersServiceTests
         _currencies.Setup(x => x.GetByCode("PLN", It.IsAny<CancellationToken>())).ReturnsAsync(DefaultCurrency.PLN);
         _userRepositoryMock.Setup(x => x.GetUsersIds(0, int.MaxValue)).Returns(new[] { 1, 2 }.ToAsyncEnumerable());
         _bonds.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(Array.Empty<BondDetails>().ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<CurrencyAccount>().ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<BondAccount>().ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(Array.Empty<InvestmentAccount>().ToAsyncEnumerable());
-        _investments.Setup(x => x.GetAccountValueAsync(It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<int, decimal>());
+        _cash.Setup(x => x.GetPositions(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _bondReader.Setup(x => x.GetPositions(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _investments.Setup(x => x.GetUserValueByListingAsync(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<long, decimal>());
         _service = new(
-            _financialAccountRepositoryMock.Object, _userRepositoryMock.Object,
+            _cash.Object, _bondReader.Object, _userRepositoryMock.Object,
             _activeUsersRepositoryMock.Object, _userPlanVerifierMock.Object,
             _currencies.Object, _exchange.Object, _bonds.Object, _investments.Object);
     }
@@ -57,10 +59,11 @@ public class AdministrationUsersServiceTests
     public async Task TotalTrackedMoney_ConvertsAllUsersCashAndBonds_AndValuesInvestmentsInPln()
     {
         var now = DateTime.UtcNow;
-        var cash = new CurrencyAccount(1, 1, "USD cash", [], nextOlderEntry: new CurrencyAccountEntry(1, 1, now.AddDays(-10), 10.25m, 10.25m), currencyId: 1);
-        var loan = new CurrencyAccount(2, 2, "PLN loan", [new CurrencyAccountEntry(2, 1, now.AddDays(-1), -2m, -2m)], currencyId: 0);
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { cash }.ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(2, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { loan }.ToAsyncEnumerable());
+        // User 1 holds USD cash, user 2 has a negative PLN balance (a debt subtracts) and a USD bond; none of it is linked to an account.
+        _cash.Setup(x => x.GetPositions(1, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(1, 10.25m, now.AddDays(-10))]);
+        _cash.Setup(x => x.GetPositions(2, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(0, -2m, now.AddDays(-1)), new OwnerLedgerPosition(1, 0m, now.AddDays(-3))]);
         _currencies.Setup(x => x.GetCurrency(1, It.IsAny<CancellationToken>())).ReturnsAsync(DefaultCurrency.USD);
         _currencies.Setup(x => x.GetCurrency(0, It.IsAny<CancellationToken>())).ReturnsAsync(DefaultCurrency.PLN);
         _exchange.Setup(x => x.GetExchangeRateAsync(DefaultCurrency.USD, DefaultCurrency.PLN, It.IsAny<DateTime>())).ReturnsAsync(4m);
@@ -68,11 +71,12 @@ public class AdministrationUsersServiceTests
             [new BondCalculationMethod { DateOperator = DateOperator.UntilDate, DateValue = now.AddYears(1).ToString("yyyy-MM-dd"), Rate = 0 }], DefaultCurrency.USD, unitValue: 1m)
         { Id = 5 };
         _bonds.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>())).Returns(new[] { details }.ToAsyncEnumerable());
-        var bond = new BondAccount(2, 3, "Bonds", [], nextOlderEntries: new() { [5] = new BondAccountEntry(3, 1, now.AddDays(-10), 3m, 3m, 5) });
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<BondAccount>(2, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { bond }.ToAsyncEnumerable());
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<InvestmentAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { new InvestmentAccount(1, 4, "Investments") }.ToAsyncEnumerable());
-        _investments.Setup(x => x.GetAccountValueAsync(It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 4 })), DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<int, decimal> { [4] = 3000000000.25m });
+        _bondReader.Setup(x => x.GetPositions(2, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(5, 3m, now.AddDays(-10)), new OwnerLedgerPosition(6, 0m, now.AddDays(-20))]);
+        // Pooled holdings: valued per user, whether or not the trades are linked to an account.
+        _investments.Setup(x => x.GetUserValueByListingAsync(1, DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(new Dictionary<long, decimal> { [7] = 3000000000.25m });
 
+        // 10.25 USD * 4 - 2 PLN + 3 USD * 4 + investments; the sold-out bond (id 6, no definition) and the zero cash position are skipped.
         Assert.Equal(3000000051.25m, await _service.GetTotalTrackedMoney());
         _exchange.Verify(x => x.GetExchangeRateAsync(DefaultCurrency.USD, DefaultCurrency.PLN, It.IsAny<DateTime>()), Times.Exactly(2));
     }
@@ -80,9 +84,22 @@ public class AdministrationUsersServiceTests
     [Fact]
     public async Task TotalTrackedMoney_MissingFx_FailsInsteadOfPublishingPartialTotal()
     {
-        var cash = new CurrencyAccount(1, 1, "USD", [new CurrencyAccountEntry(1, 1, DateTime.UtcNow.AddDays(-1), 10m, 10m)], currencyId: 1);
-        _financialAccountRepositoryMock.Setup(x => x.GetAccounts<CurrencyAccount>(1, It.IsAny<DateTime>(), It.IsAny<DateTime>(), false)).Returns(new[] { cash }.ToAsyncEnumerable());
+        _cash.Setup(x => x.GetPositions(1, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(1, 10m, DateTime.UtcNow.AddDays(-1))]);
         _currencies.Setup(x => x.GetCurrency(1, It.IsAny<CancellationToken>())).ReturnsAsync(DefaultCurrency.USD);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetTotalTrackedMoney());
+    }
+
+    [Fact]
+    public async Task TotalTrackedMoney_MissingCurrencyOrBondDefinition_Fails()
+    {
+        _cash.Setup(x => x.GetPositions(1, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(99, 10m, DateTime.UtcNow.AddDays(-1))]);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetTotalTrackedMoney());
+
+        _cash.Setup(x => x.GetPositions(1, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _bondReader.Setup(x => x.GetPositions(2, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new OwnerLedgerPosition(5, 3m, DateTime.UtcNow.AddDays(-10))]);
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GetTotalTrackedMoney());
     }
 

@@ -10,7 +10,6 @@ namespace FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.R
 
 internal class InvestmentAccountRepository(AppDbContext context) : IAccountRepository<InvestmentAccount>
 {
-    public Task<int> GetAccountsCount() => context.Accounts.AsNoTracking().Where(x => x.AccountType == AccountType.Stock).CountAsync();
     public async Task<int?> Add(int userId, string accountName)
     {
         var result = context.Accounts.Add(new FinancialAccountBaseDto

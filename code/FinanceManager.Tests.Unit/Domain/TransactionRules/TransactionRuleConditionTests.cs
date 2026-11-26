@@ -133,4 +133,13 @@ public class TransactionRuleConditionTests
         Assert.True(condition.Matches(expense));
         Assert.False(condition.Matches(income));
     }
+
+    [Fact]
+    public void AccountCondition_NeverMatchesAnEntryWithoutAnAccountLink()
+    {
+        // Account id 0 is a real id for no account; a missing link must not be confused with it.
+        var condition = new AccountCondition([0, 5]);
+
+        Assert.False(condition.Matches(new TransactionFacts("c", "d", null, 1m, TransactionDirection.Expense, [])));
+    }
 }

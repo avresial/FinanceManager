@@ -1,11 +1,10 @@
 using FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
@@ -13,8 +12,8 @@ namespace FinanceManager.Tests.Unit.Application.Services.Investments;
 [Trait("Category", "Unit")]
 public class FeeDragServiceTests
 {
-    private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepository = new();
     private readonly Mock<IInvestmentTransactionRepository> _transactionRepository = new();
+    private readonly Mock<IAssetListingRepository> _assetListingRepository = new();
     private readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
 
     [Fact]
@@ -23,19 +22,9 @@ public class FeeDragServiceTests
         var knownListing = CreateListing(101, "KNOWN", 0.005m, AssetType.ETF);
         var missingListing = CreateListing(102, "MISSING", null, AssetType.ETF);
         var stockListing = CreateListing(103, "STOCK", 0.002m, AssetType.Stock);
-        var accountOne = new InvestmentAccount(1, 10, "One");
-        var accountTwo = new InvestmentAccount(1, 11, "Two");
-        _accountRepository.Setup(repository => repository.GetAll(1)).ReturnsAsync([accountOne, accountTwo]);
 
-        _transactionRepository.Setup(repository => repository.GetByAccount(10, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([
-                CreateTransaction(10, knownListing, InvestmentTransactionType.Buy, 2m),
-                CreateTransaction(10, knownListing, InvestmentTransactionType.Sell, 0.5m),
-                CreateTransaction(10, missingListing, InvestmentTransactionType.Buy, 4m),
-                CreateTransaction(10, stockListing, InvestmentTransactionType.Buy, 10m),
-            ]);
-        _transactionRepository.Setup(repository => repository.GetByAccount(11, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateTransaction(11, knownListing, InvestmentTransactionType.Buy, 1m)]);
+        // The repository pools every account and unlinked trade per listing: 2 - 0.5 in one account plus 1 in another.
+        SetupHoldings(1, (knownListing, 2.5m), (missingListing, 4m), (stockListing, 10m));
         _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(101, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(100m);
         _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(102, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(50m);
 
@@ -52,21 +41,15 @@ public class FeeDragServiceTests
         Assert.Null(result.Holdings.Single(holding => holding.ListingId == 102).ExpenseRatio);
         Assert.Equal([10, 20, 30], result.Projections.Select(projection => projection.Years).ToArray());
         Assert.True(result.Projections[2].CumulativeFeeCost > result.Projections[0].CumulativeFeeCost);
+        _transactionRepository.Verify(repository => repository.GetHoldingsByUserAsOf(1, new DateOnly(2026, 9, 15), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task GetAnalysis_SkipsZeroHoldingsAndHoldingsWithoutPrices()
+    public async Task GetAnalysis_SkipsOversoldHoldingsAndHoldingsWithoutPrices()
     {
-        var zeroListing = CreateListing(201, "ZERO", 0.004m, AssetType.ETF);
+        var oversoldListing = CreateListing(201, "ZERO", 0.004m, AssetType.ETF);
         var noPriceListing = CreateListing(202, "NO-PRICE", 0.004m, AssetType.ETF);
-        var account = new InvestmentAccount(1, 20, "Portfolio");
-        _accountRepository.Setup(repository => repository.GetAll(1)).ReturnsAsync([account]);
-        _transactionRepository.Setup(repository => repository.GetByAccount(20, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([
-                CreateTransaction(20, zeroListing, InvestmentTransactionType.Buy, 2m),
-                CreateTransaction(20, zeroListing, InvestmentTransactionType.Sell, 2m),
-                CreateTransaction(20, noPriceListing, InvestmentTransactionType.Buy, 3m),
-            ]);
+        SetupHoldings(1, (oversoldListing, -2m), (noPriceListing, 3m));
         _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(202, It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(0m);
 
         var result = await CreateService().GetAnalysisAsync(1, DefaultCurrency.USD, DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
@@ -81,10 +64,7 @@ public class FeeDragServiceTests
     public async Task GetAnalysis_UsesRequestedCurrencyForEachPriceLookup()
     {
         var listing = CreateListing(301, "EUR-ETF", 0.001m, AssetType.ETF);
-        var account = new InvestmentAccount(1, 30, "Portfolio");
-        _accountRepository.Setup(repository => repository.GetAll(1)).ReturnsAsync([account]);
-        _transactionRepository.Setup(repository => repository.GetByAccount(30, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateTransaction(30, listing, InvestmentTransactionType.Buy, 2m)]);
+        SetupHoldings(1, (listing, 2m));
         _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(301, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(75m);
 
         var result = await CreateService().GetAnalysisAsync(1, DefaultCurrency.USD, DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
@@ -94,19 +74,27 @@ public class FeeDragServiceTests
     }
 
     [Fact]
+    public async Task GetAnalysis_OrdersHoldingsByTickerThenListingId()
+    {
+        var second = CreateListing(502, "bbb", null, AssetType.ETF);
+        var first = CreateListing(501, "AAA", null, AssetType.ETF);
+        var sameTicker = CreateListing(500, "BBB", null, AssetType.ETF);
+        SetupHoldings(1, (second, 1m), (first, 1m), (sameTicker, 1m));
+        _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(It.IsAny<long>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync(10m);
+
+        var result = await CreateService().GetAnalysisAsync(1, DefaultCurrency.PLN, DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal([501L, 500L, 502L], result.Holdings.Select(holding => holding.ListingId).ToArray());
+    }
+
+    [Fact]
     public async Task GetAnalysis_IncludesEtfHoldingsForGuestSandboxUserWithNegativeId()
     {
         // Guest sandbox users are issued negative ids, so they must not be treated as invalid.
         const int guestUserId = -2;
         var listing = CreateListing(401, "CSPX", null, AssetType.ETF);
-        var account = new InvestmentAccount(guestUserId, 40, "Investments");
         var asOfDate = new DateTime(2026, 9, 15);
-        var futureTransaction = CreateTransaction(40, listing, InvestmentTransactionType.Buy, 5m);
-        futureTransaction.TradeDate = new DateOnly(2026, 9, 16);
-        _accountRepository.Setup(repository => repository.GetAll(guestUserId))
-            .ReturnsAsync([account, new InvestmentAccount(1, 41, "Other user")]);
-        _transactionRepository.Setup(repository => repository.GetByAccount(40, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([CreateTransaction(40, listing, InvestmentTransactionType.Buy, 3m), futureTransaction]);
+        SetupHoldings(guestUserId, (listing, 3m));
         _priceProvider.Setup(provider => provider.GetPricePerUnitAsync(401, DefaultCurrency.PLN, asOfDate, It.IsAny<CancellationToken>())).ReturnsAsync(400m);
 
         var result = await CreateService().GetAnalysisAsync(guestUserId, DefaultCurrency.PLN, asOfDate, cancellationToken: TestContext.Current.CancellationToken);
@@ -116,7 +104,7 @@ public class FeeDragServiceTests
         Assert.Equal(1, result.MissingTerCount);
         Assert.Equal(1200m, result.MissingTerHoldingsValue);
         Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
-        _transactionRepository.Verify(repository => repository.GetByAccount(41, It.IsAny<CancellationToken>()), Times.Never);
+        _transactionRepository.Verify(repository => repository.GetHoldingsByUserAsOf(guestUserId, new DateOnly(2026, 9, 15), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -129,9 +117,9 @@ public class FeeDragServiceTests
     }
 
     [Fact]
-    public async Task GetAnalysis_WithNoAccountsReturnsSafeEmptyProjection()
+    public async Task GetAnalysis_WithNoHoldingsReturnsSafeEmptyProjection()
     {
-        _accountRepository.Setup(repository => repository.GetAll(1)).ReturnsAsync([]);
+        SetupHoldings(1);
 
         var result = await CreateService().GetAnalysisAsync(1, DefaultCurrency.PLN, DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -139,9 +127,32 @@ public class FeeDragServiceTests
         Assert.Equal(0m, result.AnnualFeeCost);
         Assert.Equal(3, result.Projections.Count);
         Assert.All(result.Projections, projection => Assert.Equal(0m, projection.CumulativeFeeCost));
+        _assetListingRepository.Verify(repository => repository.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private FeeDragService CreateService() => new(_accountRepository.Object, _transactionRepository.Object, _priceProvider.Object);
+    [Fact]
+    public async Task GetAnalysis_WithUnsetUserIdReturnsSafeEmptyProjectionWithoutReading()
+    {
+        var result = await CreateService().GetAnalysisAsync(0, DefaultCurrency.PLN, DateTime.UtcNow, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Holdings);
+        Assert.Equal(3, result.Projections.Count);
+        _transactionRepository.Verify(repository => repository.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void SetupHoldings(int userId, params (AssetListing Listing, decimal Units)[] holdings)
+    {
+        _transactionRepository
+            .Setup(repository => repository.GetHoldingsByUserAsOf(userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([.. holdings.Select(holding => new InvestmentHolding(
+                holding.Listing.Id, holding.Listing.Ticker, "Exchange", holding.Listing.Asset.Type, holding.Units))]);
+        _assetListingRepository
+            .Setup(repository => repository.GetByIds(It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<long> ids, CancellationToken _) =>
+                [.. holdings.Select(holding => holding.Listing).Where(listing => ids.Contains(listing.Id))]);
+    }
+
+    private FeeDragService CreateService() => new(_transactionRepository.Object, _assetListingRepository.Object, _priceProvider.Object);
 
     private static AssetListing CreateListing(long id, string ticker, decimal? expenseRatio, AssetType type) => new()
     {
@@ -149,21 +160,6 @@ public class FeeDragServiceTests
         Ticker = ticker,
         Asset = new Asset { Id = id, Name = $"{ticker} ETF", Type = type, TotalExpenseRatio = expenseRatio },
     };
-
-    private static InvestmentTransaction CreateTransaction(
-        int accountId,
-        AssetListing listing,
-        InvestmentTransactionType type,
-        decimal quantity) => new()
-        {
-            AccountId = accountId,
-            AssetListingId = listing.Id,
-            AssetListing = listing,
-            Type = type,
-            Quantity = quantity,
-            TradeDate = new DateOnly(2026, 9, 1),
-            Currency = listing.TradingCurrency ?? DefaultCurrency.USD.ShortName,
-        };
 
     // .NET 11 made decimal<->double conversions correctly rounded. Projections compound through
     // Math.Pow(double), so these tests pin the cent results against exact decimal compounding.

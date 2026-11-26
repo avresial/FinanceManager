@@ -4,6 +4,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
 
@@ -16,9 +17,9 @@ public class PortfolioPeriodLedgerTests
     [Fact]
     public void Build_SplitsTradePrincipalAndFeeAndNormalizesQuoteUnits()
     {
-        var buy = new IInvestmentTransactionRepository.CapitalFlowInput(
-            11, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 100m, 5m, "GBX", 0.01m);
+        var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
+            11, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+            2m, 100m, 5m, "GBX");
         var sell = buy with
         {
             TransactionId = 12,
@@ -41,7 +42,6 @@ public class PortfolioPeriodLedgerTests
                 Assert.Equal("GBP", principal.Currency);
                 Assert.Equal(2m, principal.Quantity);
                 Assert.Equal(11, principal.SourceId);
-                Assert.Equal(2, principal.AccountId);
                 Assert.Equal(3, principal.InstrumentId);
             },
             fee =>
@@ -61,9 +61,9 @@ public class PortfolioPeriodLedgerTests
     [InlineData("ILA", "ILS")]
     public void Build_NormalizesMinorTransactionCurrencyWithoutListingMultiplier(string minorCurrency, string majorCurrency)
     {
-        var buy = new IInvestmentTransactionRepository.CapitalFlowInput(
-            11, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 100m, null, minorCurrency, 1m);
+        var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
+            11, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+            2m, 100m, null, minorCurrency);
 
         var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
 
@@ -75,9 +75,9 @@ public class PortfolioPeriodLedgerTests
     [Fact]
     public void Build_RepresentsSalesAndFeeRebatesAsPositiveAmounts()
     {
-        var sell = new IInvestmentTransactionRepository.CapitalFlowInput(
-            12, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Sell,
-            2m, 100m, -3m, "PLN", null);
+        var sell = new IInvestmentTransactionRepository.UserCapitalFlowInput(
+            12, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Sell,
+            2m, 100m, -3m, "PLN");
 
         var movements = PortfolioPeriodLedger.Build([sell], [], new Dictionary<int, BondDetails>(), _start, _end).Movements;
 
@@ -91,15 +91,15 @@ public class PortfolioPeriodLedgerTests
     [Fact]
     public void Build_TypesBondContributionsAndWithdrawals()
     {
-        var account = new BondAccount(1, 2, "Bonds",
-            [new BondAccountEntry(2, 11, _start, 2m, 2m, 5),
-                new BondAccountEntry(2, 12, _end, 1m, -1m, 5)]);
+        List<OwnerLedgerPoint> points =
+            [new(5, 11, _start, 2m),
+                new(5, 12, _end, -1m)];
         var details = new BondDetails("Bond", "Issuer", DateOnly.FromDateTime(_start),
             DateOnly.FromDateTime(_end.AddYears(1)), [], DefaultCurrency.PLN,
             BondType.InflationBond, 100m)
         { Id = 5 };
 
-        var movements = PortfolioPeriodLedger.Build([], [account], new Dictionary<int, BondDetails> { [5] = details }, _start, _end).Movements;
+        var movements = PortfolioPeriodLedger.Build([], points, new Dictionary<int, BondDetails> { [5] = details }, _start, _end).Movements;
 
         Assert.Equal(PortfolioMovementKind.BondContribution, movements[0].Kind);
         Assert.Equal(200m, movements[0].Amount);
@@ -111,9 +111,9 @@ public class PortfolioPeriodLedgerTests
     [Fact]
     public void Build_KeepsQuantityForZeroPriceTradeWithoutZeroAmountMovement()
     {
-        var buy = new IInvestmentTransactionRepository.CapitalFlowInput(
-            13, 2, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
-            2m, 0m, null, "EUR", null);
+        var buy = new IInvestmentTransactionRepository.UserCapitalFlowInput(
+            13, 3, DateOnly.FromDateTime(_start), InvestmentTransactionType.Buy,
+            2m, 0m, null, "EUR");
 
         var ledger = PortfolioPeriodLedger.Build([buy], [], new Dictionary<int, BondDetails>(), _start, _end);
 

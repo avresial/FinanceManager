@@ -16,8 +16,8 @@ public sealed record TransactionFacts
     /// <summary>The user-visible description as currently stored (never null; may be empty).</summary>
     public string Description { get; set; }
 
-    /// <summary>The account the transaction belongs to. Referenced for matching only; rules cannot move money between accounts.</summary>
-    public int AccountId { get; set; }
+    /// <summary>The legacy account link, or null for an owner-scoped entry. Referenced for matching only; rules cannot move money between accounts.</summary>
+    public int? AccountId { get; set; }
 
     /// <summary>The transaction amount as a non-negative magnitude; <see cref="Direction"/> carries the sign.</summary>
     public decimal Amount { get; set; }
@@ -33,7 +33,7 @@ public sealed record TransactionFacts
     public TransactionFacts(
         string contractor,
         string description,
-        int accountId,
+        int? accountId,
         decimal amount,
         TransactionDirection direction,
         IReadOnlyList<string> labels)

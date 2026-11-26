@@ -3,7 +3,7 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Imports;
 
 namespace FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 
-public record ImportConflict(int AccountId, CurrencyEntryImport? ImportEntry, CurrencyAccountEntry? ExistingEntry, string Reason, string? ConflictId = null)
+public record ImportConflict(int? AccountId, CurrencyEntryImport? ImportEntry, CurrencyAccountEntry? ExistingEntry, string Reason, string? ConflictId = null)
 {
     // Posting dates are stored/compared at second precision across the app. Truncating
     // both sides keeps legacy fractional-second DB entries comparable with second-precision

@@ -1,3 +1,4 @@
+using FinanceManager.Api.Features.FinancialAccounts.Investments.Controllers;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
@@ -26,6 +27,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
 {
     private const int _testUserId = 92;
     private const int _testAccountId = 792;
+    private const int _otherUserId = _testUserId + 1;
     private const long _listingId = 5002;
     private const int _usdCurrencyId = 840;
     private static readonly DateTime _asOf = new(2024, 6, 10);
@@ -50,7 +52,6 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         services.AddSingleton(_testDatabase.Context);
 
         var planVerifierMock = new Mock<IUserPlanVerifier>();
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
         services.RemoveAll<IInflationIndexProvider>();
@@ -72,7 +73,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    // Net holding 3 (buy 5, sell 2) on a USD listing priced at 100 USD, so account value is 300 USD.
+    // Net holding 3 (buy 5 linked to an account, sell 2 not linked to any) on a USD listing priced at 100 USD, so the pooled value is
+    // 300 USD. Another user's 100 units of the same listing must never leak in.
     private async Task SeedHoldingsWithPrice()
     {
         await SeedAccount();
@@ -108,7 +110,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         });
         context.InvestmentTransactions.AddRange(
             new InvestmentTransaction { UserId = _testUserId, AccountId = _testAccountId, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 5m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) },
-            new InvestmentTransaction { UserId = _testUserId, AccountId = _testAccountId, AssetListingId = _listingId, Type = InvestmentTransactionType.Sell, Quantity = 2m, UnitPrice = 95m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 5) });
+            new InvestmentTransaction { UserId = _testUserId, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Sell, Quantity = 2m, UnitPrice = 95m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 5) },
+            new InvestmentTransaction { UserId = _otherUserId, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 100m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) });
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -120,7 +123,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
 
-        var holdings = await client.GetHoldingsAsync(_testAccountId, _asOf);
+        var holdings = await client.GetHoldingsAsync(_asOf);
 
         Assert.Equal(3m, Assert.Contains(_listingId, holdings));
     }
@@ -131,7 +134,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
 
-        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_testAccountId}/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
 
         Assert.Equal(300m, value); // 3 units * 100 USD
     }
@@ -143,7 +146,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
 
-        var series = await client.GetValueSeriesAsync(_testAccountId, _usdCurrencyId, _asOf.AddDays(-3), _asOf);
+        var series = await client.GetValueSeriesAsync(_usdCurrencyId, _asOf.AddDays(-3), _asOf);
 
         Assert.NotEmpty(series);
         Assert.Equal(300m, series[_asOf]); // 3 units * 100 USD on the priced day
@@ -182,8 +185,8 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
                 : new CurrencyExchangeRateResult.Success(4m));
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
-        var point = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_testAccountId}/985/{end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
-        var series = await client.GetValueSeriesAsync(_testAccountId, 985, friday, end);
+        var point = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/985/{end:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+        var series = await client.GetValueSeriesAsync(985, friday, end);
         var assets = new AssetsHttpClient(Client);
         var currency = new Currency(985, "PLN", "PLN");
         var distribution = await assets.GetEndAssetsPerType(_testUserId, currency, end);
@@ -202,14 +205,14 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         Authorize("testuser", _testUserId, UserRole.User);
 
         var response = await Client.GetAsync(
-            $"api/InvestmentValuation/ValueSeries/{_testAccountId}/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}/{_asOf.AddDays(-1):yyyy-MM-dd}",
+            $"api/InvestmentValuation/ValueSeries/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}/{_asOf.AddDays(-1):yyyy-MM-dd}",
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task GetBenchmarkSeries_DefaultsToInflationAndMatchesTheAccountsContributions()
+    public async Task GetBenchmarkSeries_DefaultsToInflationAndMatchesThePooledContributions()
     {
         await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
@@ -224,7 +227,6 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         var client = new InvestmentValuationHttpClient(Client);
 
         var series = await client.GetBenchmarkSeriesAsync(
-            _testAccountId,
             _usdCurrencyId,
             start,
             _asOf,
@@ -238,29 +240,84 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetBenchmarkSeries_ForOtherUsersAccount_ReturnsForbidden()
+    public async Task OtherUsers_SeeOnlyTheirOwnHoldingsAndValues()
     {
         await SeedHoldingsWithPrice();
-        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        Authorize("otheruser", _otherUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
 
-        var response = await Client.GetAsync(
-            $"api/InvestmentValuation/BenchmarkSeries/{_testAccountId}/{_usdCurrencyId}/{_asOf.AddMonths(-1):yyyy-MM-dd}/{_asOf:yyyy-MM-dd}",
-            TestContext.Current.CancellationToken);
+        var holdings = await client.GetHoldingsAsync(_asOf);
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        // The other user only holds their own 100 units, never the first user's 3.
+        Assert.Equal(100m, Assert.Contains(_listingId, holdings));
+        Assert.Equal(10_000m, value);
     }
 
     [Fact]
-    public async Task GetValue_ForOtherUsersAccount_ReturnsForbidden()
+    public async Task GuestUsers_WithNegativeIds_AreServedTheirOwnPooledHoldings()
     {
         await SeedHoldingsWithPrice();
-        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        _testDatabase!.Context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            UserId = -7,
+            AccountId = null,
+            AssetListingId = _listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 4m,
+            UnitPrice = 90m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2024, 6, 1)
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("guest", -7, UserRole.User);
+
+        var value = await Client.GetFromJsonAsync<decimal>($"api/InvestmentValuation/Value/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(400m, value);
+    }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_ForUnknownBenchmarkListing_ReturnsNotFound()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
 
         var response = await Client.GetAsync(
-            $"api/InvestmentValuation/Value/{_testAccountId}/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+            $"api/InvestmentValuation/BenchmarkSeries/{_usdCurrencyId}/{_asOf.AddMonths(-1):yyyy-MM-dd}/{_asOf:yyyy-MM-dd}?listingId=999999",
+            TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetBenchmarkSeries_WithInvalidDateRange_ReturnsBadRequest()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/InvestmentValuation/BenchmarkSeries/{_usdCurrencyId}/{_asOf:yyyy-MM-dd}/{_asOf.AddDays(-1):yyyy-MM-dd}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetValue_ForUnknownCurrency_ReturnsNotFound()
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/InvestmentValuation/Value/999999/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private async Task<long> BuyId() => await _testDatabase!.Context.InvestmentTransactions
+        .Where(x => x.UserId == _testUserId && x.AccountId != null && x.Type == InvestmentTransactionType.Buy)
+        .Select(x => x.EntryId)
+        .SingleAsync(TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task GetTransactionValuations_ReturnsBuyPerformance()
@@ -268,12 +325,18 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
         var client = new InvestmentValuationHttpClient(Client);
+        var buyId = await BuyId();
+        var sellId = await _testDatabase!.Context.InvestmentTransactions
+            .Where(x => x.UserId == _testUserId && x.Type == InvestmentTransactionType.Sell)
+            .Select(x => x.EntryId)
+            .SingleAsync(TestContext.Current.CancellationToken);
 
         var valuations = await client.GetTransactionValuationsAsync(
-            _testAccountId, _usdCurrencyId, cancellationToken: TestContext.Current.CancellationToken);
+            _usdCurrencyId, [buyId, sellId], TestContext.Current.CancellationToken);
 
         // Only the Buy (5 @ 90 USD) is valued; latest quote is 100 USD.
         var valuation = Assert.Single(valuations);
+        Assert.Equal(buyId, valuation.TransactionId);
         Assert.True(valuation.IsConverted);
         Assert.Equal("USD", valuation.Currency);
         Assert.True(valuation.HasCurrentPrice);
@@ -285,48 +348,68 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     [Fact]
-    public async Task GetTransactionValuations_CanRestrictRowsToVisiblePage()
+    public async Task GetTransactionValuations_ValuesAnUnlinkedPurchase()
     {
         await SeedHoldingsWithPrice();
+        var context = _testDatabase!.Context;
+        var unlinked = context.InvestmentTransactions.Add(new InvestmentTransaction
+        {
+            UserId = _testUserId,
+            AccountId = null,
+            AssetListingId = _listingId,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = 1m,
+            UnitPrice = 80m,
+            Currency = "USD",
+            TradeDate = new DateOnly(2024, 6, 2)
+        });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("testuser", _testUserId, UserRole.User);
-        var buyId = await _testDatabase!.Context.InvestmentTransactions
-            .Where(x => x.AccountId == _testAccountId && x.Type == InvestmentTransactionType.Buy)
-            .Select(x => x.EntryId)
-            .SingleAsync(TestContext.Current.CancellationToken);
         var client = new InvestmentValuationHttpClient(Client);
 
         var valuations = await client.GetTransactionValuationsAsync(
-            _testAccountId,
-            _usdCurrencyId,
-            [buyId],
-            TestContext.Current.CancellationToken);
+            _usdCurrencyId, [unlinked.Entity.EntryId, await BuyId()], TestContext.Current.CancellationToken);
 
-        var valuation = Assert.Single(valuations);
-        Assert.Equal(buyId, valuation.TransactionId);
+        Assert.Equal(2, valuations.Count);
+        Assert.Equal(20m, valuations.Single(x => x.TransactionId == unlinked.Entity.EntryId).GainLoss); // 1 * (100 - 80)
     }
 
     [Fact]
-    public async Task GetTransactionValuations_ForOtherUsersAccount_ReturnsForbidden()
+    public async Task GetTransactionValuations_NeverReturnsAnotherUsersTrades()
     {
         await SeedHoldingsWithPrice();
-        Authorize("otheruser", _testUserId + 1, UserRole.User);
+        var buyId = await BuyId();
+        Authorize("otheruser", _otherUserId, UserRole.User);
+        var client = new InvestmentValuationHttpClient(Client);
 
-        var response = await Client.GetAsync(
-            $"api/InvestmentValuation/TransactionValuations/{_testAccountId}/{_usdCurrencyId}", TestContext.Current.CancellationToken);
+        var valuations = await client.GetTransactionValuationsAsync(_usdCurrencyId, [buyId], TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Empty(valuations);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("?transactionIds=")]
+    public async Task GetTransactionValuations_WithoutIds_ReturnsBadRequest(string query)
+    {
+        await SeedHoldingsWithPrice();
+        Authorize("testuser", _testUserId, UserRole.User);
+
+        var response = await Client.GetAsync($"api/InvestmentValuation/TransactionValuations/{_usdCurrencyId}{query}", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task GetHoldings_ForUnknownAccount_ReturnsNotFound()
+    public async Task GetTransactionValuations_AboveTheIdCap_ReturnsBadRequest()
     {
-        await SeedAccount();
+        await SeedHoldingsWithPrice();
         Authorize("testuser", _testUserId, UserRole.User);
+        var ids = string.Join("&", Enumerable.Range(1, InvestmentValuationController.MaxTransactionValuationIds + 1).Select(id => $"transactionIds={id}"));
 
-        var response = await Client.GetAsync(
-            $"api/InvestmentValuation/Holdings/999999/{_asOf:yyyy-MM-dd}", TestContext.Current.CancellationToken);
+        var response = await Client.GetAsync($"api/InvestmentValuation/TransactionValuations/{_usdCurrencyId}?{ids}", TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     public override void Dispose()

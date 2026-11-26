@@ -5,7 +5,6 @@ using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared;
 using Moq;
@@ -20,7 +19,7 @@ public class InvestmentRateServiceTests
     private readonly DateTime _endDate = DateTime.UtcNow;
 
     private readonly InvestmentRateService _investmentRateService;
-    private readonly Mock<IFinancialAccountRepository> _financialAccountRepositoryMock = new();
+    private readonly InMemoryOwnerLedger _ledger = new();
     private readonly Mock<IFinancialLabelsRepository> _financialLabelsRepositoryMock = new();
     private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepositoryMock = new();
     private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
@@ -28,14 +27,12 @@ public class InvestmentRateServiceTests
 
     public InvestmentRateServiceTests()
     {
-        _financialAccountRepositoryMock.Setup(r => r.GetAccounts<CurrencyAccount>(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
         _investmentTransactionRepositoryMock
             .Setup(x => x.GetByUser(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
         _investmentRateService = new InvestmentRateService(
-            _financialAccountRepositoryMock.Object,
+            _ledger,
             _financialLabelsRepositoryMock.Object,
             _investmentTransactionRepositoryMock.Object,
             _currencyRepositoryMock.Object,
@@ -50,11 +47,7 @@ public class InvestmentRateServiceTests
         var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
         _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
 
-        var currencyAccount = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        currencyAccount.Add(new CurrencyAccountEntry(1, 1, _startDate, 1000, 1000) { Labels = [salaryLabel] }, false);
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
-            .Returns(new[] { currencyAccount }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, _startDate, 1000, [salaryLabel.Id]);
         _investmentTransactionRepositoryMock
             .Setup(x => x.GetByUser(userId, DateOnly.FromDateTime(_startDate), DateOnly.FromDateTime(_endDate), It.IsAny<CancellationToken>()))
             .ReturnsAsync([Transaction(userId, _startDate, InvestmentTransactionType.Buy, 2m, 5m)]);
@@ -82,13 +75,7 @@ public class InvestmentRateServiceTests
         var monthStart = new DateTime(_endDate.Year, _endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var salaryDate = monthStart.AddMonths(-1).AddDays(25);
 
-        var accountWithPreviousMonthSalary = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        accountWithPreviousMonthSalary.Add(new CurrencyAccountEntry(1, 1, salaryDate, 9456.88m, 9456.88m) { Labels = [salaryLabel] }, false);
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart, _endDate))
-            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart.AddMonths(-12), monthStart))
-            .Returns(new[] { accountWithPreviousMonthSalary }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, salaryDate, 9456.88m, [salaryLabel.Id]);
 
         _investmentTransactionRepositoryMock
             .Setup(x => x.GetByUser(userId, DateOnly.FromDateTime(monthStart), DateOnly.FromDateTime(_endDate), It.IsAny<CancellationToken>()))
@@ -145,13 +132,7 @@ public class InvestmentRateServiceTests
         var monthStart = new DateTime(_endDate.Year, _endDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var salaryDate = monthStart.AddMonths(-3).AddDays(9);
 
-        var accountWithOldSalary = new CurrencyAccount(userId, 1, "Currency Account 1", AccountLabel.Cash);
-        accountWithOldSalary.Add(new CurrencyAccountEntry(1, 1, salaryDate, 1000, 1000) { Labels = [salaryLabel] }, false);
-
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart, _endDate))
-            .Returns(AsyncEnumerable.Empty<CurrencyAccount>());
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, monthStart.AddMonths(-12), monthStart))
-            .Returns(new[] { accountWithOldSalary }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, salaryDate, 1000, [salaryLabel.Id]);
 
         // Act
         var result = await _investmentRateService.GetInvestmentRate(userId, DefaultCurrency.PLN, monthStart, _endDate).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -182,10 +163,7 @@ public class InvestmentRateServiceTests
         var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
         _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
 
-        var account = new CurrencyAccount(userId, 1, "Cash", AccountLabel.Cash);
-        account.Add(new CurrencyAccountEntry(1, 1, _startDate, 1000m, 1000m) { Labels = [salaryLabel] }, false);
-        _financialAccountRepositoryMock.Setup(repo => repo.GetAccounts<CurrencyAccount>(userId, _startDate, _endDate))
-            .Returns(new[] { account }.ToAsyncEnumerable());
+        _ledger.Add(DefaultCurrency.PLN.Id, _startDate, 1000m, [salaryLabel.Id]);
         _investmentTransactionRepositoryMock
             .Setup(x => x.GetByUser(userId, DateOnly.FromDateTime(_startDate), DateOnly.FromDateTime(_endDate), It.IsAny<CancellationToken>()))
             .ReturnsAsync([
@@ -218,6 +196,22 @@ public class InvestmentRateServiceTests
 
         var rate = Assert.Single(result);
         Assert.Equal(408m, rate.InvestmentsChange);
+    }
+
+    [Fact]
+    public async Task GetInvestmentRate_CountsSalaryOnWindowEndAndIgnoresOtherEntries()
+    {
+        // The salary posted exactly on the window end counts; unlabelled income and a salary after the window do not.
+        var salaryLabel = new FinancialLabel { Id = 1, Name = "Salary" };
+        _financialLabelsRepositoryMock.Setup(repo => repo.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { salaryLabel }.ToAsyncEnumerable());
+        var end = new DateTime(2026, 2, 28, 0, 0, 0, DateTimeKind.Utc);
+        _ledger.Add(DefaultCurrency.PLN.Id, end, 1000m, [salaryLabel.Id])
+            .Add(DefaultCurrency.PLN.Id, end.AddDays(-1), 700m)
+            .Add(DefaultCurrency.PLN.Id, end.AddDays(1), 5000m, [salaryLabel.Id]);
+
+        var result = await _investmentRateService.GetInvestmentRate(-7, DefaultCurrency.PLN, end.AddDays(-27), end).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1000m, Assert.Single(result).Salary);
     }
 
     private static InvestmentTransaction Transaction(

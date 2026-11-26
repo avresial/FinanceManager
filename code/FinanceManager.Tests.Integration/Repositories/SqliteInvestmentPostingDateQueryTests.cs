@@ -52,10 +52,10 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         var ct = TestContext.Current.CancellationToken;
 
         var holdings = await _repository.GetHoldingsAsOf([_accountId], _start, ct);
-        var byAccount = await _repository.GetHoldingsByAccountAsOf([_accountId], _start, ct);
+        var byUser = await _repository.GetHoldingsByUserAsOf(_userId, _start, ct);
 
         Assert.Equal(3m, holdings[_listingId]);
-        Assert.Equal(3m, byAccount[_accountId][_listingId]);
+        Assert.Equal(3m, byUser.Single(h => h.AssetListingId == _listingId).Units);
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCapitalFlowInputs_ReturnsCalendarDatesUpToDate()
+    public async Task GetCapitalFlowInputsByUser_ReturnsCalendarDatesUpToDate()
     {
         await Seed();
 
-        var flows = await _repository.GetCapitalFlowInputs([_accountId], _start, TestContext.Current.CancellationToken);
+        var flows = await _repository.GetCapitalFlowInputsByUser(_userId, _start, TestContext.Current.CancellationToken);
 
         Assert.Equal([_start.AddDays(-1), _start, _start], flows.Select(f => f.TradeDate).Order());
     }
@@ -125,6 +125,31 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         Assert.Contains(all, t => t.AccountId is null);
         Assert.All(filtered.Items, t => Assert.Equal(_listingId, t.AssetListingId));
         Assert.Equal(3, filtered.Items.Count);
+    }
+
+    [Fact]
+    public async Task GetCapitalFlowInputsByUser_PoolsLinkedAndUnlinkedTrades_UpToTheDateForOneOwnerOnly()
+    {
+        await SeedOwnerPool();
+
+        var flows = await _repository.GetCapitalFlowInputsByUser(_userId, _start.AddDays(1), TestContext.Current.CancellationToken);
+
+        // Linked and unlinked rows of the owner, ordered by posting date then id; later trades and other owners are excluded.
+        Assert.Equal([1L, 2L, 4L, 3L], flows.Select(f => f.TransactionId));
+        Assert.Empty(await _repository.GetCapitalFlowInputsByUser(0, _end, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetByUserAndIds_ReturnsOnlyTheOwnersRequestedTrades_LinkedOrNot()
+    {
+        await SeedOwnerPool();
+
+        var result = await _repository.GetByUserAndIds(_userId, [1, 2, 3, 999_999], TestContext.Current.CancellationToken);
+
+        Assert.Equal([1L, 2L, 3L], result.Select(t => t.EntryId));
+        Assert.All(result, t => Assert.Equal(_userId, t.UserId));
+        Assert.Contains(result, t => t.AccountId is null);
+        Assert.Empty(await _repository.GetByUserAndIds(0, [1, 2, 3], TestContext.Current.CancellationToken));
     }
 
     private async Task SeedOwnerPool()

@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Shared.Helpers;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
@@ -15,6 +16,7 @@ public partial class BondTransactionRow
     private bool _updateEntryVisibility;
     private bool _removeEntryVisibility;
 
+    /// <summary>The account page this row belongs to. Null on the Transactions page, where entries are edited and deleted through the owner routes.</summary>
     [Parameter] public BondAccount? Account { get; set; }
     [Parameter] public required BondAccountEntry Entry { get; set; }
     [Parameter] public string? BondName { get; set; }
@@ -24,6 +26,7 @@ public partial class BondTransactionRow
 
     [Inject] public required ISnackbar Snackbar { get; set; }
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
     [Inject] public required ILogger<BondTransactionRow> Logger { get; set; }
 
@@ -121,13 +124,15 @@ public partial class BondTransactionRow
 
     private async Task ConfirmRemove()
     {
-        if (Account is null) return;
         _removeEntryVisibility = false;
         _expanded = false;
 
         try
         {
-            await FinancialAccountService.RemoveEntry(Entry.EntryId, Account.AccountId);
+            if (Account is null)
+                await BondTransactionsHttpClient.DeleteAsync(Entry.EntryId);
+            else
+                await FinancialAccountService.RemoveEntry(Entry.EntryId, Account.AccountId);
         }
         catch (Exception ex)
         {

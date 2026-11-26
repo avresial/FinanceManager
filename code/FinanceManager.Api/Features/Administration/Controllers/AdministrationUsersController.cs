@@ -26,11 +26,6 @@ public class AdministrationUsersController(IAdministrationUsersService administr
     public async Task<IActionResult> GetDailyActiveUsers() =>
         Ok(await administrationUsersService.GetDailyActiveUsers().ToListAsync());
 
-    [HttpGet(nameof(GetAccountsCount))]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(int))]
-    public async Task<IActionResult> GetAccountsCount() =>
-        Ok(await administrationUsersService.GetAccountsCount());
-
     [HttpGet(nameof(GetTotalTrackedMoney))]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(decimal))]
     public async Task<IActionResult> GetTotalTrackedMoney() =>

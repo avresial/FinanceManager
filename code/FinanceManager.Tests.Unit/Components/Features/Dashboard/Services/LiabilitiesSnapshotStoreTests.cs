@@ -12,7 +12,7 @@ namespace FinanceManager.Tests.Unit.Components.Features.Dashboard.Services;
 public class LiabilitiesSnapshotStoreTests
 {
     private const string _timeSeriesKey = "liabilities-timeseries:1:PLN";
-    private const string _distributionKey = "liabilities-distribution:1:2";
+    private const string _distributionKey = "liabilities-distribution:v2:1:2";
 
     private static readonly DateTime _start = new(2024, 1, 1);
     private static readonly DateTime _end = new(2024, 2, 1);

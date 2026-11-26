@@ -10,6 +10,9 @@ public interface IAssetListingRepository
     /// <summary>Get the listing uniquely identified by ticker, exchange MIC and trading currency, or <c>null</c>.</summary>
     Task<AssetListing?> Get(string ticker, string exchangeMic, string tradingCurrency, CancellationToken cancellationToken = default);
 
+    /// <summary>Get the listings with the given ids and their parent <see cref="Asset"/> in one query (no tracking). Unknown ids are omitted.</summary>
+    Task<IReadOnlyList<AssetListing>> GetByIds(IReadOnlyCollection<long> ids, CancellationToken cancellationToken = default);
+
     /// <summary>Get all listings belonging to the given asset.</summary>
     Task<IReadOnlyList<AssetListing>> GetByAsset(long assetId, CancellationToken cancellationToken = default);
 

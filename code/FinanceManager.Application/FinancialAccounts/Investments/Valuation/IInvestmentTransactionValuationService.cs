@@ -14,12 +14,12 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Valuation;
 public interface IInvestmentTransactionValuationService
 {
     /// <summary>
-    /// Valuation figures keyed by transaction id for every Buy transaction of the account.
-    /// Sell transactions are omitted. Returns an empty list for an account with no Buy transactions.
+    /// Valuation figures for the Buy transactions of <paramref name="userId"/> among <paramref name="transactionIds"/>, linked to an
+    /// account or not. Sell transactions and ids of other users are omitted. The caller bounds the id list (the API caps it per request).
     /// </summary>
-    Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForAccountAsync(
-        int accountId,
+    Task<IReadOnlyList<InvestmentTransactionValuationDto>> GetForUserAsync(
+        int userId,
         Currency targetCurrency,
-        CancellationToken cancellationToken = default,
-        IReadOnlyCollection<long>? transactionIds = null);
+        IReadOnlyCollection<long> transactionIds,
+        CancellationToken cancellationToken = default);
 }

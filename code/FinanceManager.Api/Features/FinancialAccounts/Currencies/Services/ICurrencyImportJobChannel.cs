@@ -9,4 +9,6 @@ public interface ICurrencyImportJobChannel
     IAsyncEnumerable<CurrencyImportJobRequest> ReadAll(CancellationToken cancellationToken);
 }
 
-public sealed record CurrencyImportJobRequest(Guid JobId, int UserId, int AccountId, IReadOnlyList<CurrencyEntryImportRecordDto> Entries, int? GuestUserId = null);
+/// <summary>A queued cash import. A null <paramref name="AccountId"/> imports into the owner's pool of <paramref name="CurrencyId"/>.</summary>
+public sealed record CurrencyImportJobRequest(
+    Guid JobId, int UserId, int? AccountId, IReadOnlyList<CurrencyEntryImportRecordDto> Entries, int? GuestUserId = null, int? CurrencyId = null);

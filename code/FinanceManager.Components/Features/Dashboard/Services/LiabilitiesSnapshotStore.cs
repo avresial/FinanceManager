@@ -118,5 +118,5 @@ public sealed class LiabilitiesSnapshotStore(ISnapshotRefreshCoordinator coordin
     // Per-user keys with no date component, so a single snapshot per surface is overwritten on each save.
     // Currency-scoped so a snapshot saved before a preferred-currency change is never painted with new labels.
     private static string BuildTimeSeriesKey(int userId, string currency) => $"liabilities-timeseries:{userId}:{currency}";
-    private static string BuildDistributionKey(int userId, int currencyId) => $"liabilities-distribution:{userId}:{currencyId}";
+    private static string BuildDistributionKey(int userId, int currencyId) => $"liabilities-distribution:v2:{userId}:{currencyId}";
 }

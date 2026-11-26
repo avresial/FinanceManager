@@ -20,20 +20,6 @@ public class AdministrationUsersHttpClient(HttpClient httpClient)
             ?? throw new InvalidOperationException("The daily active users response was empty.");
     }
 
-    public async Task<int?> GetAccountsCount()
-    {
-        try
-        {
-            return await httpClient.GetFromJsonAsync<int>($"{httpClient.BaseAddress}api/AdministrationUsers/GetAccountsCount");
-        }
-        catch
-        {
-            // Null means no usable response came back; a genuine zero is returned as data. The admin
-            // dashboard snapshot surface relies on that distinction to keep stale content on failure.
-            return null;
-        }
-    }
-
     public async Task<decimal?> GetTotalTrackedMoney()
     {
         try

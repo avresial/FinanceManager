@@ -33,6 +33,8 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         if (entryList.Count == 0) return true;
         var accounts = await LegacyEntryAccounts.Resolve(context, AccountType.Bond, entryList.Select(e => e.AccountId), cancellationToken);
         if (accounts is null) return false;
+        // An unlinked entry is owned by the server-stamped owner it carries.
+        if (entryList.Any(e => e.AccountId is null && (e.UserId is not int owner || owner == 0))) return false;
 
         var existingLabelIds = entryList.SelectMany(e => e.Labels).Where(l => l.Id != 0).Select(l => l.Id).Distinct().ToList();
         var trackedById = existingLabelIds.Count == 0
@@ -48,7 +50,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             var newEntry = new BondAccountEntry(entry.AccountId, 0, DateTime.SpecifyKind(entry.PostingDate, DateTimeKind.Utc),
              0, entry.ValueChange, entry.BondDetailsId)
             {
-                UserId = accounts[entry.AccountId!.Value].UserId,
+                UserId = entry.AccountId is int accountId ? accounts[accountId].UserId : entry.UserId,
                 Description = entry.Description,
                 Labels = entry.Labels.Select(l => l.Id != 0 && trackedById.TryGetValue(l.Id, out var tracked) ? tracked : l).ToList(),
             };
@@ -59,11 +61,12 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         async Task RecalculateAccounts(CancellationToken token)
         {
-            foreach (var group in pairs.GroupBy(p => p.Target.AccountId!.Value))
+            foreach (var group in pairs.Where(p => p.Target.AccountId is not null).GroupBy(p => p.Target.AccountId!.Value))
                 await RecalculateValues(group.Key, group.MinBy(p => p.Target.PostingDate).Target.EntryId, token);
         }
 
-        await using var transaction = context.Database.IsRelational() && recalculate
+        var hasLinkedEntries = pairs.Any(p => p.Target.AccountId is not null);
+        await using var transaction = context.Database.IsRelational() && recalculate && hasLinkedEntries
             ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
         await context.SaveChangesAsync(cancellationToken);
         if (transaction is not null)
@@ -76,7 +79,7 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             if (source.EntryId == 0 && target.EntryId != 0)
                 _entryIdProperty?.SetValue(source, target.EntryId);
         }
-        if (recalculate && transaction is null)
+        if (recalculate && hasLinkedEntries && transaction is null)
         {
             try
             {
@@ -100,11 +103,39 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         var entryToDelete = await context.BondEntries
             .FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entryId, cancellationToken);
         if (entryToDelete is null) return false;
+
+        await Remove(entryToDelete, cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DeleteByOwner(int userId, long entryId, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var entryToDelete = await context.BondEntries.FirstOrDefaultAsync(e => e.UserId == userId && e.EntryId == entryId, cancellationToken);
+        if (entryToDelete is null) return false;
+
+        await Remove(entryToDelete, cancellationToken);
+        return true;
+    }
+
+    // Removes a tracked entry. A linked entry also repairs its account's running values; an unlinked one has none.
+    private async Task Remove(BondAccountEntry entryToDelete, CancellationToken cancellationToken)
+    {
+        if (entryToDelete.AccountId is not int accountId)
+        {
+            context.BondEntries.Remove(entryToDelete);
+            await context.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        // Relational: the deletion and the recalculation commit together.
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
         context.BondEntries.Remove(entryToDelete);
         await context.SaveChangesAsync(cancellationToken);
         await RecalculateValues(accountId, entryToDelete.PostingDate, cancellationToken);
-
-        return true;
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     public Task<bool> Delete(int accountId) => Delete(accountId, CancellationToken.None);
@@ -218,19 +249,48 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
             .Include(entry => entry.Labels)
             .FirstOrDefaultAsync(x => x.AccountId == accountId && x.EntryId == entryId);
 
+    public async Task<BondAccountEntry?> GetByOwner(int userId, long entryId, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        return await context.BondEntries
+            .AsNoTracking()
+            .Include(entry => entry.Labels)
+            .FirstOrDefaultAsync(entry => entry.UserId == userId && entry.EntryId == entryId, cancellationToken);
+    }
+
+    public async IAsyncEnumerable<BondAccountEntry> GetByOwner(
+        int userId,
+        int partitionId,
+        DateTime startDate,
+        DateTime endDate,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        await foreach (var entry in context.BondEntries
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && x.BondDetailsId == partitionId && x.PostingDate >= startDate && x.PostingDate <= endDate)
+            .OrderBy(x => x.PostingDate)
+            .ThenBy(x => x.EntryId)
+            .AsAsyncEnumerable()
+            .WithCancellation(cancellationToken))
+        {
+            yield return entry;
+        }
+    }
+
     public async Task<int> GetCount(int accountId) => await context.BondEntries.AsNoTracking().CountAsync(x => x.AccountId == accountId);
 
     public async Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
     {
         if (userIds.Count == 0) return new Dictionary<int, int>();
 
-        return await (
-            from entry in context.BondEntries.AsNoTracking()
-            join account in context.Accounts on entry.AccountId equals account.AccountId
-            where userIds.Contains(account.UserId)
-            group entry by account.UserId into grouped
-            select new { UserId = grouped.Key, Count = grouped.Count() })
-            .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+        // The entry carries its owner, so linked and unlinked rows are each counted exactly once.
+        var rows = await context.BondEntries.AsNoTracking()
+            .Where(entry => entry.UserId != null && userIds.Contains(entry.UserId.Value))
+            .GroupBy(entry => entry.UserId!.Value)
+            .Select(grouped => new { UserId = grouped.Key, Count = grouped.Count() })
+            .ToListAsync(cancellationToken);
+        return rows.ToDictionary(x => x.UserId, x => x.Count);
     }
 
     public async Task<BondAccountEntry?> GetNextOlder(int accountId, long entryId)
@@ -375,10 +435,28 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
         var existingEntry = await context.BondEntries.Include(x => x.Labels).FirstOrDefaultAsync(e => e.AccountId == accountId && e.EntryId == entry.EntryId);
         if (existingEntry is null) return false;
 
+        await ApplyUpdate(existingEntry, entry, CancellationToken.None, accounts[accountId].UserId);
+        return true;
+    }
+
+    public async Task<bool> UpdateByOwner(int userId, BondAccountEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(userId);
+        var existingEntry = await context.BondEntries.Include(x => x.Labels)
+            .FirstOrDefaultAsync(e => e.UserId == userId && e.EntryId == entry.EntryId, cancellationToken);
+        if (existingEntry is null) return false;
+
+        // The owner and account link of the stored row stay as they are.
+        await ApplyUpdate(existingEntry, entry, cancellationToken, linkedAccountOwner: null);
+        return true;
+    }
+
+    private async Task ApplyUpdate(BondAccountEntry existingEntry, BondAccountEntry entry, CancellationToken cancellationToken, int? linkedAccountOwner)
+    {
         List<FinancialLabel> newLabels = [];
         foreach (var label in entry.Labels)
         {
-            var existingLabel = await context.FinancialLabels.FirstOrDefaultAsync(x => x.Id == label.Id);
+            var existingLabel = await context.FinancialLabels.FirstOrDefaultAsync(x => x.Id == label.Id, cancellationToken);
             if (existingLabel is null) continue;
 
             newLabels.Add(existingLabel);
@@ -386,11 +464,25 @@ public class BondEntryRepository(AppDbContext context) : IBondAccountEntryReposi
 
         entry.Labels = newLabels;
 
+        var previousPostingDate = existingEntry.PostingDate;
         existingEntry.Update(entry);
-        existingEntry.UserId = accounts[accountId].UserId;
-        await context.SaveChangesAsync();
-        await RecalculateValues(accountId, entry.EntryId);
-        return true;
+        if (linkedAccountOwner is int owner)
+            existingEntry.UserId = owner;
+
+        if (existingEntry.AccountId is not int accountId)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        // A move to a later date, or to another bond, also changes the running values between the old and the new position.
+        var recalculateFrom = previousPostingDate <= existingEntry.PostingDate ? previousPostingDate : existingEntry.PostingDate;
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
+        await context.SaveChangesAsync(cancellationToken);
+        await RecalculateValues(accountId, recalculateFrom, cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
     }
 
     public Task RecalculateValues(int accountId, long entryId) =>

@@ -25,15 +25,14 @@ public class TransactionLogHttpClient(HttpClient httpClient)
     public async Task<TransactionHistoryPage> GetItemsPage(int userId, TransactionLogQuery query, CancellationToken cancellationToken = default)
     {
         var page = await httpClient.GetFromJsonAsync<TransactionLogItemsPageDto>(BuildEndpoint(userId, query), cancellationToken);
-        return page is null ? new TransactionHistoryPage([], null) : ToHistoryPage(userId, page);
+        return page is null ? new TransactionHistoryPage([], null) : ToHistoryPage(page);
     }
 
-    internal static TransactionHistoryPage ToHistoryPage(int userId, TransactionLogItemsPageDto page)
+    internal static TransactionHistoryPage ToHistoryPage(TransactionLogItemsPageDto page)
     {
         var items = page.Items.Select<TransactionLogItemDto, TransactionHistoryItem>(item => item switch
         {
             CurrencyTransactionLogItemDto e => new CurrencyTransactionHistoryItem(
-                e.LegacyAccountId is int id ? new CurrencyAccount(userId, id, $"Cash {e.Currency}".TrimEnd(), AccountLabel.Other, e.CurrencyId) : null,
                 e.Currency ?? string.Empty, new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange)
                 {
                     Description = e.Description,
@@ -42,7 +41,6 @@ public class TransactionLogHttpClient(HttpClient httpClient)
                     Labels = [.. e.Labels.Select(FinancialLabelMapping.ToDomain)]
                 }),
             BondTransactionLogItemDto e => new BondTransactionHistoryItem(
-                e.LegacyAccountId is int id ? new BondAccount(userId, id, e.BondName ?? "Bond", AccountLabel.Other) : null,
                 new(e.LegacyAccountId, e.EntryId, e.PostingDate, 0, e.ValueChange, e.BondDetailsId)
                 {
                     Description = e.Description,

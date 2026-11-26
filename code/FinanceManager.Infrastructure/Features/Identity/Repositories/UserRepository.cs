@@ -1,3 +1,4 @@
+using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Exceptions;
@@ -101,16 +102,98 @@ public class UserRepository(AppDbContext context) : IUserRepository
         .Select(x => x.Id)
         .ToAsyncEnumerable();
 
-    public async Task<bool> RemoveUser(int userId)
+    public async Task<bool> RemoveUser(int userId, CancellationToken cancellationToken = default)
     {
-        var userToRemove = await context.Users.FirstOrDefaultAsync(x => x.Id == userId);
-        if (userToRemove is null) return await Task.FromResult(false);
+        // Guest sandboxes live in their own in-memory database that is dropped as a whole, so they never reach this delete.
+        if (userId == 0) return false;
 
-        context.Remove(userToRemove);
+        if (!context.Database.IsRelational())
+            return await RemoveUserTracked(userId, cancellationToken);
 
-        await context.SaveChangesAsync();
-        return await Task.FromResult(true);
+        // One transaction, so a failure part-way leaves the user complete instead of half deleted.
+        var strategy = context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            if (!await context.Users.AnyAsync(x => x.Id == userId, cancellationToken)) return false;
+
+            // Labels are shared rows; a bond entry only points at its label through this optional shadow key, which must be cleared before the entry goes.
+            foreach (var labels in LabelsOnBondEntries(userId))
+                await labels.ExecuteUpdateAsync(set => set.SetProperty(label => EF.Property<long?>(label, _bondEntryLabelKey), (long?)null), cancellationToken);
+            foreach (var rows in OwnedRowSets(userId))
+                await rows.Delete(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        });
     }
+
+    private async Task<bool> RemoveUserTracked(int userId, CancellationToken cancellationToken)
+    {
+        if (!await context.Users.AnyAsync(x => x.Id == userId, cancellationToken)) return false;
+
+        // The in-memory provider has neither ExecuteDelete nor cascades: load the same rows, detach their labels
+        // (the shared label rows stay) and remove everything in one SaveChanges.
+        foreach (var rows in OwnedRowSets(userId))
+            await rows.RemoveTracked(cancellationToken);
+
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private const string _bondEntryLabelKey = "BondAccountEntryEntryId";
+
+    private IQueryable<int> LegacyAccountIds(int userId) => context.Accounts.Where(a => a.UserId == userId).Select(a => a.AccountId);
+
+    private IEnumerable<IQueryable<FinancialLabel>> LabelsOnBondEntries(int userId)
+    {
+        yield return context.FinancialLabels.Where(label => context.BondEntries.Any(e => e.UserId == userId && e.EntryId == EF.Property<long?>(label, _bondEntryLabelKey)));
+        yield return context.FinancialLabels.Where(label => context.BondEntries.Any(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value) && e.EntryId == EF.Property<long?>(label, _bondEntryLabelKey)));
+    }
+
+    // Every table that holds the user's rows, each defined ONCE as a query. The relational path deletes it in place, the
+    // in-memory path loads it, so the two paths cannot drift apart. Entries and dividends have no foreign key to the user
+    // (they need not be linked to an account), so they are matched by their own owner key first and by the user's legacy
+    // accounts second: two statements per table, because one OR over two indexes cannot use either of them. The statements
+    // on legacy accounts and the Accounts table itself go when accounts are dropped (#1139); Accounts must stay after the
+    // dividends that reference them.
+    private IEnumerable<RowSet> OwnedRowSets(int userId)
+    {
+        long ownerKey = userId;
+        yield return RowSet.Of(context, context.BondEntries.Where(e => e.UserId == userId), q => q.Include(e => e.Labels), e => e.Labels.Clear());
+        yield return RowSet.Of(context, context.BondEntries.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)), q => q.Include(e => e.Labels), e => e.Labels.Clear());
+        yield return RowSet.Of(context, context.CurrencyEntries.Where(e => e.UserId == userId), q => q.Include(e => e.Labels), e => e.Labels.Clear());
+        yield return RowSet.Of(context, context.CurrencyEntries.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)), q => q.Include(e => e.Labels), e => e.Labels.Clear());
+        yield return RowSet.Of(context, context.InvestmentTransactions.Where(e => e.UserId == ownerKey), q => q.Include(e => e.Labels), e => e.Labels.Clear());
+        yield return RowSet.Of(context, context.DividendPayments.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.DividendPayments.Where(e => e.AccountId != null && LegacyAccountIds(userId).Contains(e.AccountId.Value)));
+        yield return RowSet.Of(context, context.Accounts.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.FinancialAlerts.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.FinancialInsights.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.TransactionRules.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.RecurringSubscriptions.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.RefreshTokens.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.PasswordResetTokens.Where(e => e.UserId == userId));
+        yield return RowSet.Of(context, context.Users.Where(e => e.Id == userId));
+    }
+
+    /// <summary>One table's rows of the user as a query, with the two ways to remove them.</summary>
+    private sealed class RowSet(Func<CancellationToken, Task> delete, Func<CancellationToken, Task> removeTracked)
+    {
+        public Task Delete(CancellationToken cancellationToken) => delete(cancellationToken);
+        public Task RemoveTracked(CancellationToken cancellationToken) => removeTracked(cancellationToken);
+
+        public static RowSet Of<T>(AppDbContext context, IQueryable<T> rows, Func<IQueryable<T>, IQueryable<T>>? loadRelated = null, Action<T>? detach = null)
+            where T : class => new(
+                cancellationToken => rows.ExecuteDeleteAsync(cancellationToken),
+                async cancellationToken =>
+                {
+                    var tracked = await (loadRelated?.Invoke(rows) ?? rows).ToListAsync(cancellationToken);
+                    if (detach is not null) tracked.ForEach(detach);
+                    context.RemoveRange(tracked);
+                });
+    }
+
     public async Task<LoginThrottlingState?> GetLoginThrottlingState(string login)
     {
         var userDto = await context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Login == login);

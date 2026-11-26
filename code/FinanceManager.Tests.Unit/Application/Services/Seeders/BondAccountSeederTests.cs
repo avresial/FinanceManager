@@ -3,10 +3,7 @@ using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.ValueObjects;
-using FinanceManager.Domain.Identity.Entities;
-using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -26,30 +23,30 @@ public class BondAccountSeederTests
         UnitValue = 100m,
     };
 
-    private readonly Mock<IFinancialAccountRepository> _accountRepository = new();
-    private readonly Mock<IAccountRepository<BondAccount>> _bondAccountRepository = new();
+    private readonly Mock<IBondTransactionReader> _bondReader = new();
+    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _entryRepository = new();
     private readonly Mock<IBondDetailsRepository> _bondDetailsRepository = new();
-    private readonly List<BondAccount> _savedAccounts = [];
+    private readonly List<BondAccountEntry> _savedEntries = [];
     private readonly BondAccountSeeder _seeder;
 
     public BondAccountSeederTests()
     {
-        _bondAccountRepository
-            .Setup(r => r.GetAvailableAccounts(It.IsAny<int>()))
-            .Returns(AsyncEnumerable.Empty<AvailableAccount>());
+        _bondReader
+            .Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
         _bondDetailsRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .Returns(new[] { _bond }.ToAsyncEnumerable());
 
-        _accountRepository
-            .Setup(r => r.AddAccount(It.IsAny<BondAccount>()))
-            .Callback<BondAccount>(a => _savedAccounts.Add(a))
-            .ReturnsAsync(0);
+        _entryRepository
+            .Setup(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<BondAccountEntry>, bool, CancellationToken>((entries, _, _) => _savedEntries.AddRange(entries))
+            .ReturnsAsync(true);
 
         _seeder = new BondAccountSeeder(
-            _accountRepository.Object,
-            _bondAccountRepository.Object,
+            _bondReader.Object,
+            _entryRepository.Object,
             _bondDetailsRepository.Object,
             NullLogger<BondAccountSeeder>.Instance);
     }
@@ -117,36 +114,32 @@ public class BondAccountSeederTests
     }
 
     [Fact]
-    public async Task Seed_AccumulatesUnitsAndAssignsDistinctIds()
+    public async Task Seed_WritesEntriesOwnedByTheUser_WithoutAnAccount_InOneBatch()
     {
-        var start = new DateTime(2026, 1, 1);
-        var end = new DateTime(2026, 6, 30);
+        await _seeder.Seed(userId: -9, new DateTime(2026, 1, 1), new DateTime(2026, 6, 30), TestContext.Current.CancellationToken);
 
-        await _seeder.Seed(userId: 1, start, end, TestContext.Current.CancellationToken);
-
-        var entries = GetBondEntries().OrderBy(e => e.PostingDate).ToList();
+        var entries = GetBondEntries();
         Assert.True(entries.Count > 1);
-        // BondAccount.Add silently drops entries that share an EntryId, so distinct ids guard against lost purchases.
-        Assert.Equal(entries.Count, entries.Select(e => e.EntryId).Distinct().Count());
-
-        decimal expected = 0;
-        foreach (var entry in entries)
+        Assert.All(entries, e =>
         {
-            expected += entry.ValueChange;
-            Assert.Equal(expected, entry.Value);
-        }
+            Assert.Null(e.AccountId);
+            Assert.Equal(-9, e.UserId);
+            Assert.Equal(_bond.Name, e.Description);
+            Assert.Equal(DateTimeKind.Utc, e.PostingDate.Kind);
+        });
+        _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<BondAccountEntry>>(), false, It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task Seed_SkipsWhenBondAccountAlreadyExists()
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task Seed_SkipsWhenTheUserAlreadyHasBondEntries_OrIsNotAUser(bool hasEntries, int userId)
     {
-        _bondAccountRepository
-            .Setup(r => r.GetAvailableAccounts(It.IsAny<int>()))
-            .Returns(new[] { new AvailableAccount(1, "Existing") }.ToAsyncEnumerable());
+        _bondReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(hasEntries);
 
-        await _seeder.Seed(userId: 1, new DateTime(2026, 1, 1), new DateTime(2026, 3, 1), TestContext.Current.CancellationToken);
+        await _seeder.Seed(userId, new DateTime(2026, 1, 1), new DateTime(2026, 3, 1), TestContext.Current.CancellationToken);
 
-        Assert.Empty(_savedAccounts);
+        Assert.Empty(_savedEntries);
     }
 
     [Fact]
@@ -158,9 +151,8 @@ public class BondAccountSeederTests
 
         await _seeder.Seed(userId: 1, new DateTime(2026, 1, 1), new DateTime(2026, 3, 1), TestContext.Current.CancellationToken);
 
-        Assert.Empty(_savedAccounts);
+        Assert.Empty(_savedEntries);
     }
 
-    private List<BondAccountEntry> GetBondEntries() =>
-        Assert.Single(_savedAccounts).Entries.ToList();
+    private List<BondAccountEntry> GetBondEntries() => _savedEntries;
 }

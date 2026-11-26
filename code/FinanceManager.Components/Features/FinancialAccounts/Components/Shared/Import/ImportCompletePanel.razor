@@ -11,9 +11,9 @@
             Import another file
         </MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                   Href="@($"AccountDetails/{AccountId}")"
+                   Href="@ReturnHref"
                    EndIcon="@Icons.Material.Filled.ArrowForward">
-            Return to @AccountName
+            @ReturnText
         </MudButton>
     </MudStack>
 </MudStack>

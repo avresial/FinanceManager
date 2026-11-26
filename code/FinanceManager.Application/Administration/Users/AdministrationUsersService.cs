@@ -6,25 +6,22 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared.Charting;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Repositories;
 
 namespace FinanceManager.Application.Administration.Users;
 
-public class AdministrationUsersService(IFinancialAccountRepository financialAccountRepository, IUserRepository userRepository,
+public class AdministrationUsersService(ICashTransactionReader cashTransactionReader, IBondTransactionReader bondTransactionReader, IUserRepository userRepository,
     IActiveUsersRepository activeUsersRepository, IUserPlanVerifier userPlanVerifier,
     ICurrencyRepository currencyRepository, ICurrencyExchangeService currencyExchangeService,
     IBondDetailsRepository bondDetailsRepository, IInvestmentValuationService investmentValuationService) : IAdministrationUsersService
 {
-
-    public Task<int> GetAccountsCount() => financialAccountRepository.GetAccountsCount();
-
     public async IAsyncEnumerable<ChartEntryModel> GetDailyActiveUsers()
     {
         var end = DateTime.UtcNow.AddDays(1).Date.AddTicks(-1);
@@ -60,40 +57,32 @@ public class AdministrationUsersService(IFinancialAccountRepository financialAcc
         var currencies = new Dictionary<int, Currency>();
         decimal total = 0;
 
-        // Queries share a scoped DbContext, so enumerate users and accounts sequentially.
+        // Queries share a scoped DbContext, so enumerate users sequentially. Each user's pooled positions
+        // (entries linked to an account or not) are valued as of the same instant.
         var userIds = await userRepository.GetUsersIds(0, int.MaxValue).ToListAsync();
         foreach (var userId in userIds)
         {
-            var cashAccounts = await financialAccountRepository.GetAccounts<CurrencyAccount>(userId, now, now, false).ToListAsync();
-            foreach (var account in cashAccounts)
+            foreach (var position in (await cashTransactionReader.GetPositions(userId, now)).Where(p => p.Value != 0))
             {
-                var value = account.GetThisOrNextOlder(now)?.Value ?? 0;
-                if (value == 0) continue;
-                if (!currencies.TryGetValue(account.CurrencyId, out var currency))
+                if (!currencies.TryGetValue(position.PartitionId, out var currency))
                 {
-                    currency = await currencyRepository.GetCurrency(account.CurrencyId)
-                        ?? throw new InvalidOperationException($"Currency {account.CurrencyId} is required to value account {account.AccountId}.");
-                    currencies.Add(account.CurrencyId, currency);
+                    currency = await currencyRepository.GetCurrency(position.PartitionId)
+                        ?? throw new InvalidOperationException($"Currency {position.PartitionId} is required to value tracked cash.");
+                    currencies.Add(position.PartitionId, currency);
                 }
-                total += await ConvertToPln(value, currency);
+                total += await ConvertToPln(position.Value, currency);
             }
 
-            var bonds = await financialAccountRepository.GetAccounts<BondAccount>(userId, now, now, false).ToListAsync();
-            foreach (var account in bonds)
+            foreach (var position in (await bondTransactionReader.GetPositions(userId, now)).Where(p => p.Value != 0))
             {
-                foreach (var bondId in account.GetStoredBondsIds())
-                {
-                    var entry = account.GetThisOrNextOlder(now, bondId);
-                    if (entry is null) continue;
-                    if (!bondDetails.TryGetValue(bondId, out var details))
-                        throw new InvalidOperationException($"Bond valuation requires details for bond id {bondId}.");
-                    total += await ConvertToPln(entry.GetPriceAt(DateOnly.FromDateTime(now), details), details.Currency);
-                }
+                if (!bondDetails.TryGetValue(position.PartitionId, out var details))
+                    throw new InvalidOperationException($"Bond valuation requires details for bond id {position.PartitionId}.");
+                var price = BondAccountEntry.GetPrice(DateOnly.FromDateTime(position.LastPostingDate), position.Value, DateOnly.FromDateTime(now), details)
+                    .GetValueOrDefault(DateOnly.FromDateTime(now));
+                total += await ConvertToPln(price, details.Currency);
             }
 
-            var investments = await financialAccountRepository.GetAccounts<InvestmentAccount>(userId, now, now, false).ToListAsync();
-            var investmentValues = await investmentValuationService.GetAccountValueAsync(investments.Select(x => x.AccountId).ToList(), pln, now);
-            total += investmentValues.Values.Sum();
+            total += (await investmentValuationService.GetUserValueByListingAsync(userId, pln, now)).Values.Sum();
         }
         return total;
 

@@ -10,15 +10,20 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Export;
 
 public class BondAccountCsvExportService(IBondAccountExportService bondAccountExportService) : IAccountCsvExportService<BondAccountExportDto>
 {
-    public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default)
+    public async Task<string> GetExportResults(UserId userId, AccountId accountId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        await WriteCsv(new BondAccountExportDtoMap(), bondAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken), cancellationToken);
+
+    public async Task<string> GetOwnerExportResults(UserId userId, int partitionId, DateTime start, DateTime end, CancellationToken cancellationToken = default) =>
+        await WriteCsv(new BondAccountExportDtoMap(includeValue: false), bondAccountExportService.GetOwnerExportResults(userId, partitionId, start, end, cancellationToken), cancellationToken);
+
+    private static async Task<string> WriteCsv(BondAccountExportDtoMap map, IAsyncEnumerable<BondAccountExportDto> exportItems, CancellationToken cancellationToken)
     {
         using var writer = new StringWriter(CultureInfo.InvariantCulture);
         using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-        csv.Context.RegisterClassMap<BondAccountExportDtoMap>();
+        csv.Context.RegisterClassMap(map);
         csv.WriteHeader<BondAccountExportDto>();
         await csv.NextRecordAsync();
 
-        var exportItems = bondAccountExportService.GetExportResults(userId, accountId, start, end, cancellationToken);
         await foreach (var exportItem in exportItems.WithCancellation(cancellationToken))
         {
             csv.WriteRecord(exportItem);
@@ -27,5 +32,4 @@ public class BondAccountCsvExportService(IBondAccountExportService bondAccountEx
 
         return writer.ToString();
     }
-
 }

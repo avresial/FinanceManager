@@ -134,18 +134,19 @@
                     </MudStack>
                 </MudItem>
             }
-            @if (Account is not null)
-            {
-                <MudItem xs="12">
-                    <MudButton Variant="Variant.Text" OnClick="ShowEditOverlay">Edit</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ShowRemoveOverlay">Remove</MudButton>
-                </MudItem>
-            }
+            <MudItem xs="12">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
+                </MudStack>
+            </MudItem>
         </MudGrid>
     </div>
 </MudCollapse>
 
-@if (_updateEntryVisibility && Account is not null)
+@if (_updateEntryVisibility)
 {
     <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
@@ -154,11 +155,11 @@
     </MudOverlay>
 }
 
-@if (_removeEntryVisibility && Account is not null)
+@if (_removeEntryVisibility)
 {
     <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-            <RemoveBondEntry BondAccountName="@Account.Name" BondAccountEntry="Entry"
+            <RemoveBondEntry BondAccountName="@(Account?.Name ?? GetTitle())" BondAccountEntry="Entry"
                              Cancel="HideOverlay" Confirm="ConfirmRemove" />
         </MudPaper>
     </MudOverlay>

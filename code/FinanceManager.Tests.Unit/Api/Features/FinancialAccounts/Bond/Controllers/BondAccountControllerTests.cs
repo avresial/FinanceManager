@@ -25,7 +25,6 @@ public class BondAccountControllerTests
 {
     private readonly Mock<IAccountRepository<BondAccount>> _mockBondAccountRepository = new();
     private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _mockBondAccountEntryRepository = new();
-    private readonly Mock<IUserPlanVerifier> _userPlanVerifier = new();
     private readonly Mock<IAccountCsvExportService<BondAccountExportDto>> _bondAccountCsvExportService = new();
     private readonly BondAccountController _controller;
 
@@ -34,7 +33,6 @@ public class BondAccountControllerTests
         _controller = new BondAccountController(
             _mockBondAccountRepository.Object,
             _mockBondAccountEntryRepository.Object,
-            _userPlanVerifier.Object,
             _bondAccountCsvExportService.Object,
             Mock.Of<ICacheInvalidator>(),
             Mock.Of<IFinancialAlertService>());

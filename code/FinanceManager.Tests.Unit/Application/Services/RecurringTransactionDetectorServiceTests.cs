@@ -1,7 +1,5 @@
 using FinanceManager.Application.Labels.RecurringTransactions;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Tests.Unit.Shared.Time;
@@ -12,7 +10,7 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class RecurringTransactionDetectorServiceTests
 {
-    private readonly Mock<IFinancialAccountRepository> _accounts = new();
+    private readonly InMemoryOwnerLedger _ledger = new();
     private readonly Mock<IRecurringSubscriptionRepository> _subscriptions = new();
     private readonly FakeDateTimeProvider _clock = new(new DateTime(2026, 7, 29));
 
@@ -378,55 +376,61 @@ public class RecurringTransactionDetectorServiceTests
     }
 
     [Fact]
-    public async Task GetRecurringCashFlows_UsesOnlyCashAccountsWithoutChangingSubscriptionDetection()
+    public async Task GetRecurringCashFlows_IncludesEveryOwnedEntry_LinkedToAnAccountOrNot()
     {
-        var loan = AccountWithType(
-            AccountLabel.Loan,
-            Entry(1, new DateTime(2026, 4, 15), -40m, "Loan payment"),
+        // Entries are pooled per owner, so what used to be a loan account's payments (and entries without any account) recur like any other.
+        var rows = new[]
+        {
+            Entry(1, new DateTime(2026, 4, 15), -40m, "Loan payment", accountId: 3),
             Entry(2, new DateTime(2026, 5, 15), -40m, "Loan payment"),
-            Entry(3, new DateTime(2026, 6, 15), -40m, "Loan payment"));
-        Setup([loan], []);
+            Entry(3, new DateTime(2026, 6, 15), -40m, "Loan payment"),
+        };
+        Setup(rows, []);
         var service = CreateService();
 
-        Assert.Empty(await service.GetRecurringCashFlows(7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
+        var flow = Assert.Single(await service.GetRecurringCashFlows(7, _clock.UtcNow.Date, TestContext.Current.CancellationToken));
+        Assert.Equal(-40m, flow.OccurrenceAmount);
         Assert.Single(await service.GetRecurringTransactions(7, TestContext.Current.CancellationToken));
     }
 
-    private RecurringTransactionDetectorService CreateService() =>
-        new(_accounts.Object, _subscriptions.Object, _clock);
-
-    private void Setup(CurrencyAccount account, List<RecurringSubscription> subscriptions)
+    [Fact]
+    public async Task GetRecurringTransactions_ForGuestOwner_DetectsRecurringSalaryAndExpense()
     {
-        Setup([account], subscriptions);
+        var rows = new[]
+        {
+            Entry(1, new DateTime(2026, 5, 1), 5000m, "Monthly salary"),
+            Entry(2, new DateTime(2026, 6, 1), 5000m, "Monthly salary"),
+            Entry(3, new DateTime(2026, 7, 1), 5000m, "Monthly salary"),
+            Entry(4, new DateTime(2026, 5, 6), -400m, "Loan repayment"),
+            Entry(5, new DateTime(2026, 6, 6), -400m, "Loan repayment"),
+            Entry(6, new DateTime(2026, 7, 6), -400m, "Loan repayment"),
+        };
+        Setup(rows, [], userId: -21);
+
+        var results = await CreateService().GetRecurringTransactions(-21, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.Equal(RecurringCadence.Monthly, result.Cadence));
     }
 
-    private void Setup(IReadOnlyCollection<CurrencyAccount> accounts, List<RecurringSubscription> subscriptions)
+    private RecurringTransactionDetectorService CreateService() =>
+        new(_ledger, _subscriptions.Object, _clock);
+
+    private void Setup(IReadOnlyCollection<EntryRow> rows, List<RecurringSubscription> subscriptions, int userId = 7)
     {
-        _accounts
-            .Setup(x => x.GetAccounts<CurrencyAccount>(
-                7,
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<bool>()))
-            .Returns(accounts.ToAsyncEnumerable());
+        foreach (var row in rows)
+            _ledger.Add(DefaultCurrency.PLN.Id, row.Date, row.Amount, [], row.Merchant, row.Merchant, row.AccountId);
         _subscriptions
-            .Setup(x => x.GetAll(7, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetAll(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(subscriptions);
         _subscriptions
             .Setup(x => x.Save(It.IsAny<IEnumerable<RecurringSubscription>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
 
-    private static CurrencyAccount Account(params CurrencyAccountEntry[] entries) =>
-        AccountWithType(AccountLabel.Cash, entries);
+    private static EntryRow[] Account(params EntryRow[] entries) => entries;
 
-    private static CurrencyAccount AccountWithType(AccountLabel accountType, params CurrencyAccountEntry[] entries) =>
-        new(7, 1, accountType.ToString(), entries, accountType);
+    private static EntryRow Entry(int id, DateTime date, decimal amount, string merchant, int? accountId = 1) => new(id, date, amount, merchant, accountId);
 
-    private static CurrencyAccountEntry Entry(int id, DateTime date, decimal amount, string merchant) =>
-        new(1, id, date, amount, amount)
-        {
-            ContractorDetails = merchant,
-            Description = merchant
-        };
+    private sealed record EntryRow(int Id, DateTime Date, decimal Amount, string Merchant, int? AccountId);
 }

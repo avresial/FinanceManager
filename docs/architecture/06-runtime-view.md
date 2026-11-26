@@ -67,7 +67,6 @@ sequenceDiagram
     participant UI as Investment UI
     participant Client as InvestmentValuationHttpClient
     participant API as InvestmentValuationController
-    participant Accounts as Account repository
     participant Value as InvestmentValuationService
     participant Trades as InvestmentTransactionRepository
     participant Price as InvestmentPriceProvider
@@ -76,13 +75,12 @@ sequenceDiagram
     participant Quotes as PriceQuoteRepository
     participant Source as Provider-specific price source
     participant FX as CurrencyExchangeService
-    UI->>Client: Get account value in currency as of date
+    UI->>Client: Get portfolio value in currency as of date
     Client->>API: GET api/InvestmentValuation/Value/...
-    API->>Accounts: Get account
-    API->>API: Check authenticated ownership and currency
-    API->>Value: GetAccountValueAsync
-    Value->>Trades: GetHoldingsAsOf(account ids, date)
-    Trades-->>Value: Net quantities by listing
+    API->>API: Resolve the caller from the principal and check the currency
+    API->>Value: GetUserValueByListingAsync(user id)
+    Value->>Trades: GetHoldingsByUserAsOf(user id, date)
+    Trades-->>Value: Net quantities by listing, pooled across accounts and unlinked trades
     loop Nonzero holding
         Value->>Price: GetPricePerUnitAsync(listing, target currency, date)
         Price->>Cache: TryGetValue(guest scope, listing, currency, day)
@@ -110,7 +108,7 @@ sequenceDiagram
         Price-->>Value: Price or scalar zero for unavailable result
         Value->>Value: Add quantity times positive price
     end
-    Value-->>API: Total
+    Value-->>API: Value per listing (controller sums the total)
     API-->>Client: JSON decimal
     Client-->>UI: Render result
 ```
@@ -181,6 +179,8 @@ sequenceDiagram
 Evidence: [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Controllers/CurrencyAccountImportController.cs), [channel](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobChannel.cs), [worker](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportBackgroundService.cs), [job store](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Services/CurrencyImportJobStore.cs), [hub](../../code/FinanceManager.Api/Features/FinancialAccounts/Currencies/Hubs/CurrencyImportHub.cs), [import service](../../code/FinanceManager.Application/FinancialAccounts/Currencies/Import/CurrencyAccountImportService.cs), [browser tracker](../../code/FinanceManager.Components/Features/FinancialAccounts/Services/CurrencyImportJobTracker.cs).
 
 The queue is bounded to 256 requests, uses one reader, and waits when full; `202` follows successful queue admission, not completed persistence. The worker publishes progress with a 200 ms throttling interval and a final update. Status polling complements events that can race group subscription. Store and queue are process-local; restart does not preserve queued jobs/status. The worker uses the host shutdown token, not the original HTTP request token. Shutdown cancellation exits processing; other exceptions mark the job failed and publish status. Import effects and job metadata have different persistence lifetimes.
+
+Owner cash imports use the same flow with `POST api/transactions/cash/import?currencyId=`: the job store records the owner and currency as the job scope at creation, the worker calls `ImportOwnerEntries` for a job without an account, and status, hub join and conflict decisions are authorized by the owner alone. A decision on an owner job only adds the reviewed incoming row (picking the existing side is a skip and never deletes a row); the plan limit is rechecked per approved addition, and a decision that cannot be saved is reopened so it can be retried while earlier decisions stay resolved. Owner bond imports are synchronous and return their conflicts directly.
 
 Synchronous import and synchronous conflict resolution also exist. They validate account ownership, invoke the same import service, invalidate user cache, and evaluate alerts before responding. Async conflict resolution validates/store-resolves each decision before applying resolved changes, so do not assume the entire submitted list is one atomic operation. The diagram does not claim all-or-nothing admission or transactional processing of a whole import.
 
@@ -260,4 +260,6 @@ When `McpOAuth:Enabled` is false, the MCP endpoint/discovery mappings return 404
 
 ## 6.6 Transaction history
 
-The Transactions page loads currency choices independently of the first page of events. Changing the date range, kind, currency or search cancels the old request and resets the cursor. Later pages append to the existing day groups. The feed gets owner identity from the authenticated request and reads events by persisted owner. A linked row opens its existing account editor or delete action, whose endpoint checks account ownership. A successful mutation reloads the active selection from the first page. Unlinked rows can be expanded to inspect details and labels.
+The Transactions page loads currency choices independently of the first page of events. Changing the date range, kind, currency or search cancels the old request and resets the cursor. Later pages append to the existing day groups. The feed gets owner identity from the authenticated request and reads events by persisted owner. A successful mutation reloads the active selection from the first page. Every row edits and deletes through the owner routes of its kind, so linked and unlinked rows behave alike.
+
+The page writes as well as reads. The Add button opens one dialog with a cash, bond or investment toggle, which hosts the entry forms in owner mode (no account, the owner comes from the principal) and calls `api/transactions/cash`, `bonds` or `investment`. Cash and bond saves announce the change through `AccountDataSynchronizationService`, which reloads the list; the investment form does not, so the dialog raises `OnSaved` and the page reloads on it. Import opens the cash or bond wizard on `/Transactions/Import/{kind}`: a cash import first picks the currency and then follows the asynchronous job flow of 6.3, and a bond import posts all rows (any mix of bond definitions) to `bonds/import` and re-submits the rows of each accepted conflict key to `bonds/import/resolve`. Export is a dialog rather than a page because it starts from the page's own range and filters; it downloads one currency's cash entries or one bond's entries.

@@ -47,8 +47,9 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
 
         PostingDate = entry.PostingDate;
         Description = entry.Description;
-        var valueChangeChange = entry.ValueChange - ValueChange;
-        Value += valueChangeChange;
+        // An entry without an account link has no running balance to keep in step.
+        if (AccountId is not null)
+            Value += entry.ValueChange - ValueChange;
         ValueChange = entry.ValueChange;
         Labels = entry.Labels ?? [];
         ContractorDetails = entry.ContractorDetails;

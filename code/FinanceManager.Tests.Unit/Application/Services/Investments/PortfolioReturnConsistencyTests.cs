@@ -1,16 +1,19 @@
 using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.FinancialAccounts.Investments.Performance;
+using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services.Investments;
@@ -20,7 +23,6 @@ namespace FinanceManager.Tests.Unit.Application.Services.Investments;
 public class PortfolioReturnConsistencyTests
 {
     private const int _userId = 1;
-    private const int _accountId = 10;
     private const long _listingId = 100;
     private static readonly DateTime _start = new(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _end = new(2023, 1, 5, 0, 0, 0, DateTimeKind.Utc);
@@ -74,21 +76,21 @@ public class PortfolioReturnConsistencyTests
             + attribution.FxEffect
             + attribution.ReconciliationDifference);
 
-        fixture.TransactionRepository.Verify(repository => repository.GetValuationInputs(
-            It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { _accountId })),
+        fixture.TransactionRepository.Verify(repository => repository.GetValuationInputsByUser(
+            _userId,
             DateOnly.FromDateTime(_start),
             DateOnly.FromDateTime(_end),
             It.IsAny<CancellationToken>()), Times.Once);
-        fixture.TransactionRepository.Verify(repository => repository.GetHoldingsByAccountAsOf(
-            It.IsAny<IReadOnlyCollection<int>>(),
+        fixture.TransactionRepository.Verify(repository => repository.GetHoldingsByUserAsOf(
+            _userId,
             DateOnly.FromDateTime(_start).AddDays(-1),
             It.IsAny<CancellationToken>()), Times.Exactly(2));
-        fixture.TransactionRepository.Verify(repository => repository.GetHoldingsByAccountAsOf(
-            It.IsAny<IReadOnlyCollection<int>>(),
+        fixture.TransactionRepository.Verify(repository => repository.GetHoldingsByUserAsOf(
+            _userId,
             DateOnly.FromDateTime(_end),
             It.IsAny<CancellationToken>()), Times.Exactly(2));
-        fixture.TransactionRepository.Verify(repository => repository.GetCapitalFlowInputs(
-            It.IsAny<IReadOnlyCollection<int>>(),
+        fixture.TransactionRepository.Verify(repository => repository.GetCapitalFlowInputsByUser(
+            _userId,
             DateOnly.FromDateTime(_end),
             It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
@@ -155,7 +157,8 @@ public class PortfolioReturnConsistencyTests
     {
         var end = _start.AddDays(elapsedDays);
         var fixture = CreateFixture(
-            [],
+            // The opening 10 units come from a trade before the period, so there is no flow inside it.
+            [Flow(1, _start.AddDays(-1), InvestmentTransactionType.Buy, 10m, 90m)],
             openingQuantity: 10m,
             endingQuantity: 10m,
             prices: [(0, 100m), (elapsedDays, 110m)],
@@ -206,28 +209,27 @@ public class PortfolioReturnConsistencyTests
         Assert.Equal(0m, attribution.ReconciliationDifference);
     }
 
-    private static IInvestmentTransactionRepository.CapitalFlowInput Flow(
+    private static IInvestmentTransactionRepository.UserCapitalFlowInput Flow(
         long id,
         DateTime date,
         InvestmentTransactionType type,
         decimal quantity,
         decimal unitPrice) =>
-        new(id, _accountId, _listingId, DateOnly.FromDateTime(date), type, quantity, unitPrice, null, "PLN", null);
+        new(id, _listingId, DateOnly.FromDateTime(date), type, quantity, unitPrice, null, "PLN");
 
     private static Fixture CreateFixture(
-        IReadOnlyList<IInvestmentTransactionRepository.CapitalFlowInput> transactions,
+        IReadOnlyList<IInvestmentTransactionRepository.UserCapitalFlowInput> transactions,
         decimal openingQuantity,
         decimal endingQuantity,
         (int Day, decimal Value)[] prices,
         DateTime? end = null)
     {
         var rangeEnd = end ?? _end;
-        var accountRepository = new Mock<IFinancialAccountRepository>();
+        var bondReader = new Mock<IBondTransactionReader>();
         var transactionRepository = new Mock<IInvestmentTransactionRepository>();
         var priceProvider = new Mock<IInvestmentPriceProvider>();
         var bondDetailsRepository = new Mock<IBondDetailsRepository>();
         var currencyExchange = new Mock<ICurrencyExchangeService>();
-        var investmentAccount = new InvestmentAccount(_userId, _accountId, "Investments");
         var orderedPrices = prices.OrderBy(price => price.Day).ToArray();
         var priceSeries = Enumerable
             .Range(0, (rangeEnd.Date - _start.Date).Days + 1)
@@ -235,36 +237,31 @@ public class PortfolioReturnConsistencyTests
                 offset => _start.AddDays(offset),
                 offset => orderedPrices.Last(price => price.Day <= offset).Value);
 
-        accountRepository
-            .Setup(repository => repository.GetAccounts<InvestmentAccount>(
-                _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-            .Returns(new[] { investmentAccount }.ToAsyncEnumerable());
-        accountRepository
-            .Setup(repository => repository.GetAccounts<BondAccount>(
-                _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<bool>()))
-            .Returns(Array.Empty<BondAccount>().ToAsyncEnumerable());
+        bondReader
+            .Setup(repository => repository.GetValueRange(
+                _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(OwnerLedgerRange.Empty);
         transactionRepository
-            .Setup(repository => repository.GetCapitalFlowInputs(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .Setup(repository => repository.GetCapitalFlowInputsByUser(
+                _userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(transactions);
         transactionRepository
-            .Setup(repository => repository.GetValuationInputs(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IInvestmentTransactionRepository.AccountValuationInputs(
-                [new(_accountId, _listingId, openingQuantity)],
+            .Setup(repository => repository.GetValuationInputsByUser(
+                _userId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IInvestmentTransactionRepository.UserValuationInputs(
+                [new(_listingId, openingQuantity)],
                 transactions
                     .Where(transaction => transaction.TradeDate >= DateOnly.FromDateTime(_start)
                                           && transaction.TradeDate <= DateOnly.FromDateTime(rangeEnd))
-                    .Select(transaction => new IInvestmentTransactionRepository.ValuationTradeInput(
-                        transaction.AccountId,
+                    .Select(transaction => new IInvestmentTransactionRepository.UserValuationTradeInput(
                         transaction.AssetListingId,
                         transaction.TradeDate,
                         transaction.Type == InvestmentTransactionType.Buy ? transaction.Quantity : -transaction.Quantity))
                     .ToList()));
         transactionRepository
-            .Setup(repository => repository.GetHoldingsByAccountAsOf(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyCollection<int> _, DateOnly asOf, CancellationToken _) =>
+            .Setup(repository => repository.GetHoldingsByUserAsOf(
+                _userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((long _, DateOnly asOf, CancellationToken _) =>
                 asOf < DateOnly.FromDateTime(_start)
                     ? Holdings(openingQuantity)
                     : Holdings(endingQuantity));
@@ -298,19 +295,19 @@ public class PortfolioReturnConsistencyTests
 
         return new Fixture(
             new PortfolioTimeWeightedReturnService(
-                accountRepository.Object,
+                bondReader.Object,
                 transactionRepository.Object,
                 priceProvider.Object,
                 new BondDashboardContext(bondDetailsRepository.Object),
                 currencyExchange.Object),
             new PortfolioMoneyWeightedReturnService(
-                accountRepository.Object,
+                bondReader.Object,
                 transactionRepository.Object,
                 priceProvider.Object,
                 new BondDashboardContext(bondDetailsRepository.Object),
                 currencyExchange.Object),
             new PortfolioReturnAttributionService(
-                accountRepository.Object,
+                bondReader.Object,
                 transactionRepository.Object,
                 priceProvider.Object,
                 new BondDashboardContext(bondDetailsRepository.Object),
@@ -318,11 +315,8 @@ public class PortfolioReturnConsistencyTests
             transactionRepository);
     }
 
-    private static Dictionary<int, IReadOnlyDictionary<long, decimal>> Holdings(decimal quantity) =>
-        new()
-        {
-            [_accountId] = new Dictionary<long, decimal> { [_listingId] = quantity },
-        };
+    private static IReadOnlyList<InvestmentHolding> Holdings(decimal quantity) =>
+        [new InvestmentHolding(_listingId, "TICK", "Exchange", AssetType.ETF, quantity)];
 
     private static double EvaluateNpv(
         IReadOnlyList<(DateTime Date, decimal Amount)> flows,

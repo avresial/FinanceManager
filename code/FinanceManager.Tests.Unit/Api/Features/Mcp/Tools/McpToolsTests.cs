@@ -6,6 +6,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
@@ -138,44 +139,55 @@ public sealed class McpToolsTests
     }
 
     [Fact]
-    public async Task InvestmentPortfolio_UsesSubjectAndFiltersForeignRows()
+    public async Task InvestmentPortfolio_PoolsTheSubjectsTradesPerListing()
     {
-        var accounts = new Mock<IAccountRepository<InvestmentAccount>>();
+        var transactions = new Mock<IInvestmentTransactionRepository>();
         var valuation = new Mock<IInvestmentValuationService>();
         var currencies = new Mock<ICurrencyRepository>();
         var listings = new Mock<IAssetListingRepository>();
-        accounts.Setup(repository => repository.GetAll(_userId)).ReturnsAsync([
-            new InvestmentAccount(_userId, 10, "Broker"),
-            new InvestmentAccount(999, 20, "Foreign broker")
-        ]);
         currencies.Setup(repository => repository.GetByCode("PLN", It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);
-        valuation.Setup(service => service.GetAccountValueAsync(
-                It.Is<IReadOnlyCollection<int>>(ids => ids.SequenceEqual(new[] { 10 })),
-                DefaultCurrency.PLN,
-                It.IsAny<DateTime>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<int, decimal> { [10] = 1200m });
-        valuation.Setup(service => service.GetHoldingsAsOfAsync(
-                10, new DateOnly(2026, 7, 21), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<long, decimal> { [100] = 3 });
-        listings.Setup(repository => repository.Get(100, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AssetListing(100, "OWN"));
-        var tools = new InvestmentTools(UserContext(Subject()), accounts.Object, valuation.Object, currencies.Object, listings.Object);
+        transactions.Setup(repository => repository.GetHoldingsByUserAsOf(_userId, new DateOnly(2026, 7, 21), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new InvestmentHolding(100, "OWN", "NYSE", AssetType.Stock, 3),
+                new InvestmentHolding(200, "AAA", "NYSE", AssetType.Stock, 1)
+            ]);
+        valuation.Setup(service => service.GetValueByListingAsync(
+                It.IsAny<IReadOnlyList<InvestmentHolding>>(), DefaultCurrency.PLN, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<long, decimal> { [100] = 1200m, [200] = 50m, [300] = 25m });
+        listings.Setup(repository => repository.GetByIds(
+                It.Is<IReadOnlyCollection<long>>(ids => ids.OrderBy(id => id).SequenceEqual(new long[] { 100, 200 })), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([AssetListing(100, "OWN"), AssetListing(200, "AAA")]);
+        var tools = new InvestmentTools(UserContext(Subject()), transactions.Object, valuation.Object, currencies.Object, listings.Object);
 
         var result = await tools.GetInvestmentPortfolio(
             new DateOnly(2026, 7, 21),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal(1200m, result.TotalValue);
-        Assert.Equal(10, Assert.Single(result.Accounts).AccountId);
-        var position = Assert.Single(result.Positions);
-        Assert.Equal("OWN", position.Ticker);
-        Assert.Equal(3, position.Quantity);
-        valuation.Verify(service => service.GetHoldingsAsOfAsync(
-            10, new DateOnly(2026, 7, 21), It.IsAny<CancellationToken>()), Times.Once);
-        valuation.Verify(service => service.GetHoldingsAsOfAsync(
-            20, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
+        // The total is the pooled valuation (listing 300 has no catalogue row but still counts), positions are sorted by ticker.
+        Assert.Equal(1275m, result.TotalValue);
+        Assert.Equal(["AAA", "OWN"], result.Positions.Select(position => position.Ticker));
+        var own = result.Positions.Single(position => position.AssetListingId == 100);
+        Assert.Equal(3, own.Quantity);
+        Assert.Equal(1200m, own.Value);
+        listings.Verify(repository => repository.Get(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task InvestmentPortfolio_ReturnsAnEmptyPortfolioWithoutHoldings()
+    {
+        var transactions = new Mock<IInvestmentTransactionRepository>();
+        var valuation = new Mock<IInvestmentValuationService>();
+        var currencies = new Mock<ICurrencyRepository>();
+        currencies.Setup(repository => repository.GetByCode("PLN", It.IsAny<CancellationToken>())).ReturnsAsync(DefaultCurrency.PLN);
+        transactions.Setup(repository => repository.GetHoldingsByUserAsOf(_userId, It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var tools = new InvestmentTools(UserContext(Subject()), transactions.Object, valuation.Object, currencies.Object, new Mock<IAssetListingRepository>().Object);
+
+        var result = await tools.GetInvestmentPortfolio(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, result.TotalValue);
+        Assert.Empty(result.Positions);
+        valuation.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -230,7 +242,7 @@ public sealed class McpToolsTests
             {
                 ContractorDetails = "fallback-sensitive counterparty"
             }, "Cash"),
-            McpResponseMapper.InvestmentPosition(10, "Broker", investment.AssetListing, 2),
+            McpResponseMapper.InvestmentPosition(investment.AssetListing, 2, 40),
             McpResponseMapper.Currency(DefaultCurrency.USD),
             McpResponseMapper.Label(label)
         };

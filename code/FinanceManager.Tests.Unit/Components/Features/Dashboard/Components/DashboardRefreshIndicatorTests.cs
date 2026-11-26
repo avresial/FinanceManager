@@ -232,7 +232,7 @@ public class DashboardRefreshIndicatorTests
             handler.Complete(0, fresh);
             cut.WaitForAssertion(() => Assert.Equal(420m, DisplayedStock()), _timeout);
             Assert.Same(heldNetWorth, NetWorthModel(cut));
-            cut.WaitForAssertion(() => snapshots.Verify(x => x.SetAsync("dashboard-overview:1:0",
+            cut.WaitForAssertion(() => snapshots.Verify(x => x.SetAsync("dashboard-overview:v2:1:0",
                 It.Is<DashboardOverviewSnapshot>(snapshot => snapshot.AssetsPerType.Single().Value == 420m)), Times.Once), _timeout);
         }
         Assert.Equal(1, handler.Count);

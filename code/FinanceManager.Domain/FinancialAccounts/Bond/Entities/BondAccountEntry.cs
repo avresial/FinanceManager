@@ -46,8 +46,9 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
 
         PostingDate = entry.PostingDate;
         Description = entry.Description;
-        var valueChangeChange = entry.ValueChange - ValueChange;
-        Value += valueChangeChange;
+        // An entry without an account link has no running balance to keep in step.
+        if (AccountId is not null)
+            Value += entry.ValueChange - ValueChange;
         ValueChange = entry.ValueChange;
         Labels = entry.Labels ?? [];
         BondDetailsId = entry.BondDetailsId;
@@ -69,7 +70,14 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
         return priceHistory.TryGetValue(date, out var price) ? price : 0;
     }
 
-    public Dictionary<DateOnly, decimal> GetPrice(DateOnly date, BondDetails bondDetails)
+    public Dictionary<DateOnly, decimal> GetPrice(DateOnly date, BondDetails bondDetails) =>
+        GetPrice(DateOnly.FromDateTime(PostingDate), Value, date, bondDetails);
+
+    /// <summary>
+    /// Daily value of <paramref name="units"/> accruing from <paramref name="anchorDate"/> through <paramref name="throughDate"/>.
+    /// Shared by single entries and by the owner-pooled positions, where the anchor is the latest pooled entry's posting date.
+    /// </summary>
+    public static Dictionary<DateOnly, decimal> GetPrice(DateOnly anchorDate, decimal units, DateOnly throughDate, BondDetails bondDetails)
     {
         if (bondDetails.CalculationMethods.Count == 0) throw new InvalidOperationException($"{nameof(BondDetails.CalculationMethods)} can't be empty");
 
@@ -78,18 +86,17 @@ public class BondAccountEntry(int? accountId, long entryId, DateTime postingDate
         {
             case Capitalization.Annual:
                 Dictionary<DateOnly, decimal> result = [];
-                decimal capital = Value;
+                decimal capital = units;
                 decimal current = capital;
-                var postingDate = DateOnly.FromDateTime(PostingDate);
-                result[postingDate] = current * bondDetails.UnitValue;
-                for (var i = postingDate.AddDays(1); i <= date; i = i.AddDays(1))
+                result[anchorDate] = current * bondDetails.UnitValue;
+                for (var i = anchorDate.AddDays(1); i <= throughDate; i = i.AddDays(1))
                 {
                     var calculation = bondDetails.CalculationMethods.FirstOrDefault(cm => cm.IsActiveAt(i));
                     if (calculation is null) continue;
                     decimal change = Math.Round(capital * calculation.Rate / 365, 5);
                     current += change;
 
-                    if ((i.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - postingDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).Days % 365 == 0)
+                    if ((i.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) - anchorDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).Days % 365 == 0)
                         capital = current;
                     result[i] = current * bondDetails.UnitValue;
                 }

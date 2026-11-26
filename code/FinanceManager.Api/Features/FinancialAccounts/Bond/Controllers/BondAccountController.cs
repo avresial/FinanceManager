@@ -23,7 +23,6 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Bond.Controllers;
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
-    IUserPlanVerifier userPlanVerifier,
     IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
     ICacheInvalidator dashboardCacheInvalidator,
     IFinancialAlertService financialAlertService) : ControllerBase
@@ -102,9 +101,6 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
     public async Task<IActionResult> Add(AddAccount addAccount)
     {
         var userId = ApiAuthenticationHelper.GetUserId(User);
-
-        if (!await userPlanVerifier.CanAddMoreAccounts(userId))
-            return BadRequest("Too many accounts. In order to add this account upgrade to higher tier or delete existing one.");
 
         var result = await bondAccountRepository.Add(userId, addAccount.AccountName);
         await dashboardCacheInvalidator.InvalidateUser(userId);

@@ -6,13 +6,20 @@ namespace FinanceManager.Application.FinancialAccounts.Bond.Export;
 
 public sealed class BondAccountExportDtoMap : ClassMap<BondAccountExportDto>
 {
-    public BondAccountExportDtoMap()
+    public BondAccountExportDtoMap() : this(includeValue: true)
     {
-        Map(x => x.Id).Index(0).Name("Id");
-        Map(x => x.PostingDate).Index(1).Name("PostingDate").TypeConverterOption.Format("yyyy-MM-ddTHH:mm:ssZ");
-        Map(x => x.Value).Index(2).Name("Value");
-        Map(x => x.ValueChange).Index(3).Name("ValueChange");
-        Map(x => x.BondName).Index(4).Name("Bond");
-        Map(x => x.Description).Index(5).Name("Description");
+    }
+
+    /// <param name="includeValue">Whether to write the account running <c>Value</c> column. An owner export leaves it out.</param>
+    public BondAccountExportDtoMap(bool includeValue)
+    {
+        var index = 0;
+        Map(x => x.Id).Index(index++).Name("Id");
+        Map(x => x.PostingDate).Index(index++).Name("PostingDate").TypeConverterOption.Format("yyyy-MM-ddTHH:mm:ssZ");
+        if (includeValue)
+            Map(x => x.Value).Index(index++).Name("Value");
+        Map(x => x.ValueChange).Index(index++).Name("ValueChange");
+        Map(x => x.BondName).Index(index++).Name("Bond");
+        Map(x => x.Description).Index(index).Name("Description");
     }
 }

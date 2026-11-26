@@ -54,7 +54,7 @@ public sealed class TransactionRuleApplication(
     }
 
     internal static TransactionFacts ToFacts(CurrencyAccountEntry entry) =>
-        new(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId ?? throw new InvalidOperationException("A rule requires an account-linked entry."),
+        new(entry.ContractorDetails ?? string.Empty, entry.Description, entry.AccountId,
             Math.Abs(entry.ValueChange), entry.ValueChange switch
             {
                 > 0 => TransactionDirection.Income,

@@ -1,22 +1,21 @@
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 namespace FinanceManager.Application.FinancialAccounts.Investments.FeeDrag;
 
 /// <summary>
 /// Calculates the annual and long-term cost of known ETF expense ratios from current holdings.
-/// The query is read-only: holdings are reconstructed from investment transactions and prices are
+/// The query is read-only: holdings are the owner's pooled trades per listing (linked to an account or not) and prices are
 /// resolved through the existing investment price provider.
 /// </summary>
 internal sealed class FeeDragService(
-    IAccountRepository<InvestmentAccount> accountRepository,
     IInvestmentTransactionRepository transactionRepository,
+    IAssetListingRepository assetListingRepository,
     IInvestmentPriceProvider priceProvider) : IFeeDragService
 {
     private const decimal _defaultReturnRate = 0.07m;
@@ -45,43 +44,22 @@ internal sealed class FeeDragService(
 
         var asOf = asOfDate == default ? DateTime.UtcNow : asOfDate;
         var asOfDateOnly = DateOnly.FromDateTime(asOf);
-        var accounts = await accountRepository.GetAll(userId);
-        var positions = new Dictionary<long, HoldingPosition>();
-
-        foreach (var account in accounts.Where(account => account.UserId == userId))
-        {
-            var transactions = await transactionRepository.GetByAccount(account.AccountId, cancellationToken);
-
-            foreach (var listingTransactions in transactions
-                         .Where(transaction => transaction.TradeDate <= asOfDateOnly)
-                         .GroupBy(transaction => transaction.AssetListingId))
-            {
-                var quantity = listingTransactions.Sum(transaction => transaction.SignedQuantity);
-                if (quantity <= 0m)
-                    continue;
-
-                var listing = listingTransactions
-                    .Select(transaction => transaction.AssetListing)
-                    .FirstOrDefault(candidate => candidate?.Asset is not null);
-
-                if (listing?.Asset is not { Type: AssetType.ETF })
-                    continue;
-
-                if (positions.TryGetValue(listing.Id, out var existing))
-                {
-                    existing.Quantity += quantity;
-                }
-                else
-                {
-                    positions.Add(listing.Id, new HoldingPosition(listing, quantity));
-                }
-            }
-        }
+        var holdings = await transactionRepository.GetHoldingsByUserAsOf(userId, asOfDateOnly, cancellationToken);
+        var quantities = holdings
+            .Where(holding => holding.AssetType == AssetType.ETF && holding.Units > 0m)
+            .ToDictionary(holding => holding.AssetListingId, holding => holding.Units);
+        var listings = quantities.Count == 0 ? [] : await assetListingRepository.GetByIds([.. quantities.Keys], cancellationToken);
+        var positions = listings
+            .Where(listing => listing.Asset is not null)
+            .OrderBy(listing => listing.Ticker, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(listing => listing.Id)
+            .Select(listing => new HoldingPosition(listing, quantities[listing.Id]))
+            .ToList();
 
         decimal knownValue = 0m;
         decimal weightedExpenseRatioValue = 0m;
 
-        foreach (var position in positions.Values.OrderBy(position => position.Listing.Ticker, StringComparer.OrdinalIgnoreCase))
+        foreach (var position in positions)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -172,9 +150,5 @@ internal sealed class FeeDragService(
 
     private static decimal RoundMoney(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
 
-    private sealed class HoldingPosition(AssetListing listing, decimal quantity)
-    {
-        public AssetListing Listing { get; } = listing;
-        public decimal Quantity { get; set; } = quantity;
-    }
+    private sealed record HoldingPosition(AssetListing Listing, decimal Quantity);
 }

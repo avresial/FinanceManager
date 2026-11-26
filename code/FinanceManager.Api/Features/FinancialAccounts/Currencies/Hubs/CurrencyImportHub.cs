@@ -18,8 +18,7 @@ public class CurrencyImportHub(ICurrencyImportJobStore jobStore) : Hub
         if (Context.User is null)
             throw new HubException("Authentication is required.");
 
-        var userId = ApiAuthenticationHelper.GetUserId(Context.User);
-        if (!jobStore.CanAccessJob(parsedJobId, userId))
+        if (!ApiAuthenticationHelper.TryGetOwnerId(Context.User, out var userId) || !jobStore.CanAccessJob(parsedJobId, userId))
             throw new HubException("Job not found or access denied.");
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GetJobGroupName(parsedJobId));

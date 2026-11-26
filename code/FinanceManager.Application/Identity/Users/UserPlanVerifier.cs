@@ -1,15 +1,13 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
 
 namespace FinanceManager.Application.Identity.Users;
 
-public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> currencyAccountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
+public class UserPlanVerifier(IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     IInvestmentTransactionRepository investmentTransactionRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
@@ -29,12 +27,7 @@ public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> curren
         var currencyCounts = await currencyAccountEntryRepository.GetEntriesCountPerUser(userIds);
         var bondCounts = await bondAccountEntryRepository.GetEntriesCountPerUser(userIds);
 
-        var investmentCounts = new Dictionary<int, int>();
-        foreach (var userId in userIds.Distinct())
-        {
-            var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.MinValue, DateOnly.MaxValue);
-            investmentCounts[userId] = transactions.Count;
-        }
+        var investmentCounts = await investmentTransactionRepository.GetCountPerUser(userIds);
 
         return userIds.Distinct().ToDictionary(
             id => id,
@@ -51,16 +44,5 @@ public class UserPlanVerifier(ICurrencyAccountRepository<CurrencyAccount> curren
         int totalEntries = await GetUsedRecordsCapacity(userId);
 
         return totalEntries + entriesCount <= PricingProvider.GetMaxAllowedEntries(user.PricingLevel);
-    }
-
-    public async Task<bool> CanAddMoreAccounts(int userId)
-    {
-        var user = await userRepository.GetUser(userId);
-        if (user is null) return false;
-
-        var accountsCount = await currencyAccountRepository.GetAvailableAccounts(userId)
-            .CountAsync();
-
-        return accountsCount < PricingProvider.GetMaxAccountCount(user.PricingLevel);
     }
 }

@@ -1,7 +1,14 @@
+using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Bonds;
+using FinanceManager.Contracts.Transactions.Cash;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
@@ -14,6 +21,7 @@ using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using System.Net;
 using Xunit;
 
@@ -22,10 +30,16 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 [Trait("Category", "Integration")]
 public class TransactionLogPagingTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
+    private readonly Mock<IUserPlanVerifier> _planVerifier = new();
     private TestDatabase? _database;
+
+    // The plan mock is per instance, so the host is too.
+    protected override bool ReuseApplicationHost => false;
 
     protected override void ConfigureServices(IServiceCollection services)
     {
+        _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
+        services.AddSingleton(_planVerifier.Object);
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
         if (descriptor is not null)
             services.Remove(descriptor);
@@ -138,6 +152,36 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal([(TransactionKind.Cash, 3L), (TransactionKind.Bond, 2L), (TransactionKind.Cash, 1L), (TransactionKind.Bond, 1L)], walked);
     }
 
+    // What the Transactions page writes: entries created through the owner routes carry no account link, yet they belong in
+    // the log and answer the same kind and currency filters.
+    [Fact]
+    public async Task EntriesCreatedThroughTheOwnerRoutes_AppearUnlinked_AndFilterByKindAndCurrency()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var day = await SeedHistoryAsync(ct);
+        var cash = await new CashTransactionsHttpClient(Client).CreateAsync(new CreateCashEntryRequest(1, day.AddHours(5), -4m, "Owner cash", null), ct);
+        var bond = await new BondTransactionsHttpClient(Client).CreateAsync(new SaveBondEntryRequest(7, day.AddHours(6), 3m, "Owner bond"), ct);
+        var trade = await new InvestmentTradesHttpClient(Client).CreateAsync(
+            new CreateInvestmentTradeRequest(1, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", DateOnly.FromDateTime(day)), ct);
+        var client = new TransactionLogHttpClient(Client);
+        TransactionLogQuery Query(TransactionKind[]? kinds = null, string[]? currencies = null) =>
+            new(day, day.AddDays(1), 100, null, kinds, currencies, null);
+
+        var all = (await client.GetItemsPage(641, Query(), ct)).Items;
+
+        Assert.All([(TransactionKind.Cash, cash.EntryId), (TransactionKind.Bond, bond.EntryId), (TransactionKind.Investment, trade.Id)],
+            key => Assert.Null(Assert.Single(all, item => (item.Kind, item.EntryId) == key).LegacyAccountId));
+        var usdCash = (await client.GetItemsPage(641, Query([TransactionKind.Cash], ["USD"]), ct)).Items;
+        Assert.Contains(usdCash, item => item.EntryId == cash.EntryId);
+        Assert.All(usdCash, item => Assert.Equal(TransactionKind.Cash, item.Kind));
+        var plnBonds = (await client.GetItemsPage(641, Query([TransactionKind.Bond], ["PLN"]), ct)).Items;
+        Assert.Contains(plnBonds, item => item.EntryId == bond.EntryId);
+        var plnTrades = (await client.GetItemsPage(641, Query([TransactionKind.Investment], ["PLN"]), ct)).Items;
+        Assert.Equal([trade.Id], plnTrades.Select(item => item.EntryId));
+        var plnCash = (await client.GetItemsPage(641, Query([TransactionKind.Cash], ["PLN"]), ct)).Items;
+        Assert.DoesNotContain(plnCash, item => item.EntryId == cash.EntryId);
+    }
+
     [Fact]
     public async Task Currencies_ListsTheOwnersCurrenciesWithoutQuoteUnits()
     {
@@ -182,8 +226,8 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         Assert.Equal(7, expected.Count);
         Assert.Equal(expected, actual.Select(item => (item.Kind, item.EntryId)));
         var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.LegacyAccountId == 11));
-        Assert.Equal(("Cash USD", "USD", 1, "Long term"),
-            (savings.Account!.Name, savings.Currency, savings.Account.CurrencyId, savings.Entry.Labels.Single().Name));
+        Assert.Equal(("USD", 1, "Long term"),
+            (savings.Currency, savings.Entry.CurrencyId, savings.Entry.Labels.Single().Name));
         Assert.All(actual.OfType<BondTransactionHistoryItem>(), bond => Assert.Equal(7, bond.Entry.BondDetailsId));
         var trade = actual.OfType<InvestmentTransactionHistoryItem>().Single(item => item.EntryId == 1).Transaction;
         Assert.Equal(("HIST", "Long term"), (trade.Ticker, Assert.Single(trade.Labels!).Name));

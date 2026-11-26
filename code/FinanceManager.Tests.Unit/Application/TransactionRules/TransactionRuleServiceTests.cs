@@ -320,4 +320,40 @@ public sealed class TransactionRuleServiceTests
         Assert.All(entries, entry => Assert.Equal("Receipt", entry.Description));
         _alerts.Verify(x => x.EvaluateAlertsAsync(7, It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task ApplyToEntry_UnlinkedEntry_AppliesRulesThatDoNotNeedAnAccount()
+    {
+        SetupSingleRule("[{\"type\":\"NormalizeDescription\",\"value\":\"Groceries\"}]");
+        var entry = new CurrencyAccountEntry(null, 3, DateTime.UtcNow, 0, -20m) { Description = "Shop", UserId = 7, CurrencyId = 0 };
+
+        var changed = await _service.ApplyToEntryAsync(7, entry, TestContext.Current.CancellationToken);
+
+        Assert.True(changed);
+        Assert.Equal("Groceries", entry.Description);
+    }
+
+    [Fact]
+    public async Task ApplyToEntry_UnlinkedEntry_NeverMatchesAnAccountCondition()
+    {
+        _repository.Setup(x => x.GetByUserId(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new TransactionRuleDefinition
+                {
+                    UserId = 7,
+                    Name = "Account rule",
+                    Order = 1,
+                    ConditionsJson = "[{\"type\":\"Account\",\"accountIds\":[0,2]}]",
+                    ActionsJson = "[{\"type\":\"NormalizeDescription\",\"value\":\"Matched\"}]"
+                }
+            ]);
+        var linked = new CurrencyAccountEntry(2, 3, DateTime.UtcNow, -20m, -20m) { Description = "Shop" };
+        var unlinked = new CurrencyAccountEntry(null, 4, DateTime.UtcNow, 0, -20m) { Description = "Shop" };
+
+        Assert.True(await _service.ApplyToEntryAsync(7, linked, TestContext.Current.CancellationToken));
+        Assert.False(await _service.ApplyToEntryAsync(7, unlinked, TestContext.Current.CancellationToken));
+
+        Assert.Equal("Matched", linked.Description);
+        Assert.Equal("Shop", unlinked.Description);
+    }
 }

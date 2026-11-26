@@ -40,7 +40,6 @@ public class CurrencyEntryControllerTests(OptionsProvider optionsProvider) : Con
         // Mock user plan verifier to allow any number of entries
         var planVerifierMock = new Mock<IUserPlanVerifier>();
         planVerifierMock.Setup(x => x.CanAddMoreEntries(_testUserId, It.IsAny<int>())).ReturnsAsync(true);
-        planVerifierMock.Setup(x => x.CanAddMoreAccounts(_testUserId)).ReturnsAsync(true);
         services.AddSingleton(planVerifierMock.Object);
     }
 

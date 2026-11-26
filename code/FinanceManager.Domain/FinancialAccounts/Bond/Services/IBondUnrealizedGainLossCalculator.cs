@@ -1,10 +1,15 @@
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Transactions.Shared.Dtos;
 
 namespace FinanceManager.Domain.FinancialAccounts.Bond.Services;
 
 public interface IBondUnrealizedGainLossCalculator
 {
-    Task<UnrealizedGainLossInstrumentResult?> CalculateAsync(BondAccount account, int bondDetailsId, BondDetails? details, Currency currency, DateTime asOfDate);
+    /// <summary>
+    /// Unrealized gain/loss of one owner-pooled bond position: its units are the pooled balance of the bond definition and
+    /// interest accrues from the latest pooled entry. Returns <c>null</c> when nothing is held.
+    /// </summary>
+    Task<UnrealizedGainLossInstrumentResult?> CalculateAsync(OwnerLedgerPosition position, BondDetails? details, Currency currency, DateTime asOfDate);
 }

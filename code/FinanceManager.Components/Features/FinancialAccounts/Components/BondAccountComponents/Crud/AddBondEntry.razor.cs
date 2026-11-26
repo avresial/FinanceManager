@@ -2,6 +2,8 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
@@ -37,9 +39,11 @@ public partial class AddBondEntry : ComponentBase
     private List<FinancialLabel> _possibleLabels = [];
     [Parameter] public RenderFragment? CustomButton { get; set; }
     [Parameter] public EventCallback ActionCompleted { get; set; }
-    [Parameter] public required BondAccount BondAccount { get; set; }
+    /// <summary>The account to add to. Null adds to the owner's pool of the selected bond (Transactions page).</summary>
+    [Parameter] public BondAccount? BondAccount { get; set; }
 
     [Inject] public required IFinancialAccountService FinancialAccountService { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }
     [Inject] public required ILogger<AddBondEntry> Logger { get; set; }
     [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
@@ -98,14 +102,29 @@ public partial class AddBondEntry : ComponentBase
             DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes,
                 _time.Value.Seconds);
 
-            BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
-            {
-                Description = _description?.Trim() ?? string.Empty,
-                Labels = GetLabels().ToList()
-            };
+            var description = _description?.Trim() ?? string.Empty;
             try
             {
-                await FinancialAccountService.AddEntry(bondAccountEntry);
+                if (BondAccount is null)
+                {
+                    await BondTransactionsHttpClient.CreateAsync(new SaveBondEntryRequest(
+                        _selectedBond.Id, date, ValueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
+                }
+                else
+                {
+                    BondAccountEntry bondAccountEntry = new(BondAccount.AccountId, -1, date, -1, ValueChange.Value, _selectedBond.Id)
+                    {
+                        Description = description,
+                        Labels = GetLabels().ToList()
+                    };
+                    await FinancialAccountService.AddEntry(bondAccountEntry);
+                }
+            }
+            // Only the owner routes explain a rejection (plan quota, validation); the account services do not.
+            catch (HttpRequestException ex) when (BondAccount is null && !string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry add");
+                _errors = [ex.Message];
             }
             catch (Exception ex)
             {

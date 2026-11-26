@@ -31,7 +31,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         // Legacy individual seeder hosted services removed; no need to unregister.
 
         _nowUtc = DateTime.UtcNow;
-        _testDatabase = new TestDatabase();
+        _testDatabase = new TestDatabase(stampOwnerKeys: true);
 
         // remove any registration for AppDbContext
         var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
@@ -48,7 +48,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.Name == accountName, TestContext.Current.CancellationToken))
             return;
 
-        _value = _valueChange;
+        _value = 0;
 
         var test = new FinancialAccountBaseDto
         {
@@ -109,7 +109,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal("Test Currency Account", result[0].Name);
+        // Cash is pooled per currency and named by it, not by the account the entries were booked in.
+        Assert.Equal("PLN", result[0].Name);
+        Assert.Null(result[0].AccountId);
         Assert.Equal(_value, result[0].Value);
     }
 
@@ -249,22 +251,27 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         string ticker = "CSPX",
         decimal buyQuantity = 5m,
         decimal buyUnitPrice = 90m,
-        decimal currentPrice = 100m)
+        decimal currentPrice = 100m,
+        bool unlinked = false)
     {
         var context = _testDatabase!.Context;
 
         if (await context.Accounts.AnyAsync(x => x.AccountId == accountId, TestContext.Current.CancellationToken))
             return;
 
-        var account = new FinancialAccountBaseDto
+        // An unlinked trade belongs to the owner without any account.
+        if (!unlinked)
         {
-            UserId = userId,
-            AccountId = accountId,
-            Name = $"Investment Account {accountId}",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        };
-        context.Accounts.Add(account);
+            var account = new FinancialAccountBaseDto
+            {
+                UserId = userId,
+                AccountId = accountId,
+                Name = $"Investment Account {accountId}",
+                AccountLabel = AccountLabel.Stock,
+                AccountType = AccountType.Stock
+            };
+            context.Accounts.Add(account);
+        }
 
         if (!await context.AssetListings.AnyAsync(x => x.Id == listingId, TestContext.Current.CancellationToken))
         {
@@ -304,7 +311,8 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         context.InvestmentTransactions.Add(new InvestmentTransaction
         {
-            AccountId = accountId,
+            UserId = userId,
+            AccountId = unlinked ? null : accountId,
             AssetListingId = listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = buyQuantity,
@@ -336,6 +344,179 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             $"api/Assets/GetUnrealizedGainLossForAccount/1/20/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
             TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, directResponse.StatusCode);
+    }
+
+    // Account 70 buys 5 @ 90, account 71 buys 5 @ 110 and an unlinked trade buys 2 @ 100 of one listing priced at 120:
+    // pooled cost 450 + 550 + 200 = 1200 for 12 units worth 1440. Reading account 70 alone would report 150.
+    private async Task SeedPooledInvestmentsAcrossAccountsAndUnlinkedTrade()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 7, accountId: 70, listingId: 700, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 120m);
+
+        var context = _testDatabase!.Context;
+        context.Accounts.Add(new FinancialAccountBaseDto
+        {
+            UserId = 7,
+            AccountId = 71,
+            Name = "Investment Account 71",
+            AccountLabel = AccountLabel.Stock,
+            AccountType = AccountType.Stock
+        });
+
+        InvestmentTransaction Buy(int? accountId, decimal quantity, decimal unitPrice) => new()
+        {
+            UserId = 7,
+            AccountId = accountId,
+            AssetListingId = 700,
+            Type = InvestmentTransactionType.Buy,
+            Quantity = quantity,
+            UnitPrice = unitPrice,
+            Currency = "USD",
+            TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-4))
+        };
+
+        context.InvestmentTransactions.AddRange(Buy(71, 5m, 110m), Buy(null, 2m, 100m));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerAccount_PoolsLinkedAndUnlinkedTradesWithoutAccountId()
+    {
+        await SeedPooledInvestmentsAcrossAccountsAndUnlinkedTrade();
+        Authorize("TestUser", 7, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/Assets/GetUnrealizedGainLossPerAccount/7/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<UnrealizedGainLossAccountResult>>(TestContext.Current.CancellationToken);
+        var row = Assert.Single(result!);
+        Assert.Null(row.AccountId);
+        Assert.Equal("Investments", row.AccountName);
+        Assert.Equal(1200m, row.CostBasis);
+        Assert.Equal(1440m, row.CurrentValue);
+        Assert.Equal(240m, row.UnrealizedGainLoss);
+        Assert.Equal(20m, row.UnrealizedGainLossPercent);
+        Assert.Equal(0, row.ExcludedInstrumentsCount);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLossPerInstrument_PoolsOneRowPerListingAcrossAccounts()
+    {
+        await SeedPooledInvestmentsAcrossAccountsAndUnlinkedTrade();
+        Authorize("TestUser", 7, UserRole.User);
+
+        var response = await Client.GetAsync(
+            $"api/Assets/GetUnrealizedGainLossPerInstrument/7/{DefaultCurrency.USD.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>(TestContext.Current.CancellationToken);
+        var row = Assert.Single(result!);
+        Assert.Null(row.AccountId);
+        Assert.Equal("Investments", row.AccountName);
+        Assert.Equal("CSPX", row.InstrumentName);
+        Assert.Equal(12m, row.Quantity);
+        Assert.Equal(1200m, row.CostBasis);
+        Assert.Equal(1440m, row.CurrentValue);
+        Assert.Equal(240m, row.UnrealizedGainLoss);
+        Assert.False(row.IsExcludedFromTotals);
+    }
+
+    [Fact]
+    public async Task GetUnrealizedGainLoss_PoolsBondEntriesWithAndWithoutAccountIntoOneBondsRow()
+    {
+        var context = _testDatabase!.Context;
+        context.Accounts.Add(new FinancialAccountBaseDto
+        {
+            UserId = 8,
+            AccountId = 81,
+            Name = "Bond Portfolio",
+            AccountLabel = AccountLabel.Other,
+            AccountType = AccountType.Bond
+        });
+        context.Bonds.Add(CreateBondDetails(8, _nowUtc));
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        context.BondEntries.AddRange(
+            new BondAccountEntry(81, 1, _nowUtc.AddDays(-1), 6000m, 6000m, 8),
+            new BondAccountEntry(null, 2, _nowUtc.AddDays(-1), 12000m, 6000m, 8) { UserId = 8 });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 8, UserRole.User);
+
+        var perAccount = await Client.GetFromJsonAsync<List<UnrealizedGainLossAccountResult>>(
+            $"api/Assets/GetUnrealizedGainLossPerAccount/8/{DefaultCurrency.PLN.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        var perInstrument = await Client.GetFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>(
+            $"api/Assets/GetUnrealizedGainLossPerInstrument/8/{DefaultCurrency.PLN.Id}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        var accountRow = Assert.Single(perAccount!);
+        Assert.Null(accountRow.AccountId);
+        Assert.Equal("Bonds", accountRow.AccountName);
+        Assert.Equal(12001.20m, accountRow.CurrentValue);
+        Assert.Equal(0, accountRow.ExcludedInstrumentsCount);
+
+        // Both entries hold the same bond, so they pool into one instrument.
+        var instrumentRow = Assert.Single(perInstrument!);
+        Assert.Null(instrumentRow.AccountId);
+        Assert.Equal(accountRow.CurrentValue, instrumentRow.CurrentValue);
+    }
+
+    [Fact]
+    public async Task PortfolioReturns_IncludeUnlinkedTrades()
+    {
+        // The only trade has no account: performance is calculated from the owner's trades, not from accounts.
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 24, listingId: 204, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m, unlinked: true);
+        // A quote on the trade day prices every day of the holding period, so the time-weighted return is computable end to end.
+        _testDatabase!.Context.PriceQuotes.Add(new PriceQuote
+        {
+            AssetListingId = 204,
+            Provider = MarketDataProvider.AlphaVantage,
+            Price = 90m,
+            Currency = "USD",
+            PriceTime = new DateTimeOffset(_nowUtc.AddDays(-5).Date, TimeSpan.Zero),
+            QuoteType = PriceQuoteType.EndOfDay,
+            FetchedAt = DateTimeOffset.UtcNow
+        });
+        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        Authorize("TestUser", 1, UserRole.User);
+        var start = _nowUtc.AddDays(-10).Date;
+
+        var attribution = await Client.GetFromJsonAsync<PortfolioReturnAttributionResult>(
+            $"api/Assets/GetReturnAttribution/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        var moneyWeighted = await Client.GetFromJsonAsync<MoneyWeightedReturnResult>(
+            $"api/Assets/GetMoneyWeightedReturn/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+        var timeWeighted = await Client.GetFromJsonAsync<TimeWeightedReturnResult>(
+            $"api/Assets/GetTimeWeightedReturn/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(attribution);
+        Assert.Equal(PortfolioReturnAttributionStatus.Available, attribution.Status);
+        Assert.Equal(500m, attribution.TotalChange);
+        Assert.Equal(450m, attribution.ExternalCashMovement);
+        Assert.Equal(50m, attribution.MarketEffect);
+        Assert.NotNull(moneyWeighted);
+        Assert.Equal(MoneyWeightedReturnStatus.Available, moneyWeighted.Status);
+        Assert.NotNull(timeWeighted);
+        Assert.Equal(TimeWeightedReturnStatus.Available, timeWeighted.Status);
+    }
+
+    [Fact]
+    public async Task PortfolioReturns_DoNotIncludeOtherUsersTrades()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 2, accountId: 25, listingId: 205, unlinked: true);
+        Authorize("TestUser", 1, UserRole.User);
+        var start = _nowUtc.AddDays(-10).Date;
+
+        var attribution = await Client.GetFromJsonAsync<PortfolioReturnAttributionResult>(
+            $"api/Assets/GetReturnAttribution/1/{DefaultCurrency.USD.Id}/{start:O}/{_nowUtc:O}",
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(attribution);
+        Assert.Equal(PortfolioReturnAttributionStatus.InsufficientData, attribution.Status);
     }
 
     [Fact]
@@ -379,6 +560,24 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         Assert.Equal(500m, result.TotalHoldingsValue);
         Assert.Equal(2.50m, result.AnnualFeeCost);
         Assert.Equal("CSPX", Assert.Single(result.Holdings).Ticker);
+    }
+
+    [Fact]
+    public async Task GetFeeDragAnalysis_IncludesUnlinkedEtfTrades()
+    {
+        await SeedInvestmentAccountWithHoldings(userId: 1, accountId: 26, listingId: 206, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m, unlinked: true);
+        Authorize("TestUser", 1, UserRole.User);
+
+        var result = await new AssetsHttpClient(Client).GetFeeDragAnalysis(
+            1,
+            DefaultCurrency.USD,
+            _nowUtc,
+            0.07m,
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.Equal(500m, result.TotalHoldingsValue);
+        Assert.Equal(1, result.TotalHoldingsCount);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Domain.FinancialAccounts.Bond.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using Microsoft.AspNetCore.Components;
@@ -9,12 +11,20 @@ namespace FinanceManager.Components.Features.FinancialAccounts.Components.BondAc
 public partial class BondEntryConflictResolver
 {
     [Inject] public required BondAccountImportHttpClient AccountImportHttpClient { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
     [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
     [Inject] public required ILogger<BondEntryConflictResolver> Logger { get; set; }
 
     [Parameter] public required IReadOnlyCollection<BondImportConflict> Conflicts { get; set; }
     [Parameter] public bool SkipExactMatches { get; set; } = true;
     [Parameter] public required string AccountName { get; set; }
+
+    /// <summary>
+    /// Owner mode (Transactions page): every row of the import. The conflicts carry no account, so accepting a
+    /// day re-submits all rows of the accepted keys and the server adds only the occurrences that are missing.
+    /// </summary>
+    [Parameter] public IReadOnlyList<BondEntryImportRecordDto>? OwnerRows { get; set; }
+
     [Parameter] public EventCallback OnResolutionChanged { get; set; }
     [Parameter] public EventCallback OnSubmitted { get; set; }
 
@@ -95,20 +105,43 @@ public partial class BondEntryConflictResolver
         _errorMessage = null;
         try
         {
-            var resolvedImports = new List<ResolvedBondImportConflict>();
-            foreach (var g in _dayGroups)
+            var acceptedConflicts = _dayGroups
+                .Where(g => _dayChoices.TryGetValue(g.Date, out var choice) && choice == ResolveChoice.Imported)
+                .SelectMany(g => g.Conflicts)
+                .ToList();
+
+            if (OwnerRows is not null)
             {
-                if (!_dayChoices.TryGetValue(g.Date, out var choice)) continue;
-                if (choice != ResolveChoice.Imported) continue;
-                foreach (var c in g.Conflicts)
+                // "Existing" skips: owner mode never deletes existing entries.
+                var acceptedKeys = acceptedConflicts
+                    .Where(c => c.ImportEntry is not null)
+                    .Select(c => (Truncate(c.ImportEntry!.PostingDate), c.ImportEntry.ValueChange, c.ImportEntry.BondDetailsId))
+                    .ToHashSet();
+                var acceptedRows = OwnerRows.Where(r => acceptedKeys.Contains((Truncate(r.PostingDate), r.ValueChange, r.BondDetailsId))).ToList();
+                if (acceptedRows.Count > 0)
                 {
-                    resolvedImports.Add(new ResolvedBondImportConflict(
-                        c.AccountId, true, c.ImportEntry, false, c.ExistingEntry?.EntryId));
+                    var result = await BondTransactionsHttpClient.ResolveImportAsync(acceptedRows);
+                    if (result.Failed > 0 || result.Errors.Count > 0)
+                    {
+                        _errorMessage = result.Errors.Count > 0
+                            ? $"{result.Failed} entries could not be imported: {result.Errors[0]}"
+                            : $"{result.Failed} entries could not be imported.";
+                        _isLoading = false;
+                        StateHasChanged();
+                        return;
+                    }
                 }
             }
-
-            if (resolvedImports.Count > 0)
-                await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+            else
+            {
+                // The account import review only handles conflicts that carry an account.
+                var resolvedImports = acceptedConflicts
+                    .Where(c => c.AccountId is not null)
+                    .Select(c => new ResolvedBondImportConflict(c.AccountId!.Value, true, c.ImportEntry, false, c.ExistingEntry?.EntryId))
+                    .ToList();
+                if (resolvedImports.Count > 0)
+                    await AccountImportHttpClient.ResolveImportConflictsAsync(resolvedImports);
+            }
 
             _dayChoices.Clear();
             await OnSubmitted.InvokeAsync();
@@ -121,6 +154,9 @@ public partial class BondEntryConflictResolver
         _isLoading = false;
         StateHasChanged();
     }
+
+    // Posting dates match at second precision, as the conflict detection compares them.
+    private static DateTime Truncate(DateTime d) => new(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second);
 
     public string GetBondName(int bondDetailsId) =>
         _bondNamesById.TryGetValue(bondDetailsId, out var name) ? name : $"Bond #{bondDetailsId}";
