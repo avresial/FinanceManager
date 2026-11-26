@@ -33,9 +33,7 @@ public class BondAccountControllerTests
         _controller = new BondAccountController(
             _mockBondAccountRepository.Object,
             _mockBondAccountEntryRepository.Object,
-            _bondAccountCsvExportService.Object,
-            Mock.Of<ICacheInvalidator>(),
-            Mock.Of<IFinancialAlertService>());
+            _bondAccountCsvExportService.Object);
 
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
         [

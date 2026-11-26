@@ -4,6 +4,7 @@ using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
@@ -15,7 +16,6 @@ using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
-using FinanceManager.Tests.Integration.Support.LegacyAccountClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -77,44 +77,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         _twelveDataResolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MarketDataSymbolResolution(MarketDataProvider.TwelveData, 200, "not found"));
         services.AddSingleton(_twelveDataResolver.Object);
-    }
-
-    [Fact]
-    public async Task Labels_AddReplaceClearAndReload_RejectUnknownAndForeignTransactions()
-    {
-        await SeedAccount();
-        await SeedListing();
-        var ct = TestContext.Current.CancellationToken;
-        var first = new FinancialLabel { Name = "Long term" };
-        var second = new FinancialLabel { Name = "Retirement" };
-        _testDatabase!.Context.FinancialLabels.AddRange(first, second);
-        await _testDatabase.Context.SaveChangesAsync(ct);
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-        var added = await client.AddAsync(AddRequest(_testAccountId) with { LabelIds = [first.Id] });
-        Assert.NotNull(added);
-        Assert.Equal(first.Id, Assert.Single(added.Labels!).Id);
-        var update = new UpdateInvestmentTransactionRequest(added.Id, _testAccountId, _listingId,
-            InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), LabelIds: [second.Id]);
-        Assert.True(await client.UpdateAsync(update));
-        var reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
-        Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
-        var invalid = await Client.PutAsJsonAsync("api/InvestmentTransaction/Update", update with { LabelIds = [int.MaxValue] }, ct);
-        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
-        var invalidAdd = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", AddRequest(_testAccountId) with { LabelIds = [int.MaxValue] }, ct);
-        Assert.Equal(HttpStatusCode.BadRequest, invalidAdd.StatusCode);
-        Assert.True(await client.UpdateAsync(update with { LabelIds = null }));
-        reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
-        Assert.Equal(second.Id, Assert.Single(reloaded!.Labels!).Id);
-        Assert.True(await client.UpdateAsync(update with { LabelIds = [] }));
-        reloaded = await Client.GetFromJsonAsync<InvestmentTransactionDto>($"api/InvestmentTransaction/Get/{added.Id}", ct);
-        Assert.Empty(reloaded!.Labels!);
-        Authorize("foreign", _testUserId + 1, UserRole.User);
-        var forbidden = await Client.PutAsJsonAsync("api/InvestmentTransaction/Update", update, ct);
-        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
-        forbidden = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", AddRequest(_testAccountId) with { LabelIds = [first.Id] }, ct);
-        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
-        Assert.Empty((await _testDatabase.Context.InvestmentTransactions.Include(x => x.Labels).SingleAsync(x => x.EntryId == added.Id, ct)).Labels);
     }
 
     private async Task SeedAccount()
@@ -183,8 +145,15 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         return transaction.EntryId;
     }
 
-    private static AddInvestmentTransactionRequest AddRequest(int accountId) => new(
-        accountId, _listingId, InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1));
+    [Fact]
+    public async Task ListingLookups_ReturnTheSeededInstrument()
+    {
+        await SeedListing();
+        Authorize("owner", _testUserId, UserRole.User);
+        var client = new InvestmentTransactionHttpClient(Client);
+        Assert.Equal(_listingId, Assert.Single(await client.SearchListingsAsync("CSPX", cancellationToken: TestContext.Current.CancellationToken)).ListingId);
+        Assert.Equal(_listingId, (await client.GetListingAsync(_listingId))!.ListingId);
+    }
 
     [Fact]
     public async Task ListingPrice_UsesPriceProvider()
@@ -245,30 +214,8 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
-    public async Task Add_CreatesTransaction()
-    {
-        await SeedAccount();
-        await SeedListing();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-
-        var result = await client.AddAsync(AddRequest(_testAccountId));
-
-        Assert.NotNull(result);
-        Assert.Equal(_testUserId, result!.UserId);
-        Assert.Equal(3m, result.Quantity);
-
-        var inDb = await _testDatabase!.Context.InvestmentTransactions
-            .FirstOrDefaultAsync(x => x.AccountId == _testAccountId, TestContext.Current.CancellationToken);
-        Assert.NotNull(inDb);
-        Assert.Equal(120m, inDb!.UnitPrice);
-        Assert.Equal(_testUserId, inDb.UserId);
-    }
-
-    [Fact]
     public async Task Add_WithExternalInstrument_CommitsInstrumentAndTransactionTogether()
     {
-        await SeedAccount();
         SetupExternalInstrument();
         Authorize("testuser", _testUserId, UserRole.User);
 
@@ -278,9 +225,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var option = Assert.Single(options!);
         Assert.Equal(InstrumentOptionSource.External, option.Source);
 
-        var request = new AddInvestmentTransactionRequest(
-            _testAccountId,
-            null,
+        var request = new CreateInvestmentTradeRequest(null,
             InvestmentTransactionTypeDto.Buy,
             2m,
             100m,
@@ -288,7 +233,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: option.ResultId);
         var response = await Client.PostAsJsonAsync(
-            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+            "api/transactions/investment", request, TestContext.Current.CancellationToken);
 
         response.EnsureSuccessStatusCode();
         var transaction = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
@@ -296,6 +241,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         Assert.NotNull(transaction);
         Assert.True(transaction!.AssetListingId > 0);
+        Assert.Null(transaction.AccountId);
         Assert.True(transaction.AutomaticPricesAvailable);
         Assert.Single(await _testDatabase!.Context.Assets.ToListAsync(TestContext.Current.CancellationToken));
         Assert.Single(await _testDatabase.Context.AssetListings.ToListAsync(TestContext.Current.CancellationToken));
@@ -315,7 +261,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     [Fact]
     public async Task Add_WithMultipleConfiguredProviders_PersistsSymbolsAndPreservesDisabledMappingOnReimport()
     {
-        await SeedAccount();
         SetupExternalInstrument();
         _twelveDataResolver.SetupGet(x => x.Priority).Returns(50);
         _twelveDataResolver.Setup(x => x.ResolveAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()))
@@ -324,9 +269,9 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Authorize("testuser", _testUserId, UserRole.User);
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
             "api/InvestmentTransaction/SearchInstruments?q=CSPX", TestContext.Current.CancellationToken);
-        var request = new AddInvestmentTransactionRequest(_testAccountId, null, InvestmentTransactionTypeDto.Buy,
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy,
             2m, 100m, "USD", new DateOnly(2026, 1, 1), ExternalInstrumentResultId: Assert.Single(options!).ResultId);
-        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        var response = await Client.PostAsJsonAsync("api/transactions/investment", request, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
         var symbols = await _testDatabase!.Context.MarketDataSymbols.OrderBy(x => x.Provider).ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, symbols.Count);
@@ -344,7 +289,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _testDatabase.Context.ChangeTracker.Clear();
 
-        var reimport = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+        var reimport = await Client.PostAsJsonAsync("api/transactions/investment", request, TestContext.Current.CancellationToken);
         reimport.EnsureSuccessStatusCode();
         _testDatabase.Context.ChangeTracker.Clear();
         var retriedSymbol = await _testDatabase.Context.MarketDataSymbols.AsNoTracking()
@@ -359,7 +304,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     [Fact]
     public async Task Add_WhenAllPriceProvidersFail_SavesCatalogInstrumentWithoutSymbolsAndSavesTransaction()
     {
-        await SeedAccount();
         SetupExternalInstrument();
         _alphaVantageClient
             .Setup(x => x.GetDailySeries(
@@ -374,9 +318,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var options = await Client.GetFromJsonAsync<List<InvestmentInstrumentOptionDto>>(
             "api/InvestmentTransaction/SearchInstruments?q=CSPX",
             TestContext.Current.CancellationToken);
-        var request = new AddInvestmentTransactionRequest(
-            _testAccountId,
-            null,
+        var request = new CreateInvestmentTradeRequest(null,
             InvestmentTransactionTypeDto.Buy,
             2m,
             100m,
@@ -384,7 +326,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: Assert.Single(options!).ResultId);
         var response = await Client.PostAsJsonAsync(
-            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+            "api/transactions/investment", request, TestContext.Current.CancellationToken);
 
         response.EnsureSuccessStatusCode();
         var saved = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
@@ -406,7 +348,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     [Fact]
     public async Task Add_WithIncompleteExternalInstrumentMissingVenueAndCurrency_SavesCatalogListingAndSupportsReadEndpoints()
     {
-        await SeedAccount();
         _openFigiClient
             .Setup(x => x.MapByTickerAsync("VWCE", It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([
@@ -433,9 +374,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(string.Empty, option.TradingCurrency);
         Assert.NotEmpty(option.Warnings);
 
-        var request = new AddInvestmentTransactionRequest(
-            _testAccountId,
-            null,
+        var request = new CreateInvestmentTradeRequest(null,
             InvestmentTransactionTypeDto.Buy,
             4m,
             117.50m,
@@ -443,7 +382,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
             new DateOnly(2026, 2, 10),
             ExternalInstrumentResultId: option.ResultId);
         var response = await Client.PostAsJsonAsync(
-            "api/InvestmentTransaction/Add", request, TestContext.Current.CancellationToken);
+            "api/transactions/investment", request, TestContext.Current.CancellationToken);
 
         response.EnsureSuccessStatusCode();
         var created = await response.Content.ReadFromJsonAsync<InvestmentTransactionDto>(
@@ -479,7 +418,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
 
         // History page endpoint reads back the saved transaction without errors
         var history = await Client.GetFromJsonAsync<InvestmentTransactionHistoryPageDto>(
-            $"api/InvestmentTransaction/GetHistoryPage/{_testAccountId}",
+            "api/transactions/investment",
             TestContext.Current.CancellationToken);
         Assert.Single(history!.Items);
         Assert.Equal("EUR", history.Items[0].Currency);
@@ -488,12 +427,9 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
     [Fact]
     public async Task Add_WithUnrecognizedExternalResultId_ReturnsBadRequest()
     {
-        await SeedAccount();
         Authorize("testuser", _testUserId, UserRole.User);
 
-        var request = new AddInvestmentTransactionRequest(
-            _testAccountId,
-            null,
+        var request = new CreateInvestmentTradeRequest(null,
             InvestmentTransactionTypeDto.Buy,
             1m,
             100m,
@@ -507,7 +443,7 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         var symbolsBefore = await context.MarketDataSymbols.CountAsync(ct);
         var transactionsBefore = await context.InvestmentTransactions.CountAsync(ct);
 
-        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", request, ct);
+        var response = await Client.PostAsJsonAsync("api/transactions/investment", request, ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         // Rejection happens before anything is written to the shared catalog.
@@ -515,29 +451,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         Assert.Equal(listingsBefore, await context.AssetListings.CountAsync(ct));
         Assert.Equal(symbolsBefore, await context.MarketDataSymbols.CountAsync(ct));
         Assert.Equal(transactionsBefore, await context.InvestmentTransactions.CountAsync(ct));
-    }
-
-    [Fact]
-    public async Task Add_ForOtherUsersAccount_ReturnsForbidden()
-    {
-        await SeedAccount();
-        Authorize("otheruser", _testUserId + 1, UserRole.User);
-
-        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", AddRequest(_testAccountId), TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Add_WithInvalidQuantity_ReturnsBadRequest()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var invalid = AddRequest(_testAccountId) with { Quantity = 0m };
-
-        var response = await Client.PostAsJsonAsync("api/InvestmentTransaction/Add", invalid, TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -647,91 +560,6 @@ public class InvestmentTransactionControllerTests(OptionsProvider optionsProvide
         using var response = await Client.GetAsync($"api/InvestmentTransaction/Get/{id}", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Update_ForUnknownTransaction_ReturnsFalse()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-        var update = new UpdateInvestmentTransactionRequest(
-            long.MaxValue, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
-
-        var result = await client.UpdateAsync(update);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task Delete_ForUnknownTransaction_ReturnsFalse()
-    {
-        await SeedAccount();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-
-        var result = await client.DeleteAsync(_testAccountId, long.MaxValue);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task Update_ModifiesTransaction()
-    {
-        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-        var update = new UpdateInvestmentTransactionRequest(
-            id, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 8m, 130m, "USD", new DateOnly(2024, 1, 10));
-
-        var result = await client.UpdateAsync(update);
-
-        Assert.True(result);
-        var inDb = await _testDatabase!.Context.InvestmentTransactions
-            .FirstOrDefaultAsync(x => x.EntryId == id, TestContext.Current.CancellationToken);
-        Assert.Equal(8m, inDb!.Quantity);
-        Assert.Equal(130m, inDb.UnitPrice);
-    }
-
-    [Fact]
-    public async Task Notes_AreStoredAsDescription_AndNullOrEmptyNotesComeBackAsNull()
-    {
-        await SeedAccount();
-        await SeedListing();
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-
-        var withNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = "Monthly ETF contribution" });
-        var withoutNotes = await client.AddAsync(AddRequest(_testAccountId) with { Notes = null });
-
-        Assert.Equal("Monthly ETF contribution", withNotes!.Notes);
-        Assert.Null(withoutNotes!.Notes);
-        _testDatabase!.Context.ChangeTracker.Clear();
-        var stored = await _testDatabase.Context.InvestmentTransactions.AsNoTracking().OrderBy(x => x.EntryId).ToListAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(["Monthly ETF contribution", string.Empty], stored.Select(x => x.Description));
-
-        // An update with empty notes clears the text; the payload still reports no notes.
-        var cleared = new UpdateInvestmentTransactionRequest(
-            withNotes.Id, _testAccountId, _listingId, InvestmentTransactionTypeDto.Buy, 3m, 120m, "USD", new DateOnly(2024, 6, 1), Notes: "");
-        Assert.True(await client.UpdateAsync(cleared));
-        _testDatabase.Context.ChangeTracker.Clear();
-        Assert.Equal(string.Empty, (await _testDatabase.Context.InvestmentTransactions.AsNoTracking()
-            .SingleAsync(x => x.EntryId == withNotes.Id, TestContext.Current.CancellationToken)).Description);
-    }
-
-    [Fact]
-    public async Task Delete_RemovesTransaction()
-    {
-        var id = await SeedTransaction(InvestmentTransactionType.Buy, 5m, new DateOnly(2024, 1, 10));
-        Authorize("testuser", _testUserId, UserRole.User);
-        var client = new InvestmentTransactionAccountClient(Client);
-
-        var result = await client.DeleteAsync(_testAccountId, id);
-
-        Assert.True(result);
-        var inDb = await _testDatabase!.Context.InvestmentTransactions
-            .FirstOrDefaultAsync(x => x.EntryId == id, TestContext.Current.CancellationToken);
-        Assert.Null(inDb);
     }
 
     [Fact]

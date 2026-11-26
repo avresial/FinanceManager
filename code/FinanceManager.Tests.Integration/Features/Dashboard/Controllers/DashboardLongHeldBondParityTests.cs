@@ -1,6 +1,7 @@
 using FinanceManager.Application.MoneyFlow.NetWorth;
+using FinanceManager.Contracts.Dashboard;
+using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Commands;
 using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
@@ -112,10 +113,10 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
             }
         }
 
-        using var update = await Client.PutAsJsonAsync("api/BondEntry",
-            new UpdateBondAccountEntry(_accountId, entry.EntryId, posting, 2m, 2m, details.Id), ct);
+        using var update = await Client.PutAsJsonAsync($"api/transactions/bonds/{entry.EntryId}",
+            new SaveBondEntryRequest(details.Id, posting, 2m, entry.Description), ct);
         update.EnsureSuccessStatusCode();
-        Assert.True(await update.Content.ReadFromJsonAsync<bool>(ct));
+        Assert.Equal(2m, (await update.Content.ReadFromJsonAsync<BondTransactionLogItemDto>(ct))!.ValueChange);
         var changedEntry = await Overview(); // The PUT must invalidate the cached overview itself.
         Assert.False(JsonNode.DeepEquals(candidate["netWorthSeries"], changedEntry["netWorthSeries"]));
         await Invalidate();

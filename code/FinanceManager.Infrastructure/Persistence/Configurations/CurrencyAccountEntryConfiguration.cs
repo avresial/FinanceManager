@@ -9,6 +9,8 @@ public class CurrencyAccountEntryConfiguration : IEntityTypeConfiguration<Curren
 {
     public void Configure(EntityTypeBuilder<CurrencyAccountEntry> builder)
     {
+        builder.Property(e => e.UserId).IsRequired();
+        builder.Property(e => e.CurrencyId).IsRequired();
         builder.HasKey(e => e.EntryId);
         builder.Property(e => e.EntryId)
             .ValueGeneratedOnAdd();

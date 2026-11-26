@@ -30,7 +30,7 @@ public class CurrencyImportBackgroundServiceTests
         var guestIdSeenWhenResolving = (int?)null;
         var importService = new Mock<ICurrencyAccountImportService>();
         importService
-            .Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
+            .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
                 It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
             .ReturnsAsync(new ImportResult(10, 1, 0, [], []));
 
@@ -48,7 +48,7 @@ public class CurrencyImportBackgroundServiceTests
 
         var channel = new CurrencyImportJobChannel();
         var store = new CurrencyImportJobStore();
-        var jobId = store.CreateJob(_guestUserId, accountId: 10, totalEntries: 1);
+        var jobId = store.CreateOwnerJob(_guestUserId, currencyId: 10, totalEntries: 1);
         await channel.QueueJob(new CurrencyImportJobRequest(jobId, _guestUserId, 10,
             [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)], _guestUserId), TestContext.Current.CancellationToken);
 
@@ -68,7 +68,7 @@ public class CurrencyImportBackgroundServiceTests
         var guestIdSeenWhenResolving = (int?)-1;
         var importService = new Mock<ICurrencyAccountImportService>();
         importService
-            .Setup(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
+            .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
                 It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
             .ReturnsAsync(new ImportResult(10, 1, 0, [], []));
 
@@ -85,7 +85,7 @@ public class CurrencyImportBackgroundServiceTests
 
         var channel = new CurrencyImportJobChannel();
         var store = new CurrencyImportJobStore();
-        var jobId = store.CreateJob(5, accountId: 10, totalEntries: 1);
+        var jobId = store.CreateOwnerJob(5, currencyId: 10, totalEntries: 1);
         await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, 10,
             [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)]), TestContext.Current.CancellationToken);
 
@@ -118,8 +118,8 @@ public class CurrencyImportBackgroundServiceTests
         var channel = new CurrencyImportJobChannel();
         var store = new CurrencyImportJobStore();
         var jobId = store.CreateOwnerJob(5, currencyId: 3, totalEntries: 1);
-        await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, null,
-            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)], CurrencyId: 3), TestContext.Current.CancellationToken);
+        await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, 3,
+            [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, -12.5m)]), TestContext.Current.CancellationToken);
 
         using var service = new CurrencyImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
             CreateHub(), NullLogger<CurrencyImportBackgroundService>.Instance);
@@ -134,33 +134,6 @@ public class CurrencyImportBackgroundServiceTests
             It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Never);
         store.TryGetStatus(jobId, 5, out var status);
         Assert.Equal(AsyncImportJobState.Completed, status!.Status);
-    }
-
-    [Fact]
-    public async Task OwnerJobWithoutACurrency_FailsInsteadOfGuessing()
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        services.AddScoped<IGuestSessionAccessor, GuestSessionAccessor>();
-        services.AddScoped(_ => Mock.Of<ICurrencyAccountImportService>());
-        services.AddScoped(_ => Mock.Of<IFinancialAlertService>());
-        await using var provider = services.BuildServiceProvider();
-
-        var channel = new CurrencyImportJobChannel();
-        var store = new CurrencyImportJobStore();
-        var jobId = store.CreateOwnerJob(5, currencyId: 3, totalEntries: 1);
-        await channel.QueueJob(new CurrencyImportJobRequest(jobId, 5, null, [new CurrencyEntryImportRecordDto(DateTime.UtcNow.Date, 1m)]),
-            TestContext.Current.CancellationToken);
-
-        using var service = new CurrencyImportBackgroundService(channel, store, provider.GetRequiredService<IServiceScopeFactory>(),
-            CreateHub(), NullLogger<CurrencyImportBackgroundService>.Instance);
-
-        await service.StartAsync(TestContext.Current.CancellationToken);
-        await WaitForCompletion(store, jobId, userId: 5);
-        await service.StopAsync(TestContext.Current.CancellationToken);
-
-        store.TryGetStatus(jobId, 5, out var status);
-        Assert.Equal(AsyncImportJobState.Failed, status!.Status);
     }
 
     private static IHubContext<CurrencyImportHub> CreateHub()

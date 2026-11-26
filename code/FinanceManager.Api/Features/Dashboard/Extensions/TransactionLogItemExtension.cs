@@ -32,7 +32,7 @@ public static class TransactionLogItemExtension
 
     /// <summary>The log item for a persisted cash entry (labels loaded) and its currency code.</summary>
     public static CurrencyTransactionLogItemDto ToLogItemDto(this CurrencyAccountEntry entry, string? currency) => new(
-        entry.AccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId ?? 0, currency, entry.ContractorDetails,
+        entry.AccountId, entry.EntryId, entry.PostingDate, entry.ValueChange, entry.Description, entry.CurrencyId, currency, entry.ContractorDetails,
         [.. entry.Labels.Select(label => label.ToLabelDto())]);
 
     /// <summary>The log item for a persisted bond entry (labels loaded) and its definition's currency code and name.</summary>

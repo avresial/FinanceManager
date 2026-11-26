@@ -9,6 +9,7 @@ public class BondAccountEntryConfiguration : IEntityTypeConfiguration<BondAccoun
 {
     public void Configure(EntityTypeBuilder<BondAccountEntry> builder)
     {
+        builder.Property(e => e.UserId).IsRequired();
         builder.HasKey(e => e.EntryId);
         builder.Property(e => e.EntryId)
             .ValueGeneratedOnAdd();

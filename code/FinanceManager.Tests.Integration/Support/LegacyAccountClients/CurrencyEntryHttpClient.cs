@@ -53,34 +53,4 @@ public class CurrencyEntryHttpClient(HttpClient httpClient)
             return null;
         }
     }
-
-    public async Task<bool> AddEntryAsync(AddCurrencyAccountEntry addEntry)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", addEntry);
-        if (response.IsSuccessStatusCode) return true;
-        throw new Exception(await response.Content.ReadAsStringAsync());
-    }
-
-    public async Task<bool> DeleteEntryAsync(int accountId, long entryId)
-    {
-        var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/CurrencyEntry/{accountId}/{entryId}");
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> UpdateEntryAsync(CurrencyAccountEntry entry)
-    {
-        if (entry.AccountId is not int accountId) return false;
-        var updateCommand = new UpdateCurrencyAccountEntry(
-            accountId,
-            entry.EntryId,
-            entry.PostingDate,
-            entry.Value,
-            entry.ValueChange,
-            entry.Description,
-            entry.ContractorDetails,
-            entry.Labels?.Select(l => new UpdateFinancialLabel(l.Id, l.Name)).ToList() ?? []
-        );
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/CurrencyEntry", updateCommand);
-        return response.IsSuccessStatusCode;
-    }
 }

@@ -23,9 +23,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Bond.Controllers;
 [Tags("Bond Accounts")]
 public class BondAccountController(IAccountRepository<BondAccount> bondAccountRepository,
     IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
-    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService,
-    ICacheInvalidator dashboardCacheInvalidator,
-    IFinancialAlertService financialAlertService) : ControllerBase
+    IAccountCsvExportService<BondAccountExportDto> bondAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<BondAccountDto>))]
@@ -93,48 +91,6 @@ public class BondAccountController(IAccountRepository<BondAccount> bondAccountRe
         var nextYoungerReferenceDate = entries.Any() ? entries.Max(x => x.PostingDate) : date;
 
         return Ok(await CreateDtoAsync(account, entries, nextOlderReferenceDate, nextYoungerReferenceDate));
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(int))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Add(AddAccount addAccount)
-    {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-
-        var result = await bondAccountRepository.Add(userId, addAccount.AccountName);
-        await dashboardCacheInvalidator.InvalidateUser(userId);
-        return Ok(result);
-    }
-
-    [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(int))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Update(UpdateAccount updateAccount)
-    {
-        var account = await bondAccountRepository.Get(updateAccount.AccountId);
-
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-
-        var result = await bondAccountRepository.Update(updateAccount.AccountId, updateAccount.AccountName);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        return Ok(result);
-    }
-
-    [HttpDelete("{accountId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Delete(int accountId)
-    {
-        var account = await bondAccountRepository.Get(accountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-
-        await bondAccountEntryRepository.Delete(accountId);
-        var result = await bondAccountRepository.Delete(accountId);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId);
-        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

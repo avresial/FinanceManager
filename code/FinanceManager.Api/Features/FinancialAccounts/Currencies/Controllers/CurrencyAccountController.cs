@@ -24,10 +24,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 [Tags("Currency Accounts")]
 public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccount> accountRepository,
     IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
-    ICurrencyRepository currencyRepository,
-    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService,
-    ICacheInvalidator dashboardCacheInvalidator,
-    IFinancialAlertService financialAlertService) : ControllerBase
+    IAccountCsvExportService<CurrencyAccountExportDto> currencyAccountCsvExportService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<CurrencyAccountDto>))]
@@ -90,58 +87,6 @@ public class CurrencyAccountController(ICurrencyAccountRepository<CurrencyAccoun
         var nextYoungerReferenceDate = entries.Any() ? entries.Max(x => x.PostingDate) : date;
 
         return Ok(await CreateDtoAsync(account, entries, nextOlderReferenceDate, nextYoungerReferenceDate));
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(int))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Add(AddAccount addAccount)
-    {
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-
-        if (await currencyRepository.GetCurrency(addAccount.CurrencyId, HttpContext.RequestAborted) is null)
-            return BadRequest("Select a valid account currency.");
-
-        var result = await accountRepository.Add(userId, addAccount.AccountName, AccountLabel.Other, addAccount.CurrencyId);
-        await dashboardCacheInvalidator.InvalidateUser(userId);
-        return Ok(result);
-    }
-
-    [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(int))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Update(UpdateAccount updateAccount)
-    {
-        var account = await accountRepository.Get(updateAccount.AccountId);
-
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-
-        var currencyId = updateAccount.CurrencyId ?? account.CurrencyId;
-        if (account.CurrencyId != currencyId
-            && await accountEntryRepository.GetOldest(updateAccount.AccountId) is not null)
-            return BadRequest("Account currency cannot change after transactions have been added.");
-        if (await currencyRepository.GetCurrency(currencyId, HttpContext.RequestAborted) is null)
-            return BadRequest("Select a valid account currency.");
-
-        var result = await accountRepository.Update(updateAccount.AccountId, updateAccount.AccountName, updateAccount.AccountType, currencyId);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        return Ok(result);
-    }
-
-    [HttpDelete("{accountId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Delete(int accountId)
-    {
-        var account = await accountRepository.Get(accountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return BadRequest();
-
-        await accountEntryRepository.Delete(accountId);
-        var result = await accountRepository.Delete(accountId);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId);
-        return Ok(result);
     }
 
     [HttpGet("export/{accountId:int}")]

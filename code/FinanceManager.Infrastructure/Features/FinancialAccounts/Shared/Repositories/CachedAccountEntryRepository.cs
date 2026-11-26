@@ -426,13 +426,13 @@ public class CachedAccountEntryRepository<T>(
     {
         var entryList = entries as IList<T> ?? entries.ToList();
         var invalidatedUsers = new HashSet<int>();
-        foreach (var ownerId in entryList.Select(e => e.UserId).OfType<int>().Where(id => id != 0).Distinct())
+        foreach (var ownerId in entryList.Select(e => e.UserId).Where(id => id != 0).Distinct())
         {
             await cacheInvalidator.InvalidateUser(ownerId, cancellationToken);
             invalidatedUsers.Add(ownerId);
         }
 
-        await InvalidateAccounts(entryList.Where(e => e.UserId is null or 0).Select(e => e.AccountId), cancellationToken, invalidatedUsers);
+        await InvalidateAccounts(entryList.Where(e => e.UserId == 0).Select(e => e.AccountId), cancellationToken, invalidatedUsers);
     }
 
     private async Task InvalidateAccounts(IEnumerable<int?> accountIds, CancellationToken cancellationToken = default, ISet<int>? invalidatedUsers = null)

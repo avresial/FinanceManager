@@ -8,18 +8,12 @@ internal static class RequestBodySizeLimits
     public const long GlobalRequestBodyBytes = 50L * 1024 * 1024;
     public const long ImportEndpointBytes = 30L * 1024 * 1024;
 
-    public const string BondImportPath = "/api/BondAccountImport/ImportBondEntries";
-    public const string CurrencyStartAsyncImportPath = "/api/CurrencyAccountImport/StartAsyncImport";
-    public const string CurrencyImportEntriesPath = "/api/CurrencyAccountImport/ImportCurrencyEntries";
     public const string OwnerCashImportPath = "/api/transactions/cash/import";
     public const string OwnerBondImportPath = "/api/transactions/bonds/import";
     public const string OwnerBondImportResolvePath = "/api/transactions/bonds/import/resolve";
 
     private static readonly HashSet<string> _importEndpointPaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        BondImportPath,
-        CurrencyStartAsyncImportPath,
-        CurrencyImportEntriesPath,
         OwnerCashImportPath,
         OwnerBondImportPath,
         OwnerBondImportResolvePath,

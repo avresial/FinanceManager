@@ -49,7 +49,7 @@ public sealed class SqliteOwnerLedgerReadTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task AddCash(int owner, int? currency, DateTime date, decimal change, int? account = null, decimal storedValue = 999)
+    private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, decimal storedValue = 999)
     {
         _context.CurrencyEntries.Add(new CurrencyAccountEntry(account, 0, date, storedValue, change) { UserId = owner, CurrencyId = currency });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -75,9 +75,8 @@ public sealed class SqliteOwnerLedgerReadTests : IDisposable
     }
 
     [Fact]
-    public async Task Cash_GetPositions_IgnoresRowsWithoutACurrency_OtherOwners_AndLaterRows_AndAcceptsGuestIds()
+    public async Task Cash_GetPositions_IgnoresOtherOwnersAndLaterRows_AndAcceptsGuestIds()
     {
-        await AddCash(_owner, null, _jan1, 50);
         await AddCash(_other, 0, _jan1, 70);
         await AddCash(_guest, 0, _jan1, 9);
         await AddCash(_guest, 0, _jan1.AddDays(3), 1);

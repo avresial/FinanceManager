@@ -134,24 +134,25 @@ Important branches:
 ```mermaid
 sequenceDiagram
     participant Browser as Import component / job tracker
+    participant Start as CashTransactionsController
     participant API as CurrencyAccountImportController
     participant Store as CurrencyImportJobStore
     participant Queue as CurrencyImportJobChannel
     participant Worker as CurrencyImportBackgroundService
     participant Import as CurrencyAccountImportService
     participant Hub as CurrencyImportHub
-    Browser->>API: StartAsyncImport(entries, account id)
-    API->>API: Validate entries and account ownership
-    API->>Store: CreateJob(user, account, total)
-    API->>Queue: QueueJob(job request)
-    API-->>Browser: 202 Accepted with job id
+    Browser->>Start: StartImport(currency id, entries)
+    Start->>Start: Resolve owner and validate currency
+    Start->>Store: CreateOwnerJob(user, currency, total)
+    Start->>Queue: QueueJob(job request)
+    Start-->>Browser: 202 Accepted with job id
     Browser->>Hub: JoinJob(job id), authenticated
     Hub->>Store: CanAccessJob(job, authenticated user)
     Hub-->>Browser: Join owned job group
     Queue-->>Worker: Read queued job
     Worker->>Store: TrySetRunning
     Worker->>Worker: Create DI scope
-    Worker->>Import: ImportEntries with progress/conflict callbacks
+    Worker->>Import: ImportOwnerEntries with progress/conflict callbacks
     loop Batches / discovered conflicts
         Import-->>Worker: Progress and non-exact conflicts
         Worker->>Store: Update counters / add conflict
@@ -169,7 +170,7 @@ sequenceDiagram
         Browser->>API: ResolveAsyncImportConflicts(job, decisions)
         API->>API: Require exactly one selected side per decision
         API->>Store: Resolve owned conflicts
-        API->>Import: ApplyResolvedConflicts
+        API->>Import: ApplyOwnerConflict for each approved addition
         API->>API: Invalidate user cache and evaluate alerts
         API->>Hub: Publish updated status
         API-->>Browser: Updated status
@@ -180,9 +181,7 @@ Evidence: [controller](../../code/FinanceManager.Api/Features/FinancialAccounts/
 
 The queue is bounded to 256 requests, uses one reader, and waits when full; `202` follows successful queue admission, not completed persistence. The worker publishes progress with a 200 ms throttling interval and a final update. Status polling complements events that can race group subscription. Store and queue are process-local; restart does not preserve queued jobs/status. The worker uses the host shutdown token, not the original HTTP request token. Shutdown cancellation exits processing; other exceptions mark the job failed and publish status. Import effects and job metadata have different persistence lifetimes.
 
-Owner cash imports use the same flow with `POST api/transactions/cash/import?currencyId=`: the job store records the owner and currency as the job scope at creation, the worker calls `ImportOwnerEntries` for a job without an account, and status, hub join and conflict decisions are authorized by the owner alone. A decision on an owner job only adds the reviewed incoming row (picking the existing side is a skip and never deletes a row); the plan limit is rechecked per approved addition, and a decision that cannot be saved is reopened so it can be retried while earlier decisions stay resolved. Owner bond imports are synchronous and return their conflicts directly.
-
-Synchronous import and synchronous conflict resolution also exist. They validate account ownership, invoke the same import service, invalidate user cache, and evaluate alerts before responding. Async conflict resolution validates/store-resolves each decision before applying resolved changes, so do not assume the entire submitted list is one atomic operation. The diagram does not claim all-or-nothing admission or transactional processing of a whole import.
+Cash imports start with `POST api/transactions/cash/import?currencyId=`: the job store records the owner and currency as the job scope at creation, the worker calls `ImportOwnerEntries` for the stored owner and currency, and status, hub join and conflict decisions are authorized by the owner alone. A decision on an owner job only adds the reviewed incoming row (picking the existing side is a skip and never deletes a row); the plan limit is rechecked per approved addition, and a decision that cannot be saved is reopened so it can be retried while earlier decisions stay resolved. Owner bond imports are synchronous and return their conflicts directly.
 
 ## 6.4 Browser login and token refresh
 

@@ -26,21 +26,6 @@ public class DividendPaymentController(DividendPaymentService service) : Control
     public Task<IActionResult> Holdings(int accountId, CancellationToken ct) =>
         Execute(async () => Ok(await service.GetHoldings(ApiAuthenticationHelper.GetUserId(User), accountId, ct)));
 
-    [HttpPost]
-    [ProducesResponseType<long>(StatusCodes.Status200OK)]
-    public Task<IActionResult> Add(int accountId, DividendPaymentRequest request, CancellationToken ct) =>
-        Execute(async () => Ok(await service.Save(ApiAuthenticationHelper.GetUserId(User), accountId, null, request, ct)));
-
-    [HttpPut("{id:long}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public Task<IActionResult> Update(int accountId, long id, DividendPaymentRequest request, CancellationToken ct) =>
-        Execute(async () => { await service.Save(ApiAuthenticationHelper.GetUserId(User), accountId, id, request, ct); return NoContent(); });
-
-    [HttpDelete("{id:long}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public Task<IActionResult> Delete(int accountId, long id, CancellationToken ct) =>
-        Execute(async () => { await service.Delete(ApiAuthenticationHelper.GetUserId(User), accountId, id, ct); return NoContent(); });
-
     private async Task<IActionResult> Execute(Func<Task<IActionResult>> action)
     {
         try { return await action(); }

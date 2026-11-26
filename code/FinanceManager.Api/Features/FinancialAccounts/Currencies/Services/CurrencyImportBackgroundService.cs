@@ -77,13 +77,8 @@ public sealed class CurrencyImportBackgroundService(
                     }
                 }
 
-                // The job's own scope decides the target: a legacy account, or the owner's pool of one currency.
-                var result = request.AccountId is int accountId
-                    ? await importService.ImportEntries(
-                        request.UserId, accountId, domainEntries, stoppingToken, OnConflicts, OnProgress)
-                    : await importService.ImportOwnerEntries(
-                        request.UserId, request.CurrencyId ?? throw new InvalidOperationException("An owner import needs a currency."),
-                        domainEntries, stoppingToken, OnConflicts, OnProgress);
+                var result = await importService.ImportOwnerEntries(
+                    request.UserId, request.CurrencyId, domainEntries, stoppingToken, OnConflicts, OnProgress);
 
                 await financialAlertService.EvaluateAlertsAsync(request.UserId, CancellationToken.None);
 

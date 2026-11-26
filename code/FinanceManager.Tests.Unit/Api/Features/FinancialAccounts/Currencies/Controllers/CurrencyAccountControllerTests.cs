@@ -28,9 +28,7 @@ public class CurrencyAccountControllerTests
 {
     private readonly Mock<ICurrencyAccountRepository<CurrencyAccount>> _mockAccountRepository = new();
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _mockAccountEntryRepository = new();
-    private readonly Mock<ICurrencyRepository> _mockCurrencyRepository = new();
 
-    private readonly Mock<IUserRepository> _userRepository = new();
     private readonly Mock<IAccountCsvExportService<CurrencyAccountExportDto>> _currencyAccountCsvExportService = new();
 
     private readonly CurrencyAccountController _controller;
@@ -38,17 +36,11 @@ public class CurrencyAccountControllerTests
     public CurrencyAccountControllerTests()
     {
         var user = new User() { Login = "TestUser", UserId = 1, PricingLevel = PricingLevel.Premium, CreationDate = DateTime.UtcNow };
-        _userRepository.Setup(x => x.GetUser(It.IsAny<int>())).ReturnsAsync(user);
-        _mockCurrencyRepository.Setup(x => x.GetCurrency(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int id, CancellationToken _) => new Currency(id, "PLN", "zł"));
 
         _controller = new(
             _mockAccountRepository.Object,
             _mockAccountEntryRepository.Object,
-            _mockCurrencyRepository.Object,
-            _currencyAccountCsvExportService.Object,
-            Mock.Of<ICacheInvalidator>(),
-            Mock.Of<IFinancialAlertService>());
+            _currencyAccountCsvExportService.Object);
 
         // Mock user identity
         var userClaims = new ClaimsPrincipal(new ClaimsIdentity(
@@ -133,61 +125,6 @@ public class CurrencyAccountControllerTests
 
         Assert.NotNull(returnValue.NextYoungerEntry);
         Assert.Equal(youngerThanLoadedDate, returnValue.NextYoungerEntry.PostingDate);
-    }
-
-    [Fact]
-    public async Task Add_ReturnsOkResult_WithNewAccount()
-    {
-        // Arrange
-        var userId = 1;
-        AddAccount addAccount = new("New Account");
-        var newAccountId = 1;
-        _mockAccountRepository.Setup(repo => repo.Add(userId, addAccount.AccountName, AccountLabel.Other, addAccount.CurrencyId)).ReturnsAsync(newAccountId);
-
-        // Act
-        var result = await _controller.Add(addAccount);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(newAccountId, okResult.Value);
-    }
-
-    [Fact]
-    public async Task Update_ReturnsOkResult_WithUpdatedAccount()
-    {
-        // Arrange
-        var userId = 1;
-        UpdateAccount updateAccount = new(1, "Updated Account", AccountLabel.Cash);
-        CurrencyAccount account = new(userId, updateAccount.AccountId, "Test Account", AccountLabel.Cash, currencyId: 2);
-        _mockAccountRepository.Setup(repo => repo.Get(updateAccount.AccountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(repo => repo.Update(updateAccount.AccountId, updateAccount.AccountName, AccountLabel.Cash, account.CurrencyId)).ReturnsAsync(true);
-
-        // Act
-        var result = await _controller.Update(updateAccount);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.IsType<bool>(okResult.Value);
-        Assert.True((bool)okResult.Value);
-    }
-
-    [Fact]
-    public async Task Delete_ReturnsOkResult_WithDeletedAccount()
-    {
-        // Arrange
-        var userId = 1;
-        const int accountId = 1;
-        CurrencyAccount account = new(userId, accountId, "Test Account");
-        _mockAccountRepository.Setup(repo => repo.Get(accountId)).ReturnsAsync(account);
-        _mockAccountRepository.Setup(repo => repo.Delete(accountId)).ReturnsAsync(true);
-
-        // Act
-        var result = await _controller.Delete(accountId);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.IsType<bool>(okResult.Value);
-        Assert.True((bool)okResult.Value);
     }
 
     [Fact]

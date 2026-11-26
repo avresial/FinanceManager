@@ -23,11 +23,7 @@ namespace FinanceManager.Api.Features.FinancialAccounts.Currencies.Controllers;
 [Tags("Currency Entries")]
 public class CurrencyEntryController(
     ICurrencyAccountRepository<CurrencyAccount> accountRepository,
-    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository,
-    IUserPlanVerifier userPlanVerifier, ILabelSetterChannel labelSetterChannel, IGuestSessionAccessor guestSessionAccessor,
-    ICacheInvalidator dashboardCacheInvalidator,
-    IFinancialAlertService financialAlertService,
-    ITransactionRuleService transactionRuleService) : ControllerBase
+    IAccountEntryRepository<CurrencyAccountEntry> accountEntryRepository) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
@@ -70,96 +66,5 @@ public class CurrencyEntryController(
 
         var entry = await accountEntryRepository.GetOldest(accountId);
         return entry is null ? NoContent() : Ok(entry.PostingDate);
-    }
-
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> AddEntry(AddCurrencyAccountEntry addEntry)
-    {
-        var account = await accountRepository.Get(addEntry.AccountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        if (!await userPlanVerifier.CanAddMoreEntries(ApiAuthenticationHelper.GetUserId(User)))
-            return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
-
-
-        var userId = ApiAuthenticationHelper.GetUserId(User);
-        var newEntry = new CurrencyAccountEntry(addEntry.AccountId, 0, addEntry.PostingDate, addEntry.Value, addEntry.ValueChange)
-        {
-            Description = addEntry.Description,
-            ContractorDetails = addEntry.ContractorDetails
-        };
-
-        await transactionRuleService.ApplyToEntryAsync(userId, newEntry, HttpContext.RequestAborted);
-
-        var result = await accountEntryRepository.Add(newEntry);
-        // Guest sandboxes are ephemeral and never reach the shared label worker.
-        if (result && !guestSessionAccessor.IsGuest && userId > 0) await labelSetterChannel.QueueEntries(userId, [newEntry.EntryId]);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
-
-        return Ok(result);
-    }
-
-    [HttpDelete("{accountId:int}/{entryId:long}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> DeleteEntry(int accountId, long entryId)
-    {
-        var account = await accountRepository.Get(accountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        var result = await accountEntryRepository.Delete(accountId, entryId);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
-        return Ok(result);
-    }
-
-    [HttpPost("Recalculate/{accountId:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RecalculateBalance(int accountId)
-    {
-        var account = await accountRepository.Get(accountId);
-        if (account is null) return NotFound();
-        if (!ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        await accountEntryRepository.RecalculateValues(accountId);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
-        return Ok();
-    }
-
-    [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyAccountEntryDto))]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> UpdateEntry(UpdateCurrencyAccountEntry updateEntry)
-    {
-        var account = await accountRepository.Get(updateEntry.AccountId);
-        if (account is null || !ApiAuthenticationHelper.IsAccountOwner(User, account.UserId)) return Forbid();
-
-        var newEntry = new CurrencyAccountEntry(updateEntry.AccountId, updateEntry.EntryId, updateEntry.PostingDate, updateEntry.Value,
-            updateEntry.ValueChange)
-        {
-            Description = updateEntry.Description,
-            ContractorDetails = updateEntry.ContractorDetails
-        };
-
-        if (updateEntry.Labels is null)
-            newEntry.Labels = [];
-        else
-            newEntry.Labels = updateEntry.Labels.Select(x => new FinancialLabel() { Name = x.Name, Id = x.Id }).ToList();
-
-        await transactionRuleService.ApplyToEntryAsync(ApiAuthenticationHelper.GetUserId(User), newEntry, HttpContext.RequestAborted);
-
-        var result = await accountEntryRepository.Update(newEntry);
-        await dashboardCacheInvalidator.InvalidateUser(account.UserId);
-        if (result)
-            await financialAlertService.EvaluateAlertsAsync(account.UserId, HttpContext.RequestAborted);
-        return Ok(result);
     }
 }

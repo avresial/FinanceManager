@@ -61,23 +61,4 @@ public class BondAccountHttpClient(HttpClient httpClient)
     {
         Description = entry.Description
     };
-
-    public async Task<int?> AddAccountAsync(AddAccount addAccount)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BondAccount", addAccount);
-        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<int?>();
-        throw new Exception(await response.Content.ReadAsStringAsync());
-    }
-
-    public async Task<bool> UpdateAccountAsync(UpdateAccount updateAccount)
-    {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/BondAccount", updateAccount);
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> DeleteAccountAsync(int accountId)
-    {
-        var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondAccount/{accountId}");
-        return response.IsSuccessStatusCode;
-    }
 }

@@ -45,7 +45,7 @@ public class RequestBodySizeLimitMiddlewareTests
 
         var context = new DefaultHttpContext();
         context.Request.Method = HttpMethods.Post;
-        context.Request.Path = RequestBodySizeLimits.CurrencyImportEntriesPath;
+        context.Request.Path = RequestBodySizeLimits.OwnerCashImportPath;
         context.Features.Set<IHttpRequestBodyDetectionFeature>(new TestRequestBodyDetectionFeature(canHaveBody: true));
 
         await middleware.Invoke(context);

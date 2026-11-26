@@ -539,7 +539,7 @@ namespace FinanceManager.Api.Migrations
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Value")
@@ -676,7 +676,7 @@ namespace FinanceManager.Api.Migrations
                         .HasMaxLength(140)
                         .HasColumnType("character varying(140)");
 
-                    b.Property<int?>("CurrencyId")
+                    b.Property<int>("CurrencyId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Description")
@@ -686,7 +686,7 @@ namespace FinanceManager.Api.Migrations
                     b.Property<DateTime>("PostingDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Value")

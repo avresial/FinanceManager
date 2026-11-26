@@ -24,23 +24,4 @@ public class BondEntryHttpClient(HttpClient httpClient)
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         return await response.Content.ReadFromJsonAsync<DateTime?>();
     }
-
-    public async Task<bool> AddEntryAsync(AddBondAccountEntry addEntry)
-    {
-        var response = await httpClient.PostAsJsonAsync($"{httpClient.BaseAddress}api/BondEntry", addEntry);
-        if (response.IsSuccessStatusCode) return true;
-        throw new Exception(await response.Content.ReadAsStringAsync());
-    }
-
-    public async Task<bool> DeleteEntryAsync(int accountId, long entryId)
-    {
-        var response = await httpClient.DeleteAsync($"{httpClient.BaseAddress}api/BondEntry/{accountId}/{entryId}");
-        return response.IsSuccessStatusCode;
-    }
-
-    public async Task<bool> UpdateEntryAsync(UpdateBondAccountEntry entry)
-    {
-        var response = await httpClient.PutAsJsonAsync($"{httpClient.BaseAddress}api/BondEntry", entry);
-        return response.IsSuccessStatusCode;
-    }
 }

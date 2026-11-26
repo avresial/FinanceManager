@@ -296,7 +296,7 @@ public class BondAccountImportService(
     private static BondAccountEntry NewEntry(int userId, int? accountId, BondEntryImport import) =>
         new(accountId, 0, ImportDateNormalizer.ToSecond(import.PostingDate), accountId is null ? 0 : import.ValueChange, import.ValueChange, import.BondDetailsId)
         {
-            UserId = accountId is null ? userId : null,
+            UserId = userId,
             Description = import.Description
         };
 
