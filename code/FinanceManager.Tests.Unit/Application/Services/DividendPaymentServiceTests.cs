@@ -1,10 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Dividends;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Application.Portfolio.Dividends;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Portfolio.Dividends.Dtos;
+using FinanceManager.Domain.Portfolio.Dividends.Entities;
+using FinanceManager.Domain.Portfolio.Dividends.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

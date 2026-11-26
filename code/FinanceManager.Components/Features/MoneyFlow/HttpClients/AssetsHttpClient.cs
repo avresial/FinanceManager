@@ -1,8 +1,7 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.Portfolio.FeeDrag.Dtos;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -86,7 +85,7 @@ public class AssetsHttpClient(HttpClient httpClient)
         return await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
     }
 
-    public async Task<UnrealizedGainLossAccountResult?> GetInvestmentGainLossAsync(
+    public async Task<UnrealizedGainLossResult?> GetInvestmentGainLossAsync(
         int userId,
         Currency currency,
         DateTime asOfDate,
@@ -99,7 +98,7 @@ public class AssetsHttpClient(HttpClient httpClient)
         if (response.StatusCode == HttpStatusCode.NoContent) return null;
 
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
+        return await response.Content.ReadFromJsonAsync<UnrealizedGainLossResult>(cancellationToken: cancellationToken);
     }
 
     public async Task<FeeDragAnalysisResult?> GetFeeDragAnalysis(

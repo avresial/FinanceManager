@@ -1,14 +1,14 @@
 using FinanceManager.Contracts.Assets;
-using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;

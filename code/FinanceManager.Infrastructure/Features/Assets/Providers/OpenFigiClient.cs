@@ -1,6 +1,5 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Resolution;
+using FinanceManager.Application.Assets.Resolution;
 using FinanceManager.Application.Shared.ExternalServices;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;

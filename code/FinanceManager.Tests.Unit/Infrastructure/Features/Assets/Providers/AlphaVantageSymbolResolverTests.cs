@@ -1,10 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Assets.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Shared.ExternalServices.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Features.Assets.Providers;
 using Moq;
 using System.Net;

@@ -1,4 +1,4 @@
-using FinanceManager.Contracts.FinancialAccounts.Shared;
+using FinanceManager.Contracts.Labels;
 
 namespace FinanceManager.Contracts.Dashboard;
 

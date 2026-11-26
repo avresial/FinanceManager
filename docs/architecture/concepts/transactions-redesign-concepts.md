@@ -8,7 +8,7 @@ Baseline: `develop` at `dd933e70` (2026-10-22), guest demo data. The issue asked
 
 ## Current page
 
-Sources: [`TransactionsPage.razor`](../../../code/FinanceManager.Components/Features/Dashboard/Components/Pages/TransactionsPage.razor), [`TransactionLogToolbar.razor`](../../../code/FinanceManager.Components/Features/Dashboard/Components/TransactionLogToolbar.razor), [`TransactionLogRow.razor`](../../../code/FinanceManager.Components/Features/Dashboard/Components/TransactionLogRow.razor), [`transaction-log-card.css`](../../../code/FinanceManager.Components/wwwroot/css/transaction-log-card.css).
+Sources: [`TransactionsPage.razor`](../../../code/FinanceManager.Components/Features/Transactions/Components/Pages/TransactionsPage.razor), [`TransactionLogToolbar.razor`](../../../code/FinanceManager.Components/Features/Dashboard/Components/TransactionLogToolbar.razor), [`TransactionLogRow.razor`](../../../code/FinanceManager.Components/Features/Dashboard/Components/TransactionLogRow.razor), [`transaction-log-card.css`](../../../code/FinanceManager.Components/wwwroot/css/transaction-log-card.css).
 
 The audit in #993 found these problems. The tables below refer to them by number:
 
@@ -138,7 +138,7 @@ Mobile toolbar overflow (P5) is fixed in all three: A fits search, range and Fil
 | Labels on `TransactionLogEntryDto` | A3, C3, C4 | Entries already carry labels; this is a projection change in the service and repositories. |
 | `AccountLabel` on the DTO or account list | B4 (loan icon) | Otherwise loans show the cash icon. |
 | Currency code | C4 (and any per-row currency display) | From `CurrencyAccount.CurrencyId`; bonds and investments need their own source. |
-| Entry details: contractor, balance after | C4 | `CurrencyAccountEntry.ContractorDetails` and `Value`; could be a per-entry detail endpoint. |
+| Entry details: contractor, balance after | C4 | `CashEntry.ContractorDetails` and `Value`; could be a per-entry detail endpoint. |
 | Sort parameter | C2 | Amount sort needs a new cursor shape. |
 
 ## Mixing guide

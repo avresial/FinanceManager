@@ -1,11 +1,10 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -14,9 +13,9 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 [Trait("Category", "Unit")]
 public class UserPlanVerifierTests
 {
-    private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepositoryMock = new();
+    private readonly Mock<ITransactionEntryRepository<CashEntry>> _currencyEntryRepositoryMock = new();
     private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepositoryMock = new();
-    private readonly Mock<IAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
+    private readonly Mock<ITransactionEntryRepository<BondEntry>> _bondEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 

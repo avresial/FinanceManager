@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Components.Cards;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Portfolio.HttpClients;
 using FinanceManager.Components.Features.Portfolio.Models;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Components.Shared.Helpers;

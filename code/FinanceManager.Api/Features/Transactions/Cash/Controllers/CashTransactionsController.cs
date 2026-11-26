@@ -1,27 +1,28 @@
 using FinanceManager.Api.Features.Dashboard.Extensions;
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
 using FinanceManager.Api.Features.Labels.Services;
+using FinanceManager.Api.Features.Transactions.Cash.Hubs;
+using FinanceManager.Api.Features.Transactions.Cash.Services;
 using FinanceManager.Api.Features.Transactions.Shared.Validation;
 using FinanceManager.Api.Shared.Helpers;
 using FinanceManager.Application.Alerts.Services;
-using FinanceManager.Application.FinancialAccounts.Currencies.Import;
-using FinanceManager.Application.FinancialAccounts.Shared.Exports;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.TransactionRules.Services;
+using FinanceManager.Application.Transactions.Export;
+using FinanceManager.Application.Transactions.Import;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Dashboard.Dtos;
 using FinanceManager.Domain.Dashboard.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Cash.Exports;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -41,7 +42,7 @@ namespace FinanceManager.Api.Features.Transactions.Cash.Controllers;
 [Tags("Owner Cash Transactions")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 public class CashTransactionsController(
-    IAccountEntryRepository<CurrencyAccountEntry> entryRepository,
+    ITransactionEntryRepository<CashEntry> entryRepository,
     ICurrencyRepository currencyRepository,
     IFinancialLabelsRepository labelsRepository,
     IUserPlanVerifier userPlanVerifier,
@@ -50,7 +51,7 @@ public class CashTransactionsController(
     ICashTransactionReader cashTransactionReader,
     ILabelSetterChannel labelSetterChannel,
     IGuestSessionAccessor guestSessionAccessor,
-    IAccountCsvExportService<CurrencyAccountExportDto> csvExportService) : ControllerBase
+    ICsvExportService<CashExportDto> csvExportService) : ControllerBase
 {
     private const int _maxBatchEntryIds = 100;
 
@@ -86,7 +87,7 @@ public class CashTransactionsController(
         if (!await userPlanVerifier.CanAddMoreEntries(ownerId))
             return BadRequest("Too many entries. In order to add this entry upgrade to higher tier or delete existing one.");
 
-        var entry = new CurrencyAccountEntry(null, 0, request.PostingDate, 0, request.ValueChange)
+        var entry = new CashEntry(null, 0, request.PostingDate, 0, request.ValueChange)
         {
             UserId = ownerId,
             CurrencyId = currency.Id,
@@ -125,7 +126,7 @@ public class CashTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The entry keeps its persisted currency, and its owner and account link never come from the request.
-        var entry = new CurrencyAccountEntry(null, entryId, request.PostingDate, 0, request.ValueChange)
+        var entry = new CashEntry(null, entryId, request.PostingDate, 0, request.ValueChange)
         {
             UserId = ownerId,
             CurrencyId = existing.CurrencyId,
@@ -160,8 +161,8 @@ public class CashTransactionsController(
     public async Task<IActionResult> StartImport(
         [FromQuery, BindRequired] int currencyId,
         [FromBody] IReadOnlyList<CurrencyEntryImportRecordDto> entries,
-        [FromServices] ICurrencyImportJobStore jobStore,
-        [FromServices] ICurrencyImportJobChannel jobChannel,
+        [FromServices] ICashImportJobStore jobStore,
+        [FromServices] ICashImportJobChannel jobChannel,
         CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var ownerId)) return Forbid();
@@ -169,7 +170,7 @@ public class CashTransactionsController(
         if (await currencyRepository.GetCurrency(currencyId, cancellationToken) is null) return BadRequest("Unknown currency.");
 
         var jobId = jobStore.CreateOwnerJob(ownerId, currencyId, entries.Count);
-        await jobChannel.QueueJob(new CurrencyImportJobRequest(jobId, ownerId, currencyId, entries, guestSessionAccessor.GuestUserId), cancellationToken);
+        await jobChannel.QueueJob(new CashImportJobRequest(jobId, ownerId, currencyId, entries, guestSessionAccessor.GuestUserId), cancellationToken);
 
         return Accepted(new CurrencyImportJobStartResponseDto(jobId));
     }
@@ -196,7 +197,7 @@ public class CashTransactionsController(
     }
 
     // Guest sandboxes are ephemeral and never reach the shared label worker; only real owners' unlabelled, described entries are queued.
-    private async Task QueueLabeling(int ownerId, CurrencyAccountEntry entry, CancellationToken cancellationToken)
+    private async Task QueueLabeling(int ownerId, CashEntry entry, CancellationToken cancellationToken)
     {
         if (guestSessionAccessor.IsGuest || ownerId <= 0 || entry.EntryId == 0 || entry.Labels.Count != 0) return;
         if (string.IsNullOrWhiteSpace(entry.Description) && string.IsNullOrWhiteSpace(entry.ContractorDetails)) return;
@@ -219,7 +220,7 @@ public class CashTransactionsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult ImportStatus(
         Guid jobId,
-        [FromServices] ICurrencyImportJobStore jobStore)
+        [FromServices] ICashImportJobStore jobStore)
     {
         if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
         if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
@@ -236,11 +237,11 @@ public class CashTransactionsController(
     public async Task<IActionResult> ResolveAsyncImportConflicts(
         Guid jobId,
         [FromBody] CurrencyImportResolveConflictsRequestDto request,
-        [FromServices] ICurrencyAccountImportService importService,
+        [FromServices] ICashImportService importService,
         [FromServices] ICacheInvalidator dashboardCacheInvalidator,
         [FromServices] ILogger<CashTransactionsController> logger,
-        [FromServices] ICurrencyImportJobStore jobStore,
-        [FromServices] IHubContext<CurrencyImportHub> hub)
+        [FromServices] ICashImportJobStore jobStore,
+        [FromServices] IHubContext<CashImportHub> hub)
     {
         if (request is null || request.JobId != jobId || request.Decisions.Count == 0)
             return BadRequest("Provide conflict decisions for the requested job.");
@@ -315,7 +316,7 @@ public class CashTransactionsController(
         if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
             return NotFound("Import job not found.");
 
-        await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(jobId)).SendAsync("ImportStatusUpdated", status);
+        await hub.Clients.Group(CashImportHub.GetJobGroupName(jobId)).SendAsync("ImportStatusUpdated", status);
         return Ok(status);
     }
 }

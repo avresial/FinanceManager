@@ -1,0 +1,148 @@
+using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
+using FinanceManager.Contracts.Transactions.Bonds;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
+using MudBlazor;
+
+namespace FinanceManager.Components.Features.Transactions.Bonds.Components.Crud;
+
+public partial class UpdateBondEntry
+{
+
+    private long? _loadedEntryId = null;
+    private Currency _currency = DefaultCurrency.PLN;
+    private bool _success;
+    private string[] _errors = [];
+    private bool _isUpdating;
+    private MudForm? _form;
+
+    private DateTime? _postingDate = DateTime.Today;
+    private TimeSpan? _time = new TimeSpan(01, 00, 00);
+
+    private decimal? _valueChange = 0;
+
+    private BondDetails? _selectedBond;
+    private List<BondDetails> _possibleBonds = [];
+
+    private string _description = string.Empty;
+
+    private string _labelValue = "Nothing selected";
+    private IReadOnlyCollection<string> _selectedLabels = [];
+    private List<FinancialLabel> _possibleLabels = [];
+
+    [Parameter] public EventCallback ActionCompleted { get; set; }
+    [Parameter] public required BondEntry BondEntry { get; set; }
+
+    [Inject] public required ILogger<UpdateBondEntry> Logger { get; set; }
+    [Inject] public required ISettingsService SettingsService { get; set; }
+    [Inject] public required BondTransactionsHttpClient BondTransactionsHttpClient { get; set; }
+    [Inject] public required TransactionDataSynchronizationService TransactionDataSynchronizationService { get; set; }
+    [Inject] public required FinancialLabelHttpClient FinancialLabelHttpClient { get; set; }
+    [Inject] public required BondDetailsHttpClient BondDetailsHttpClient { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var allLabelsCount = await FinancialLabelHttpClient.GetCount();
+        _possibleLabels = (await FinancialLabelHttpClient.Get(0, allLabelsCount)).ToList();
+
+        _possibleBonds = await BondDetailsHttpClient.GetAll();
+        SetSelectedBond();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_loadedEntryId.HasValue && _loadedEntryId.Value == BondEntry.EntryId) return;
+        _loadedEntryId = BondEntry.EntryId;
+
+        _currency = SettingsService.GetCurrency();
+        // Entries are stored as UTC and the rows show them in local time, so the form edits the same local wall-clock time.
+        var posted = BondEntry.PostingDate.ToLocalTime();
+        _postingDate = posted;
+        _time = new TimeSpan(posted.Hour, posted.Minute, posted.Second);
+        _valueChange = BondEntry.ValueChange;
+        _description = BondEntry.Description;
+
+        SetSelectedBond();
+
+        _selectedLabels = BondEntry.Labels?.Select(x => x.Name.ToString()).ToList() ?? [];
+    }
+
+    private void SetSelectedBond()
+    {
+        if (_possibleBonds.Count > 0)
+        {
+            _selectedBond = _possibleBonds.FirstOrDefault(b => b.Id == BondEntry.BondDetailsId);
+        }
+    }
+
+    public async Task Update()
+    {
+        if (_form is null || _isUpdating) return;
+        _isUpdating = true;
+        try
+        {
+            await _form.Validate();
+
+            if (!_form.IsValid) return;
+            if (!_valueChange.HasValue) return;
+            if (!_postingDate.HasValue) return;
+            if (!_time.HasValue) return;
+            if (_selectedBond is null) return;
+
+            DateTime date = new(_postingDate.Value.Year, _postingDate.Value.Month, _postingDate.Value.Day, _time.Value.Hours, _time.Value.Minutes, _time.Value.Seconds);
+            var description = _description?.Trim() ?? string.Empty;
+
+            // Clear a previous failure so a successful retry closes the editor.
+            _errors = [];
+            try
+            {
+                await BondTransactionsHttpClient.UpdateAsync(BondEntry.EntryId, new SaveBondEntryRequest(
+                    _selectedBond.Id, date, _valueChange.Value, description, [.. GetLabels().Select(x => x.Id)]));
+            }
+            // The owner routes explain a rejection (plan quota, validation); show their message.
+            catch (HttpRequestException ex) when (!string.IsNullOrWhiteSpace(ex.Message))
+            {
+                Logger.LogWarning(ex, "Rejected entry update");
+                _errors = [ex.Message];
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error updating entry");
+                _errors = ["Could not update the entry. Please try again."];
+            }
+
+            if (_errors.Length == 0)
+            {
+                await TransactionDataSynchronizationService.AccountChanged();
+
+                await ActionCompleted.InvokeAsync();
+            }
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+    }
+
+    public IEnumerable<FinancialLabel> GetLabels()
+    {
+        if (_selectedLabels is null || _selectedLabels.Count() == 0) yield break;
+
+        foreach (var selectedLabel in _selectedLabels)
+        {
+            var existingLabel = _possibleLabels.FirstOrDefault(x => x.Name == selectedLabel);
+            if (existingLabel is null) continue;
+            yield return existingLabel;
+        }
+    }
+    public async Task Cancel()
+    {
+        await ActionCompleted.InvokeAsync();
+    }
+}

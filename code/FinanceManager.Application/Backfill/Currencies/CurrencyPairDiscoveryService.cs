@@ -1,8 +1,8 @@
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceManager.Application.Backfill.Currencies;

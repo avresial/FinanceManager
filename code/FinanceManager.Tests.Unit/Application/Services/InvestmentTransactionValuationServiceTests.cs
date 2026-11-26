@@ -1,10 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Valuation;
+using FinanceManager.Application.Portfolio.Valuation;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

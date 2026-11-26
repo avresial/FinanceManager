@@ -1,4 +1,3 @@
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Labels.Entities;
 
 namespace FinanceManager.Application.Labels.Suggestions;

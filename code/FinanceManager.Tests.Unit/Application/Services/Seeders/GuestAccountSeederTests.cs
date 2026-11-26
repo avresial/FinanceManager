@@ -1,25 +1,25 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Seeders;
-using FinanceManager.Application.FinancialAccounts.Currencies.Seeders;
-using FinanceManager.Application.FinancialAccounts.Investments.Seeders;
 using FinanceManager.Application.Identity.Seeders;
 using FinanceManager.Application.Insights.Seeders;
 using FinanceManager.Application.Labels.Seeders;
+using FinanceManager.Application.Transactions.Bonds.Seeders;
+using FinanceManager.Application.Transactions.Cash.Seeders;
+using FinanceManager.Application.Transactions.Investments.Seeders;
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Insights.Repositories;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.Shared.Services;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -54,7 +54,7 @@ public class GuestAccountSeederTests
     [Fact]
     public async Task SeedForGuest_SeedsASmallUsdCardDebt_SoTheLiabilitiesPageIsNotEmpty()
     {
-        var saved = new List<CurrencyAccountEntry>();
+        var saved = new List<CashEntry>();
 
         await SeedCashEntries(new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc), saved);
 
@@ -65,14 +65,14 @@ public class GuestAccountSeederTests
         Assert.True(saved.Where(e => e.CurrencyId == DefaultCurrency.PLN.Id).Sum(e => e.ValueChange) > 0m);
     }
 
-    private static async Task<List<(DateTime PostingDate, decimal ValueChange, string Description)>> SeedCashEntries(DateTime utcNow, List<CurrencyAccountEntry>? saved = null)
+    private static async Task<List<(DateTime PostingDate, decimal ValueChange, string Description)>> SeedCashEntries(DateTime utcNow, List<CashEntry>? saved = null)
     {
         saved ??= [];
         var cashReader = new Mock<ICashTransactionReader>();
         cashReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        var cashEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        cashEntries.Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<CurrencyAccountEntry>, CancellationToken>((entries, _) => saved.AddRange(entries))
+        var cashEntries = new Mock<ITransactionEntryRepository<CashEntry>>();
+        cashEntries.Setup(r => r.Add(It.IsAny<IEnumerable<CashEntry>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CashEntry>, CancellationToken>((entries, _) => saved.AddRange(entries))
             .ReturnsAsync(true);
         var labelsRepository = new Mock<IFinancialLabelsRepository>();
         labelsRepository.Setup(r => r.GetLabels(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<FinancialLabel>());
@@ -101,10 +101,10 @@ public class GuestAccountSeederTests
             userRepository.Object,
             new FinancialLabelSeeder(Mock.Of<IFinancialLabelsRepository>(), NullLogger<FinancialLabelSeeder>.Instance),
             new BondDetailsSeeder(bondDetailsRepository.Object, Mock.Of<ICurrencyRepository>(), NullLogger<BondDetailsSeeder>.Instance),
-            new CurrencyAccountSeeder(cashReader.Object, cashEntries.Object, labelsRepository.Object, NullLogger<CurrencyAccountSeeder>.Instance),
-            new InvestmentAccountSeeder(Mock.Of<IAssetRepository>(), Mock.Of<IAssetListingRepository>(),
-                Mock.Of<IMarketDataSymbolRepository>(), Mock.Of<IPriceQuoteRepository>(), investmentTransactions.Object, NullLogger<InvestmentAccountSeeder>.Instance),
-            new BondAccountSeeder(bondReader.Object, Mock.Of<IAccountEntryRepository<BondAccountEntry>>(), bondDetailsRepository.Object, NullLogger<BondAccountSeeder>.Instance),
+            new CashEntrySeeder(cashReader.Object, cashEntries.Object, labelsRepository.Object, NullLogger<CashEntrySeeder>.Instance),
+            new InvestmentTransactionSeeder(Mock.Of<IAssetRepository>(), Mock.Of<IAssetListingRepository>(),
+                Mock.Of<IMarketDataSymbolRepository>(), Mock.Of<IPriceQuoteRepository>(), investmentTransactions.Object, NullLogger<InvestmentTransactionSeeder>.Instance),
+            new BondEntrySeeder(bondReader.Object, Mock.Of<ITransactionEntryRepository<BondEntry>>(), bondDetailsRepository.Object, NullLogger<BondEntrySeeder>.Instance),
             new FinancialInsightsSeeder(insightsRepository.Object, userRepository.Object, new ConfigurationBuilder().Build(), NullLogger<FinancialInsightsSeeder>.Instance),
             dateTimeProvider.Object,
             NullLogger<GuestAccountSeeder>.Instance);

@@ -1,9 +1,9 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Domain.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Features.Administration.Components;

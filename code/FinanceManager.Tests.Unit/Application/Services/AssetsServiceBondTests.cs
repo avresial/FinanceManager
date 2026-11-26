@@ -1,13 +1,12 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Assets;
-using FinanceManager.Application.FinancialAccounts.Bond.Details;
-using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
+using FinanceManager.Application.MoneyFlow.Assets;
+using FinanceManager.Application.Transactions.Bonds.Details;
+using FinanceManager.Application.Transactions.Bonds.Valuation;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;

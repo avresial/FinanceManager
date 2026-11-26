@@ -1,5 +1,5 @@
 using FinanceManager.Application.Labels.Setter;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FinanceManager.Tests.Unit.Application.Labels.Setter;

@@ -1,13 +1,13 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Repositories;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 
 namespace FinanceManager.Application.MoneyFlow.InvestmentRate;
 
@@ -31,7 +31,7 @@ public class InvestmentRateService(
         var transactions = await investmentTransactionRepository.GetByUser(userId, DateOnly.FromDateTime(start), DateOnly.FromDateTime(end));
         foreach (var transaction in transactions)
         {
-            var amount = transaction.Type == Domain.FinancialAccounts.Investments.Entities.InvestmentTransactionType.Buy
+            var amount = transaction.Type == Domain.Transactions.Investments.Entities.InvestmentTransactionType.Buy
                 ? transaction.Quantity * transaction.UnitPrice + (transaction.Fee ?? 0m)
                 : -transaction.Quantity * transaction.UnitPrice + (transaction.Fee ?? 0m);
 

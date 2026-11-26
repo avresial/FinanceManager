@@ -1,7 +1,7 @@
 using Bunit;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;

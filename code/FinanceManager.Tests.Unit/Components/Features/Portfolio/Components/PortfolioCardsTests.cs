@@ -1,17 +1,17 @@
 using Bunit;
-using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.Models;
+using FinanceManager.Components.Features.Assets.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.Portfolio.Components;
+using FinanceManager.Components.Features.Portfolio.HttpClients;
 using FinanceManager.Components.Features.Portfolio.Models;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
 using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Contracts.Assets;
 using FinanceManager.Contracts.Transactions.Investments;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -131,7 +131,7 @@ public class PortfolioCardsTests
         bool fail = true;
         using var handler = new RecordingHttpHandler(r => r.RequestUri!.AbsolutePath switch
         {
-            var path when path.Contains("/GetInvestmentGainLoss/") => Json(new UnrealizedGainLossAccountResult("Investments", 100, 125, 25, 25, _end, 0)),
+            var path when path.Contains("/GetInvestmentGainLoss/") => Json(new UnrealizedGainLossResult("Investments", 100, 125, 25, 25, _end, 0)),
             var path when path.EndsWith("/holdings") => Json(new InvestmentHoldingDto[] { new(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m) }),
             var path when path.Contains("/CapitalSeries/") => Json(new Dictionary<DateTime, decimal> { [_end.AddDays(-2)] = 100 }),
             var path when path.Contains("/BenchmarkSeries/") => Json(new Dictionary<DateTime, decimal> { [_end] = 110 }),
@@ -164,7 +164,7 @@ public class PortfolioCardsTests
     public async Task Value_WithAnUnpricedHolding_KeepsTheHoldingVisibleAndHidesTheGainChip()
     {
         // The server keeps an unpriced holding in the result but leaves it out of both totals.
-        var cut = RenderValue(new UnrealizedGainLossAccountResult("Investments", 0, 0, 0, 0, _end, 1),
+        var cut = RenderValue(new UnrealizedGainLossResult("Investments", 0, 0, 0, 0, _end, 1),
             new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 0m), out var context);
         await using var _ = context;
 
@@ -177,7 +177,7 @@ public class PortfolioCardsTests
     [Fact]
     public async Task Value_WithAnFxExcludedHolding_KeepsTheChipForThePricedOnesAndNamesTheExcludedCount()
     {
-        var cut = RenderValue(new UnrealizedGainLossAccountResult("Investments", 100, 125, 25, 25, _end, 1),
+        var cut = RenderValue(new UnrealizedGainLossResult("Investments", 100, 125, 25, 25, _end, 1),
             new InvestmentHoldingDto(2, "FUND", "Berlin", AssetTypeDto.ETF, 3, "EUR", 20m), out var context,
             new InvestmentHoldingDto(4, "NOFX", "Tokyo", AssetTypeDto.Stock, 5, "JPY", 9m));
         await using var _ = context;
@@ -216,7 +216,7 @@ public class PortfolioCardsTests
         Assert.Empty(cut.FindAll(".fm-card-header-subtitle"));
     }
 
-    private IRenderedComponent<InvestmentsValueCardContainer> RenderValue(UnrealizedGainLossAccountResult? gain,
+    private IRenderedComponent<InvestmentsValueCardContainer> RenderValue(UnrealizedGainLossResult? gain,
         InvestmentHoldingDto holding, out BunitContext context, params InvestmentHoldingDto[] more)
     {
         InvestmentHoldingDto[] rows = [holding, .. more];

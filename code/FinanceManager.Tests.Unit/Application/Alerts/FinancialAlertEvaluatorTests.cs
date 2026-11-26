@@ -4,7 +4,6 @@ using FinanceManager.Application.Alerts.Services.Conditions;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Alerts.Models;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
@@ -19,7 +18,7 @@ public class FinancialAlertEvaluatorTests
 
     private readonly FinancialAlertEvaluator _evaluator = new(
     [
-        new AccountBalanceConditionEvaluator(),
+        new CashBalanceConditionEvaluator(),
         new CategorySpendingConditionEvaluator(),
         new MerchantSpendingConditionEvaluator(),
         new LargeTransactionConditionEvaluator(),

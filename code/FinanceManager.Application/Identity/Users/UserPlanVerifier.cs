@@ -1,15 +1,14 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 
 namespace FinanceManager.Application.Identity.Users;
 
-public class UserPlanVerifier(IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
+public class UserPlanVerifier(ITransactionEntryRepository<CashEntry> currencyAccountEntryRepository,
     IInvestmentTransactionRepository investmentTransactionRepository,
-    IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
+    ITransactionEntryRepository<BondEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)

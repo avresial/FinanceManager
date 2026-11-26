@@ -1,11 +1,11 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -51,13 +51,13 @@ public sealed class SqliteOwnerLedgerReadTests : IDisposable
 
     private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, decimal storedValue = 999)
     {
-        _context.CurrencyEntries.Add(new CurrencyAccountEntry(account, 0, date, storedValue, change) { UserId = owner, CurrencyId = currency });
+        _context.CurrencyEntries.Add(new CashEntry(account, 0, date, storedValue, change) { UserId = owner, CurrencyId = currency });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task AddBond(int owner, int bond, DateTime date, decimal change, int? account = null)
     {
-        _context.BondEntries.Add(new BondAccountEntry(account, 0, date, 999, change, bond) { UserId = owner });
+        _context.BondEntries.Add(new BondEntry(account, 0, date, 999, change, bond) { UserId = owner });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

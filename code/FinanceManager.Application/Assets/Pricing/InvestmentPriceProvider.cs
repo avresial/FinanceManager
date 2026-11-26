@@ -1,9 +1,9 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Repositories;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared;
 using Microsoft.Extensions.Caching.Memory;

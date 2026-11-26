@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
@@ -40,10 +40,10 @@ public sealed class SqliteRecentEntriesTests : IDisposable
     public async Task CurrencyRecentRead_FiltersAndOrdersAcrossAccounts()
     {
         _context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 10, new DateTime(2024, 3, 1), 100, 1) { UserId = 1, CurrencyId = 1 },
-            new CurrencyAccountEntry(2, 11, new DateTime(2024, 3, 3), 100, 1) { UserId = 1, CurrencyId = 1 },
-            new CurrencyAccountEntry(1, 12, new DateTime(2024, 3, 2), 100, 1) { UserId = 1, CurrencyId = 1 },
-            new CurrencyAccountEntry(3, 13, new DateTime(2024, 3, 4), 100, 1) { UserId = 2, CurrencyId = 1 });
+            new CashEntry(1, 10, new DateTime(2024, 3, 1), 100, 1) { UserId = 1, CurrencyId = 1 },
+            new CashEntry(2, 11, new DateTime(2024, 3, 3), 100, 1) { UserId = 1, CurrencyId = 1 },
+            new CashEntry(1, 12, new DateTime(2024, 3, 2), 100, 1) { UserId = 1, CurrencyId = 1 },
+            new CashEntry(3, 13, new DateTime(2024, 3, 4), 100, 1) { UserId = 2, CurrencyId = 1 });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _commands.Reset();
 
@@ -59,10 +59,10 @@ public sealed class SqliteRecentEntriesTests : IDisposable
     public async Task BondRecentRead_FiltersAndOrdersAcrossAccounts()
     {
         _context.BondEntries.AddRange(
-            new BondAccountEntry(1, 10, new DateTime(2024, 3, 1), 100, 1, 7) { UserId = 1 },
-            new BondAccountEntry(2, 11, new DateTime(2024, 3, 3), 100, 1, 7) { UserId = 1 },
-            new BondAccountEntry(1, 12, new DateTime(2024, 3, 2), 100, 1, 7) { UserId = 1 },
-            new BondAccountEntry(3, 13, new DateTime(2024, 3, 4), 100, 1, 7) { UserId = 2 });
+            new BondEntry(1, 10, new DateTime(2024, 3, 1), 100, 1, 7) { UserId = 1 },
+            new BondEntry(2, 11, new DateTime(2024, 3, 3), 100, 1, 7) { UserId = 1 },
+            new BondEntry(1, 12, new DateTime(2024, 3, 2), 100, 1, 7) { UserId = 1 },
+            new BondEntry(3, 13, new DateTime(2024, 3, 4), 100, 1, 7) { UserId = 2 });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _commands.Reset();
 
@@ -83,14 +83,14 @@ public sealed class SqliteRecentEntriesTests : IDisposable
         var accountIds = Enumerable.Range(1, accountCount).ToArray();
         foreach (var accountId in accountIds)
         {
-            _context.CurrencyEntries.Add(new CurrencyAccountEntry(
+            _context.CurrencyEntries.Add(new CashEntry(
                 accountId,
                 0,
                 new DateTime(2024, 1, accountId % 28 + 1, 0, 0, 0, DateTimeKind.Utc),
                 100,
                 accountId)
             { UserId = 1, CurrencyId = 1 });
-            _context.CurrencyEntries.Add(new CurrencyAccountEntry(
+            _context.CurrencyEntries.Add(new CashEntry(
                 accountId,
                 0,
                 new DateTime(2024, 2, accountId % 28 + 1, 0, 0, 0, DateTimeKind.Utc),
@@ -125,7 +125,7 @@ public sealed class SqliteRecentEntriesTests : IDisposable
         var accountIds = Enumerable.Range(1, accountCount).ToArray();
         foreach (var accountId in accountIds)
         {
-            _context.BondEntries.Add(new BondAccountEntry(
+            _context.BondEntries.Add(new BondEntry(
                 accountId,
                 0,
                 new DateTime(2024, 1, accountId % 28 + 1, 0, 0, 0, DateTimeKind.Utc),
@@ -133,7 +133,7 @@ public sealed class SqliteRecentEntriesTests : IDisposable
                 accountId,
                 1)
             { UserId = 1 });
-            _context.BondEntries.Add(new BondAccountEntry(
+            _context.BondEntries.Add(new BondEntry(
                 accountId,
                 0,
                 new DateTime(2024, 2, accountId % 28 + 1, 0, 0, 0, DateTimeKind.Utc),
@@ -167,7 +167,7 @@ public sealed class SqliteRecentEntriesTests : IDisposable
         var accountIds = Enumerable.Range(1, accountCount).ToArray();
         foreach (var accountId in accountIds)
         {
-            _context.CurrencyEntries.Add(new CurrencyAccountEntry(
+            _context.CurrencyEntries.Add(new CashEntry(
                 accountId,
                 0,
                 new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc),

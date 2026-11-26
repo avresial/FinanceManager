@@ -1,8 +1,7 @@
 using FinanceManager.Components.Features.Labels.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Commands;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;

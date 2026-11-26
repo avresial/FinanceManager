@@ -1,0 +1,280 @@
+using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Imports;
+using FinanceManager.Domain.Transactions.Import;
+using System.Collections.Concurrent;
+
+namespace FinanceManager.Api.Features.Transactions.Cash.Services;
+
+public sealed class CashImportJobStore : ICashImportJobStore
+{
+    private static readonly TimeSpan _completedJobRetention = TimeSpan.FromHours(5);
+    private static readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(15);
+
+    private readonly ConcurrentDictionary<Guid, CashImportJobState> _jobs = new();
+    private readonly object _cleanupGate = new();
+    private DateTime _lastCleanupUtc = DateTime.MinValue;
+
+    public Guid CreateOwnerJob(int userId, int currencyId, int totalEntries)
+    {
+        CleanupExpiredCompletedJobs();
+
+        var jobId = Guid.NewGuid();
+        var state = new CashImportJobState(jobId, userId, currencyId, totalEntries);
+        _jobs[jobId] = state;
+        return jobId;
+    }
+
+    public bool TryGetCurrencyId(Guid jobId, int userId, out int currencyId)
+    {
+        CleanupExpiredCompletedJobs();
+
+        currencyId = default;
+        if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
+            return false;
+
+        currencyId = state.CurrencyId;
+        return true;
+    }
+
+    public bool TryReopenConflict(Guid jobId, int userId, string conflictId)
+    {
+        if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
+            return false;
+
+        lock (state.Gate)
+        {
+            var index = state.Conflicts.FindIndex(x => x.ConflictId == conflictId);
+            if (index < 0 || !state.Conflicts[index].IsResolved)
+                return false;
+
+            state.Conflicts[index] = state.Conflicts[index] with { IsResolved = false };
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return true;
+        }
+    }
+
+    public bool TrySetRunning(Guid jobId)
+    {
+        CleanupExpiredCompletedJobs();
+
+        if (!_jobs.TryGetValue(jobId, out var state))
+            return false;
+
+        lock (state.Gate)
+        {
+            state.Status = AsyncImportJobState.Running;
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return true;
+        }
+    }
+
+    public bool TryUpdateProgress(Guid jobId, int processedEntries, int imported, int failed)
+    {
+        CleanupExpiredCompletedJobs();
+
+        if (!_jobs.TryGetValue(jobId, out var state))
+            return false;
+
+        lock (state.Gate)
+        {
+            state.ProcessedEntries = processedEntries;
+            state.Imported = imported;
+            state.Failed = failed;
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return true;
+        }
+    }
+
+    public ImportJobConflict? TryAddConflict(Guid jobId, ImportConflict conflict)
+    {
+        CleanupExpiredCompletedJobs();
+
+        if (!_jobs.TryGetValue(jobId, out var state))
+            return null;
+
+        lock (state.Gate)
+        {
+            state.NextConflictId++;
+            var conflictId = $"{jobId:N}-{state.NextConflictId}";
+            var withId = conflict with { ConflictId = conflictId };
+            var importJobConflict = new ImportJobConflict(conflictId, withId, withId.IsExactMatch);
+            state.Conflicts.Add(importJobConflict);
+            if (IsActionable(importJobConflict))
+                state.Status = AsyncImportJobState.WaitingForResolution;
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return importJobConflict;
+        }
+    }
+
+    public bool TryMarkCompleted(Guid jobId, ImportResult result)
+    {
+        CleanupExpiredCompletedJobs();
+
+        if (!_jobs.TryGetValue(jobId, out var state))
+            return false;
+
+        lock (state.Gate)
+        {
+            state.ProcessedEntries = state.TotalEntries;
+            state.Imported = result.Imported;
+            state.Failed = result.Failed;
+            state.Errors.Clear();
+            state.Errors.AddRange(result.Errors);
+            state.Status = state.Conflicts.Any(IsActionableUnresolved)
+                ? AsyncImportJobState.CompletedWithConflicts
+                : AsyncImportJobState.Completed;
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return true;
+        }
+    }
+
+    public bool TryMarkFailed(Guid jobId, string error)
+    {
+        CleanupExpiredCompletedJobs();
+
+        if (!_jobs.TryGetValue(jobId, out var state))
+            return false;
+
+        lock (state.Gate)
+        {
+            state.Status = AsyncImportJobState.Failed;
+            state.Errors.Add(error);
+            state.LastUpdatedUtc = DateTime.UtcNow;
+            return true;
+        }
+    }
+
+    public bool TryGetStatus(Guid jobId, int userId, out CurrencyImportJobStatusDto? status)
+    {
+        CleanupExpiredCompletedJobs();
+
+        status = null;
+
+        if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
+            return false;
+
+        lock (state.Gate)
+        {
+            status = ToDto(state);
+            return true;
+        }
+    }
+
+    public bool CanAccessJob(Guid jobId, int userId) =>
+        CanAccessJobInternal(jobId, userId);
+
+    public bool TryResolveConflict(Guid jobId, int userId, CurrencyImportConflictResolutionDecisionDto decision, out CurrencyEntryImport? addition)
+    {
+        CleanupExpiredCompletedJobs();
+
+        addition = null;
+
+        if (!_jobs.TryGetValue(jobId, out var state) || state.UserId != userId)
+            return false;
+
+        lock (state.Gate)
+        {
+            var index = state.Conflicts.FindIndex(x => x.ConflictId == decision.ConflictId);
+            if (index < 0)
+                return false;
+
+            var current = state.Conflicts[index];
+            if (current.IsResolved)
+                return true;
+
+            if (decision.PickImported == decision.PickExisting) return false;
+            addition = decision.PickImported ? current.Conflict.ImportEntry : null;
+
+            state.Conflicts[index] = current with { IsResolved = true };
+            state.LastUpdatedUtc = DateTime.UtcNow;
+
+            if (state.Status == AsyncImportJobState.WaitingForResolution && state.Conflicts.All(x => !IsActionable(x) || x.IsResolved))
+                state.Status = state.ProcessedEntries >= state.TotalEntries
+                    ? AsyncImportJobState.Completed
+                    : AsyncImportJobState.Running;
+
+            return true;
+        }
+    }
+
+    private bool CanAccessJobInternal(Guid jobId, int userId)
+    {
+        CleanupExpiredCompletedJobs();
+        return _jobs.TryGetValue(jobId, out var state) && state.UserId == userId;
+    }
+
+    private void CleanupExpiredCompletedJobs()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastCleanupUtc < _cleanupInterval)
+            return;
+
+        lock (_cleanupGate)
+        {
+            now = DateTime.UtcNow;
+            if (now - _lastCleanupUtc < _cleanupInterval)
+                return;
+
+            _lastCleanupUtc = now;
+            var expireBefore = now - _completedJobRetention;
+
+            foreach (var pair in _jobs)
+            {
+                var shouldRemove = false;
+                lock (pair.Value.Gate)
+                {
+                    shouldRemove = IsTerminalState(pair.Value.Status) && pair.Value.LastUpdatedUtc <= expireBefore;
+                }
+
+                if (shouldRemove)
+                    _jobs.TryRemove(pair.Key, out _);
+            }
+        }
+    }
+
+    private static bool IsTerminalState(AsyncImportJobState status) =>
+        status is AsyncImportJobState.Completed or AsyncImportJobState.CompletedWithConflicts or AsyncImportJobState.Failed;
+
+    private static CurrencyImportJobStatusDto ToDto(CashImportJobState state)
+    {
+        var isCompleted = state.Status is AsyncImportJobState.Completed or AsyncImportJobState.CompletedWithConflicts or AsyncImportJobState.Failed;
+        var actionableConflicts = state.Conflicts.Where(IsActionable).ToList();
+        var resolvedCount = actionableConflicts.Count(x => x.IsResolved);
+
+        return new CurrencyImportJobStatusDto(
+            state.JobId,
+            state.Status,
+            state.TotalEntries,
+            state.ProcessedEntries,
+            state.Imported,
+            state.Failed,
+            actionableConflicts.Count,
+            resolvedCount,
+            state.Errors.ToList(),
+            state.Conflicts.ToList(),
+            isCompleted);
+    }
+
+    private static bool IsActionable(ImportJobConflict conflict) => !conflict.Conflict.IsExactMatch;
+
+    private static bool IsActionableUnresolved(ImportJobConflict conflict) => IsActionable(conflict) && !conflict.IsResolved;
+
+    private sealed class CashImportJobState(Guid jobId, int userId, int currencyId, int totalEntries)
+    {
+        public Guid JobId { get; } = jobId;
+        public int UserId { get; } = userId;
+        public int CurrencyId { get; } = currencyId;
+        public int TotalEntries { get; } = totalEntries;
+
+        public object Gate { get; } = new();
+
+        public AsyncImportJobState Status { get; set; } = AsyncImportJobState.Queued;
+        public int ProcessedEntries { get; set; }
+        public int Imported { get; set; }
+        public int Failed { get; set; }
+        public int NextConflictId { get; set; }
+        public List<string> Errors { get; } = [];
+        public List<ImportJobConflict> Conflicts { get; } = [];
+        public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
+    }
+}

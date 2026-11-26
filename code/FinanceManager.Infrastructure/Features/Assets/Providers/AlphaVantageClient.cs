@@ -1,10 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Stock.Pricing;
+using FinanceManager.Application.Assets.Pricing;
 using FinanceManager.Application.Shared.ExternalServices;
+using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Text.Json;

@@ -1,13 +1,12 @@
 @page "/Admin/AddLabel"
+@using FinanceManager.Domain.Labels.Entities
 @using FinanceManager.Components.Features.Administration.HttpClients;
 @using FinanceManager.Components.Features.Dashboard.HttpClients;
-@using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 @using FinanceManager.Components.Features.Identity.HttpClients;
 @using FinanceManager.Components.Features.Insights.HttpClients;
 @using FinanceManager.Components.Features.Labels.HttpClients;
 @using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 @using FinanceManager.Components.Shared.Layout
-@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
 @using Microsoft.AspNetCore.Authorization
 
 @attribute [Authorize(Roles = "Admin")]

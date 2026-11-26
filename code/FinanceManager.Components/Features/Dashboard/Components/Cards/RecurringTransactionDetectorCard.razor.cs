@@ -5,7 +5,6 @@ using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;

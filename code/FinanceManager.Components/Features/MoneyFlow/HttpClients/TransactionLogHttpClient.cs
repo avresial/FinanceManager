@@ -1,10 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using System.Globalization;
 using System.Net.Http.Json;
 

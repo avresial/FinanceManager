@@ -2,7 +2,6 @@ using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;

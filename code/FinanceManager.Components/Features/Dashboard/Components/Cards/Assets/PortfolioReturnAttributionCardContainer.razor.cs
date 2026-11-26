@@ -1,7 +1,7 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.Dashboard.Services;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;

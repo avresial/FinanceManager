@@ -1,11 +1,10 @@
-using FinanceManager.Application.FinancialAccounts;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Application.MoneyFlow.Assets;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
+using FinanceManager.Domain.MoneyFlow.Services;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -214,11 +213,11 @@ public class AssetsServiceTests
 
         _mockService1.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ReturnsAsync([
-                new UnrealizedGainLossAccountResult("Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
+                new UnrealizedGainLossResult("Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
             ]);
         _mockService2.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ReturnsAsync([
-                new UnrealizedGainLossAccountResult("Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
+                new UnrealizedGainLossResult("Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
             ]);
 
         var results = await _assetsService.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate);

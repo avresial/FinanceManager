@@ -1,5 +1,5 @@
 using FinanceManager.Application.Insights.Generation;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Dtos;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Cash.Dtos;

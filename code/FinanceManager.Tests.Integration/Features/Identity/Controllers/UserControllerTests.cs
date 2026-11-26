@@ -307,8 +307,8 @@ public class UserControllerTests(OptionsProvider optionsProvider) : ControllerTe
         await SeedUser();
         var context = _testDatabase!.Context;
         context.CurrencyEntries.AddRange(
-            new FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry(null, 0, DateTime.UtcNow, 0, 10m) { UserId = _testUserId, CurrencyId = 0 },
-            new FinanceManager.Domain.FinancialAccounts.Currencies.Entities.CurrencyAccountEntry(null, 0, DateTime.UtcNow, 0, 20m) { UserId = _testUserId + 1, CurrencyId = 0 });
+            new FinanceManager.Domain.Transactions.Cash.Entities.CashEntry(null, 0, DateTime.UtcNow, 0, 10m) { UserId = _testUserId, CurrencyId = 0 },
+            new FinanceManager.Domain.Transactions.Cash.Entities.CashEntry(null, 0, DateTime.UtcNow, 0, 20m) { UserId = _testUserId + 1, CurrencyId = 0 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize(_testUserName, _testUserId, UserRole.Admin);
 

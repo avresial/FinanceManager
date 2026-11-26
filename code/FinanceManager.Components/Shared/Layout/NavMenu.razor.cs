@@ -1,5 +1,5 @@
-using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.Services;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
 using FinanceManager.Components.Shared.Models;
 using FinanceManager.Components.Shared.Services;
 using FinanceManager.Domain.Identity.Entities;
@@ -19,7 +19,7 @@ public partial class NavMenu : ComponentBase, IDisposable
 
     [Parameter] public bool DrawerIsOpen { get; set; }
     [Inject] public required NavMenuStateCacheService NavMenuStateCacheService { get; set; }
-    [Inject] public required AccountDataSynchronizationService AccountDataSynchronizationService { get; set; }
+    [Inject] public required TransactionDataSynchronizationService TransactionDataSynchronizationService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required ILogger<NavMenu> Logger { get; set; }
 
@@ -28,7 +28,7 @@ public partial class NavMenu : ComponentBase, IDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        AccountDataSynchronizationService.AccountsChanged += AccountDataSynchronizationService_AccountsChanged;
+        TransactionDataSynchronizationService.TransactionsChanged += AccountDataSynchronizationService_AccountsChanged;
         LoginService.LogginStateChanged += LoginService_LogginStateChanged;
 
         try
@@ -207,7 +207,7 @@ public partial class NavMenu : ComponentBase, IDisposable
     public void Dispose()
     {
         _disposeTokenSource.Cancel();
-        AccountDataSynchronizationService.AccountsChanged -= AccountDataSynchronizationService_AccountsChanged;
+        TransactionDataSynchronizationService.TransactionsChanged -= AccountDataSynchronizationService_AccountsChanged;
         LoginService.LogginStateChanged -= LoginService_LogginStateChanged;
         _disposeTokenSource.Dispose();
     }

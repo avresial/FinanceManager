@@ -1,11 +1,11 @@
 using FinanceManager.Api.Features.Administration.Logging;
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
 using FinanceManager.Api.Features.Identity.Guest;
 using FinanceManager.Api.Features.Identity.Services;
 using FinanceManager.Api.Features.Insights.Services;
 using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Api.Features.Maintenance.Services;
 using FinanceManager.Api.Features.Mcp.OAuth;
+using FinanceManager.Api.Features.Transactions.Cash.Services;
 using FinanceManager.Application.Shared.Options;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Infrastructure.Features.Mcp.OAuth;
@@ -110,9 +110,9 @@ public static class ApiConfigurationExtensions
         services.AddSingleton<ILabelSetterChannel, LabelSetterChannel>();
         services.AddHostedService<LabelSetterBackgroundService>();
         services.AddHostedService<LabelSetterStartupService>();
-        services.AddSingleton<ICurrencyImportJobChannel, CurrencyImportJobChannel>();
-        services.AddSingleton<ICurrencyImportJobStore, CurrencyImportJobStore>();
-        services.AddHostedService<CurrencyImportBackgroundService>();
+        services.AddSingleton<ICashImportJobChannel, CashImportJobChannel>();
+        services.AddSingleton<ICashImportJobStore, CashImportJobStore>();
+        services.AddHostedService<CashImportBackgroundService>();
         services.AddSingleton<IPriceBackfillJobChannel, PriceBackfillJobChannel>();
         services.AddHostedService<PriceBackfillBackgroundService>();
         services.AddHostedService<StartupBackfillBackgroundService>();

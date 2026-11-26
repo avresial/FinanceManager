@@ -1,7 +1,7 @@
 using FinanceManager.Application.Backfill;
 using FinanceManager.Application.Backfill.Currencies;
 using FinanceManager.Application.Shared.Options;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Repositories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Dtos;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.Transactions.Shared;
@@ -104,8 +104,8 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
         return await OwnerEntries(userId).AnyAsync(ct);
     }
 
-    private IQueryable<BondAccountEntry> OwnerEntries(int userId) => context.BondEntries.AsNoTracking().Where(e => e.UserId == userId);
+    private IQueryable<BondEntry> OwnerEntries(int userId) => context.BondEntries.AsNoTracking().Where(e => e.UserId == userId);
 
-    private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<BondAccountEntry> entries) =>
+    private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<BondEntry> entries) =>
         entries.GroupBy(e => e.BondDetailsId).Select(g => new OwnerLedgerPosition(g.Key, g.Sum(e => e.ValueChange), g.Max(e => e.PostingDate)));
 }

@@ -1,6 +1,6 @@
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Domain.Transactions.Cash.Repositories;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
 using FinanceManager.Infrastructure.Features.Transactions.Shared;
@@ -162,7 +162,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
             }).ToDictionaryAsync(x => x.EntryId, x => x.Labels, ct);
 
     // The entries' label links as plain join-table rows: a join the database plans freely, where navigating the collection would need APPLY.
-    private IQueryable<EntryLabelLink> LabelLinks(IQueryable<CurrencyAccountEntry> entries) =>
+    private IQueryable<EntryLabelLink> LabelLinks(IQueryable<CashEntry> entries) =>
         context.Set<Dictionary<string, object>>("CurrencyAccountEntryFinancialLabel")
             .Join(entries, link => EF.Property<long>(link, "CurrencyAccountEntryEntryId"), entry => entry.EntryId,
                 (link, entry) => new EntryLabelLink { EntryId = entry.EntryId, LabelId = EF.Property<int>(link, "LabelsId"), ValueChange = entry.ValueChange });
@@ -174,7 +174,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         public decimal ValueChange { get; init; }
     }
 
-    private IQueryable<CurrencyAccountEntry> EntriesBetween(int userId, DateTime start, DateTime end, bool endInclusive)
+    private IQueryable<CashEntry> EntriesBetween(int userId, DateTime start, DateTime end, bool endInclusive)
     {
         var startUtc = OwnerLedgerTimestamps.ToUtc(start);
         var endUtc = OwnerLedgerTimestamps.ToUtc(end);
@@ -182,8 +182,8 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         return endInclusive ? entries.Where(e => e.PostingDate <= endUtc) : entries.Where(e => e.PostingDate < endUtc);
     }
 
-    private IQueryable<CurrencyAccountEntry> OwnerEntries(int userId) => context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId);
+    private IQueryable<CashEntry> OwnerEntries(int userId) => context.CurrencyEntries.AsNoTracking().Where(e => e.UserId == userId);
 
-    private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<CurrencyAccountEntry> entries) =>
+    private static IQueryable<OwnerLedgerPosition> Positions(IQueryable<CashEntry> entries) =>
         entries.GroupBy(e => e.CurrencyId).Select(g => new OwnerLedgerPosition(g.Key, g.Sum(e => e.ValueChange), g.Max(e => e.PostingDate)));
 }

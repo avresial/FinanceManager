@@ -1,5 +1,5 @@
 using FinanceManager.Components.Shared.Models;
-using FinanceManager.Domain.FinancialAccounts.Investments.Dtos;
+using FinanceManager.Domain.Portfolio.FeeDrag.Dtos;
 
 namespace FinanceManager.Components.Features.Dashboard.Models;
 

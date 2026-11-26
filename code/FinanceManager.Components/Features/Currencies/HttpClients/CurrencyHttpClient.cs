@@ -1,0 +1,10 @@
+using FinanceManager.Domain.Currencies.Entities;
+using System.Net.Http.Json;
+
+namespace FinanceManager.Components.Features.Currencies.HttpClients;
+
+public class CurrencyHttpClient(HttpClient httpClient)
+{
+    public async Task<List<Currency>> GetAll(CancellationToken cancellationToken = default) =>
+        await httpClient.GetFromJsonAsync<List<Currency>>($"{httpClient.BaseAddress}api/Currency/GetAll", cancellationToken) ?? [];
+}

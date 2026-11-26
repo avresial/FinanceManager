@@ -1,8 +1,7 @@
 ﻿@page "/Admin/EditLabel/{LabelId:int}"
 @attribute [Authorize(Roles = "Admin")]
 @layout AdminLayout
-@using FinanceManager.Domain.FinancialAccounts.Shared.Entities
-
+@using FinanceManager.Domain.Labels.Entities
 <PageTitle>Edit label - Admin</PageTitle>
 
 @if (_isLoadingPage)

@@ -1,10 +1,10 @@
 using FinanceManager.Application.Identity.Users;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Assets.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.Identity.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Domain.Assets.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Identity.Services;

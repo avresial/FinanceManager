@@ -1,8 +1,7 @@
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
 using FinanceManager.Infrastructure.Persistence;
@@ -47,7 +46,7 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
 
     private async Task<long> AddCash(int owner, int? account, DateTime date, decimal change, string description = "d", params FinancialLabel[] labels)
     {
-        var entry = new CurrencyAccountEntry(account, 0, date, 0, change) { UserId = owner, CurrencyId = 0, Description = description, ContractorDetails = "counterparty", Labels = [.. labels] };
+        var entry = new CashEntry(account, 0, date, 0, change) { UserId = owner, CurrencyId = 0, Description = description, ContractorDetails = "counterparty", Labels = [.. labels] };
         _context.CurrencyEntries.Add(entry);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return entry.EntryId;
@@ -77,9 +76,9 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
     public async Task BondGetById_ReadsTheOwnersLinkedOrUnlinkedEntry_WithBondNameAndLabels_AndNothingForeign()
     {
         _context.Set<BondDetails>().Add(new BondDetails("Treasury 2030", "Issuer", new DateOnly(2025, 1, 1), new DateOnly(2030, 1, 1), []) { Id = 7 });
-        var unlinked = new BondAccountEntry(null, 0, _jan1, 0, 3, 7) { UserId = _owner, Description = "bond note", Labels = [_rent] };
-        var foreign = new BondAccountEntry(null, 0, _jan1, 0, 3, 7) { UserId = _other, Description = "foreign" };
-        var missingDefinition = new BondAccountEntry(12, 0, _jan1, 0, 3, 99) { UserId = _owner, Description = "orphan" };
+        var unlinked = new BondEntry(null, 0, _jan1, 0, 3, 7) { UserId = _owner, Description = "bond note", Labels = [_rent] };
+        var foreign = new BondEntry(null, 0, _jan1, 0, 3, 7) { UserId = _other, Description = "foreign" };
+        var missingDefinition = new BondEntry(12, 0, _jan1, 0, 3, 99) { UserId = _owner, Description = "orphan" };
         _context.BondEntries.AddRange(unlinked, foreign, missingDefinition);
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var reader = new BondTransactionRepository(_context);
@@ -104,7 +103,7 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
         var linked = await AddCash(_owner, 40, _jan1, -5);
         var foreign = await AddCash(_other, null, _jan1, -5);
         var guest = await AddCash(_guest, null, _jan1, -5);
-        var repository = new CurrencyEntryRepository(_context);
+        var repository = new CashEntryRepository(_context);
 
         var entries = await repository.GetByIds(_owner, [unlinked, linked, foreign, guest], TestContext.Current.CancellationToken);
 
@@ -121,7 +120,7 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
         var linked = await AddCash(_owner, 40, _jan1, -5);
         var foreign = await AddCash(_other, null, _jan1, -5);
         var guest = await AddCash(_guest, null, _jan1, -5);
-        var repository = new CurrencyEntryRepository(_context);
+        var repository = new CashEntryRepository(_context);
 
         var added = await repository.AddLabels(_owner,
             [(unlinked, _food.Id), (linked, _food.Id), (linked, _food.Id), (foreign, _food.Id), (guest, _food.Id), (unlinked, 99999)], TestContext.Current.CancellationToken);

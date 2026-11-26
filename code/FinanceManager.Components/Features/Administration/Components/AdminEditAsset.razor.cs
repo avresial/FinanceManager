@@ -1,8 +1,8 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Shared.Components.Dialogs;
 using FinanceManager.Domain.Assets.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

@@ -1,12 +1,11 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Domain.Transactions.Shared.Dtos;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -38,22 +37,22 @@ public class TransactionLogSearchTests
         if (stream == "Currency")
         {
             context.CurrencyEntries.AddRange(
-                new CurrencyAccountEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = null },
-                new CurrencyAccountEntry(2, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0 },
-                new CurrencyAccountEntry(1, 3, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = "MiXeD shop" },
-                new CurrencyAccountEntry(1, 4, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "MIXED purchase" },
-                new CurrencyAccountEntry(1, 5, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "other" },
-                new CurrencyAccountEntry(1, 6, _day.AddDays(1), 1, 1) { UserId = 1, CurrencyId = 0, Description = "mixed" },
-                new CurrencyAccountEntry(999, 7, _day, 1, 1) { UserId = 999, CurrencyId = 0, Description = "mixed" });
+                new CashEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = null },
+                new CashEntry(2, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0 },
+                new CashEntry(1, 3, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = "MiXeD shop" },
+                new CashEntry(1, 4, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "MIXED purchase" },
+                new CashEntry(1, 5, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "other" },
+                new CashEntry(1, 6, _day.AddDays(1), 1, 1) { UserId = 1, CurrencyId = 0, Description = "mixed" },
+                new CashEntry(999, 7, _day, 1, 1) { UserId = 999, CurrencyId = 0, Description = "mixed" });
         }
         else if (stream == "Bond")
         {
             context.Bonds.Add(new BondDetails("MiXeD Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
             context.BondEntries.AddRange(
-                new BondAccountEntry(1, 1, _day, 1, 1, 99) { UserId = 1 }, new BondAccountEntry(2, 2, _day, 1, 1, 99) { UserId = 1 },
-                new BondAccountEntry(1, 3, _day, 1, 1, 1) { UserId = 1 }, new BondAccountEntry(1, 4, _day, 1, 1, 1) { UserId = 1 },
-                new BondAccountEntry(1, 5, _day, 1, 1, 99) { UserId = 1 }, new BondAccountEntry(1, 6, _day.AddDays(1), 1, 1, 1) { UserId = 1 },
-                new BondAccountEntry(999, 7, _day, 1, 1, 1) { UserId = 999 });
+                new BondEntry(1, 1, _day, 1, 1, 99) { UserId = 1 }, new BondEntry(2, 2, _day, 1, 1, 99) { UserId = 1 },
+                new BondEntry(1, 3, _day, 1, 1, 1) { UserId = 1 }, new BondEntry(1, 4, _day, 1, 1, 1) { UserId = 1 },
+                new BondEntry(1, 5, _day, 1, 1, 99) { UserId = 1 }, new BondEntry(1, 6, _day.AddDays(1), 1, 1, 1) { UserId = 1 },
+                new BondEntry(999, 7, _day, 1, 1, 1) { UserId = 999 });
         }
         else
         {
@@ -80,9 +79,9 @@ public class TransactionLogSearchTests
         var context = database.Context;
         context.Bonds.Add(new BondDetails("Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
         context.BondEntries.AddRange(
-            new BondAccountEntry(1, 1, _day, 1, 1, 1) { UserId = 1, Description = "Quarterly Top-Up" },
-            new BondAccountEntry(1, 2, _day, 1, 1, 1) { UserId = 1 },
-            new BondAccountEntry(1, 3, _day, 1, 1, 1) { UserId = 1, Description = "something else" });
+            new BondEntry(1, 1, _day, 1, 1, 1) { UserId = 1, Description = "Quarterly Top-Up" },
+            new BondEntry(1, 2, _day, 1, 1, 1) { UserId = 1 },
+            new BondEntry(1, 3, _day, 1, 1, 1) { UserId = 1, Description = "something else" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(new long[] { 1L }, await Page(context, "Bond", 10, null, " top-up "));
@@ -100,8 +99,8 @@ public class TransactionLogSearchTests
         await using var database = await SearchDatabase.Create(provider);
         var context = database.Context;
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100%_sale[one]" },
-            new CurrencyAccountEntry(1, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100xxsaleo" });
+            new CashEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100%_sale[one]" },
+            new CashEntry(1, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100xxsaleo" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.Equal(new long[] { 1L }, await Page(context, "Currency", 10, null, "%_sale[one]"));
     }
@@ -147,8 +146,8 @@ public class TransactionLogSearchTests
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.Entity<CurrencyAccountEntry>().Property(e => e.EntryId).ValueGeneratedNever();
-            modelBuilder.Entity<BondAccountEntry>().Property(e => e.EntryId).ValueGeneratedNever();
+            modelBuilder.Entity<CashEntry>().Property(e => e.EntryId).ValueGeneratedNever();
+            modelBuilder.Entity<BondEntry>().Property(e => e.EntryId).ValueGeneratedNever();
             modelBuilder.Entity<BondDetails>().Property(e => e.Id).ValueGeneratedNever();
             modelBuilder.Entity<Asset>().Property(e => e.Id).ValueGeneratedNever();
             modelBuilder.Entity<AssetListing>().Property(e => e.Id).ValueGeneratedNever();

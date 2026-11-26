@@ -1,11 +1,9 @@
-using FinanceManager.Application.FinancialAccounts.Currencies.ExchangeRates;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Application.Currencies.ExchangeRates;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Currencies.Services;
 using FinanceManager.Domain.Identity.Services;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Providers;
+using FinanceManager.Infrastructure.Features.Currencies.Providers;
 using FinanceManager.Tests.Unit.Shared.Time;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

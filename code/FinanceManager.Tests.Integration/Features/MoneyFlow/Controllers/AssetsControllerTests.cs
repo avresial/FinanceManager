@@ -1,13 +1,14 @@
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         _value = 0;
 
         for (DateTime i = DateTime.UtcNow.AddMonths(-24).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -189,9 +190,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(null, 1, _nowUtc.AddMonths(-2), 3000m, 3000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] },
-            new CurrencyAccountEntry(null, 2, _nowUtc, 4500m, 4500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] });
-        _testDatabase.Context.BondEntries.Add(new BondAccountEntry(null, 1, _nowUtc.AddDays(-1), 12000m, 12000m, 1) { UserId = 1 });
+            new CashEntry(null, 1, _nowUtc.AddMonths(-2), 3000m, 3000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] },
+            new CashEntry(null, 2, _nowUtc, 4500m, 4500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] });
+        _testDatabase.Context.BondEntries.Add(new BondEntry(null, 1, _nowUtc.AddDays(-1), 12000m, 12000m, 1) { UserId = 1 });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
@@ -320,7 +321,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<UnrealizedGainLossAccountResult>>(TestContext.Current.CancellationToken);
+        var result = await response.Content.ReadFromJsonAsync<List<UnrealizedGainLossResult>>(TestContext.Current.CancellationToken);
         var row = Assert.Single(result!);
         Assert.Equal("Investments", row.AccountName);
         Assert.Equal(1200m, row.CostBasis);
@@ -360,12 +361,12 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.BondEntries.AddRange(
-            new BondAccountEntry(null, 1, _nowUtc.AddDays(-1), 6000m, 6000m, 8) { UserId = 8 },
-            new BondAccountEntry(null, 2, _nowUtc.AddDays(-1), 12000m, 6000m, 8) { UserId = 8 });
+            new BondEntry(null, 1, _nowUtc.AddDays(-1), 6000m, 6000m, 8) { UserId = 8 },
+            new BondEntry(null, 2, _nowUtc.AddDays(-1), 12000m, 6000m, 8) { UserId = 8 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 8, UserRole.User);
 
-        var perAccount = await Client.GetFromJsonAsync<List<UnrealizedGainLossAccountResult>>(
+        var perAccount = await Client.GetFromJsonAsync<List<UnrealizedGainLossResult>>(
             $"api/Assets/GetUnrealizedGainLossPerAccount/8/{DefaultCurrency.PLN.Id}/{_nowUtc:O}",
             TestContext.Current.CancellationToken);
         var perInstrument = await Client.GetFromJsonAsync<List<UnrealizedGainLossInstrumentResult>>(

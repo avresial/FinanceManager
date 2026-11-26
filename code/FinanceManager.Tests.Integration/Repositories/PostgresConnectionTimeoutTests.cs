@@ -1,5 +1,5 @@
 using FinanceManager.Infrastructure;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Currencies.Repositories;
+using FinanceManager.Infrastructure.Features.Currencies.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Infrastructure.Shared.Persistence;
 using Microsoft.EntityFrameworkCore;

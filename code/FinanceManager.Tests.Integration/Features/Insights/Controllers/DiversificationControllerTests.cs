@@ -1,11 +1,12 @@
 using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -135,11 +136,11 @@ public class DiversificationControllerTests(OptionsProvider optionsProvider) : C
             TradeDate = DateOnly.FromDateTime(_nowUtc.AddDays(-2))
         });
         _testDatabase.Context.BondEntries.AddRange(
-            new BondAccountEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5) { UserId = 1 },
-            new BondAccountEntry(null, 2, _nowUtc.AddDays(-2), 10m, 10m, 6) { UserId = 1 });
+            new BondEntry(2, 1, _nowUtc.AddDays(-3), 1000m, 1000m, 5) { UserId = 1 },
+            new BondEntry(null, 2, _nowUtc.AddDays(-2), 10m, 10m, 6) { UserId = 1 });
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { UserId = 1, CurrencyId = 0, Labels = [] },
-            new CurrencyAccountEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { UserId = 1, CurrencyId = usd.Id, Labels = [] });
+            new CashEntry(3, 1, _nowUtc.AddDays(-3), 500m, 500m) { UserId = 1, CurrencyId = 0, Labels = [] },
+            new CashEntry(4, 2, _nowUtc.AddDays(-3), 50m, 50m) { UserId = 1, CurrencyId = usd.Id, Labels = [] });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 

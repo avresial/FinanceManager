@@ -1,11 +1,13 @@
 using FinanceManager.Application.Dashboard;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
-using FinanceManager.Infrastructure.Features.FinancialAccounts.Investments.Repositories;
+using FinanceManager.Domain.Portfolio.Dividends.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
+using FinanceManager.Infrastructure.Features.Portfolio.Dividends.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Bonds.Repositories;
 using FinanceManager.Infrastructure.Features.Transactions.Cash.Repositories;
+using FinanceManager.Infrastructure.Features.Transactions.Investments.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -61,10 +63,10 @@ public sealed class TransactionLogHasAnyTests : IDisposable
         switch (kind)
         {
             case "cash":
-                _context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 0, _day, 0, 5) { UserId = owner, CurrencyId = 0 });
+                _context.CurrencyEntries.Add(new CashEntry(null, 0, _day, 0, 5) { UserId = owner, CurrencyId = 0 });
                 break;
             case "bond":
-                _context.BondEntries.Add(new BondAccountEntry(null, 0, _day, 0, 1, 5) { UserId = owner });
+                _context.BondEntries.Add(new BondEntry(null, 0, _day, 0, 1, 5) { UserId = owner });
                 break;
             case "trade":
                 _context.InvestmentTransactions.Add(new InvestmentTransaction

@@ -1,22 +1,22 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.Models;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
-using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Dashboard.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -85,12 +85,12 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
             new FinancialAccountBaseDto { AccountId = 97, UserId = 999, Name = "Other broker", AccountType = AccountType.Stock },
             new FinancialAccountBaseDto { AccountId = 99, UserId = 999, Name = "Other user", AccountType = AccountType.Currency });
         db.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(10, 1, day, 0, 1) { UserId = 641, CurrencyId = 0 }, new CurrencyAccountEntry(11, 2, day, 0, 2) { UserId = 641, CurrencyId = 1 },
-            new CurrencyAccountEntry(null, 3, day.AddHours(1), 0, 3) { UserId = 641, CurrencyId = 0 },
-            new CurrencyAccountEntry(10, 4, day.AddDays(-2), 0, 4) { UserId = 641, CurrencyId = 0 },
-            new CurrencyAccountEntry(99, 99, day, 0, 99) { UserId = 999, CurrencyId = 0 });
+            new CashEntry(10, 1, day, 0, 1) { UserId = 641, CurrencyId = 0 }, new CashEntry(11, 2, day, 0, 2) { UserId = 641, CurrencyId = 1 },
+            new CashEntry(null, 3, day.AddHours(1), 0, 3) { UserId = 641, CurrencyId = 0 },
+            new CashEntry(10, 4, day.AddDays(-2), 0, 4) { UserId = 641, CurrencyId = 0 },
+            new CashEntry(99, 99, day, 0, 99) { UserId = 999, CurrencyId = 0 });
         db.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(day), DateOnly.FromDateTime(day.AddYears(1)), []) { Id = 7 });
-        db.BondEntries.AddRange(new BondAccountEntry(20, 1, day, 0, 1, 7) { UserId = 641 }, new BondAccountEntry(20, 2, day, 0, 2, 7) { UserId = 641 }, new BondAccountEntry(98, 98, day, 0, 98, 7) { UserId = 999 });
+        db.BondEntries.AddRange(new BondEntry(20, 1, day, 0, 1, 7) { UserId = 641 }, new BondEntry(20, 2, day, 0, 2, 7) { UserId = 641 }, new BondEntry(98, 98, day, 0, 98, 7) { UserId = 999 });
         db.AssetListings.Add(new AssetListing
         {
             Id = 1,

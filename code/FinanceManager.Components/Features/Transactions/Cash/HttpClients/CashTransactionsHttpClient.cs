@@ -2,7 +2,7 @@ using FinanceManager.Components.Features.Transactions.Shared.HttpClients;
 using FinanceManager.Components.Features.Transactions.Shared.Models;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.Transactions.Cash.HttpClients;

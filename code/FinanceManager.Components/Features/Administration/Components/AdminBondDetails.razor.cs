@@ -1,7 +1,7 @@
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Shared.Components;
 using FinanceManager.Components.Shared.Components.Dialogs;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 

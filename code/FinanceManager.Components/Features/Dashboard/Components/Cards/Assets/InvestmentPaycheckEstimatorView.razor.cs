@@ -1,6 +1,6 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Shared.Helpers;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using Microsoft.AspNetCore.Components;
 
 namespace FinanceManager.Components.Features.Dashboard.Components.Cards.Assets;

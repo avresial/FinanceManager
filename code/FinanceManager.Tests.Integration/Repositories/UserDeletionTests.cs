@@ -2,9 +2,6 @@ using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Dtos;
@@ -12,7 +9,11 @@ using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.GiftCodes;
 using FinanceManager.Domain.Insights.Entities;
 using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Portfolio.Dividends.Entities;
 using FinanceManager.Domain.TransactionRules.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Features.Identity.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
@@ -81,12 +82,12 @@ public sealed class UserDeletionTests : IDisposable
         await context.SaveChangesAsync(ct);
 
         context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(accountId, 0, _jan1, 0, 10m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
-            new CurrencyAccountEntry(null, 0, _jan1, 0, 20m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
-            new CurrencyAccountEntry(accountId, 0, _jan1, 0, 30m) { UserId = userId, CurrencyId = 0 });
+            new CashEntry(accountId, 0, _jan1, 0, 10m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
+            new CashEntry(null, 0, _jan1, 0, 20m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
+            new CashEntry(accountId, 0, _jan1, 0, 30m) { UserId = userId, CurrencyId = 0 });
         context.BondEntries.AddRange(
-            new BondAccountEntry(null, 0, _jan1, 0, 1m, 5) { UserId = userId, Labels = [bondLabel] },
-            new BondAccountEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = userId, Labels = [legacyBondLabel] });
+            new BondEntry(null, 0, _jan1, 0, 1m, 5) { UserId = userId, Labels = [bondLabel] },
+            new BondEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = userId, Labels = [legacyBondLabel] });
         context.Assets.Add(new Asset { Id = entryBase, Name = $"Equity {userId}", Type = AssetType.Stock });
         context.AssetListings.Add(new AssetListing { Id = entryBase, AssetId = entryBase, Ticker = $"T{userId}", ExchangeMic = "XNAS", ExchangeName = "N", TradingCurrency = "USD", PriceMultiplier = 1m, IsActive = true });
         await context.SaveChangesAsync(ct);

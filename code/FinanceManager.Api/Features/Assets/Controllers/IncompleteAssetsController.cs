@@ -1,4 +1,4 @@
-using FinanceManager.Application.FinancialAccounts.Investments.Discovery;
+using FinanceManager.Application.Assets.Discovery;
 using FinanceManager.Domain.Assets.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

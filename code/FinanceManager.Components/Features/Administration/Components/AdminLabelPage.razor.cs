@@ -1,6 +1,5 @@
 using FinanceManager.Components.Features.Labels.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Shared.Commands;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Labels.Commands;
 using FinanceManager.Domain.Labels.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;

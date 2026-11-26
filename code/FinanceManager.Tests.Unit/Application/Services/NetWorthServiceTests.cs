@@ -1,10 +1,10 @@
-using FinanceManager.Application.FinancialAccounts.Bond.Valuation;
 using FinanceManager.Application.MoneyFlow.NetWorth;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Application.Transactions.Bonds.Valuation;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Repositories;
 using Moq;
 
 namespace FinanceManager.Tests.Unit.Application.Services;
@@ -134,11 +134,11 @@ public class NetWorthServiceTests
         var result = await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end);
 
         // Before the second purchase the first unit accrues from its own entry; afterwards all two units accrue from the latest one.
-        var beforePurchase = BondAccountEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(-100)), 1m, DateOnly.FromDateTime(start.AddDays(19)), details)[DateOnly.FromDateTime(start.AddDays(19))];
-        var afterPurchase = BondAccountEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(20)), 2m, DateOnly.FromDateTime(end), details)[DateOnly.FromDateTime(end)];
+        var beforePurchase = BondEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(-100)), 1m, DateOnly.FromDateTime(start.AddDays(19)), details)[DateOnly.FromDateTime(start.AddDays(19))];
+        var afterPurchase = BondEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(20)), 2m, DateOnly.FromDateTime(end), details)[DateOnly.FromDateTime(end)];
         Assert.Equal(Math.Round(beforePurchase, 2), result[start.AddDays(19)]);
         Assert.Equal(Math.Round(afterPurchase, 2), result[end]);
-        Assert.Equal(Math.Round(2m * 100m, 2) * 1, Math.Round(BondAccountEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(20)), 2m, DateOnly.FromDateTime(start.AddDays(20)), details)[DateOnly.FromDateTime(start.AddDays(20))], 2));
+        Assert.Equal(Math.Round(2m * 100m, 2) * 1, Math.Round(BondEntry.GetPrice(DateOnly.FromDateTime(start.AddDays(20)), 2m, DateOnly.FromDateTime(start.AddDays(20)), details)[DateOnly.FromDateTime(start.AddDays(20))], 2));
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class NetWorthServiceTests
         // Warm JIT outside measurement; each operation has a new request context.
         await NewService().GetNetWorth(1, DefaultCurrency.PLN, start, end);
         var beforeHistory = GC.GetAllocatedBytesForCurrentThread();
-        var history = BondAccountEntry.GetPrice(anchor, 1m, DateOnly.FromDateTime(end), details);
+        var history = BondEntry.GetPrice(anchor, 1m, DateOnly.FromDateTime(end), details);
         var historyBytes = GC.GetAllocatedBytesForCurrentThread() - beforeHistory;
         var service = NewService();
         var beforeRange = GC.GetAllocatedBytesForCurrentThread();

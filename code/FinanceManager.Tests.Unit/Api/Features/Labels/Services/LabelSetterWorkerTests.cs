@@ -1,12 +1,12 @@
 using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Labels.Setter;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Labels.Repositories;
+using FinanceManager.Domain.Transactions.Cash.Entities;
+using FinanceManager.Domain.Transactions.Shared.Repositories;
 using FinanceManager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -27,7 +27,7 @@ public sealed class LabelSetterWorkerTests
         var ai = new Mock<ILabelSetterAiService>();
         ai.Setup(service => service.AssignLabels(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int _, IReadOnlyCollection<long> ids, CancellationToken _) => ids.ToDictionary(id => id, _ => "Food"));
-        var entries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        var entries = new Mock<ITransactionEntryRepository<CashEntry>>();
         entries.Setup(repository => repository.AddLabels(7, It.IsAny<IEnumerable<(long, int)>>(), It.IsAny<CancellationToken>())).ReturnsAsync(3);
         var alerts = new Mock<IFinancialAlertService>();
         var tracker = new Mock<ILabelSetterProgressTracker>();
@@ -58,7 +58,7 @@ public sealed class LabelSetterWorkerTests
     {
         var ai = new Mock<ILabelSetterAiService>();
         ai.Setup(service => service.AssignLabels(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
-        var entries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        var entries = new Mock<ITransactionEntryRepository<CashEntry>>();
         var tracker = new Mock<ILabelSetterProgressTracker>();
         var finished = new SemaphoreSlim(0);
         tracker.Setup(t => t.CompleteJob()).Callback(() => finished.Release());
@@ -86,7 +86,7 @@ public sealed class LabelSetterWorkerTests
         {
             var label = new FinancialLabel { Name = "Food" };
             seed.FinancialLabels.Add(label);
-            CurrencyAccountEntry Entry(int userId, int? accountId, string description, string? contractor = null, params FinancialLabel[] labels) =>
+            CashEntry Entry(int userId, int? accountId, string description, string? contractor = null, params FinancialLabel[] labels) =>
                 new(accountId, 0, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), 0, -1m) { UserId = userId, CurrencyId = 1, Description = description, ContractorDetails = contractor, Labels = labels };
             seed.CurrencyEntries.AddRange(
                 Entry(5, null, "unlinked"),
@@ -132,7 +132,7 @@ public sealed class LabelSetterWorkerTests
     [Fact]
     public async Task AiService_NeverReadsEntriesWithoutAUser_AndAsksTheRepositoryForTheUsersOwnEntries()
     {
-        var entries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        var entries = new Mock<ITransactionEntryRepository<CashEntry>>();
         entries.Setup(repository => repository.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var labels = new Mock<IFinancialLabelsRepository>();
         labels.Setup(repository => repository.GetLabels(It.IsAny<CancellationToken>())).Returns(new[] { new FinancialLabel { Id = 1, Name = "Food" } }.ToAsyncEnumerable());
@@ -149,8 +149,8 @@ public sealed class LabelSetterWorkerTests
     [Fact]
     public async Task AiService_NeverReturnsAnAssignmentForAnEntryTheUserDoesNotOwn()
     {
-        var owned = new CurrencyAccountEntry(null, 10, new DateTime(2026, 1, 1), 0, -5m) { Description = "Lunch" };
-        var entries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
+        var owned = new CashEntry(null, 10, new DateTime(2026, 1, 1), 0, -5m) { Description = "Lunch" };
+        var entries = new Mock<ITransactionEntryRepository<CashEntry>>();
         // The repository filters by owner: entry 20 is requested but belongs to someone else.
         entries.Setup(repository => repository.GetByIds(7, It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>())).ReturnsAsync([owned]);
         var labels = new Mock<IFinancialLabelsRepository>();
@@ -167,14 +167,14 @@ public sealed class LabelSetterWorkerTests
         Assert.Equal(new Dictionary<long, string> { [10] = "Food" }, result);
     }
 
-    private static ILabelSetterAiService CreateAiService(IAccountEntryRepository<CurrencyAccountEntry> entries, IFinancialLabelsRepository labels) =>
+    private static ILabelSetterAiService CreateAiService(ITransactionEntryRepository<CashEntry> entries, IFinancialLabelsRepository labels) =>
         new LabelSetterAiService(entries, labels, Mock.Of<ILabelSetterPromptProvider>(), new LabelAssignmentResponseParser(),
             new LabelAssignmentValidator(NullLogger<LabelAssignmentValidator>.Instance), Mock.Of<Microsoft.Extensions.AI.IChatClient>(),
             NullLogger<LabelSetterAiService>.Instance);
 
     private static ServiceProvider Services(
         Mock<ILabelSetterAiService> ai,
-        Mock<IAccountEntryRepository<CurrencyAccountEntry>> entries,
+        Mock<ITransactionEntryRepository<CashEntry>> entries,
         Mock<IFinancialAlertService> alerts,
         List<FinancialLabel> labels)
     {

@@ -1,17 +1,19 @@
 using FinanceManager.Application.Administration;
 using FinanceManager.Application.Alerts.Services;
 using FinanceManager.Application.Alerts.Services.Conditions;
+using FinanceManager.Application.Assets;
+using FinanceManager.Application.Currencies;
 using FinanceManager.Application.Dashboard;
-using FinanceManager.Application.FinancialAccounts;
 using FinanceManager.Application.Identity;
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Insights;
 using FinanceManager.Application.Labels;
 using FinanceManager.Application.MoneyFlow;
+using FinanceManager.Application.Portfolio;
 using FinanceManager.Application.Shared.Maintenance;
 using FinanceManager.Application.Shared.Time;
 using FinanceManager.Application.TransactionRules;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
+using FinanceManager.Application.Transactions;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.Shared.Services;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -32,17 +34,20 @@ public static class ServiceCollectionExtension
 
     public static IServiceCollection AddApplicationApi(this IServiceCollection services)
     {
-        // Identity must come before FinancialAccounts and Labels: seeders run in
-        // ISeeder registration order (admin/test users, then financial-account
+        // Identity must come before Transactions and Labels: seeders run in
+        // ISeeder registration order (admin/test users, then transaction
         // detail seeders, then labels).
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddScoped<IMaintenanceKeyService, MaintenanceKeyService>();
 
         services
             .AddIdentityApplication()
-            .AddFinancialAccountsApplication()
+            .AddAssetsApplication()
+            .AddCurrenciesApplication()
+            .AddTransactionsApplication()
+            .AddPortfolioApplication()
             .AddLabelsApplication()
-            .AddSingleton<IAlertConditionEvaluator, AccountBalanceConditionEvaluator>()
+            .AddSingleton<IAlertConditionEvaluator, CashBalanceConditionEvaluator>()
             .AddSingleton<IAlertConditionEvaluator, CategorySpendingConditionEvaluator>()
             .AddSingleton<IAlertConditionEvaluator, MerchantSpendingConditionEvaluator>()
             .AddSingleton<IAlertConditionEvaluator, LargeTransactionConditionEvaluator>()

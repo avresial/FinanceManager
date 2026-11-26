@@ -237,9 +237,6 @@ public class CardInfoAffordanceCoverageTests
 
     private static readonly string[] _dateGroupTooltipExemptions =
     [
-        "Features/FinancialAccounts/Components/BondAccountComponents/TransactionHistory/BondDayGroupCard.razor",
-        "Features/FinancialAccounts/Components/CurrencyAccountComponents/TransactionHistory/CurrencyDayGroupCard.razor",
-        "Features/FinancialAccounts/Components/InvestmentAccountComponents/TransactionHistory/InvestmentDayGroupCard.razor",
         "Features/Dashboard/Components/TransactionHistoryDayGroupCard.razor"
     ];
 

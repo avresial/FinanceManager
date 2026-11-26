@@ -1,0 +1,129 @@
+@using FinanceManager.Components.Shared.Helpers
+
+<div class="@(IsMobile ? "py-2 px-4" : "pa-2") mud-list-item-clickable"
+     style="@(_expanded ? "background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);" : "")"
+     role="button" tabindex="0" aria-expanded="@_expanded.ToString().ToLowerInvariant()"
+     aria-label="@GetAccessibleName()" @onclick="ToggleExpanded" @onkeydown="OnKeyDown">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="w-100">
+        <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
+                 Style="@($"transition: transform 220ms; transform: rotate({(_expanded ? 180 : 0)}deg); flex-shrink: 0; color: {(_expanded ? "var(--mud-palette-primary)" : "var(--mud-palette-text-secondary)")}")"
+                 Size="Size.Small" />
+
+        @if (!IsMobile)
+        {
+            <MudAvatar Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Style="flex-shrink: 0;">
+                <MudIcon Icon="@TransactionRowPresentation.IconFor(Entry.Labels?.FirstOrDefault()?.Name, Entry.ValueChange)" Size="Size.Small" />
+            </MudAvatar>
+        }
+
+        <MudStack Spacing="0" Class="flex-grow-1" Style="min-width: 0;">
+            <MudText Typo="Typo.body1" Class="text-truncate">@GetTitle()</MudText>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Style="min-width: 0;">
+                @if (Entry.Labels is not null && Entry.Labels.Any())
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                             Style="height: 18px; font-size: 11px; margin: 0;">@Entry.Labels.First().Name</MudChip>
+                }
+                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate" Style="min-width: 0;" data-testid="bond-row-description">@Entry.Description</MudText>
+                }
+                else if (BondDetails is not null && !string.IsNullOrWhiteSpace(BondDetails.Issuer))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default" Class="text-truncate" Style="min-width: 0;">@BondDetails.Issuer</MudText>
+                }
+                @if (!IsMobile)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default" Style="flex-shrink: 0;">· @Entry.PostingDate.ToLocalTime().ToString("HH:mm")</MudText>
+                }
+            </MudStack>
+        </MudStack>
+
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Style="flex-shrink: 0;">
+            <MudText Typo="Typo.body1" Class="fm-tabular" Style="white-space: nowrap;"
+                     Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange) units
+            </MudText>
+        </MudStack>
+    </MudStack>
+</div>
+
+<MudCollapse Expanded="_expanded">
+    <div class="px-4 pb-3" style="@(IsMobile ? "" : "padding-left: 60px;")">
+        <MudGrid Spacing="2">
+            <MudItem xs="6">
+                <MudText Typo="Typo.caption" Color="Color.Default">Posting date</MudText>
+                <MudText Typo="Typo.body2">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
+            </MudItem>
+            <MudItem xs="6">
+                <MudText Typo="Typo.caption" Color="Color.Default">Units change</MudText>
+                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2" Class="fm-tabular"
+                             Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
+                        @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange)
+                    </MudText>
+                </MudStack>
+            </MudItem>
+            @if (!string.IsNullOrWhiteSpace(Entry.Description))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Description</MudText>
+                    <MudText Typo="Typo.body2" Style="overflow-wrap: anywhere;">@Entry.Description</MudText>
+                </MudItem>
+            }
+            @if (BondDetails is not null)
+            {
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Issuer</MudText>
+                    <MudText Typo="Typo.body2">@BondDetails.Issuer</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
+                    <MudText Typo="Typo.body2">@MoneyFormatter.Format(BondDetails.UnitValue, BondDetails.Currency.ShortName)</MudText>
+                </MudItem>
+            }
+            @if (Entry.Labels is not null && Entry.Labels.Any())
+            {
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Default">Labels</MudText>
+                    <MudStack Row Spacing="1" Wrap="Wrap.Wrap">
+                        @foreach (var label in Entry.Labels)
+                        {
+                            <MudChip T="string" Size="Size.Small" Style="max-width: 100%; height: auto;">
+                                <span style="white-space: normal; overflow-wrap: anywhere; min-width: 0;">@label.Name</span>
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudItem>
+            }
+            <MudItem xs="12">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Edit" OnClick="ShowEditOverlay">Edit</MudButton>
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete" OnClick="ShowRemoveOverlay">Delete</MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </div>
+</MudCollapse>
+
+@if (_updateEntryVisibility)
+{
+    <MudOverlay @bind-Visible="_updateEntryVisibility" DarkBackground="true" ZIndex="1300">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <UpdateBondEntry BondEntry="Entry" ActionCompleted="HideOverlay" />
+        </MudPaper>
+    </MudOverlay>
+}
+
+@if (_removeEntryVisibility)
+{
+    <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
+        <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
+            <RemoveBondEntry BondAccountName="@GetTitle()" BondEntry="Entry"
+                             Cancel="HideOverlay" Confirm="ConfirmRemove" />
+        </MudPaper>
+    </MudOverlay>
+}
+

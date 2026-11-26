@@ -1,18 +1,19 @@
 using Bunit;
-using FinanceManager.Components.Features.FinancialAccounts.Components.BondAccountComponents.Crud;
-using FinanceManager.Components.Features.FinancialAccounts.Components.CurrencyAccountComponents.Crud;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.Labels.HttpClients;
+using FinanceManager.Components.Features.Transactions.Bonds.Components.Crud;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.Components.Crud;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Contracts.Transactions.Cash;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -60,12 +61,12 @@ public class OwnerEntryFormTests
     {
         var handler = RecordingHttpHandler.ForEntryForms([_food], saved: CashItem());
         await using var context = CreateContext(handler);
-        var entry = new CurrencyAccountEntry(null, 42, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, -3m)
+        var entry = new CashEntry(null, 42, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, -3m)
         {
             Description = "Old",
             CurrencyId = DefaultCurrency.USD.Id,
         };
-        var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CurrencyAccountEntry, entry));
+        var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CashEntry, entry));
         cut.WaitForAssertion(() => Assert.Contains("Edit cash entry", cut.Markup));
         cut.WaitForAssertion(() => Assert.Contains(DefaultCurrency.USD.ShortName, cut.Find(".mud-typography-subtitle1").TextContent));
         await cut.InvokeAsync(() => cut.FindComponents<MudTextField<string>>().Single(t => t.Instance.Label == "Description").Instance.ValueChanged.InvokeAsync("New"));
@@ -83,9 +84,9 @@ public class OwnerEntryFormTests
     public async Task EditCash_ShowsTheLocalTimeTheRowShows()
     {
         await using var context = CreateContext(RecordingHttpHandler.ForEntryForms([_food], saved: CashItem()));
-        var entry = new CurrencyAccountEntry(null, 42, new DateTime(2026, 11, 23, 0, 0, 0, DateTimeKind.Utc), 0m, -3m) { Description = "Old", CurrencyId = DefaultCurrency.USD.Id };
+        var entry = new CashEntry(null, 42, new DateTime(2026, 11, 23, 0, 0, 0, DateTimeKind.Utc), 0m, -3m) { Description = "Old", CurrencyId = DefaultCurrency.USD.Id };
 
-        var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CurrencyAccountEntry, entry));
+        var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CashEntry, entry));
 
         // Rows show PostingDate.ToLocalTime(); an edit form that showed the raw UTC hour would disagree with the row it came from.
         var shown = entry.PostingDate.ToLocalTime().ToString("HH:mm");
@@ -118,8 +119,8 @@ public class OwnerEntryFormTests
     {
         var handler = RecordingHttpHandler.ForEntryForms([], [_bond], saved: BondItem());
         await using var context = CreateContext(handler);
-        var entry = new BondAccountEntry(null, 9, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, 2m, _bond.Id) { Description = "Old" };
-        var cut = context.Render<UpdateBondEntry>(p => p.Add(x => x.BondAccountEntry, entry));
+        var entry = new BondEntry(null, 9, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, 2m, _bond.Id) { Description = "Old" };
+        var cut = context.Render<UpdateBondEntry>(p => p.Add(x => x.BondEntry, entry));
         cut.WaitForAssertion(() => Assert.Contains("Edit bond entry", cut.Markup));
         cut.WaitForAssertion(() => Assert.Contains("EDO1234", cut.Markup));
 
@@ -146,7 +147,7 @@ public class OwnerEntryFormTests
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new CashTransactionsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
-        context.Services.AddSingleton<AccountDataSynchronizationService>();
+        context.Services.AddSingleton<TransactionDataSynchronizationService>();
         var settings = new Mock<ISettingsService>();
         settings.Setup(service => service.GetCurrency()).Returns(DefaultCurrency.PLN);
         context.Services.AddSingleton(settings.Object);

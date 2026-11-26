@@ -5,7 +5,7 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;

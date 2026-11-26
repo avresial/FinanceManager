@@ -1,6 +1,6 @@
-using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
+using FinanceManager.Api.Features.Transactions.Cash.Services;
 using FinanceManager.Domain.Identity.Entities;
+using FinanceManager.Domain.Transactions.Cash.Dtos;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
@@ -12,9 +12,9 @@ namespace FinanceManager.Tests.Integration.Features.Transactions.Cash.Controller
 [Trait("Category", "Integration")]
 public class CashImportJobOwnershipTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
-    private readonly CurrencyImportJobStore _jobs = new();
+    private readonly CashImportJobStore _jobs = new();
     protected override bool ReuseApplicationHost => false;
-    protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton<ICurrencyImportJobStore>(_jobs);
+    protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton<ICashImportJobStore>(_jobs);
 
     // Guest users have negative ids, so an owner check of `> 0` instead of `!= 0` would lock them out.
     [Theory]

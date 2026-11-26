@@ -1,7 +1,7 @@
 using FinanceManager.Domain.Assets.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Investments.Services;
+using FinanceManager.Domain.Currencies.Repositories;
+using FinanceManager.Domain.Portfolio.Valuation.Services;
+using FinanceManager.Domain.Transactions.Investments.Repositories;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 

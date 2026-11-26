@@ -1,15 +1,14 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Components.Features.Dashboard.HttpClients;
-using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.Transactions.Bonds;
 using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
-using FinanceManager.Domain.FinancialAccounts.Bond.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Shared;
+using FinanceManager.Domain.Transactions.Bonds.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;

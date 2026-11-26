@@ -1,10 +1,10 @@
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Currencies.Repositories;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.Currencies.Entities;
+using FinanceManager.Domain.Currencies.Repositories;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
+using FinanceManager.Domain.Labels.Entities;
+using FinanceManager.Domain.Transactions.Cash.Entities;
 using FinanceManager.Infrastructure.Persistence;
 using FinanceManager.Tests.Integration.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -88,19 +88,19 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(null, 1, _nowUtc.AddDays(-1), 950m, -50m)
+            new CashEntry(null, 1, _nowUtc.AddDays(-1), 950m, -50m)
             {
                 UserId = 1,
                 CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [essentialLabel]
             },
-            new CurrencyAccountEntry(null, 2, _nowUtc, 930m, -20m)
+            new CashEntry(null, 2, _nowUtc, 930m, -20m)
             {
                 UserId = 1,
                 CurrencyId = DefaultCurrency.PLN.Id,
                 Labels = [essentialLabel, wantLabel, essentialLabel2]
             },
-            new CurrencyAccountEntry(null, 3, _nowUtc, 920m, -10m)
+            new CashEntry(null, 3, _nowUtc, 920m, -10m)
             {
                 UserId = 1,
                 CurrencyId = DefaultCurrency.PLN.Id,
@@ -134,8 +134,8 @@ public class EssentialSpendingControllerTests(OptionsProvider optionsProvider) :
         _testDatabase!.Context.FinancialLabels.Add(essential);
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, -75m) { Labels = [essential], UserId = 1, CurrencyId = 0 },
-            new CurrencyAccountEntry(null, 0, _nowUtc.AddDays(-1), 0, -999m) { Labels = [essential], UserId = 2, CurrencyId = 0 });
+            new CashEntry(null, 0, _nowUtc.AddDays(-1), 0, -75m) { Labels = [essential], UserId = 1, CurrencyId = 0 },
+            new CashEntry(null, 0, _nowUtc.AddDays(-1), 0, -999m) { Labels = [essential], UserId = 2, CurrencyId = 0 });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
 

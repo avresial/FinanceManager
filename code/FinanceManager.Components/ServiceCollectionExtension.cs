@@ -1,22 +1,25 @@
 using FinanceManager.Components.Features.Administration.HttpClients;
 using FinanceManager.Components.Features.Administration.Services;
 using FinanceManager.Components.Features.Alerts.HttpClients;
+using FinanceManager.Components.Features.Assets.HttpClients;
+using FinanceManager.Components.Features.Currencies.HttpClients;
 using FinanceManager.Components.Features.Dashboard.HttpClients;
 using FinanceManager.Components.Features.Dashboard.Services;
-using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
-using FinanceManager.Components.Features.FinancialAccounts.Services;
 using FinanceManager.Components.Features.Identity.HttpClients;
 using FinanceManager.Components.Features.Identity.Services;
 using FinanceManager.Components.Features.Insights.HttpClients;
 using FinanceManager.Components.Features.Labels.HttpClients;
 using FinanceManager.Components.Features.Labels.Services;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Portfolio.HttpClients;
 using FinanceManager.Components.Features.TransactionRules.HttpClients;
 using FinanceManager.Components.Features.Transactions.Bonds.HttpClients;
 using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.Services;
+using FinanceManager.Components.Features.Transactions.Import.HttpClients;
 using FinanceManager.Components.Features.Transactions.Investments.HttpClients;
+using FinanceManager.Components.Features.Transactions.Shared.Services;
 using FinanceManager.Components.Shared.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Services;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Identity.Services;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -70,7 +73,7 @@ public static class ServiceCollectionExtension
                 .AddScoped<FinancialAlertsHttpClient>()
                 .AddScoped<CashFlowForecastHttpClient>()
                 .AddScoped<CsvHeaderMappingHttpClient>()
-                .AddScoped<AccountDataSynchronizationService>()
+                .AddScoped<TransactionDataSynchronizationService>()
                 .AddScoped<NavMenuStateCacheService>()
                 .AddScoped<DashboardHttpClient>()
                 .AddScoped<DashboardOverviewCardsCacheService>()

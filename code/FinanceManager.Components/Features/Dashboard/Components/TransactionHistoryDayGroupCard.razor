@@ -1,8 +1,8 @@
+@using FinanceManager.Contracts.Portfolio
+@using FinanceManager.Contracts.Transactions.Investments
+@using FinanceManager.Domain.Transactions.Bonds.Entities
 @using FinanceManager.Components.Features.Dashboard.Models
 @using FinanceManager.Components.Shared.Helpers
-@using FinanceManager.Contracts.FinancialAccounts.Investments
-@using FinanceManager.Domain.FinancialAccounts.Bond.Entities
-
 @* One day of the Transactions page, framed as a card per day. Entries of a day can mix
    currencies, bond units and trades, so the header shows no daily net; a cursor page can also split a
    day, so the count is of the entries loaded so far. *@
