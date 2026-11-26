@@ -10,6 +10,10 @@ public class InvestmentTradesHttpClient(HttpClient httpClient)
 {
     private string Endpoint => $"{httpClient.BaseAddress}api/transactions/investment";
 
+    public async Task<IReadOnlyList<InvestmentHoldingDto>> GetHoldingsAsync(DateOnly asOf, CancellationToken cancellationToken = default) =>
+        await httpClient.GetFromJsonAsync<List<InvestmentHoldingDto>>($"{Endpoint}/holdings?asOf={asOf:yyyy-MM-dd}", cancellationToken)
+            ?? throw new InvalidOperationException("The server returned no holdings response.");
+
     public async Task<InvestmentTransactionDto> CreateAsync(CreateInvestmentTradeRequest request, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PostAsJsonAsync(Endpoint, request, cancellationToken);

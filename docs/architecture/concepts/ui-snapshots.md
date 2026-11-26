@@ -150,6 +150,7 @@ screen a moment later. Splitting the request must not split the snapshot either.
 | Dashboard overview | [Dashboard.razor.cs](../../../code/FinanceManager.Components/Features/Dashboard/Components/Dashboard.razor.cs) |
 | Account transaction lists (currency, bond) | [AccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/AccountDetailsSnapshotStore.cs) |
 | Investment account trade list | [InvestmentAccountDetailsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/FinancialAccounts/Services/InvestmentAccountDetailsSnapshotStore.cs) |
+| Assets portfolio value and holdings (scoped to the owner, with currency and benchmark in the value key and the selected dates in the snapshot) | [PortfolioCardBase.cs](../../../code/FinanceManager.Components/Features/Portfolio/Components/PortfolioCardBase.cs) |
 | Liabilities cards | [LiabilitiesSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/LiabilitiesSnapshotStore.cs) |
 | Dashboard insights / recurring / transaction-log cards (`financial-insights:v2:{user}:{count}`; alerts card `financial-alerts:v2:{user}`; Alerts page `alerts-page:v2:{user}`; the `v2` keys retire snapshots keyed per account) | [DashboardCardsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Dashboard/Services/DashboardCardsSnapshotStore.cs) |
 | Subscriptions page summary tiles and list | [SubscriptionsSnapshotStore.cs](../../../code/FinanceManager.Components/Features/Labels/Services/SubscriptionsSnapshotStore.cs) |

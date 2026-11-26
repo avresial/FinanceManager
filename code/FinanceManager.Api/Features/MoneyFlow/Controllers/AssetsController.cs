@@ -131,6 +131,20 @@ public class AssetsController(
     public async Task<IActionResult> GetUnrealizedGainLossPerAccount(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default) =>
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId) ? Ok(await assetsService.GetUnrealizedGainLossPerAccount(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), asOfDate)) : Forbid();
 
+    [HttpGet("GetInvestmentGainLoss/{userId:int}/{currencyId:int}/{asOfDate:DateTime}")]
+    [ProducesResponseType<UnrealizedGainLossAccountResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetInvestmentGainLoss(int userId, int currencyId, DateTime asOfDate, CancellationToken cancellationToken = default)
+    {
+        if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
+        var currency = await currencyRepository.GetCurrency(currencyId, cancellationToken);
+        if (currency is null) return NotFound("Currency not found.");
+        var result = await investmentAppreciationService.GetForUserAsync(userId, currency, asOfDate, cancellationToken);
+        return result is null ? NoContent() : Ok(result);
+    }
+
     [HttpGet("GetUnrealizedGainLossForAccount/{userId:int}/{accountId:int}/{currencyId:int}/{asOfDate:DateTime}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UnrealizedGainLossAccountResult))]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

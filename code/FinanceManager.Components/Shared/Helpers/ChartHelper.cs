@@ -105,6 +105,13 @@ public static class ChartHelper
     }
 
     /// <summary>
+    /// <see cref="GetYAxisTickFormatter"/> for series that never go below zero: ticks under zero belong to the empty label
+    /// gutter of <see cref="GetYScaleWithLabelGutter"/>, so they are left blank instead of reading as a negative value.
+    /// </summary>
+    public static string GetNonNegativeYAxisTickFormatter(double minimum, double maximum, int tickCount) =>
+        "function(v){ if(v<0) return ''; return (" + GetYAxisTickFormatter(minimum, maximum, tickCount) + ")(v); }";
+
+    /// <summary>
     /// ApexCharts tooltip formatter that renders money exactly like <see cref="MoneyFormatter.Format"/>:
     /// comma thousands grouping, two decimals and a regular space before the currency (<c>12,480.00 PLN</c>).
     /// The locale is fixed to en-US so the tooltip never depends on the browser locale.
@@ -172,6 +179,14 @@ public static class ChartHelper
         var step = GetNiceStep((high - low) / targetBands);
         var niceLow = Math.Floor(low / step) * step;
         var niceHigh = Math.Ceiling(high / step) * step;
+        // A series that never goes below zero must not get an axis below zero: clamp the low end at 0 and
+        // drop the label gutter when the scale already starts there, so no empty band sits under the 0 line.
+        if (minimum >= 0 && niceLow <= 0)
+        {
+            var zeroBasedBands = (int)Math.Round(niceHigh / step);
+            return (0, niceHigh, zeroBasedBands);
+        }
+
         var bands = (int)Math.Round((niceHigh - niceLow) / step);
 
         return (niceLow - step, niceHigh, bands + 1);

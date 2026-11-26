@@ -26,13 +26,16 @@ internal class AssetsServiceInvestment(
     IInvestmentValuationService valuationService,
     IInvestmentTransactionRepository transactionRepository,
     IInvestmentPriceProvider priceProvider,
-    ICurrencyExchangeService currencyExchangeService) : IAssetsServiceTyped, IInvestmentAppreciationService
+    ICurrencyExchangeService currencyExchangeService,
+    IDividendPaymentRepository dividendRepository) : IAssetsServiceTyped, IInvestmentAppreciationService
 {
     private const string _investmentsGroupName = "Investments";
 
-    // Legacy parity: any non-zero holding counts, including an oversold (negative) one.
+    // Legacy parity: any non-zero holding counts, including an oversold (negative) one. A recorded dividend also counts, so the
+    // Assets page stays reachable for an owner who sold everything but still has payouts to review.
     public async Task<bool> IsAnyAccountWithAssets(int userId) =>
-        (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0;
+        (await transactionRepository.GetHoldingsByUserAsOf(userId, DateOnly.FromDateTime(DateTime.UtcNow))).Count > 0
+        || await dividendRepository.HasPayments(userId);
 
     public async Task<List<TimeSeriesModel>> GetAssetsTimeSeries(int userId, Currency currency, DateTime start, DateTime end)
     {
@@ -101,13 +104,16 @@ internal class AssetsServiceInvestment(
         }
     }
 
-    public async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate)
+    public Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossPerInstrument(int userId, Currency currency, DateTime asOfDate) =>
+        GetOwnerInstrumentsAsync(userId, currency, asOfDate, default);
+
+    private async Task<List<UnrealizedGainLossInstrumentResult>> GetOwnerInstrumentsAsync(int userId, Currency currency, DateTime asOfDate, CancellationToken ct)
     {
         if (userId == 0) return [];
 
         // A trade posted at any time on the as-of day counts, so read through the following midnight and keep the day filter below.
-        var transactions = await transactionRepository.GetByUser(userId, DateOnly.MinValue, asOfDate.Date == DateTime.MaxValue.Date ? DateOnly.MaxValue : DateOnly.FromDateTime(asOfDate).AddDays(1));
-        return await GetUnrealizedGainLossInstrumentsAsync(transactions, null, _investmentsGroupName, currency, asOfDate);
+        var transactions = await transactionRepository.GetByUser(userId, DateOnly.MinValue, asOfDate.Date == DateTime.MaxValue.Date ? DateOnly.MaxValue : DateOnly.FromDateTime(asOfDate).AddDays(1), ct);
+        return await GetUnrealizedGainLossInstrumentsAsync(transactions, null, _investmentsGroupName, currency, asOfDate, ct);
     }
 
     public async Task<UnrealizedGainLossAccountResult?> GetForAccountAsync(
@@ -139,12 +145,18 @@ internal class AssetsServiceInvestment(
 
     public async Task<List<UnrealizedGainLossAccountResult>> GetUnrealizedGainLossPerAccount(int userId, Currency currency, DateTime asOfDate)
     {
-        var instrumentResults = await GetUnrealizedGainLossPerInstrument(userId, currency, asOfDate);
+        var result = await GetForUserAsync(userId, currency, asOfDate);
+        return result is null ? [] : [result];
+    }
+
+    public async Task<UnrealizedGainLossAccountResult?> GetForUserAsync(int userId, Currency currency, DateTime asOfDate, CancellationToken ct = default)
+    {
+        var instrumentResults = await GetOwnerInstrumentsAsync(userId, currency, asOfDate, ct);
 
         // Pooled holdings belong to the owner, not to an account: one aggregate row without an account id.
         return instrumentResults.Count == 0
-            ? []
-            : [AggregateAccountResult(null, _investmentsGroupName, instrumentResults, asOfDate)];
+            ? null
+            : AggregateAccountResult(null, _investmentsGroupName, instrumentResults, asOfDate);
     }
 
     private async Task<List<UnrealizedGainLossInstrumentResult>> GetUnrealizedGainLossInstrumentsAsync(

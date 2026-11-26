@@ -418,6 +418,26 @@ public class OwnerInvestmentTradesControllerTests(OptionsProvider optionsProvide
     }
 
     [Fact]
+    public async Task Holdings_SelectLatestOwnerTradeByDateThenId_AndRecoverOnlyMissingPrices()
+    {
+        Seed();
+        var ct = TestContext.Current.CancellationToken;
+        var date = new DateOnly(2024, 5, 2);
+        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date, price: 10m);
+        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date, price: 0m);
+        await SeedTrade(_other, null, InvestmentTransactionType.Buy, 1m, date, price: 200m);
+        await SeedTrade(_guest, null, InvestmentTransactionType.Buy, 1m, date.AddDays(1), price: 300m);
+        _priceProvider.Setup(x => x.GetPricePerUnitAsync(_listing, It.IsAny<Currency>(), date.ToDateTime(TimeOnly.MinValue), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(15m);
+        Authorize("guest", _guest, UserRole.User);
+
+        var row = Assert.Single((await Client.GetFromJsonAsync<List<InvestmentHoldingDto>>($"{_route}/holdings?asOf=2024-05-02", ct))!);
+        Assert.Equal((2m, "USD", 15m), (row.Units, row.Currency, row.LatestUnitPrice));
+        Db.ChangeTracker.Clear();
+        Assert.Equal([10m, 15m, 200m, 300m], await Db.InvestmentTransactions.OrderBy(t => t.EntryId).Select(t => t.UnitPrice).ToListAsync(ct));
+    }
+
+    [Fact]
     public async Task MissingPrice_IsRecoveredOnRead_ForUnlinkedTrades()
     {
         Seed();

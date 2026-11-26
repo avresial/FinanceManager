@@ -136,6 +136,33 @@ public class ChartHelperTests
     }
 
     [Fact]
+    public void GetYScaleWithLabelGutter_NeverGoesBelowZeroWhenNoValueIsNegative()
+    {
+        // A series that fell to 0 after a full exit: padding would otherwise reserve an empty band under the 0 line.
+        var scale = ChartHelper.GetYScaleWithLabelGutter(0, 100);
+
+        Assert.Equal(0, scale.Min);
+        Assert.True(scale.Max >= 100);
+        Assert.Equal(scale.Max, scale.TickAmount * (scale.Max / scale.TickAmount));
+        Assert.Equal(0, scale.Max % (scale.Max / scale.TickAmount));
+    }
+
+    [Fact]
+    public void GetYScaleWithLabelGutter_KeepsTheGutterBandWhenTheDataSitsWellAboveZero()
+    {
+        var scale = ChartHelper.GetYScaleWithLabelGutter(13_500, 19_800);
+
+        Assert.True(scale.Min >= 0);
+        Assert.True(scale.Min < 13_500 - (scale.Max - scale.Min) / scale.TickAmount + 1);
+    }
+
+    [Fact]
+    public void GetYScaleWithLabelGutter_StillReservesNegativeRoomWhenAValueIsNegative()
+    {
+        Assert.True(ChartHelper.GetYScaleWithLabelGutter(-5, 100).Min < -5);
+    }
+
+    [Fact]
     public void GetNiceYScale_SnapsBoundsToRoundEvenlySpacedTicks()
     {
         // The uneven ticks seen on the hero chart came from a raw 5%-padded range (e.g. -74, -132, -190).

@@ -7,8 +7,11 @@ using FinanceManager.Components.Features.Dashboard.Components.Cards.Liabilities;
 using FinanceManager.Components.Features.Dashboard.Components.Cards.TimeSeries;
 using FinanceManager.Components.Features.Dashboard.Components.Pages;
 using FinanceManager.Components.Features.Dashboard.Services;
+using FinanceManager.Components.Features.FinancialAccounts.Components.InvestmentAccountComponents;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
+using FinanceManager.Components.Features.Portfolio.Components;
 using FinanceManager.Components.Shared.Services;
+using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.Identity.Services;
 using Microsoft.AspNetCore.Components.Sections;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +40,8 @@ public class OverviewPagesInitialRangeTests
 
         AssertDefaultOverviewRange(before, after, () => cut.Instance.StartDate, () => cut.Instance.EndDate);
         Assert.Contains("mud-container", cut.Markup);
+        // The dividend dialog defaults to the user's display currency, not the first alphabetical one.
+        cut.WaitForAssertion(() => Assert.Equal("PLN", cut.FindComponent<Stub<DividendPaymentHistory>>().Instance.Parameters.Get(x => x.DefaultCurrency)));
     }
 
     [Fact]
@@ -67,10 +72,16 @@ public class OverviewPagesInitialRangeTests
         var context = new BunitContext();
         context.JSInterop.Mode = JSRuntimeMode.Loose;
         context.Services.AddMudServices();
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(service => service.GetCurrencyAsync()).ReturnsAsync(DefaultCurrency.PLN);
+        context.Services.AddSingleton(settings.Object);
         context.Services.AddSingleton(new DashboardCardVisibilityService(Mock.Of<ISnapshotService>(),
             Mock.Of<ILoginService>(), NullLogger<DashboardCardVisibilityService>.Instance));
         context.Services.AddSingleton(new AssetsPageCardsRequestCoordinator(new AssetsHttpClient(new HttpClient(returnsHandler ?? new HttpClientHandler()) { BaseAddress = new Uri("http://localhost/") }),
             NullLogger<AssetsPageCardsRequestCoordinator>.Instance));
+        context.ComponentFactories.AddStub<InvestmentsValueCardContainer>();
+        context.ComponentFactories.AddStub<InvestmentHoldingsCardContainer>();
+        context.ComponentFactories.AddStub<DividendPaymentHistory>();
         context.ComponentFactories.AddStub<AssetsTimeSeriesCardContainer>();
         context.ComponentFactories.AddStub<AssetsDistributionOverviewCard>();
         if (returnsHandler is null)

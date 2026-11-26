@@ -4,6 +4,7 @@ using FinanceManager.Components.Shared.Components.Charts;
 using FinanceManager.Domain.MoneyFlow.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using System.Globalization;
 using System.Text.Json;
 
 namespace FinanceManager.Tests.Unit.Components.Shared.Components.Charts;
@@ -126,6 +127,83 @@ public class TimeSeriesValueCardTests
 
         var labels = Assert.IsType<XAxisLabels>(options.Xaxis!.Labels);
         Assert.Equal(-16, labels.OffsetY);
+    }
+
+    [Theory]
+    [InlineData(80, "25.0%")]
+    [InlineData(0, null)]
+    public async Task PortfolioChip_LabelsUnrealizedGainAndScalesForOverlays(int baseline, string? percent)
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, Points(75, 100))
+            .Add(x => x.SummaryValue, 100m).Add(x => x.DeltaBaseline, (decimal)baseline)
+            .Add(x => x.Overlays, [new TimeSeriesOverlay("Capital", Points(115, 180), "#66bb6a")]));
+        var badge = cut.Find(".fm-tsvc-delta").TextContent;
+        Assert.Contains($"All-time unrealized +{100 - baseline}.00", badge);
+        if (percent is null) Assert.DoesNotContain("%", badge);
+        else Assert.Contains(percent, badge);
+        var chart = cut.FindComponent<ApexChart<TimeSeriesModel>>();
+        Assert.Equal(2, cut.FindComponents<ApexPointSeries<TimeSeriesModel>>().Count);
+        Assert.True(Convert.ToDouble(chart.Instance.Options.Yaxis!.Single().Max) >= 180);
+    }
+
+    [Fact]
+    public async Task PortfolioChip_FormatsMoneyAndPercentInvariantlyUnderAPolishCulture()
+    {
+        var previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("pl-PL");
+        try
+        {
+            await using var context = new BunitContext();
+            context.JSInterop.Mode = JSRuntimeMode.Loose;
+            context.Services.AddLogging();
+            context.Services.AddMudServices();
+            var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, Points(75, 100))
+                .Add(x => x.SummaryValue, 100m).Add(x => x.DeltaBaseline, 80m).Add(x => x.CurrencyShortName, "PLN"));
+
+            Assert.Equal("All-time unrealized +20.00 PLN \u00B7 +25.0%", cut.Find(".fm-tsvc-delta").TextContent.Trim());
+        }
+        finally { CultureInfo.CurrentCulture = previous; }
+    }
+
+    [Theory]
+    [InlineData(100, 100.004, "fm-tsvc-delta--neutral", "All-time unrealized 0.00 PLN")]
+    [InlineData(80, 90, "fm-tsvc-delta--good", "All-time unrealized +10.00 PLN")]
+    [InlineData(100, 80, "fm-tsvc-delta--bad", "All-time unrealized -20.00 PLN")]
+    public async Task PortfolioChip_IsNeutralForAZeroGainAndSignsLikeMoney(double baseline, double summary, string cssClass, string text)
+    {
+        await using var context = new BunitContext();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Services.AddLogging();
+        context.Services.AddMudServices();
+        var cut = context.Render<TimeSeriesValueCard>(p => p.Add(x => x.Data, Points(75, 100))
+            .Add(x => x.SummaryValue, (decimal)summary).Add(x => x.DeltaBaseline, (decimal)baseline)
+            .Add(x => x.CurrencyShortName, "PLN"));
+
+        var badge = cut.Find(".fm-tsvc-delta");
+        Assert.Contains(cssClass, badge.ClassList);
+        Assert.StartsWith(text, badge.TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task YAxis_StartsAtZeroWhenEverySeriesIsNonNegative()
+    {
+        var options = await RenderedOptionsAsync(Points(0, 12_000), "390px");
+
+        var axis = options.Yaxis!.Single();
+        Assert.Equal(0d, Convert.ToDouble(axis.Min));
+        Assert.Contains("if(v<0) return ''", Assert.IsType<YAxisLabels>(axis.Labels).Formatter);
+    }
+
+    [Fact]
+    public async Task YAxis_KeepsRoomBelowZeroWhenASeriesIsNegative()
+    {
+        var options = await RenderedOptionsAsync(Points(-500, 12_000), "390px");
+
+        Assert.True(Convert.ToDouble(options.Yaxis!.Single().Min) < -500);
     }
 
     private static List<TimeSeriesModel> Points(params decimal[] values) =>

@@ -16,10 +16,10 @@ namespace FinanceManager.Tests.Unit.Application.Services;
 public class AssetsServiceInvestmentTests
 {
     private static AssetsServiceInvestment CreateService(
-        Mock<IInvestmentValuationService> valuation, Mock<IInvestmentTransactionRepository>? transactions = null) =>
+        Mock<IInvestmentValuationService> valuation, Mock<IInvestmentTransactionRepository>? transactions = null, IDividendPaymentRepository? dividends = null) =>
         new(Mock.Of<IAccountRepository<InvestmentAccount>>(), valuation.Object,
             (transactions ?? new Mock<IInvestmentTransactionRepository>()).Object, Mock.Of<IInvestmentPriceProvider>(),
-            Mock.Of<ICurrencyExchangeService>());
+            Mock.Of<ICurrencyExchangeService>(), dividends ?? Mock.Of<IDividendPaymentRepository>());
 
     [Fact]
     public async Task IsAnyAccountWithAssets_CountsAnyNonZeroPooledHolding_IncludingGuestUsers()
@@ -32,6 +32,19 @@ public class AssetsServiceInvestmentTests
 
         Assert.True(await service.IsAnyAccountWithAssets(-3));
         Assert.False(await service.IsAnyAccountWithAssets(4));
+    }
+
+    [Fact]
+    public async Task IsAnyAccountWithAssets_IsTrueForAnOwnerWithOnlyRecordedDividends()
+    {
+        var transactions = new Mock<IInvestmentTransactionRepository>();
+        transactions.Setup(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var dividends = new Mock<IDividendPaymentRepository>();
+        dividends.Setup(x => x.HasPayments(-5, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var service = CreateService(new Mock<IInvestmentValuationService>(), transactions, dividends.Object);
+
+        Assert.True(await service.IsAnyAccountWithAssets(-5));
+        Assert.False(await service.IsAnyAccountWithAssets(6));
     }
 
     [Fact]
@@ -115,7 +128,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = Assert.Single(await service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, DateTime.UtcNow));
 
@@ -174,7 +188,7 @@ public class AssetsServiceInvestmentTests
             Mock.Of<IInvestmentValuationService>(),
             transactionRepository.Object,
             priceProvider.Object,
-            Mock.Of<ICurrencyExchangeService>());
+            Mock.Of<ICurrencyExchangeService>(), Mock.Of<IDividendPaymentRepository>());
 
         var instrument = Assert.Single(await service.GetUnrealizedGainLossPerInstrument(-5, DefaultCurrency.PLN, new DateTime(2026, 2, 1)));
 
@@ -195,7 +209,7 @@ public class AssetsServiceInvestmentTests
             Mock.Of<IInvestmentValuationService>(),
             transactionRepository.Object,
             Mock.Of<IInvestmentPriceProvider>(),
-            Mock.Of<ICurrencyExchangeService>());
+            Mock.Of<ICurrencyExchangeService>(), Mock.Of<IDividendPaymentRepository>());
 
         Assert.Empty(await service.GetUnrealizedGainLossPerInstrument(0, DefaultCurrency.PLN, DateTime.UtcNow));
         Assert.Empty(await service.GetUnrealizedGainLossPerAccount(0, DefaultCurrency.PLN, DateTime.UtcNow));
@@ -247,7 +261,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = Assert.Single(await service.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate));
 
@@ -298,7 +313,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = await service.GetForAccountAsync(
             1,
@@ -364,7 +380,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = await service.GetForAccountAsync(
             1,
@@ -404,7 +421,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = await service.GetForAccountAsync(
             1,
@@ -441,7 +459,8 @@ public class AssetsServiceInvestmentTests
             valuationService.Object,
             transactionRepository.Object,
             priceProvider.Object,
-            exchangeService.Object);
+            exchangeService.Object,
+            Mock.Of<IDividendPaymentRepository>());
 
         var result = await service.GetForAccountAsync(
             1,

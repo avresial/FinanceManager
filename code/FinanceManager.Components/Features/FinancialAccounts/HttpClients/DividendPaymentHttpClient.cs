@@ -7,31 +7,31 @@ namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
 public class DividendPaymentHttpClient(HttpClient httpClient)
 {
-    private static string Route(int accountId) => $"api/accounts/{accountId}/dividends";
-    public async Task<DividendPaymentPage> GetHistoryPageAsync(int accountId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
+    private static string Route(int? accountId) => accountId is int id ? $"api/accounts/{id}/dividends" : "api/dividends";
+    public async Task<DividendPaymentPage> GetHistoryPageAsync(int? accountId, int page = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync($"{Route(accountId)}?page={page}&pageSize={pageSize}", cancellationToken);
         await RequireSuccess(response, cancellationToken);
         return await response.Content.ReadFromJsonAsync<DividendPaymentPage>(cancellationToken) ?? throw new HttpRequestException("The dividend history response was empty.");
     }
-    public async Task<IReadOnlyList<DividendHoldingOption>> GetHoldingsAsync(int accountId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DividendHoldingOption>> GetHoldingsAsync(int? accountId, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.GetAsync($"{Route(accountId)}/holdings", cancellationToken);
         await RequireSuccess(response, cancellationToken);
         return await response.Content.ReadFromJsonAsync<List<DividendHoldingOption>>(cancellationToken) ?? throw new HttpRequestException("The dividend holding response was empty.");
     }
-    public async Task<long> AddAsync(int accountId, DividendPaymentRequest request, CancellationToken cancellationToken = default)
+    public async Task<long> AddAsync(int? accountId, DividendPaymentRequest request, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PostAsJsonAsync(Route(accountId), request, cancellationToken);
         await RequireSuccess(response, cancellationToken);
         return await response.Content.ReadFromJsonAsync<long>(cancellationToken);
     }
-    public async Task UpdateAsync(int accountId, long id, DividendPaymentRequest request, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(int? accountId, long id, DividendPaymentRequest request, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PutAsJsonAsync($"{Route(accountId)}/{id}", request, cancellationToken);
         await RequireSuccess(response, cancellationToken);
     }
-    public async Task DeleteAsync(int accountId, long id, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(int? accountId, long id, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.DeleteAsync($"{Route(accountId)}/{id}", cancellationToken);
         await RequireSuccess(response, cancellationToken);
@@ -53,7 +53,7 @@ public class DividendPaymentHttpClient(HttpClient httpClient)
             throw new HttpRequestException(body.Length <= 512 ? body : "Check the payment fields.");
         }
         throw new HttpRequestException(response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized
-            ? "You do not have access to this investment account."
+            ? "You do not have access to these dividend payments."
             : "The dividend request failed. Refresh and try again.");
     }
 }

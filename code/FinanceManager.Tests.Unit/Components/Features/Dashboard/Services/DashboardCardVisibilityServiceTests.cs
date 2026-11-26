@@ -138,6 +138,7 @@ public class DashboardCardVisibilityServiceTests
         await reloaded.EnsureLoadedAsync("assets");
         await reloaded.EnsureLoadedAsync();
         await reloaded.SetHiddenAsync("distribution", false, "liabilities");
+        Assert.All(new[] { "investments-value", "holdings", "dividends" }, id => Assert.False(reloaded.IsHidden(id, "assets")));
         Assert.True(reloaded.IsHidden("distribution", "assets"));
         Assert.True(reloaded.IsHidden(DashboardCards.Liabilities));
         Assert.False(reloaded.IsHidden("distribution", "liabilities"));

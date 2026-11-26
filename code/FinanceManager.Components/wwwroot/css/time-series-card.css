@@ -35,6 +35,12 @@
     background: color-mix(in srgb, var(--mud-palette-error) 13%, transparent);
 }
 
+/* Zero change: no good/bad judgement, just the muted secondary text colour on a faint surface. */
+.fm-tsvc-delta--neutral {
+    color: var(--mud-palette-text-secondary);
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);
+}
+
 @media (prefers-color-scheme: dark) {
     .fm-tsvc-delta--good {
         color: color-mix(in srgb, var(--mud-palette-success) 70%, white);
@@ -136,4 +142,8 @@
 
 .fm-tsvc-note .fm-unconverted-chip {
     margin-left: 0;
+}
+
+.fm-tsvc-card .apexcharts-legend-text {
+    color: var(--mud-palette-text-secondary) !important;
 }

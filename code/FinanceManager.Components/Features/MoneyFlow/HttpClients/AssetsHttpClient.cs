@@ -86,6 +86,22 @@ public class AssetsHttpClient(HttpClient httpClient)
         return await httpClient.GetFromJsonAsync<InvestmentPaycheckEstimate>(endpoint);
     }
 
+    public async Task<UnrealizedGainLossAccountResult?> GetInvestmentGainLossAsync(
+        int userId,
+        Currency currency,
+        DateTime asOfDate,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync(
+            $"{httpClient.BaseAddress}api/Assets/GetInvestmentGainLoss/{userId}/{currency.Id}/{asOfDate:O}",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NoContent) return null;
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UnrealizedGainLossAccountResult>(cancellationToken: cancellationToken);
+    }
+
     public async Task<UnrealizedGainLossAccountResult?> GetUnrealizedGainLossForAccount(
         int userId,
         int accountId,

@@ -39,7 +39,7 @@ public class AssetsDistributionOperationTests
         _investment = new AssetsServiceInvestment(
             Mock.Of<IAccountRepository<InvestmentAccount>>(), _valuation.Object,
             _transactions.Object, Mock.Of<IInvestmentPriceProvider>(),
-            Mock.Of<ICurrencyExchangeService>());
+            Mock.Of<ICurrencyExchangeService>(), Mock.Of<IDividendPaymentRepository>());
         var currencies = new Mock<ICurrencyRepository>();
         currencies.Setup(x => x.GetCurrency(DefaultCurrency.PLN.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(DefaultCurrency.PLN);

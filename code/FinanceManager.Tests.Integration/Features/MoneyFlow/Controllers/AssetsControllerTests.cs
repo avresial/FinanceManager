@@ -379,6 +379,24 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
+    public async Task InvestmentGainLoss_UsesOwnerPoolAndChecksCurrencyAndIdentity()
+    {
+        await SeedPooledInvestmentsAcrossAccountsAndUnlinkedTrade();
+        var ct = TestContext.Current.CancellationToken;
+        var client = new AssetsHttpClient(Client);
+        Authorize("owner", 7, UserRole.User);
+        var gain = await client.GetInvestmentGainLossAsync(7, DefaultCurrency.USD, _nowUtc, ct);
+        Assert.NotNull(gain);
+        Assert.Equal((1200m, 1440m), (gain.CostBasis, gain.CurrentValue));
+
+        var route = $"api/Assets/GetInvestmentGainLoss/7";
+        Assert.Equal(HttpStatusCode.NotFound, (await Client.GetAsync($"{route}/99999/{_nowUtc:O}", ct)).StatusCode);
+        Authorize("guest", -17, UserRole.User);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client.GetAsync($"{route}/{DefaultCurrency.USD.Id}/{_nowUtc:O}", ct)).StatusCode);
+        Assert.Null(await client.GetInvestmentGainLossAsync(-17, DefaultCurrency.USD, _nowUtc, ct));
+    }
+
+    [Fact]
     public async Task GetUnrealizedGainLossPerAccount_PoolsLinkedAndUnlinkedTradesWithoutAccountId()
     {
         await SeedPooledInvestmentsAcrossAccountsAndUnlinkedTrade();
