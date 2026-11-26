@@ -124,7 +124,7 @@
 {
     <MudOverlay @bind-Visible="_removeEntryVisibility" DarkBackground="true" ZIndex="1300">
         <MudPaper Class="pa-4 pa-sm-6" Style="width: min(720px, 92vw); max-height: 90vh; overflow-y: auto;">
-            <RemoveCurrencyEntry CurrencyAccountName="@($"Cash · {Currency}")" CashEntry="Entry" Currency="@Currency"
+            <RemoveCurrencyEntry Title="@($"Cash · {Currency}")" CashEntry="Entry" Currency="@Currency"
                                  Cancel="HideOverlay" Confirm="ConfirmRemove" />
         </MudPaper>
     </MudOverlay>

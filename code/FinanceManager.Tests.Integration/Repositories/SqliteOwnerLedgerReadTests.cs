@@ -51,13 +51,13 @@ public sealed class SqliteOwnerLedgerReadTests : IDisposable
 
     private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, decimal storedValue = 999)
     {
-        _context.CurrencyEntries.Add(new CashEntry(account, 0, date, storedValue, change) { UserId = owner, CurrencyId = currency });
+        _context.CurrencyEntries.Add(new CashEntry(0, date, change) { UserId = owner, CurrencyId = currency });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task AddBond(int owner, int bond, DateTime date, decimal change, int? account = null)
     {
-        _context.BondEntries.Add(new BondEntry(account, 0, date, 999, change, bond) { UserId = owner });
+        _context.BondEntries.Add(new BondEntry(0, date, change, bond) { UserId = owner });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -180,7 +180,6 @@ public sealed class SqliteOwnerLedgerReadTests : IDisposable
         InvestmentTransaction Trade(long user, int? account, long listing, InvestmentTransactionType type, decimal quantity, DateTime date) => new()
         {
             UserId = user,
-            AccountId = account,
             AssetListingId = listing,
             Type = type,
             Quantity = quantity,

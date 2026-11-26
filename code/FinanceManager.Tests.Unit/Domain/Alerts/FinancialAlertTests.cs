@@ -47,7 +47,6 @@ public class FinancialAlertTests
         Assert.Equal(500m, alert.Threshold);
         Assert.Equal(AlertEvaluationPeriod.CurrentMonth, alert.EvaluationPeriod);
         Assert.Equal(2, alert.CurrencyId);
-        Assert.Null(alert.AccountId);
         Assert.Equal(10, alert.LabelId);
         Assert.Equal("Dining", alert.LabelName);
         Assert.True(alert.IsEnabled);
@@ -85,7 +84,6 @@ public class FinancialAlertTests
         Assert.Equal(AlertType.MerchantSpending, alert.AlertType);
         Assert.Equal(AlertEvaluationPeriod.Last30Days, alert.EvaluationPeriod);
         Assert.Equal(5, alert.CurrencyId);
-        Assert.Null(alert.AccountId);
         Assert.Equal("Amazon", alert.MerchantName);
         Assert.NotNull(alert.UpdatedAt);
     }
@@ -164,7 +162,6 @@ public class FinancialAlertTests
 
         Assert.Equal(-2, alert.UserId);
         Assert.Equal(0, alert.CurrencyId);
-        Assert.Null(alert.AccountId);
     }
 
     [Theory]

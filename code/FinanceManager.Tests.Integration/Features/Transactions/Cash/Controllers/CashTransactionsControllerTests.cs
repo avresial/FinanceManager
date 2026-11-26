@@ -3,8 +3,6 @@ using FinanceManager.Application.Identity.Users;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.Transactions.Cash.Dtos;
@@ -28,7 +26,6 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     private const int _owner = 1;
     private const int _other = 2;
     private const int _guest = -7;
-    private const int _accountId = 40;
     private const int _pln = 0;
     private const int _usd = 1;
     private static readonly DateTime _day = new(2024, 6, 3, 0, 0, 0, DateTimeKind.Utc);
@@ -63,13 +60,12 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     private void Seed()
     {
         Db.Currencies.Add(new Currency(_usd, "USD", "$"));
-        Db.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = _owner, Name = "Wallet", AccountType = AccountType.Currency, CurrencyId = _pln });
         Db.SaveChanges();
     }
 
-    private async Task<long> SeedEntry(int userId, int? accountId, int currencyId, DateTime date, decimal valueChange, decimal value = 0m, string description = "seed")
+    private async Task<long> SeedEntry(int userId, int currencyId, DateTime date, decimal valueChange, string description = "seed")
     {
-        var entry = new CashEntry(accountId, 0, date, value, valueChange)
+        var entry = new CashEntry(0, date, valueChange)
         {
             UserId = userId,
             CurrencyId = currencyId,
@@ -112,7 +108,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
-    public async Task Create_StoresAnUnlinkedOwnerRowWithASignedDelta_AndReturnsThePersistedRow()
+    public async Task Create_StoresAnOwnerRowWithASignedDelta_AndReturnsThePersistedRow()
     {
         Seed();
         Authorize("owner", _owner, UserRole.User);
@@ -133,9 +129,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         var stored = await Db.CurrencyEntries.SingleAsync(ct);
         Assert.Equal(dto.EntryId, stored.EntryId);
         Assert.Equal(_owner, stored.UserId);
-        Assert.Null(stored.AccountId);
         Assert.Equal(_pln, stored.CurrencyId);
-        Assert.Equal(0m, stored.Value);
         Assert.Equal(_day.AddHours(9), stored.PostingDate);
     }
 
@@ -170,20 +164,20 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
-    public async Task GetByIds_ReturnsTheOwnersLinkedAndUnlinkedEntriesNewestFirst_AndSkipsForeignAndMissingIds()
+    public async Task GetByIds_ReturnsTheOwnersEntriesNewestFirst_AndSkipsForeignAndMissingIds()
     {
         Seed();
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
         if (!Db.Currencies.Any(currency => currency.Id == _pln)) Db.Currencies.Add(new Currency(_pln, "PLN", "zł"));
-        var unlinked = await SeedEntry(_owner, null, _pln, _day, -5m, description: "unlinked");
-        var linked = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(2), -7m, value: 100m, description: "linked");
-        var foreign = await SeedEntry(_other, null, _pln, _day.AddDays(1), -9m);
+        var older = await SeedEntry(_owner, _pln, _day, -5m, description: "older");
+        var newer = await SeedEntry(_owner, _pln, _day.AddDays(2), -7m, description: "newer");
+        var foreign = await SeedEntry(_other, _pln, _day.AddDays(1), -9m);
 
         var response = await Client.GetFromJsonAsync<List<CurrencyTransactionLogItemDto>>(
-            $"{_route}?entryIds={unlinked}&entryIds={linked}&entryIds={foreign}&entryIds=9999&entryIds={linked}", ct);
+            $"{_route}?entryIds={older}&entryIds={newer}&entryIds={foreign}&entryIds=9999&entryIds={newer}", ct);
 
-        Assert.Equal([linked, unlinked], response!.Select(entry => entry.EntryId));
+        Assert.Equal([newer, older], response!.Select(entry => entry.EntryId));
         Assert.All(response!, entry => Assert.Equal("PLN", entry.Currency));
     }
 
@@ -211,8 +205,8 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Seed();
         Authorize("guest", _guest, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
-        var own = await SeedEntry(_guest, null, _pln, _day, -5m);
-        var owners = await SeedEntry(_owner, null, _pln, _day, -5m);
+        var own = await SeedEntry(_guest, _pln, _day, -5m);
+        var owners = await SeedEntry(_owner, _pln, _day, -5m);
 
         var response = await Client.GetFromJsonAsync<List<CurrencyTransactionLogItemDto>>($"{_route}?entryIds={own}&entryIds={owners}", ct);
 
@@ -288,7 +282,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     public async Task AnotherOwnersOrMissingEntry_IsTheSameNotFound()
     {
         Seed();
-        var foreign = await SeedEntry(_other, null, _pln, _day, 5m);
+        var foreign = await SeedEntry(_other, _pln, _day, 5m);
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
 
@@ -312,7 +306,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Seed();
         var first = await SeedLabel("first");
         var second = await SeedLabel("second");
-        var id = await SeedEntry(_owner, null, _usd, _day, 5m);
+        var id = await SeedEntry(_owner, _usd, _day, 5m);
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
 
@@ -339,46 +333,17 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Assert.Equal(33m, stored.ValueChange);
         Assert.Equal(_usd, stored.CurrencyId);
         Assert.Equal(_owner, stored.UserId);
-        Assert.Null(stored.AccountId);
-        Assert.Equal(0m, stored.Value);
     }
 
     [Fact]
-    public async Task HistoricalEntry_EditAndDeletePreserveDormantBalances()
+    public async Task Export_ListsOnlyTheOwnersRowsOfTheCurrencyInRange()
     {
         Seed();
-        var first = await SeedEntry(_owner, _accountId, _pln, _day, 10m, value: 10m);
-        var second = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(1), 5m, value: 15m);
-        var third = await SeedEntry(_owner, _accountId, _pln, _day.AddDays(2), 2m, value: 17m);
-        var unlinked = await SeedEntry(_owner, null, _pln, _day.AddDays(1), 100m);
-        Authorize("owner", _owner, UserRole.User);
-        var ct = TestContext.Current.CancellationToken;
-
-        using var edited = await Client.PutAsJsonAsync($"{_route}/{first}", Update(20m, date: _day.AddDays(1).AddHours(12)), ct);
-        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
-        Db.ChangeTracker.Clear();
-        var values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
-        Assert.Equal([second, first, third], values.Select(e => e.EntryId));
-        Assert.Equal([15m, 10m, 17m], values.Select(e => e.Value));
-        Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
-
-        using var deleted = await Client.DeleteAsync($"{_route}/{second}", ct);
-        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
-        Db.ChangeTracker.Clear();
-        values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
-        Assert.Equal([10m, 17m], values.Select(e => e.Value));
-        Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
-    }
-
-    [Fact]
-    public async Task Export_ListsOnlyTheOwnersRowsOfTheCurrencyInRange_LinkedOrNot_WithoutTheRunningValue()
-    {
-        Seed();
-        await SeedEntry(_owner, _accountId, _pln, _day.AddHours(1), 10m, value: 10m, description: "linked");
-        await SeedEntry(_owner, null, _pln, _day.AddHours(2), -3m, description: "free, \"quoted\"");
-        await SeedEntry(_owner, null, _usd, _day.AddHours(3), 99m, description: "other currency");
-        await SeedEntry(_other, null, _pln, _day.AddHours(4), 98m, description: "other owner");
-        await SeedEntry(_owner, null, _pln, _day.AddDays(40), 97m, description: "out of range");
+        await SeedEntry(_owner, _pln, _day.AddHours(1), 10m, description: "first");
+        await SeedEntry(_owner, _pln, _day.AddHours(2), -3m, description: "free, \"quoted\"");
+        await SeedEntry(_owner, _usd, _day.AddHours(3), 99m, description: "other currency");
+        await SeedEntry(_other, _pln, _day.AddHours(4), 98m, description: "other owner");
+        await SeedEntry(_owner, _pln, _day.AddDays(40), 97m, description: "out of range");
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
 
@@ -390,7 +355,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         var lines = (await response.Content.ReadAsStringAsync(ct)).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         Assert.Equal("Id,PostingDate,ValueChange,ContractorDetails,Description", lines[0]);
         Assert.Equal(3, lines.Length);
-        Assert.EndsWith(",2024-06-03T01:00:00Z,10,,linked", lines[1][lines[1].IndexOf(',')..]);
+        Assert.EndsWith(",2024-06-03T01:00:00Z,10,,first", lines[1][lines[1].IndexOf(',')..]);
         Assert.Contains("-3", lines[2]);
         Assert.Contains("\"free, \"\"quoted\"\"\"", lines[2]);
     }
@@ -415,8 +380,8 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     public async Task Import_RunsAsAnOwnerJob_SkipsExactMatches_AndSavesTheReviewedSurplusOnce()
     {
         Seed();
-        await SeedEntry(_owner, _accountId, _pln, _day.AddHours(8), 10m, value: 10m, description: "linked statement row");
-        await SeedEntry(_owner, null, _pln, _day.AddHours(20), 7m, description: "unrelated, never offered");
+        await SeedEntry(_owner, _pln, _day.AddHours(8), 10m, description: "statement row");
+        await SeedEntry(_owner, _pln, _day.AddHours(20), 7m, description: "unrelated, never offered");
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
         CurrencyEntryImportRecordDto[] rows =
@@ -455,18 +420,16 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         }
 
         Db.ChangeTracker.Clear();
-        var owned = await Db.CurrencyEntries.AsNoTracking().Where(e => e.UserId == _owner && e.AccountId == null).OrderBy(e => e.PostingDate).ToListAsync(ct);
-        Assert.Equal([5m, 7m, 2m], owned.Select(e => e.ValueChange)); // surplus once, the unrelated row, the clean day
+        var owned = await Db.CurrencyEntries.AsNoTracking().Where(e => e.UserId == _owner).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
+        Assert.Equal([10m, 5m, 7m, 2m], owned.Select(e => e.ValueChange)); // the statement row, surplus once, the unrelated row, the clean day
         Assert.All(owned, e => Assert.Equal(_pln, e.CurrencyId));
-        Assert.All(owned, e => Assert.Equal(0m, e.Value));
-        Assert.Equal(10m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.AccountId == _accountId, ct)).Value);
     }
 
     [Fact]
     public async Task ImportDecision_ThatCannotBeSavedIsReopened_SoItCanBeRetried()
     {
         Seed();
-        await SeedEntry(_owner, null, _pln, _day.AddHours(8), 10m);
+        await SeedEntry(_owner, _pln, _day.AddHours(8), 10m);
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
         CurrencyEntryImportRecordDto[] rows = [new(_day.AddHours(8), 10m, null, "present"), new(_day.AddHours(8), 10m, null, "surplus")];
@@ -495,8 +458,8 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     public async Task ImportDecision_OfAnotherOwnerOrAnotherJobsConflictId_IsNotFoundAndSavesNothing()
     {
         Seed();
-        await SeedEntry(_owner, null, _pln, _day.AddHours(8), 10m);
-        await SeedEntry(_owner, null, _usd, _day.AddHours(8), 10m);
+        await SeedEntry(_owner, _pln, _day.AddHours(8), 10m);
+        await SeedEntry(_owner, _usd, _day.AddHours(8), 10m);
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
         var plnConflict = await StartJobWithASurplus(_pln, ct);

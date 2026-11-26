@@ -76,7 +76,7 @@ public class BondTransactionRowTests
     {
         await using var context = CreateContext();
         var cut = context.Render<BondTransactionRow>(p => p
-            .Add(x => x.Entry, new BondEntry(1, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 12m, 2m, 1)));
+            .Add(x => x.Entry, new BondEntry(7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 2m, 1)));
         cut.Find("[role='button']").Click();
 
         var change = cut.FindAll(".mud-collapse-container .mud-typography.fm-tabular").Single(element => element.TextContent.Contains("+2"));
@@ -90,7 +90,7 @@ public class BondTransactionRowTests
         var handler = new RecordingHttpHandler();
         await using var context = CreateContext(handler);
         var cut = context.Render<BondTransactionRow>(p => p
-            .Add(x => x.Entry, new BondEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, 2m, 1))
+            .Add(x => x.Entry, new BondEntry(7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 2m, 1))
             .Add(x => x.BondName, "Poland Bond"));
         cut.Find("[role='button']").Click();
         var published = 0;
@@ -108,8 +108,7 @@ public class BondTransactionRowTests
 
     private static IRenderedComponent<BondTransactionRow> RenderRow(BunitContext context, bool isMobile, DateTime? postingDate = null)
     {
-        var entry = new BondEntry(1, 7, postingDate ?? new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc),
-            12m, 2m, 1);
+        var entry = new BondEntry(7, postingDate ?? new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 2m, 1);
         var details = new BondDetails
         {
             Id = 1,

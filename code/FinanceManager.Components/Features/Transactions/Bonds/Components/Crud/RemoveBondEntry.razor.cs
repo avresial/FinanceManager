@@ -14,7 +14,7 @@ public partial class RemoveBondEntry
 
     [Parameter] public EventCallback Confirm { get; set; }
     [Parameter] public EventCallback Cancel { get; set; }
-    [Parameter] public required string BondAccountName { get; set; }
+    [Parameter] public required string Title { get; set; }
     [Parameter] public required BondEntry BondEntry { get; set; }
 
     [Inject] public required ISettingsService SettingsService { get; set; }

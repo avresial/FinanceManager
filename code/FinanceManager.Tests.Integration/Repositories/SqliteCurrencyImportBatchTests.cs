@@ -44,8 +44,8 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var entry1 = new CashEntry(null, 0, jan10, 0, 500m) { UserId = 1 };
-        var entry2 = new CashEntry(null, 0, jan15, 0, 300m) { UserId = 1 };
+        var entry1 = new CashEntry(0, jan10, 500m) { UserId = 1 };
+        var entry2 = new CashEntry(0, jan15, 300m) { UserId = 1 };
 
         var added = await _repo.Add([entry2, entry1], cancellationToken: ct);
 
@@ -75,7 +75,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         await _context.SaveChangesAsync(ct);
 
         var postingDate = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new CashEntry(null, 0, postingDate, 0, 500m)
+        var entry = new CashEntry(0, postingDate, 500m)
         {
             UserId = 1,
             Labels = [new FinancialLabel { Id = existingLabel.Id, Name = existingLabel.Name }]

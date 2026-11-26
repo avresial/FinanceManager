@@ -55,7 +55,7 @@ public class BondImportService(
             // Only a real overlap needs review; unrelated rows already on the day never block an import.
             if (exactMatches.Count != 0)
             {
-                conflicts.AddRange(exactMatches.Select(x => new BondImportConflict(x.Import, WithoutLink(x.Existing), "Exact match")));
+                conflicts.AddRange(exactMatches.Select(x => new BondImportConflict(x.Import, x.Existing, "Exact match")));
                 conflicts.AddRange(importsOnly.Select(x => new BondImportConflict(x, null, "Import not found in existing")));
                 continue;
             }
@@ -209,10 +209,8 @@ public class BondImportService(
         return entries;
     }
 
-    // A linked entry is stamped by the repository from its account and carries the running value; an owner entry
-    // carries the validated owner and keeps no running value.
     private static BondEntry NewEntry(int userId, BondEntryImport import) =>
-        new(null, 0, ImportDateNormalizer.ToSecond(import.PostingDate), 0, import.ValueChange, import.BondDetailsId)
+        new(0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.BondDetailsId)
         {
             UserId = userId,
             Description = import.Description
@@ -221,15 +219,6 @@ public class BondImportService(
     // Bond entries are compared on posting date (second precision), value change and bond details.
     private static (DateTime Date, decimal ValueChange, int BondDetailsId) ImportKey(BondEntryImport import) =>
         (ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange, import.BondDetailsId);
-
-    // An owner review shows the existing row without its legacy account link or running value.
-    private static BondEntry WithoutLink(BondEntry entry) =>
-        new(null, entry.EntryId, entry.PostingDate, 0, entry.ValueChange, entry.BondDetailsId)
-        {
-            UserId = entry.UserId,
-            Description = entry.Description,
-            Labels = entry.Labels
-        };
 
     private static (DateTime Date, decimal ValueChange, int BondDetailsId) ExistingKey(BondEntry entry) =>
         (ImportDateNormalizer.ToSecond(entry.PostingDate), entry.ValueChange, entry.BondDetailsId);

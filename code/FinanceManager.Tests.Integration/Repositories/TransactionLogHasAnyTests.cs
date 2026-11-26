@@ -63,10 +63,10 @@ public sealed class TransactionLogHasAnyTests : IDisposable
         switch (kind)
         {
             case "cash":
-                _context.CurrencyEntries.Add(new CashEntry(null, 0, _day, 0, 5) { UserId = owner, CurrencyId = 0 });
+                _context.CurrencyEntries.Add(new CashEntry(0, _day, 5) { UserId = owner, CurrencyId = 0 });
                 break;
             case "bond":
-                _context.BondEntries.Add(new BondEntry(null, 0, _day, 0, 1, 5) { UserId = owner });
+                _context.BondEntries.Add(new BondEntry(0, _day, 1, 5) { UserId = owner });
                 break;
             case "trade":
                 _context.InvestmentTransactions.Add(new InvestmentTransaction

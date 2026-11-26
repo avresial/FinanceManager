@@ -35,14 +35,14 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
         var dining = new FinancialLabel { Id = 5, Name = "Dining" };
         _context.FinancialLabels.Add(dining);
         _context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), 400m, -400m)
+            new CashEntry(1, new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), -400m)
             {
                 UserId = 1,
                 CurrencyId = 0,
                 Description = "Cafe",
                 Labels = [dining]
             },
-            new CashEntry(null, 2, new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc), 3300m, -2900m)
+            new CashEntry(2, new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc), -2900m)
             {
                 UserId = 1,
                 CurrencyId = 0,
@@ -51,14 +51,14 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
                 Labels = [dining]
             },
             // Another currency of the same owner and another owner never count.
-            new CashEntry(null, 3, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), 0m, -9000m)
+            new CashEntry(3, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), -9000m)
             {
                 UserId = 1,
                 CurrencyId = 1,
                 Description = "Acme Store",
                 Labels = [dining]
             },
-            new CashEntry(null, 4, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), 0m, -9000m)
+            new CashEntry(4, new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc), -9000m)
             {
                 UserId = 2,
                 CurrencyId = 0,
@@ -134,11 +134,8 @@ public sealed class SqliteFinancialAlertRepositoryTests : IDisposable
 
         for (var entryId = 1; entryId <= 6; entryId++)
         {
-            _context.CurrencyEntries.Add(new CashEntry(
-                null,
-                entryId,
+            _context.CurrencyEntries.Add(new CashEntry(entryId,
                 new DateTime(2026, 9, entryId, 0, 0, 0, DateTimeKind.Utc),
-                1000m - entryId * 100m,
                 -entryId * 100m)
             {
                 UserId = -3,

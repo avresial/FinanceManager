@@ -174,7 +174,7 @@ Important:
 
 1. Query `__EFMigrationsHistory` again and confirm the bad migration is gone.
 2. Deploy/start only the compatible pre-migration application artifact selected in Step 1. Keep the failed/latest artifact stopped; its startup migration initializer would reapply the reverted migration.
-3. Query `__EFMigrationsHistory` again after startup to confirm the bad migration remains absent, then verify login, dashboard load, and core account flows.
+3. Query `__EFMigrationsHistory` again after startup to confirm the bad migration remains absent, then verify login, dashboard load, and core transaction flows.
 4. Review application logs for migration or startup failures before restoring traffic.
 
 ## 6. Restore From Backup
@@ -248,7 +248,7 @@ Recommended validation after restore:
 
 1. Confirm expected row counts for critical tables.
 2. Confirm `__EFMigrationsHistory` matches the backup point.
-3. Sign in and validate account listing, balances, and transaction history.
+3. Sign in and validate the Dashboard, balances, and transaction history.
 
 ## 7. Decision Guide
 
@@ -262,6 +262,7 @@ Use Supabase backup restore when:
 - A bad release wrote incorrect values.
 - A migration performed destructive or irreversible data changes.
 - Multiple migrations or app writes happened after the failure.
+- The migration to revert is `DropFinancialAccounts` or later. Its `Down()` throws on purpose because the dropped account names, links and running values cannot be rebuilt ([contract runbook](migrations.md#financial-accounts-contract-1144)).
 
 ## 8. Repo-Specific Commands
 

@@ -55,7 +55,7 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
 
     private async Task AddCash(int owner, int currency, DateTime date, decimal change, int? account = null, string description = "", string? contractor = null, params FinancialLabel[] labels)
     {
-        _context.CurrencyEntries.Add(new CashEntry(account, 0, date, 999, change) { UserId = owner, CurrencyId = currency, Description = description, ContractorDetails = contractor, Labels = labels });
+        _context.CurrencyEntries.Add(new CashEntry(0, date, change) { UserId = owner, CurrencyId = currency, Description = description, ContractorDetails = contractor, Labels = labels });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
@@ -76,11 +76,11 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
     [Fact]
     public async Task Bond_HasAnyEntries_SeesLinkedAndUnlinkedRowsOfTheOwnerOnly()
     {
-        _context.BondEntries.Add(new BondEntry(null, 0, _jan1, 0, 1, 5) { UserId = _other });
+        _context.BondEntries.Add(new BondEntry(0, _jan1, 1, 5) { UserId = _other });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.False(await _bonds.HasAnyEntries(_owner, TestContext.Current.CancellationToken));
 
-        _context.BondEntries.Add(new BondEntry(null, 0, _jan1, 0, 1, 5) { UserId = _guest });
+        _context.BondEntries.Add(new BondEntry(0, _jan1, 1, 5) { UserId = _guest });
         await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.True(await _bonds.HasAnyEntries(_guest, TestContext.Current.CancellationToken));
@@ -202,7 +202,6 @@ public sealed class OwnerMoneyFlowQueryTests : IDisposable
         InvestmentTransaction Trade(long user, int? account) => new()
         {
             UserId = user,
-            AccountId = account,
             AssetListingId = 11,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1,

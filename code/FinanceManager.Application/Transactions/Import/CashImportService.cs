@@ -195,10 +195,8 @@ public class CashImportService(ITransactionEntryRepository<CashEntry> currencyAc
         }
     }
 
-    // A linked entry is stamped by the repository from its account and carries the running value; an owner entry
-    // carries the validated owner and currency and keeps no running value.
     private static CashEntry NewEntry(int userId, int currencyId, CurrencyEntryImport import) =>
-        new(null, 0, ImportDateNormalizer.ToSecond(import.PostingDate), 0, import.ValueChange)
+        new(0, ImportDateNormalizer.ToSecond(import.PostingDate), import.ValueChange)
         {
             UserId = userId,
             CurrencyId = currencyId,

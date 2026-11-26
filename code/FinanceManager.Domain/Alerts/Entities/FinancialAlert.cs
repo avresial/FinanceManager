@@ -28,10 +28,6 @@ public class FinancialAlert
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
-    // Legacy column of the removed per-account scope, kept (always null) only until the contract step drops it.
-    [System.Text.Json.Serialization.JsonIgnore]
-    public int? AccountId { get; set; }
-
     // Parameterless constructor for persistence and serialization frameworks.
     public FinancialAlert()
     {

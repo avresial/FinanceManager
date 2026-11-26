@@ -18,7 +18,7 @@ public class CashImportJobStoreTests
         var jobId = store.CreateOwnerJob(userId: 1, currencyId: 10, totalEntries: 1);
         var date = DateTime.UtcNow.Date;
         var conflict = new ImportConflict(new CurrencyEntryImport(date, 100m),
-            new CashEntry(10, 5, date, 100m, 100m),
+            new CashEntry(5, date, 100m),
             "Exact match");
 
         // Act

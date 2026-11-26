@@ -17,7 +17,6 @@ public class FinancialInsightNormalizerTests
 
         var insight = Assert.Single(result);
         Assert.Equal(7, insight.UserId);
-        Assert.Null(insight.AccountId);
         Assert.Equal("Title", insight.Title);
         Assert.Equal("Message", insight.Message);
         Assert.Equal("spending", insight.Tags);

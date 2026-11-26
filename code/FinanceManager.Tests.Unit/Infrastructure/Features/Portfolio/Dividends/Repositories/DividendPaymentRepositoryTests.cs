@@ -1,6 +1,4 @@
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Portfolio.Dividends.Entities;
 using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Features.Portfolio.Dividends.Repositories;
@@ -15,14 +13,13 @@ namespace FinanceManager.Tests.Unit.Infrastructure.Features.Portfolio.Dividends.
 public class DividendPaymentRepositoryTests
 {
     [Fact]
-    public async Task OwnerWideQueriesPoolLinkedAndUnlinkedRowsForOneOwnerOnRelationalProvider()
+    public async Task OwnerWideQueriesReadOneOwnerOnRelationalProvider()
     {
         var ct = TestContext.Current.CancellationToken;
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync(ct);
         await using var context = new LedgerContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
         await context.Database.EnsureCreatedAsync(ct);
-        context.Accounts.Add(new FinancialAccountBaseDto { AccountId = 4, UserId = 1, AccountType = AccountType.Stock });
         context.Assets.Add(new Asset
         {
             Id = 1,
@@ -36,12 +33,12 @@ public class DividendPaymentRepositoryTests
             ]
         });
         context.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { UserId = 1, AccountId = null, AssetListingId = 8, Quantity = 1, Currency = "USD" },
-            new InvestmentTransaction { UserId = 2, AccountId = null, AssetListingId = 10, Quantity = 1, Currency = "USD" });
+            new InvestmentTransaction { UserId = 1, AssetListingId = 8, Quantity = 1, Currency = "USD" },
+            new InvestmentTransaction { UserId = 2, AssetListingId = 10, Quantity = 1, Currency = "USD" });
         context.DividendPayments.AddRange(
-            Payment(1, 1, 4, new(2020, 1, 1)), Payment(2, 1, null, new(2020, 1, 1)),
-            Payment(3, 1, null, new(2019, 1, 1)), Payment(4, 2, null, new(2021, 1, 1)));
-        context.DividendPayments.Add(new DividendPayment { Id = 5, UserId = 1, AccountId = null, AssetListingId = 9, PaymentDate = new(2018, 1, 1), Amount = 5, Currency = "USD" });
+            Payment(1, 1, new(2020, 1, 1)), Payment(2, 1, new(2020, 1, 1)),
+            Payment(3, 1, new(2019, 1, 1)), Payment(4, 2, new(2021, 1, 1)));
+        context.DividendPayments.Add(new DividendPayment { Id = 5, UserId = 1, AssetListingId = 9, PaymentDate = new(2018, 1, 1), Amount = 5, Currency = "USD" });
         await context.SaveChangesAsync(ct);
         var repository = new DividendPaymentRepository(context);
 
@@ -58,8 +55,8 @@ public class DividendPaymentRepositoryTests
         Assert.True(await repository.HasHolding(2, 10, ct));
     }
 
-    private static DividendPayment Payment(long id, int user, int? account, DateOnly date) => new()
-    { Id = id, UserId = user, AccountId = account, AssetListingId = 8, PaymentDate = date, Amount = 5, Currency = "USD" };
+    private static DividendPayment Payment(long id, int user, DateOnly date) => new()
+    { Id = id, UserId = user, AssetListingId = 8, PaymentDate = date, Amount = 5, Currency = "USD" };
 
     // SQLite requires a numeric timestamp representation; production providers support DateTimeOffset.
     private sealed class LedgerContext(DbContextOptions<AppDbContext> options) : AppDbContext(options)

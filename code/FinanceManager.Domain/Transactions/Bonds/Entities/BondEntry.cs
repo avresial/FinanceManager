@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Transactions.Bonds.Entities;
 
-public class BondEntry(int? accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange, int bondDetailsId) : ILedgerEntry
+public class BondEntry(long entryId, DateTime postingDate, decimal valueChange, int bondDetailsId) : ILedgerEntry
 {
     [JsonPropertyOrder(-2)]
     public int BondDetailsId { get; set; } = bondDetailsId;
@@ -17,16 +17,6 @@ public class BondEntry(int? accountId, long entryId, DateTime postingDate, decim
     [JsonPropertyOrder(3)]
     public DateTime PostingDate { get; set; } = postingDate;
 
-    private decimal _value = value;
-
-    // Dormant running balance, dropped in #1144.
-    [JsonIgnore]
-    public decimal Value
-    {
-        get => _value;
-        set => _value = value;
-    }
-
     [JsonPropertyOrder(-1)]
     public string Description { get; set; } = string.Empty;
 
@@ -35,10 +25,6 @@ public class BondEntry(int? accountId, long entryId, DateTime postingDate, decim
 
     [JsonIgnore]
     public int UserId { get; set; }
-
-    // Dormant account link, dropped in #1144.
-    [JsonIgnore]
-    public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
     public decimal ValueChange { get; set; } = valueChange;
@@ -54,7 +40,7 @@ public class BondEntry(int? accountId, long entryId, DateTime postingDate, decim
         BondDetailsId = entry.BondDetailsId;
     }
 
-    public BondEntry GetCopy() => new(null, EntryId, PostingDate, 0, ValueChange, BondDetailsId)
+    public BondEntry GetCopy() => new(EntryId, PostingDate, ValueChange, BondDetailsId)
     {
         UserId = UserId,
         Description = Description,

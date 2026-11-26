@@ -1,7 +1,6 @@
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Labels.Entities;
 using FinanceManager.Domain.MoneyFlow.Entities;
@@ -47,7 +46,10 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         _value = 0;
 
         for (DateTime i = DateTime.UtcNow.AddMonths(-24).Date; i <= DateTime.UtcNow; i = i.AddDays(1))
-            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 0, i, _value += _valueChange, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+        {
+            _value += _valueChange;
+            _testDatabase.Context.CurrencyEntries.Add(new CashEntry(0, i, _valueChange) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+        }
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -108,7 +110,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
 
         Assert.NotNull(result);
         Assert.Single(result);
-        Assert.Equal(AccountLabel.Cash.ToString(), result[0].Name);
+        Assert.Equal("Cash", result[0].Name);
         Assert.Equal(_value, result[0].Value);
     }
 
@@ -190,9 +192,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, _nowUtc.AddMonths(-2), 3000m, 3000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] },
-            new CashEntry(null, 2, _nowUtc, 4500m, 4500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] });
-        _testDatabase.Context.BondEntries.Add(new BondEntry(null, 1, _nowUtc.AddDays(-1), 12000m, 12000m, 1) { UserId = 1 });
+            new CashEntry(1, _nowUtc.AddMonths(-2), 3000m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] },
+            new CashEntry(2, _nowUtc, 4500m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id, Labels = [salary] });
+        _testDatabase.Context.BondEntries.Add(new BondEntry(1, _nowUtc.AddDays(-1), 12000m, 1) { UserId = 1 });
 
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 1, UserRole.User);
@@ -311,7 +313,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task GetUnrealizedGainLossPerAccount_PoolsLinkedAndUnlinkedTradesWithoutAccountId()
+    public async Task GetUnrealizedGainLossPerAccount_PoolsTheOwnerTradesIntoOneRow()
     {
         await SeedPooledInvestments();
         Authorize("TestUser", 7, UserRole.User);
@@ -332,7 +334,7 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task GetUnrealizedGainLossPerInstrument_PoolsOneRowPerListingAcrossAccounts()
+    public async Task GetUnrealizedGainLossPerInstrument_PoolsOneRowPerListing()
     {
         await SeedPooledInvestments();
         Authorize("TestUser", 7, UserRole.User);
@@ -354,15 +356,15 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task GetUnrealizedGainLoss_PoolsBondEntriesWithAndWithoutAccountIntoOneBondsRow()
+    public async Task GetUnrealizedGainLoss_PoolsBondEntriesIntoOneBondsRow()
     {
         var context = _testDatabase.Context;
         context.Bonds.Add(CreateBondDetails(8, _nowUtc));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         context.BondEntries.AddRange(
-            new BondEntry(null, 1, _nowUtc.AddDays(-1), 6000m, 6000m, 8) { UserId = 8 },
-            new BondEntry(null, 2, _nowUtc.AddDays(-1), 12000m, 6000m, 8) { UserId = 8 });
+            new BondEntry(1, _nowUtc.AddDays(-1), 6000m, 8) { UserId = 8 },
+            new BondEntry(2, _nowUtc.AddDays(-1), 6000m, 8) { UserId = 8 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("TestUser", 8, UserRole.User);
 
@@ -384,9 +386,9 @@ public class AssetsControllerTests(OptionsProvider optionsProvider) : Controller
     }
 
     [Fact]
-    public async Task PortfolioReturns_IncludeUnlinkedTrades()
+    public async Task PortfolioReturns_IncludeTheOwnerTrades()
     {
-        // The only trade has no account: performance is calculated from the owner's trades, not from accounts.
+        // Performance is calculated from the owner's trades.
         await SeedInvestmentHoldings(userId: 1, listingId: 204, buyQuantity: 5m, buyUnitPrice: 90m, currentPrice: 100m);
         // A quote on the trade day prices every day of the holding period, so the time-weighted return is computable end to end.
         _testDatabase.Context.PriceQuotes.Add(new PriceQuote

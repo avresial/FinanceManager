@@ -1,19 +1,5 @@
 using FinanceManager.Api.Migrations;
-using FinanceManager.Domain.Alerts.Entities;
-using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
-using FinanceManager.Domain.Identity.Dtos;
-using FinanceManager.Domain.Transactions.Bonds.Entities;
-using FinanceManager.Domain.Transactions.Cash.Entities;
-using FinanceManager.Domain.Transactions.Investments.Entities;
-using FinanceManager.Infrastructure.Persistence;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql;
 using System.Data.Common;
 using Xunit;
 
@@ -27,77 +13,66 @@ public class EnforceTransactionOwnerKeysLiveTests
     [InlineData(true)]
     public async Task CutoverReportsBlockingRowsThenBackfillsAndEnforcesOwnerKeys(bool sqlServer)
     {
-        var variable = sqlServer ? "FM_VALUE_SQLSERVER_CONNECTION" : "FM_VALUE_POSTGRESQL_CONNECTION";
+        var variable = PreContractDatabase.ConnectionVariable(sqlServer);
         var connection = Environment.GetEnvironmentVariable(variable);
         Assert.SkipUnless(!string.IsNullOrEmpty(connection), $"Set {variable} to run the owner-key migration on a disposable database.");
-        var database = $"fm_cutover_{Guid.NewGuid():N}";
-        var options = new DbContextOptionsBuilder<AppDbContext>();
-        if (sqlServer)
-            options.UseSqlServer(new SqlConnectionStringBuilder(connection) { InitialCatalog = database }.ConnectionString);
-        else
-            options.UseNpgsql(new NpgsqlConnectionStringBuilder(connection) { Database = database }.ConnectionString);
-
         var ct = TestContext.Current.CancellationToken;
-        await using var context = new AppDbContext(options.Options);
-        try
-        {
-            await context.Database.EnsureCreatedAsync(ct);
-            var migration = new EnforceTransactionOwnerKeys { ActiveProvider = context.Database.ProviderName! };
-            async Task Apply(bool up)
-            {
-                await using var transaction = await context.Database.BeginTransactionAsync(ct);
-                var commands = context.GetService<IMigrationsSqlGenerator>().Generate(up ? migration.UpOperations : migration.DownOperations);
-                foreach (var command in commands)
-                    await context.Database.ExecuteSqlRawAsync(command.CommandText, ct);
-                await transaction.CommitAsync(ct);
-            }
+        await using var db = await PreContractDatabase.Create(sqlServer, connection!, ct);
+        var migration = new EnforceTransactionOwnerKeys();
 
-            await Apply(up: false);
-            var account = new FinancialAccountBaseDto { UserId = -5, CurrencyId = 0, AccountType = AccountType.Currency };
-            var bondAccount = new FinancialAccountBaseDto { UserId = -5, AccountType = AccountType.Bond };
-            var user = new UserDto { Login = "cutover", Password = "unused", CreationDate = DateTime.UtcNow };
-            context.AddRange(account, bondAccount, user, new Currency(0, "PLN", "PLN"));
-            await context.SaveChangesAsync(ct);
-            var linked = new CashEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1);
-            var mismatch = new CashEntry(account.AccountId, 0, DateTime.UnixEpoch, 1, 1) { UserId = 99 };
-            var invalidCurrency = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5, CurrencyId = 999 };
-            var zero = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1);
-            var ownerOnly = new CashEntry(null, 0, DateTime.UnixEpoch, 1, 1) { UserId = -5 };
-            var orphan = new CashEntry(int.MaxValue, 0, DateTime.UnixEpoch, 1, 1) { UserId = -10 };
-            var bond = new BondEntry(bondAccount.AccountId, 0, DateTime.UnixEpoch, 1, 1, 9);
-            var alert = new FinancialAlert { UserId = user.Id, AccountId = account.AccountId };
-            var trade = new InvestmentTransaction
-            {
-                UserId = (long)int.MaxValue + 1,
-                Currency = "PLN",
-                TradeDate = new(2026, 1, 1),
-                AssetListing = new AssetListing { Ticker = "TEST", Asset = new Asset { Name = "Cutover" } },
-            };
-            context.AddRange(linked, mismatch, invalidCurrency, zero, ownerOnly, orphan, bond, alert, trade);
-            await context.SaveChangesAsync(ct);
-            await context.Database.ExecuteSqlAsync($"""UPDATE "CurrencyEntries" SET "UserId" = NULL, "CurrencyId" = NULL WHERE "EntryId" = {linked.EntryId}""", ct);
-            await context.Database.ExecuteSqlRawAsync("""UPDATE "BondEntries" SET "UserId" = NULL""", ct);
+        await db.Apply(migration, up: false, ct);
+        var account = await db.Insert("Accounts", "AccountId", ct, ("UserId", -5), ("Name", "Cash"), ("AccountType", 0), ("AccountLabel", 0), ("CurrencyId", 0));
+        var bondAccount = await db.Insert("Accounts", "AccountId", ct, ("UserId", -5), ("Name", "Bonds"), ("AccountType", 2), ("AccountLabel", 0), ("CurrencyId", 0));
+        var user = await db.Insert("Users", "Id", ct, ("Login", "cutover"), ("Password", "unused"), ("CreationDate", DateTime.UtcNow),
+            ("FailedLoginAttempts", 0), ("PreferredCurrencyId", 0), ("PricingLevel", 0), ("UserRole", 0));
+        await db.Insert("Currencies", null, ct, ("Id", 0), ("ShortName", "PLN"), ("Symbol", "PLN"));
+        Task<long> Cash(long? accountId, int? userId, int? currencyId) => db.Insert("CurrencyEntries", "EntryId", ct,
+            ("AccountId", accountId), ("UserId", userId), ("CurrencyId", currencyId), ("PostingDate", DateTime.UnixEpoch),
+            ("Description", ""), ("Value", 1m), ("ValueChange", 1m));
+        var linked = await Cash(account, null, null);
+        var mismatch = await Cash(account, 99, 0);
+        var invalidCurrency = await Cash(null, -5, 999);
+        var zero = await Cash(null, 0, 0);
+        var ownerOnly = await Cash(null, -5, 0);
+        var orphan = await Cash(int.MaxValue, -10, 0);
+        await db.Insert("BondEntries", "EntryId", ct, ("AccountId", bondAccount), ("UserId", null), ("BondDetailsId", 9),
+            ("PostingDate", DateTime.UnixEpoch), ("Description", ""), ("Value", 1m), ("ValueChange", 1m));
+        var alert = await AddAlert(db, (int)user, account, ct);
+        await AddTrade(db, (long)int.MaxValue + 1, ct);
 
-            var failure = await Assert.ThrowsAnyAsync<DbException>(() => Apply(up: true));
-            Assert.Contains("null_or_zero_keys=1, invalid_cash_currency=1, account_mismatch=1, legacy_alert_scope=1", failure.Message);
-            Assert.Equal(1, await context.Database.SqlQueryRaw<int>("""SELECT COUNT(*) AS "Value" FROM "BondEntries" WHERE "UserId" IS NULL""").SingleAsync(ct));
+        var failure = await Assert.ThrowsAnyAsync<DbException>(() => db.Apply(migration, up: true, ct));
+        Assert.Contains("null_or_zero_keys=1, invalid_cash_currency=1, account_mismatch=1, legacy_alert_scope=1", failure.Message);
+        Assert.Equal(1, await db.Scalar("""SELECT COUNT(*) FROM "BondEntries" WHERE "UserId" IS NULL""", ct));
 
-            context.RemoveRange(mismatch, zero, invalidCurrency, alert);
-            await context.SaveChangesAsync(ct);
-            await Apply(up: true);
-            context.ChangeTracker.Clear();
-            var cash = await context.CurrencyEntries.SingleAsync(e => e.EntryId == linked.EntryId, ct);
-            Assert.Equal((-5, 0), (cash.UserId, cash.CurrencyId));
-            Assert.Equal(-5, (await context.BondEntries.SingleAsync(ct)).UserId);
-            Assert.Null((await context.CurrencyEntries.SingleAsync(e => e.EntryId == ownerOnly.EntryId, ct)).AccountId);
-            Assert.Equal(-10, (await context.CurrencyEntries.SingleAsync(e => e.EntryId == orphan.EntryId, ct)).UserId);
-            await Assert.ThrowsAnyAsync<DbException>(() => context.Database.ExecuteSqlRawAsync("""UPDATE "BondEntries" SET "UserId" = NULL""", ct));
-            await Apply(up: false);
-            Assert.Equal(1, await context.Database.ExecuteSqlRawAsync("""UPDATE "BondEntries" SET "UserId" = NULL""", ct));
-        }
-        finally
-        {
-            await context.Database.EnsureDeletedAsync(CancellationToken.None);
-        }
+        await db.Execute($"""DELETE FROM "CurrencyEntries" WHERE "EntryId" IN ({mismatch}, {zero}, {invalidCurrency})""", ct);
+        await db.Execute($"""DELETE FROM "FinancialAlerts" WHERE "Id" = '{alert}'""", ct);
+        await db.Apply(migration, up: true, ct);
+        var cash = await db.Context.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == linked, ct);
+        Assert.Equal((-5, 0), (cash.UserId, cash.CurrencyId));
+        Assert.Equal(-5, (await db.Context.BondEntries.AsNoTracking().SingleAsync(ct)).UserId);
+        Assert.Equal(0, await db.Scalar($"""SELECT COUNT(*) FROM "CurrencyEntries" WHERE "EntryId" = {ownerOnly} AND "AccountId" IS NOT NULL""", ct));
+        Assert.Equal(-10, (await db.Context.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == orphan, ct)).UserId);
+        await Assert.ThrowsAnyAsync<DbException>(() => db.Execute("""UPDATE "BondEntries" SET "UserId" = NULL""", ct));
+        await db.Apply(migration, up: false, ct);
+        Assert.Equal(1, await db.Execute("""UPDATE "BondEntries" SET "UserId" = NULL""", ct));
+    }
+
+    internal static async Task<Guid> AddAlert(PreContractDatabase db, int userId, long? accountId, CancellationToken ct)
+    {
+        var id = Guid.NewGuid();
+        await db.Insert("FinancialAlerts", null, ct, ("Id", id), ("UserId", userId), ("Title", "Alert"), ("AlertType", 0), ("IsEnabled", true),
+            ("ComparisonOperator", 0), ("Threshold", 0m), ("EvaluationPeriod", 0), ("LastStatus", 0), ("CreatedAt", DateTime.UtcNow), ("AccountId", accountId));
+        return id;
+    }
+
+    internal static async Task<long> AddTrade(PreContractDatabase db, long userId, CancellationToken ct, long? accountId = null, decimal value = 0m)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var asset = await db.Insert("Assets", "Id", ct, ("Name", "Cutover"), ("Type", 0), ("CreatedAt", now), ("UpdatedAt", now));
+        var listing = await db.Insert("AssetListings", "Id", ct, ("AssetId", asset), ("Ticker", "TEST"), ("ExchangeName", ""), ("IsActive", true),
+            ("IsPrimaryListing", false), ("PriceMultiplier", 1m), ("CreatedAt", now), ("UpdatedAt", now));
+        return await db.Insert("InvestmentTransactions", "Id", ct, ("UserId", userId), ("AssetListingId", listing), ("Type", 0), ("Quantity", 1m),
+            ("UnitPrice", 1m), ("Currency", "PLN"), ("PostingDate", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)), ("Description", ""),
+            ("CreatedAt", now), ("UpdatedAt", now), ("AccountId", accountId), ("Value", value));
     }
 }

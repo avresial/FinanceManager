@@ -83,7 +83,7 @@ public class CashEntrySeeder(
     {
         List<CashEntry> entries = [];
         void Add(DateTime date, decimal valueChange, string description, List<FinancialLabel> labels) =>
-            entries.Add(new CashEntry(null, 0, date, 0m, valueChange)
+            entries.Add(new CashEntry(0, date, valueChange)
             {
                 UserId = userId,
                 CurrencyId = DefaultCurrency.PLN.Id,
@@ -161,7 +161,7 @@ public class CashEntrySeeder(
             (end.AddDays(-12), -85m, "Online software license (USD card)"),
         })
         {
-            entries.Add(new CashEntry(null, 0, date, 0m, amount)
+            entries.Add(new CashEntry(0, date, amount)
             {
                 UserId = userId,
                 CurrencyId = DefaultCurrency.USD.Id,

@@ -149,11 +149,8 @@ public class UserRepository(AppDbContext context) : IUserRepository
     }
 
     // Every table that holds the user's rows, each defined ONCE as a query. The relational path deletes it in place, the
-    // in-memory path loads it, so the two paths cannot drift apart. Entries and dividends have no foreign key to the user
-    // (they need not be linked to an account), so they are matched by their own owner key first and by the user's legacy
-    // accounts second: two statements per table, because one OR over two indexes cannot use either of them. The statements
-    // on legacy accounts and the Accounts table itself go when accounts are dropped (#1139); Accounts must stay after the
-    // dividends that reference them.
+    // in-memory path loads it, so the two paths cannot drift apart. Entries and dividends have no foreign key to the user,
+    // so they are matched by their owner key.
     private IEnumerable<RowSet> OwnedRowSets(int userId)
     {
         long ownerKey = userId;

@@ -1,7 +1,5 @@
 using FinanceManager.Application.Identity.Users;
 using FinanceManager.Application.Transactions.Import;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.Repositories;
 using FinanceManager.Domain.Labels.Entities;
@@ -23,7 +21,6 @@ namespace FinanceManager.Tests.Integration.Repositories;
 [Trait("Category", "Integration")]
 public sealed class SqliteBondImportBatchTests : IDisposable
 {
-    private const int _accountId = 7410;
     private const int _userId = 42;
 
     private readonly SqliteConnection _connection;
@@ -42,7 +39,6 @@ public sealed class SqliteBondImportBatchTests : IDisposable
 
         _context.Database.EnsureCreated();
         _repo = new BondEntryRepository(_context);
-        _context.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = _userId, AccountType = AccountType.Bond });
         _context.SaveChanges();
     }
 
@@ -59,8 +55,8 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var entry1 = new BondEntry(null, 0, jan10, 0, 500m, bondDetailsId: 1) { UserId = _userId };
-        var entry2 = new BondEntry(null, 0, jan15, 0, 300m, bondDetailsId: 1) { UserId = _userId };
+        var entry1 = new BondEntry(0, jan10, 500m, bondDetailsId: 1) { UserId = _userId };
+        var entry2 = new BondEntry(0, jan15, 300m, bondDetailsId: 1) { UserId = _userId };
         List<BondEntry> batch = [entry1, entry2];
 
         var added = await _repo.Add(batch, cancellationToken: ct);
@@ -91,7 +87,7 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         await _context.SaveChangesAsync(ct);
 
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(null, 0, jan10, 0, 500m, bondDetailsId: 1)
+        var entry = new BondEntry(0, jan10, 500m, bondDetailsId: 1)
         {
             UserId = _userId,
             Labels = [new FinancialLabel { Id = existingLabel.Id, Name = existingLabel.Name }]
@@ -112,11 +108,11 @@ public sealed class SqliteBondImportBatchTests : IDisposable
     }
 
     [Fact]
-    public async Task ServiceImport_WithRelationalPersistence_PreservesReverseDayConflictAndRecalculatesRunningBalances()
+    public async Task ServiceImport_WithRelationalPersistence_PreservesReverseDayConflict()
     {
         var ct = TestContext.Current.CancellationToken;
 
-        // Setup service with real repository and mocks for plan/account ownership
+        // Setup service with real repository and mocks for plan limits
         var mockCurrencyEntryRepo = new Mock<ITransactionEntryRepository<CashEntry>>();
         var mockInvestmentRepo = new Mock<IInvestmentTransactionRepository>();
         var mockUserRepo = new Mock<IUserRepository>();
@@ -146,8 +142,8 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         var jan25 = new DateTime(2025, 1, 25, 0, 0, 0, DateTimeKind.Utc);
 
         const int bondA = 1;
-        await _repo.Add(new BondEntry(null, 0, jan10, 0, 1000m, bondA) { UserId = _userId }, cancellationToken: ct);
-        await _repo.Add(new BondEntry(null, 0, jan20, 0, 500m, bondA) { UserId = _userId }, cancellationToken: ct);
+        await _repo.Add(new BondEntry(0, jan10, 1000m, bondA) { UserId = _userId }, cancellationToken: ct);
+        await _repo.Add(new BondEntry(0, jan20, 500m, bondA) { UserId = _userId }, cancellationToken: ct);
 
         // Import dataset:
         // - Jan 25: clean new day -> should be imported

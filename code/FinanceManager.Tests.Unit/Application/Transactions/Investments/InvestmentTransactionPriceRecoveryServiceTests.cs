@@ -217,7 +217,6 @@ public class InvestmentTransactionPriceRecoveryServiceTests
     private static InvestmentTransaction Trade(long listingId, string currency, DateOnly tradeDate, decimal unitPrice) => new()
     {
         UserId = _userId,
-        AccountId = 791,
         AssetListingId = listingId,
         Type = InvestmentTransactionType.Buy,
         Quantity = 1m,

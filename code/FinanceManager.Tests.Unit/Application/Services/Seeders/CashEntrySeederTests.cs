@@ -211,17 +211,15 @@ public class CashEntrySeederTests
     }
 
     [Fact]
-    public async Task Seed_WritesPooledEntriesOwnedByTheUser_WithoutAnyAccount()
+    public async Task Seed_WritesPooledEntriesOwnedByTheUser()
     {
         await _seeder.Seed(userId: -12, new DateTime(2026, 1, 15), new DateTime(2026, 3, 15), new Random(1), TestContext.Current.CancellationToken);
 
         Assert.NotEmpty(_savedEntries);
         Assert.All(_savedEntries, e =>
         {
-            Assert.Null(e.AccountId);
             Assert.Equal(-12, e.UserId);
             Assert.True(e.CurrencyId == DefaultCurrency.PLN.Id || e.CurrencyId == DefaultCurrency.USD.Id);
-            Assert.Equal(0m, e.Value);
         });
         Assert.Contains(_savedEntries, e => e.CurrencyId == DefaultCurrency.PLN.Id);
         _entryRepository.Verify(r => r.Add(It.IsAny<IEnumerable<CashEntry>>(), It.IsAny<CancellationToken>()), Times.Once);

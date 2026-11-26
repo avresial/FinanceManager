@@ -131,7 +131,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         var context = new AdministrationUsersHttpClient(Client);
 
         _testDatabase!.Context.Currencies.Add(DefaultCurrency.PLN);
-        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(null, 1, _nowUtc.AddDays(-10), 12.25m, 12.25m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
+        _testDatabase.Context.CurrencyEntries.Add(new CashEntry(1, _nowUtc.AddDays(-10), 12.25m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act
@@ -148,8 +148,8 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         Authorize("AdminUser", 1, UserRole.Admin);
         _testDatabase!.Context.Currencies.Add(DefaultCurrency.PLN);
         _testDatabase.Context.CurrencyEntries.AddRange(
-            new CashEntry(null, 0, _nowUtc.AddDays(-10), 0m, 20m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
-            new CashEntry(null, 0, _nowUtc.AddDays(-5), 0m, -5.5m) { UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
+            new CashEntry(0, _nowUtc.AddDays(-10), 20m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id },
+            new CashEntry(0, _nowUtc.AddDays(-5), -5.5m) { UserId = 2, CurrencyId = DefaultCurrency.PLN.Id });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(14.5m, await new AdministrationUsersHttpClient(Client).GetTotalTrackedMoney());

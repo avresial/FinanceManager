@@ -61,7 +61,7 @@ public class OwnerEntryFormTests
     {
         var handler = RecordingHttpHandler.ForEntryForms([_food], saved: CashItem());
         await using var context = CreateContext(handler);
-        var entry = new CashEntry(null, 42, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, -3m)
+        var entry = new CashEntry(42, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), -3m)
         {
             Description = "Old",
             CurrencyId = DefaultCurrency.USD.Id,
@@ -84,7 +84,7 @@ public class OwnerEntryFormTests
     public async Task EditCash_ShowsTheLocalTimeTheRowShows()
     {
         await using var context = CreateContext(RecordingHttpHandler.ForEntryForms([_food], saved: CashItem()));
-        var entry = new CashEntry(null, 42, new DateTime(2026, 11, 23, 0, 0, 0, DateTimeKind.Utc), 0m, -3m) { Description = "Old", CurrencyId = DefaultCurrency.USD.Id };
+        var entry = new CashEntry(42, new DateTime(2026, 11, 23, 0, 0, 0, DateTimeKind.Utc), -3m) { Description = "Old", CurrencyId = DefaultCurrency.USD.Id };
 
         var cut = context.Render<UpdateCurrencyEntry>(p => p.Add(x => x.CashEntry, entry));
 
@@ -119,7 +119,7 @@ public class OwnerEntryFormTests
     {
         var handler = RecordingHttpHandler.ForEntryForms([], [_bond], saved: BondItem());
         await using var context = CreateContext(handler);
-        var entry = new BondEntry(null, 9, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 0m, 2m, _bond.Id) { Description = "Old" };
+        var entry = new BondEntry(9, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc), 2m, _bond.Id) { Description = "Old" };
         var cut = context.Render<UpdateBondEntry>(p => p.Add(x => x.BondEntry, entry));
         cut.WaitForAssertion(() => Assert.Contains("Edit bond entry", cut.Markup));
         cut.WaitForAssertion(() => Assert.Contains("EDO1234", cut.Markup));

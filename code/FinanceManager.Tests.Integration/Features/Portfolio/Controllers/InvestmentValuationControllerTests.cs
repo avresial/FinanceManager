@@ -5,8 +5,6 @@ using FinanceManager.Components.Features.Portfolio.HttpClients;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
 using FinanceManager.Domain.Currencies.Services;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.MoneyFlow.Services;
 using FinanceManager.Domain.Transactions.Investments.Entities;
@@ -26,7 +24,6 @@ namespace FinanceManager.Tests.Integration.Features.Portfolio.Controllers;
 public class InvestmentValuationControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 92;
-    private const int _testAccountId = 792;
     private const int _otherUserId = _testUserId + 1;
     private const long _listingId = 5002;
     private const int _usdCurrencyId = 840;
@@ -58,26 +55,10 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         services.AddSingleton(_inflationIndexProvider.Object);
     }
 
-    private async Task SeedAccount()
-    {
-        if (_testDatabase is null) return;
-        if (await _testDatabase.Context.Accounts.AnyAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken)) return;
-        _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = _testAccountId,
-            UserId = _testUserId,
-            Name = "Test Valuation Account",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    }
-
-    // Net holding 3 (buy 5 linked to an account, sell 2 not linked to any) on a USD listing priced at 100 USD, so the pooled value is
+    // Net holding 3 (buy 5, sell 2) on a USD listing priced at 100 USD, so the pooled value is
     // 300 USD. Another user's 100 units of the same listing must never leak in.
     private async Task SeedHoldingsWithPrice()
     {
-        await SeedAccount();
         var context = _testDatabase!.Context;
 
         context.Currencies.Add(new Currency(_usdCurrencyId, "USD", "$"));
@@ -109,9 +90,9 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
             FetchedAt = DateTimeOffset.UtcNow
         });
         context.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { UserId = _testUserId, AccountId = _testAccountId, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 5m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) },
-            new InvestmentTransaction { UserId = _testUserId, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Sell, Quantity = 2m, UnitPrice = 95m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 5) },
-            new InvestmentTransaction { UserId = _otherUserId, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 100m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) });
+            new InvestmentTransaction { UserId = _testUserId, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 5m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) },
+            new InvestmentTransaction { UserId = _testUserId, AssetListingId = _listingId, Type = InvestmentTransactionType.Sell, Quantity = 2m, UnitPrice = 95m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 5) },
+            new InvestmentTransaction { UserId = _otherUserId, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 100m, UnitPrice = 90m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 1) });
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -146,7 +127,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     {
         await SeedHoldingsWithPrice();
         var context = _testDatabase!.Context;
-        context.InvestmentTransactions.Add(new InvestmentTransaction { UserId = -7, AccountId = null, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 1m, UnitPrice = 80m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 2) });
+        context.InvestmentTransactions.Add(new InvestmentTransaction { UserId = -7, AssetListingId = _listingId, Type = InvestmentTransactionType.Buy, Quantity = 1m, UnitPrice = 80m, Currency = "USD", TradeDate = new DateOnly(2024, 6, 2) });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         var client = new InvestmentValuationHttpClient(Client);
 
@@ -289,7 +270,6 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         _testDatabase!.Context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = -7,
-            AccountId = null,
             AssetListingId = _listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = 4m,
@@ -343,7 +323,7 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
     }
 
     private async Task<long> BuyId() => await _testDatabase!.Context.InvestmentTransactions
-        .Where(x => x.UserId == _testUserId && x.AccountId != null && x.Type == InvestmentTransactionType.Buy)
+        .Where(x => x.UserId == _testUserId && x.Type == InvestmentTransactionType.Buy && x.Quantity == 5m)
         .Select(x => x.EntryId)
         .SingleAsync(TestContext.Current.CancellationToken);
 
@@ -383,7 +363,6 @@ public class InvestmentValuationControllerTests(OptionsProvider optionsProvider)
         var unlinked = context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = _testUserId,
-            AccountId = null,
             AssetListingId = _listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = 1m,

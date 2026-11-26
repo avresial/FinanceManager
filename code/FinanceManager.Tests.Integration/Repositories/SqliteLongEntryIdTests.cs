@@ -33,8 +33,8 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     {
         var ct = TestContext.Current.CancellationToken;
         _context.CurrencyEntries.AddRange(
-            new CashEntry(1, _beyondIntId, _postingDate, 100, 1) { UserId = 1, CurrencyId = 0 },
-            new CashEntry(1, _beyondIntId + 1, _postingDate, 101, 1) { UserId = 1, CurrencyId = 0 });
+            new CashEntry(_beyondIntId, _postingDate, 1) { UserId = 1, CurrencyId = 0 },
+            new CashEntry(_beyondIntId + 1, _postingDate, 1) { UserId = 1, CurrencyId = 0 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
         var repository = new CashEntryRepository(_context);
@@ -52,7 +52,7 @@ public sealed class SqliteLongEntryIdTests : IDisposable
     public async Task BondEntry_BeyondIntId_CanBeReadAndDeleted()
     {
         var ct = TestContext.Current.CancellationToken;
-        _context.BondEntries.Add(new BondEntry(1, _beyondIntId, _postingDate, 100, 1, 1) { UserId = 1 });
+        _context.BondEntries.Add(new BondEntry(_beyondIntId, _postingDate, 1, 1) { UserId = 1 });
         await _context.SaveChangesAsync(ct);
         _context.ChangeTracker.Clear();
         var repository = new BondEntryRepository(_context);

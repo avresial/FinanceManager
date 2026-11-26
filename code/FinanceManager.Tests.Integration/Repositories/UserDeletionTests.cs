@@ -2,8 +2,6 @@ using FinanceManager.Domain.Administration.Monitoring;
 using FinanceManager.Domain.Alerts.Entities;
 using FinanceManager.Domain.Alerts.Enums;
 using FinanceManager.Domain.Assets.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Dtos;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Identity.GiftCodes;
@@ -24,8 +22,7 @@ namespace FinanceManager.Tests.Integration.Repositories;
 
 /// <summary>
 /// <see cref="UserRepository.RemoveUser"/> on both execution paths: relational (ExecuteDelete inside one transaction, with foreign
-/// keys enforced by SQLite) and tracked (the in-memory provider). Every row of the deleted user goes, whether or not it is linked
-/// to a legacy account; other users, the shared labels and the audit tables stay.
+/// keys enforced by SQLite) and tracked (the in-memory provider). Every row of the deleted user goes; other users, the shared labels and the audit tables stay.
 /// Known limit: owned rows have no foreign key to the user, so an import that commits after the delete leaves orphans.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -38,7 +35,6 @@ public sealed class UserDeletionTests : IDisposable
     // Tables that carry a user key but intentionally survive RemoveUser, with the reason.
     private static readonly Dictionary<string, string> _keptTables = new()
     {
-        ["Accounts"] = "dormant until the schema contract in #1144",
         ["ActiveUsers"] = "login history is audit data",
         ["GiftCodes"] = "audit actor ids intentionally survive deletion of the account (see GiftCodeConfiguration)",
     };
@@ -74,30 +70,29 @@ public sealed class UserDeletionTests : IDisposable
         return _context;
     }
 
-    private async Task SeedUserData(AppDbContext context, int userId, FinancialLabel sharedLabel, FinancialLabel bondLabel, FinancialLabel legacyBondLabel, int accountId, int entryBase)
+    private async Task SeedUserData(AppDbContext context, int userId, FinancialLabel sharedLabel, FinancialLabel bondLabel, FinancialLabel secondBondLabel, int entryBase)
     {
         var ct = TestContext.Current.CancellationToken;
         context.Users.Add(new UserDto { Id = userId, Login = $"user{userId}", Password = "hash", CreationDate = _jan1 });
-        context.Accounts.Add(new FinancialAccountBaseDto { AccountId = accountId, UserId = userId, Name = $"Account {userId}", AccountLabel = AccountLabel.Cash, AccountType = AccountType.Currency });
         await context.SaveChangesAsync(ct);
 
         context.CurrencyEntries.AddRange(
-            new CashEntry(accountId, 0, _jan1, 0, 10m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
-            new CashEntry(null, 0, _jan1, 0, 20m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
-            new CashEntry(accountId, 0, _jan1, 0, 30m) { UserId = userId, CurrencyId = 0 });
+            new CashEntry(0, _jan1, 10m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
+            new CashEntry(0, _jan1, 20m) { UserId = userId, CurrencyId = 0, Labels = [sharedLabel] },
+            new CashEntry(0, _jan1, 30m) { UserId = userId, CurrencyId = 0 });
         context.BondEntries.AddRange(
-            new BondEntry(null, 0, _jan1, 0, 1m, 5) { UserId = userId, Labels = [bondLabel] },
-            new BondEntry(accountId, 0, _jan1, 0, 2m, 5) { UserId = userId, Labels = [legacyBondLabel] });
+            new BondEntry(0, _jan1, 1m, 5) { UserId = userId, Labels = [bondLabel] },
+            new BondEntry(0, _jan1, 2m, 5) { UserId = userId, Labels = [secondBondLabel] });
         context.Assets.Add(new Asset { Id = entryBase, Name = $"Equity {userId}", Type = AssetType.Stock });
         context.AssetListings.Add(new AssetListing { Id = entryBase, AssetId = entryBase, Ticker = $"T{userId}", ExchangeMic = "XNAS", ExchangeName = "N", TradingCurrency = "USD", PriceMultiplier = 1m, IsActive = true });
         await context.SaveChangesAsync(ct);
 
         context.InvestmentTransactions.AddRange(
-            new InvestmentTransaction { UserId = userId, AccountId = null, AssetListingId = entryBase, Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 1m, Currency = "USD", TradeDate = DateOnly.FromDateTime(_jan1), PostingDate = _jan1, Labels = [sharedLabel] },
-            new InvestmentTransaction { UserId = userId, AccountId = accountId, AssetListingId = entryBase, Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 1m, Currency = "USD", TradeDate = DateOnly.FromDateTime(_jan1), PostingDate = _jan1 });
+            new InvestmentTransaction { UserId = userId, AssetListingId = entryBase, Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 1m, Currency = "USD", TradeDate = DateOnly.FromDateTime(_jan1), PostingDate = _jan1, Labels = [sharedLabel] },
+            new InvestmentTransaction { UserId = userId, AssetListingId = entryBase, Type = InvestmentTransactionType.Buy, Quantity = 1, UnitPrice = 1m, Currency = "USD", TradeDate = DateOnly.FromDateTime(_jan1), PostingDate = _jan1 });
         context.DividendPayments.AddRange(
-            new DividendPayment { UserId = userId, AccountId = accountId, AssetListingId = entryBase, PaymentDate = DateOnly.FromDateTime(_jan1), Amount = 1, Currency = "USD" },
-            new DividendPayment { UserId = userId, AccountId = null, AssetListingId = entryBase, PaymentDate = DateOnly.FromDateTime(_jan1), Amount = 2, Currency = "USD" });
+            new DividendPayment { UserId = userId, AssetListingId = entryBase, PaymentDate = DateOnly.FromDateTime(_jan1), Amount = 1, Currency = "USD" },
+            new DividendPayment { UserId = userId, AssetListingId = entryBase, PaymentDate = DateOnly.FromDateTime(_jan1), Amount = 2, Currency = "USD" });
         context.FinancialAlerts.Add(new FinancialAlert(userId, "Alert", AlertType.LargeTransaction, AlertComparisonOperator.GreaterThan, 5m));
         context.FinancialInsights.Add(new FinancialInsight { UserId = userId, Title = "t", Message = "m", Tags = "x", CreatedAt = _jan1 });
         context.TransactionRules.Add(new TransactionRuleDefinition { UserId = userId, Name = "Rule", Order = 1 });
@@ -115,13 +110,13 @@ public sealed class UserDeletionTests : IDisposable
         var shared = new FinancialLabel { Name = "Shared" };
         var targetBondLabel = new FinancialLabel { Name = "Target bond label" };
         var otherBondLabel = new FinancialLabel { Name = "Other bond label" };
-        // A bond label belongs to one entry, so the legacy account-linked bond entries carry their own labels.
-        var targetLegacyBondLabel = new FinancialLabel { Name = "Target legacy bond label" };
-        var otherLegacyBondLabel = new FinancialLabel { Name = "Other legacy bond label" };
-        context.FinancialLabels.AddRange(shared, targetBondLabel, otherBondLabel, targetLegacyBondLabel, otherLegacyBondLabel);
+        // A bond label belongs to one entry, so each user's second bond entry carries its own label.
+        var targetSecondBondLabel = new FinancialLabel { Name = "Target second bond label" };
+        var otherSecondBondLabel = new FinancialLabel { Name = "Other second bond label" };
+        context.FinancialLabels.AddRange(shared, targetBondLabel, otherBondLabel, targetSecondBondLabel, otherSecondBondLabel);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        await SeedUserData(context, _target, shared, targetBondLabel, targetLegacyBondLabel, accountId: 100, entryBase: 1);
-        await SeedUserData(context, _other, shared, otherBondLabel, otherLegacyBondLabel, accountId: 200, entryBase: 2);
+        await SeedUserData(context, _target, shared, targetBondLabel, targetSecondBondLabel, entryBase: 1);
+        await SeedUserData(context, _other, shared, otherBondLabel, otherSecondBondLabel, entryBase: 2);
         context.ChangeTracker.Clear();
         return context;
     }
@@ -137,11 +132,10 @@ public sealed class UserDeletionTests : IDisposable
         context.ChangeTracker.Clear();
 
         Assert.False(await context.Users.AnyAsync(u => u.Id == _target, ct));
-        Assert.True(await context.Accounts.AnyAsync(a => a.UserId == _target, ct));
-        Assert.Equal(0, await context.CurrencyEntries.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
-        Assert.Equal(0, await context.BondEntries.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
+        Assert.Equal(0, await context.CurrencyEntries.CountAsync(e => e.UserId == _target, ct));
+        Assert.Equal(0, await context.BondEntries.CountAsync(e => e.UserId == _target, ct));
         Assert.Equal(0, await context.InvestmentTransactions.CountAsync(e => e.UserId == _target, ct));
-        Assert.Equal(0, await context.DividendPayments.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
+        Assert.Equal(0, await context.DividendPayments.CountAsync(e => e.UserId == _target, ct));
         Assert.False(await context.FinancialAlerts.AnyAsync(e => e.UserId == _target, ct));
         Assert.False(await context.FinancialInsights.AnyAsync(e => e.UserId == _target, ct));
         Assert.False(await context.TransactionRules.AnyAsync(e => e.UserId == _target, ct));
@@ -151,8 +145,8 @@ public sealed class UserDeletionTests : IDisposable
 
         // The other user keeps every row.
         Assert.True(await context.Users.AnyAsync(u => u.Id == _other, ct));
-        Assert.Equal(3, await context.CurrencyEntries.CountAsync(e => e.UserId == _other || e.AccountId == 200, ct));
-        Assert.Equal(2, await context.BondEntries.CountAsync(e => e.UserId == _other || e.AccountId == 200, ct));
+        Assert.Equal(3, await context.CurrencyEntries.CountAsync(e => e.UserId == _other, ct));
+        Assert.Equal(2, await context.BondEntries.CountAsync(e => e.UserId == _other, ct));
         Assert.Equal(2, await context.InvestmentTransactions.CountAsync(e => e.UserId == _other, ct));
         Assert.Equal(2, await context.DividendPayments.CountAsync(e => e.UserId == _other, ct));
         Assert.True(await context.FinancialAlerts.AnyAsync(e => e.UserId == _other, ct));
@@ -170,17 +164,17 @@ public sealed class UserDeletionTests : IDisposable
     {
         var context = await SeedTwoUsers(provider);
         var ct = TestContext.Current.CancellationToken;
-        var otherBondEntryId = await context.BondEntries.Where(e => e.UserId == _other && e.AccountId == null).Select(e => e.EntryId).SingleAsync(ct);
+        var otherBondEntryId = await context.BondEntries.Where(e => e.UserId == _other && e.ValueChange == 1m).Select(e => e.EntryId).SingleAsync(ct);
 
         await new UserRepository(context).RemoveUser(_target, ct);
         context.ChangeTracker.Clear();
 
         var labels = await context.FinancialLabels.AsNoTracking().OrderBy(l => l.Id).ToListAsync(ct);
-        Assert.Equal(["Shared", "Target bond label", "Other bond label", "Target legacy bond label", "Other legacy bond label"], labels.Select(l => l.Name));
+        Assert.Equal(["Shared", "Target bond label", "Other bond label", "Target second bond label", "Other second bond label"], labels.Select(l => l.Name));
         var bondKeys = await context.FinancialLabels.Select(l => new { l.Name, Key = EF.Property<long?>(l, "BondAccountEntryEntryId") }).ToDictionaryAsync(l => l.Name, l => l.Key, ct);
         Assert.Null(bondKeys["Target bond label"]);
-        Assert.Null(bondKeys["Target legacy bond label"]);
-        Assert.NotNull(bondKeys["Other legacy bond label"]);
+        Assert.Null(bondKeys["Target second bond label"]);
+        Assert.NotNull(bondKeys["Other second bond label"]);
         Assert.Equal(otherBondEntryId, bondKeys["Other bond label"]);
 
         // Only the other user's entries still point at the shared label through the join tables.
@@ -215,7 +209,7 @@ public sealed class UserDeletionTests : IDisposable
         context.ChangeTracker.Clear();
 
         Assert.True(await context.Users.AnyAsync(u => u.Id == _target, ct));
-        Assert.Equal(3, await context.CurrencyEntries.CountAsync(e => e.UserId == _target || e.AccountId == 100, ct));
+        Assert.Equal(3, await context.CurrencyEntries.CountAsync(e => e.UserId == _target, ct));
         Assert.Equal(2, await context.InvestmentTransactions.CountAsync(e => e.UserId == _target, ct));
     }
 

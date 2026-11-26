@@ -14,8 +14,6 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
         builder.Property(x => x.EntryId).HasColumnName("Id").ValueGeneratedOnAdd();
 
         builder.Property(x => x.Quantity).HasPrecision(18, 8);
-        // Units held after the trade; same precision as Quantity so the running sum is stored exactly.
-        builder.Property(x => x.Value).HasPrecision(18, 8);
         builder.Property(x => x.UnitPrice).HasPrecision(18, 8);
         builder.Property(x => x.Fee).HasPrecision(18, 8);
         builder.Property(x => x.Currency).HasMaxLength(3).IsRequired();
@@ -42,8 +40,6 @@ public class InvestmentTransactionConfiguration : IEntityTypeConfiguration<Inves
             .HasDatabaseName("IX_InvestmentTransactions_OwnerListingDateId");
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.AssetListingId);
-        builder.HasIndex(x => x.AccountId);
-        builder.HasIndex(x => new { x.AccountId, x.PostingDate, x.EntryId });
         builder.HasIndex(x => new { x.UserId, x.PostingDate });
         builder.HasIndex(x => new { x.UserId, x.AssetListingId });
     }

@@ -45,7 +45,6 @@ public class InvestmentTransactionNotesMappingTests
         var transaction = new InvestmentTransaction
         {
             EntryId = 9,
-            AccountId = 1,
             UserId = 7,
             AssetListingId = 2,
             Type = InvestmentTransactionType.Buy,

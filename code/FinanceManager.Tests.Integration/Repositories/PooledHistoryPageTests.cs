@@ -106,9 +106,9 @@ public class PooledHistoryPageTests
         await using var context = CreateContext(sqlite);
         context.Currencies.Add(DefaultCurrency.PLN);
         context.CurrencyEntries.AddRange(
-            new CashEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 0 },
-            new CashEntry(1, 2, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 },
-            new CashEntry(1, 4, _start, 100m, 1m) { UserId = -1, CurrencyId = 999 });
+            new CashEntry(1, _start, 1m) { UserId = -1, CurrencyId = 0 },
+            new CashEntry(2, _start, 1m) { UserId = 2, CurrencyId = 0 },
+            new CashEntry(4, _start, 1m) { UserId = -1, CurrencyId = 999 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
         var repository = new CashTransactionRepository(context);
@@ -130,9 +130,9 @@ public class PooledHistoryPageTests
         await using var context = CreateContext(sqlite);
         context.Set<BondDetails>().Add(new BondDetails("Bond name", "Issuer", DateOnly.FromDateTime(_start), DateOnly.FromDateTime(_end), []) { Id = 7 });
         context.BondEntries.AddRange(
-            new BondEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 },
-            new BondEntry(1, 2, _start, 100m, 1m, 7) { UserId = 2 },
-            new BondEntry(1, 3, _start, 100m, 1m, 999) { UserId = -1 });
+            new BondEntry(1, _start, 1m, 7) { UserId = -1 },
+            new BondEntry(2, _start, 1m, 7) { UserId = 2 },
+            new BondEntry(3, _start, 1m, 999) { UserId = -1 });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
         var repository = new BondTransactionRepository(context);
@@ -263,10 +263,10 @@ public class PooledHistoryPageTests
             TradingCurrency = "PLN"
         });
         context.CurrencyEntries.AddRange(
-            new CashEntry(1, 1, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
-            new CashEntry(1, 2, _start, 100m, 1m) { UserId = -1, CurrencyId = 1 },
-            new CashEntry(1, 3, _start, 100m, 1m) { UserId = 2, CurrencyId = 0 });
-        context.BondEntries.AddRange(new BondEntry(1, 1, _start, 100m, 1m, 7) { UserId = -1 }, new BondEntry(1, 2, _start, 100m, 1m, 7) { UserId = 2 });
+            new CashEntry(1, _start, 1m) { UserId = -1, CurrencyId = 1 },
+            new CashEntry(2, _start, 1m) { UserId = -1, CurrencyId = 1 },
+            new CashEntry(3, _start, 1m) { UserId = 2, CurrencyId = 0 });
+        context.BondEntries.AddRange(new BondEntry(1, _start, 1m, 7) { UserId = -1 }, new BondEntry(2, _start, 1m, 7) { UserId = 2 });
         context.InvestmentTransactions.AddRange(Trade(1, 1, DateOnly.FromDateTime(_start)), Trade(2, 3, DateOnly.FromDateTime(_start)));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
@@ -296,7 +296,7 @@ public class PooledHistoryPageTests
         using var context = CreateContext(false);
         AssertIndex<CashEntry>(context, "UserId", "PostingDate", "EntryId");
         AssertIndex<BondEntry>(context, "UserId", "PostingDate", "EntryId");
-        AssertIndex<InvestmentTransaction>(context, "AccountId", "PostingDate", "EntryId");
+        AssertIndex<InvestmentTransaction>(context, "UserId", "AssetListingId", "PostingDate", "EntryId");
         AssertIndex<InvestmentTransaction>(context, "UserId", "PostingDate");
     }
 
@@ -325,13 +325,12 @@ public class PooledHistoryPageTests
     };
 
     private static ILedgerEntry Entry(bool bonds, int? accountId, int id, DateTime date) => bonds
-        ? new BondEntry(accountId, id, date, 100m, 1m, 1) { UserId = accountId == 3 ? 2 : -1 }
-        : new CashEntry(accountId, id, date, 100m, 1m) { UserId = accountId == 3 ? 2 : -1, CurrencyId = 0 };
+        ? new BondEntry(id, date, 1m, 1) { UserId = accountId == 3 ? 2 : -1 }
+        : new CashEntry(id, date, 1m) { UserId = accountId == 3 ? 2 : -1, CurrencyId = 0 };
 
     private static InvestmentTransaction Trade(long id, int? accountId, DateOnly date) => new()
     {
         EntryId = id,
-        AccountId = accountId,
         UserId = accountId == 3 ? 2 : -1,
         AssetListingId = 1,
         TradeDate = date,

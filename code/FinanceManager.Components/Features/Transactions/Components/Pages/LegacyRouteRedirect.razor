@@ -1,13 +1,13 @@
-@page "/AccountDetails/{AccountId:int}"
-@page "/ManageAccount/{AccountId:int}"
-@page "/Import/{AccountId:int}"
-@page "/Export/{AccountId:int}"
+@page "/AccountDetails/{LegacyId:int}"
+@page "/ManageAccount/{LegacyId:int}"
+@page "/Import/{LegacyId:int}"
+@page "/Export/{LegacyId:int}"
 @page "/AddAccount"
 @* Accounts no longer exist. These routes only keep old bookmarks and links working by sending them to Transactions. *@
 
 @code {
-    // The router needs a matching property for the {AccountId} route segment, but it is not used.
-    [Parameter] public int AccountId { get; set; }
+    // The router needs a matching property for the {LegacyId} route segment, but it is not used.
+    [Parameter] public int LegacyId { get; set; }
 
     [Inject] public required NavigationManager Navigation { get; set; }
 

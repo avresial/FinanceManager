@@ -1,7 +1,5 @@
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Portfolio.Dividends.Dtos;
 using FinanceManager.Domain.Portfolio.Dividends.Entities;
@@ -20,7 +18,6 @@ namespace FinanceManager.Tests.Integration.Features.Portfolio.Dividends.Controll
 public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const string _route = "api/dividends";
-    private const int _accountId = 4;
     private TestDatabase? _database;
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -35,7 +32,6 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
 
     private void Seed()
     {
-        Db.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = 1, Name = "Broker", AccountType = AccountType.Stock });
         Db.Currencies.Add(new Currency(1, "USD", "$"));
         Db.Assets.Add(new Asset
         {
@@ -48,7 +44,7 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
                 new() { Id = 9, Ticker = "OTHR", ExchangeMic = "XNAS", TradingCurrency = "USD" }
             ]
         });
-        Db.InvestmentTransactions.Add(new InvestmentTransaction { UserId = 1, AccountId = _accountId, AssetListingId = 8, Type = InvestmentTransactionType.Buy, Quantity = 3, UnitPrice = 100, Currency = "USD", TradeDate = new(2019, 1, 1) });
+        Db.InvestmentTransactions.Add(new InvestmentTransaction { UserId = 1, AssetListingId = 8, Type = InvestmentTransactionType.Buy, Quantity = 3, UnitPrice = 100, Currency = "USD", TradeDate = new(2019, 1, 1) });
         Db.SaveChanges();
     }
 
@@ -84,7 +80,6 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
         var id = await added.Content.ReadFromJsonAsync<long>(ct);
         var stored = await Db.DividendPayments.SingleAsync(ct);
         Assert.Equal(1, stored.UserId);
-        Assert.Null(stored.AccountId);
 
         var page = await Client.GetFromJsonAsync<DividendPaymentPage>(_route, ct);
         var item = Assert.Single(page!.Items);
@@ -110,13 +105,13 @@ public class OwnerDividendsControllerTests(OptionsProvider optionsProvider) : Co
     }
 
     [Fact]
-    public async Task History_CoversAccountLinkedAndUnlinkedPayments_ButNotOtherOwners()
+    public async Task History_CoversTheOwnerPayments_ButNotOtherOwners()
     {
         Seed();
         Db.DividendPayments.AddRange(
-            new DividendPayment { UserId = 1, AccountId = _accountId, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 1, Currency = "USD" },
-            new DividendPayment { UserId = 1, AccountId = null, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 2, Currency = "USD" },
-            new DividendPayment { UserId = 2, AccountId = null, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 99, Currency = "USD" });
+            new DividendPayment { UserId = 1, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 1, Currency = "USD" },
+            new DividendPayment { UserId = 1, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 2, Currency = "USD" },
+            new DividendPayment { UserId = 2, AssetListingId = 8, PaymentDate = new(2020, 1, 1), Amount = 99, Currency = "USD" });
         await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
         Authorize("owner", 1, UserRole.User);
         var ct = TestContext.Current.CancellationToken;

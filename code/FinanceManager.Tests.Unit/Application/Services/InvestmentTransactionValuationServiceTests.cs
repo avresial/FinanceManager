@@ -21,7 +21,6 @@ public class InvestmentTransactionValuationServiceTests
     private static InvestmentTransaction Buy(decimal quantity, decimal unitPrice, string currency, DateOnly tradeDate, long id = 1, AssetListing? listing = null) => new()
     {
         EntryId = id,
-        AccountId = _accountId,
         UserId = _userId,
         AssetListingId = (listing ?? _listing).Id,
         AssetListing = listing ?? _listing,
@@ -217,20 +216,6 @@ public class InvestmentTransactionValuationServiceTests
             _userId,
             It.Is<IReadOnlyCollection<long>>(ids => ids.Count == 1 && ids.Contains(2)),
             It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task ValuesAnUnlinkedPurchase()
-    {
-        var unlinked = Buy(1m, 100m, "USD", new DateOnly(2026, 1, 10), id: 1);
-        unlinked.AccountId = null;
-        var (repo, price, fx) = Mocks(unlinked);
-        price.Setup(x => x.GetPricePerUnitAsync(_listingId, DefaultCurrency.USD, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(110m);
-
-        var result = Assert.Single(await Build(repo, price, fx).GetForUserAsync(_userId, DefaultCurrency.USD, [1], TestContext.Current.CancellationToken));
-
-        Assert.Equal(10m, result.GainLoss);
     }
 
     [Fact]

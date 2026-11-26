@@ -17,7 +17,7 @@ public sealed class EntryRepositoryGetTests
     {
         await using var context = CreateContext();
         var label = new FinancialLabel { Name = "Groceries" };
-        var entry = new CashEntry(null, 10, DateTime.UtcNow, 100, -25) { UserId = 1, Labels = [label] };
+        var entry = new CashEntry(10, DateTime.UtcNow, -25) { UserId = 1, Labels = [label] };
         context.CurrencyEntries.Add(entry);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();
@@ -32,7 +32,7 @@ public sealed class EntryRepositoryGetTests
     {
         await using var context = CreateContext();
         var label = new FinancialLabel { Name = "Interest" };
-        var entry = new BondEntry(null, 20, DateTime.UtcNow, 100, 5, 7) { UserId = 2, Labels = [label] };
+        var entry = new BondEntry(20, DateTime.UtcNow, 5, 7) { UserId = 2, Labels = [label] };
         context.BondEntries.Add(entry);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         context.ChangeTracker.Clear();

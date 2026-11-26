@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace FinanceManager.Domain.Transactions.Cash.Entities;
 
-public class CashEntry(int? accountId, long entryId, DateTime postingDate, decimal value, decimal valueChange) : ILedgerEntry
+public class CashEntry(long entryId, DateTime postingDate, decimal valueChange) : ILedgerEntry
 {
     public string? ContractorDetails { get; set; }
 
@@ -14,16 +14,6 @@ public class CashEntry(int? accountId, long entryId, DateTime postingDate, decim
 
     [JsonPropertyOrder(3)]
     public DateTime PostingDate { get; set; } = postingDate;
-
-    private decimal _value = value;
-
-    // Dormant running balance, dropped in #1144.
-    [JsonIgnore]
-    public decimal Value
-    {
-        get => _value;
-        set => _value = value;
-    }
 
     [JsonPropertyOrder(-1)]
     public string Description { get; set; } = string.Empty;
@@ -36,10 +26,6 @@ public class CashEntry(int? accountId, long entryId, DateTime postingDate, decim
 
     [JsonIgnore]
     public int CurrencyId { get; set; }
-
-    // Dormant account link, dropped in #1144.
-    [JsonIgnore]
-    public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
     public decimal ValueChange { get; set; } = valueChange;
@@ -55,7 +41,7 @@ public class CashEntry(int? accountId, long entryId, DateTime postingDate, decim
         ContractorDetails = entry.ContractorDetails;
     }
 
-    public CashEntry GetCopy() => new(null, EntryId, PostingDate, 0, ValueChange)
+    public CashEntry GetCopy() => new(EntryId, PostingDate, ValueChange)
     {
         UserId = UserId,
         CurrencyId = CurrencyId,

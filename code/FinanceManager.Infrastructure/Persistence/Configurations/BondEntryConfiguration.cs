@@ -19,9 +19,6 @@ public class BondEntryConfiguration : IEntityTypeConfiguration<BondEntry>
         builder.Property(e => e.EntryId)
             .ValueGeneratedOnAdd();
 
-        builder.Property(e => e.Value)
-            .HasPrecision(18, 2);
-
         builder.Property(e => e.ValueChange)
           .HasPrecision(18, 2);
 
@@ -31,8 +28,6 @@ public class BondEntryConfiguration : IEntityTypeConfiguration<BondEntry>
             .HasDatabaseName("IX_BondEntries_OwnerBondDateId");
         builder.HasIndex(x => new { x.UserId, x.PostingDate, x.EntryId })
             .HasDatabaseName("IX_BondEntries_OwnerDateId");
-        builder.HasIndex(e => new { e.AccountId, e.PostingDate, e.EntryId });
-        builder.HasIndex(e => new { e.AccountId, e.BondDetailsId, e.PostingDate, e.EntryId });
 
         var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),

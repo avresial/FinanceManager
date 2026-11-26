@@ -9,8 +9,6 @@ using FinanceManager.Domain.Assets.Dtos;
 using FinanceManager.Domain.Assets.Entities;
 using FinanceManager.Domain.Assets.Services;
 using FinanceManager.Domain.Currencies.Entities;
-using FinanceManager.Domain.FinancialAccounts.Shared.Dtos;
-using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
 using FinanceManager.Domain.Identity.Entities;
 using FinanceManager.Domain.Transactions.Investments.Entities;
 using FinanceManager.Infrastructure.Persistence;
@@ -29,7 +27,6 @@ namespace FinanceManager.Tests.Integration.Features.Assets.Controllers;
 public class InvestmentInstrumentListingTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider), IDisposable
 {
     private const int _testUserId = 91;
-    private const int _testAccountId = 791;
     private const long _listingId = 5001;
     private static readonly Mock<IInvestmentPriceProvider> _priceProvider = new();
     private static readonly Mock<IOpenFigiClient> _openFigiClient = new();
@@ -78,21 +75,6 @@ public class InvestmentInstrumentListingTests(OptionsProvider optionsProvider) :
         services.AddSingleton(_twelveDataResolver.Object);
     }
 
-    private async Task SeedAccount()
-    {
-        if (_testDatabase is null) return;
-        if (await _testDatabase.Context.Accounts.AnyAsync(a => a.AccountId == _testAccountId, TestContext.Current.CancellationToken)) return;
-        _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = _testAccountId,
-            UserId = _testUserId,
-            Name = "Test Investment Account",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        });
-        await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    }
-
     // A transaction always references a real listing; seed one so the read path's Include(AssetListing)
     // (a required relationship) returns the rows rather than filtering them out.
     private async Task SeedListing()
@@ -126,12 +108,10 @@ public class InvestmentInstrumentListingTests(OptionsProvider optionsProvider) :
 
     private async Task<long> SeedTransaction(InvestmentTransactionType type, decimal quantity, DateOnly tradeDate, decimal unitPrice = 100m)
     {
-        await SeedAccount();
         await SeedListing();
         var transaction = new InvestmentTransaction
         {
             UserId = _testUserId,
-            AccountId = _testAccountId,
             AssetListingId = _listingId,
             Type = type,
             Quantity = quantity,

@@ -25,7 +25,7 @@ public class LegacyRouteRedirectTests
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo(oldRoute);
 
-        context.Render<LegacyRouteRedirect>(p => p.Add(x => x.AccountId, 7));
+        context.Render<LegacyRouteRedirect>(p => p.Add(x => x.LegacyId, 7));
 
         Assert.EndsWith(expectedPath, navigation.Uri);
         var last = context.Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>().History.First();
@@ -37,6 +37,6 @@ public class LegacyRouteRedirectTests
     {
         var templates = typeof(LegacyRouteRedirect).GetCustomAttributes<RouteAttribute>().Select(route => route.Template).Order().ToArray();
 
-        Assert.Equal(["/AccountDetails/{AccountId:int}", "/AddAccount", "/Export/{AccountId:int}", "/Import/{AccountId:int}", "/ManageAccount/{AccountId:int}"], templates);
+        Assert.Equal(["/AccountDetails/{LegacyId:int}", "/AddAccount", "/Export/{LegacyId:int}", "/Import/{LegacyId:int}", "/ManageAccount/{LegacyId:int}"], templates);
     }
 }

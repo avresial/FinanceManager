@@ -37,22 +37,22 @@ public class TransactionLogSearchTests
         if (stream == "Currency")
         {
             context.CurrencyEntries.AddRange(
-                new CashEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = null },
-                new CashEntry(2, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0 },
-                new CashEntry(1, 3, _day, 1, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = "MiXeD shop" },
-                new CashEntry(1, 4, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "MIXED purchase" },
-                new CashEntry(1, 5, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "other" },
-                new CashEntry(1, 6, _day.AddDays(1), 1, 1) { UserId = 1, CurrencyId = 0, Description = "mixed" },
-                new CashEntry(999, 7, _day, 1, 1) { UserId = 999, CurrencyId = 0, Description = "mixed" });
+                new CashEntry(1, _day, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = null },
+                new CashEntry(2, _day, 1) { UserId = 1, CurrencyId = 0 },
+                new CashEntry(3, _day, 1) { UserId = 1, CurrencyId = 0, ContractorDetails = "MiXeD shop" },
+                new CashEntry(4, _day, 1) { UserId = 1, CurrencyId = 0, Description = "MIXED purchase" },
+                new CashEntry(5, _day, 1) { UserId = 1, CurrencyId = 0, Description = "other" },
+                new CashEntry(6, _day.AddDays(1), 1) { UserId = 1, CurrencyId = 0, Description = "mixed" },
+                new CashEntry(7, _day, 1) { UserId = 999, CurrencyId = 0, Description = "mixed" });
         }
         else if (stream == "Bond")
         {
             context.Bonds.Add(new BondDetails("MiXeD Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
             context.BondEntries.AddRange(
-                new BondEntry(1, 1, _day, 1, 1, 99) { UserId = 1 }, new BondEntry(2, 2, _day, 1, 1, 99) { UserId = 1 },
-                new BondEntry(1, 3, _day, 1, 1, 1) { UserId = 1 }, new BondEntry(1, 4, _day, 1, 1, 1) { UserId = 1 },
-                new BondEntry(1, 5, _day, 1, 1, 99) { UserId = 1 }, new BondEntry(1, 6, _day.AddDays(1), 1, 1, 1) { UserId = 1 },
-                new BondEntry(999, 7, _day, 1, 1, 1) { UserId = 999 });
+                new BondEntry(1, _day, 1, 99) { UserId = 1 }, new BondEntry(2, _day, 1, 99) { UserId = 1 },
+                new BondEntry(3, _day, 1, 1) { UserId = 1 }, new BondEntry(4, _day, 1, 1) { UserId = 1 },
+                new BondEntry(5, _day, 1, 99) { UserId = 1 }, new BondEntry(6, _day.AddDays(1), 1, 1) { UserId = 1 },
+                new BondEntry(7, _day, 1, 1) { UserId = 999 });
         }
         else
         {
@@ -79,9 +79,9 @@ public class TransactionLogSearchTests
         var context = database.Context;
         context.Bonds.Add(new BondDetails("Treasury", "Issuer", new(2026, 1, 1), new(2036, 1, 1), []) { Id = 1 });
         context.BondEntries.AddRange(
-            new BondEntry(1, 1, _day, 1, 1, 1) { UserId = 1, Description = "Quarterly Top-Up" },
-            new BondEntry(1, 2, _day, 1, 1, 1) { UserId = 1 },
-            new BondEntry(1, 3, _day, 1, 1, 1) { UserId = 1, Description = "something else" });
+            new BondEntry(1, _day, 1, 1) { UserId = 1, Description = "Quarterly Top-Up" },
+            new BondEntry(2, _day, 1, 1) { UserId = 1 },
+            new BondEntry(3, _day, 1, 1) { UserId = 1, Description = "something else" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(new long[] { 1L }, await Page(context, "Bond", 10, null, " top-up "));
@@ -99,8 +99,8 @@ public class TransactionLogSearchTests
         await using var database = await SearchDatabase.Create(provider);
         var context = database.Context;
         context.CurrencyEntries.AddRange(
-            new CashEntry(1, 1, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100%_sale[one]" },
-            new CashEntry(1, 2, _day, 1, 1) { UserId = 1, CurrencyId = 0, Description = "100xxsaleo" });
+            new CashEntry(1, _day, 1) { UserId = 1, CurrencyId = 0, Description = "100%_sale[one]" },
+            new CashEntry(2, _day, 1) { UserId = 1, CurrencyId = 0, Description = "100xxsaleo" });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         Assert.Equal(new long[] { 1L }, await Page(context, "Currency", 10, null, "%_sale[one]"));
     }
@@ -130,7 +130,6 @@ public class TransactionLogSearchTests
     private static InvestmentTransaction Trade(long id, int accountId, long listingId, int offset = 0) => new()
     {
         EntryId = id,
-        AccountId = accountId,
         UserId = accountId == 999 ? 999 : 1,
         AssetListingId = listingId,
         TradeDate = DateOnly.FromDateTime(_day).AddDays(offset),

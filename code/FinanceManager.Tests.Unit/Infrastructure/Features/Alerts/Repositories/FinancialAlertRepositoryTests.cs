@@ -160,7 +160,7 @@ public sealed class FinancialAlertRepositoryTests
 
     // Owner-keyed entry with no account link, as written by the account-free transaction API.
     private static CashEntry Entry(long id, int userId, int currencyId, DateTime postingDate, decimal change, FinancialLabel? label = null) =>
-        new(null, id, postingDate, 0m, change)
+        new(id, postingDate, change)
         {
             UserId = userId,
             CurrencyId = currencyId,

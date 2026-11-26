@@ -11,15 +11,14 @@ public class BondEntryTests
     public void Update_ShouldUpdatePropertiesCorrectly()
     {
         // Arrange
-        var entry = new BondEntry(1, 1, DateTime.Now, 100m, 10m, 1);
-        var updateEntry = new BondEntry(1, 1, DateTime.Now.AddDays(1), 200m, 20m, 2);
+        var entry = new BondEntry(1, DateTime.Now, 10m, 1);
+        var updateEntry = new BondEntry(1, DateTime.Now.AddDays(1), 20m, 2);
 
         // Act
         entry.Update(updateEntry);
 
         // Assert
         Assert.Equal(updateEntry.PostingDate, entry.PostingDate);
-        Assert.Equal(100m, entry.Value);
         Assert.Equal(updateEntry.ValueChange, entry.ValueChange);
         Assert.Equal(updateEntry.BondDetailsId, entry.BondDetailsId);
     }
@@ -27,14 +26,14 @@ public class BondEntryTests
     [Fact]
     public void Update_ShouldKeepTheDescriptionOfTheUpdatedEntry()
     {
-        var entry = new BondEntry(1, 1, DateTime.Now, 100m, 10m, 1) { Description = "old" };
-        var updateEntry = new BondEntry(1, 1, DateTime.Now, 100m, 10m, 1) { Description = "new" };
+        var entry = new BondEntry(1, DateTime.Now, 10m, 1) { Description = "old" };
+        var updateEntry = new BondEntry(1, DateTime.Now, 10m, 1) { Description = "new" };
 
         entry.Update(updateEntry);
 
         Assert.Equal("new", entry.Description);
 
-        entry.Update(new BondEntry(1, 1, DateTime.Now, 100m, 10m, 1));
+        entry.Update(new BondEntry(1, DateTime.Now, 10m, 1));
 
         Assert.Equal(string.Empty, entry.Description);
     }
@@ -43,15 +42,15 @@ public class BondEntryTests
     public void GetCopy_ShouldKeepDescriptionAndLabelsWithoutSharingThem()
     {
         var label = new FinanceManager.Domain.Labels.Entities.FinancialLabel { Id = 5, Name = "Savings" };
-        var entry = new BondEntry(1, 2, new DateTime(2026, 1, 1), 100m, 10m, 3) { Description = "Quarterly top-up", Labels = [label] };
+        var entry = new BondEntry(2, new DateTime(2026, 1, 1), 10m, 3) { Description = "Quarterly top-up", Labels = [label] };
 
         var copy = entry.GetCopy();
         copy.Description = "changed";
         copy.Labels.Clear();
 
         Assert.NotSame(entry, copy);
-        Assert.Equal(((int?)null, entry.EntryId, entry.PostingDate, 0m, entry.ValueChange, entry.BondDetailsId),
-            (copy.AccountId, copy.EntryId, copy.PostingDate, copy.Value, copy.ValueChange, copy.BondDetailsId));
+        Assert.Equal((entry.EntryId, entry.PostingDate, entry.ValueChange, entry.BondDetailsId),
+            (copy.EntryId, copy.PostingDate, copy.ValueChange, copy.BondDetailsId));
         Assert.Equal("Quarterly top-up", entry.Description);
         Assert.Single(entry.Labels);
     }
@@ -61,7 +60,7 @@ public class BondEntryTests
     {
         // Arrange
         var postingDate = new DateTime(2023, 1, 1);
-        var entry = new BondEntry(1, 1, postingDate, 100m, 100m, 1);
+        var entry = new BondEntry(1, postingDate, 100m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -96,7 +95,7 @@ public class BondEntryTests
     public void GetPrice_ShouldApplyUnitValueMultiplier()
     {
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 10m, 10m, 1);
+        var entry = new BondEntry(1, postingDate, 10m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -125,7 +124,7 @@ public class BondEntryTests
     {
         // Arrange - Start in leap year 2024
         var postingDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 1000m, 1000m, 1);
+        var entry = new BondEntry(1, postingDate, 1000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -164,7 +163,7 @@ public class BondEntryTests
     {
         // Arrange
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 1000m, 1000m, 1);
+        var entry = new BondEntry(1, postingDate, 1000m, 1);
 
         // First rate applies until July 1, 2023
         var calculationMethod1 = new BondCalculationMethod
@@ -212,7 +211,7 @@ public class BondEntryTests
     {
         // Arrange - Test 5 year period to verify no significant rounding errors
         var postingDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 10000m, 10000m, 1);
+        var entry = new BondEntry(1, postingDate, 10000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -256,7 +255,7 @@ public class BondEntryTests
     {
         // Arrange - Bond redemption (selling/withdrawing)
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, -500m, -500m, 1); // Negative value change
+        var entry = new BondEntry(1, postingDate, -500m, 1); // Negative value change
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -293,7 +292,7 @@ public class BondEntryTests
     {
         // Arrange - Entry where target date equals posting date
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 1000m, 1000m, 1);
+        var entry = new BondEntry(1, postingDate, 1000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -327,7 +326,7 @@ public class BondEntryTests
     {
         // Arrange
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 0m, 2000m, 1);
+        var entry = new BondEntry(1, postingDate, 2000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -360,7 +359,7 @@ public class BondEntryTests
     {
         // Arrange - Calculation method that expires before target date
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 1000m, 1000m, 1);
+        var entry = new BondEntry(1, postingDate, 1000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {
@@ -398,7 +397,7 @@ public class BondEntryTests
     public void GetPrice_ShorterHorizon_ShouldMatchPrefixOfLongerHorizon()
     {
         var postingDate = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondEntry(1, 1, postingDate, 1000m, 1000m, 1);
+        var entry = new BondEntry(1, postingDate, 1000m, 1);
 
         var calculationMethod = new BondCalculationMethod
         {

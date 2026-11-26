@@ -66,13 +66,13 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
     }
 
     [Fact]
-    public async Task GetLatest_ReturnsHistoricalAccountInsightsAlongsideOwnerWideOnes()
+    public async Task GetLatest_ReturnsTheOwnerInsightsNewestFirst()
     {
         var now = DateTime.UtcNow;
         _testDatabase!.Context.FinancialInsights.AddRange(
-            new FinancialInsight { UserId = 1, AccountId = 10, Title = "Legacy", Message = "M", Tags = "t1", CreatedAt = now.AddDays(-1) },
-            new FinancialInsight { UserId = 1, AccountId = null, Title = "Owner wide", Message = "M", Tags = "t1", CreatedAt = now },
-            new FinancialInsight { UserId = 2, AccountId = 10, Title = "Other user", Message = "M", Tags = "t1", CreatedAt = now }
+            new FinancialInsight { UserId = 1, Title = "Legacy", Message = "M", Tags = "t1", CreatedAt = now.AddDays(-1) },
+            new FinancialInsight { UserId = 1, Title = "Owner wide", Message = "M", Tags = "t1", CreatedAt = now },
+            new FinancialInsight { UserId = 2, Title = "Other user", Message = "M", Tags = "t1", CreatedAt = now }
         );
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -82,7 +82,6 @@ public class FinancialInsightsControllerTests(OptionsProvider optionsProvider) :
         var result = await client.GetLatestAsync(3, TestContext.Current.CancellationToken);
 
         Assert.Equal(["Owner wide", "Legacy"], result.Select(x => x.Title));
-        Assert.All(result, x => Assert.Null(x.AccountId));
     }
 
     [Theory]

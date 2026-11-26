@@ -89,7 +89,6 @@ public class IncompleteAssetQueueRepositoryTests
     {
         AssetListingId = listingId,
         UserId = userId,
-        AccountId = 1,
         Type = type,
         Quantity = quantity,
         Currency = "PLN",

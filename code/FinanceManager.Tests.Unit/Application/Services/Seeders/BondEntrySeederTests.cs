@@ -122,7 +122,6 @@ public class BondEntrySeederTests
         Assert.True(entries.Count > 1);
         Assert.All(entries, e =>
         {
-            Assert.Null(e.AccountId);
             Assert.Equal(-9, e.UserId);
             Assert.Equal(_bond.Name, e.Description);
             Assert.Equal(DateTimeKind.Utc, e.PostingDate.Kind);

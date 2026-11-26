@@ -46,11 +46,11 @@ public class CurrentBalanceReconciliationTests(OptionsProvider optionsProvider) 
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "PLN", "PLN"));
         context.CurrencyEntries.AddRange(
-            new CashEntry(null, 1, _asOf.Date.AddDays(-2), 900m, 900m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 2, _asOf.AddMinutes(-1), 1000m, 100m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 3, _asOf.AddMinutes(-1), 634m, -366m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 4, _asOf.AddMinutes(1), 9634m, 9000m) { UserId = _userId, CurrencyId = _currencyId },
-            new CashEntry(null, 5, _asOf.Date.AddDays(-2), -200m, -200m) { UserId = _userId, CurrencyId = _currencyId });
+            new CashEntry(1, _asOf.Date.AddDays(-2), 900m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(2, _asOf.AddMinutes(-1), 100m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(3, _asOf.AddMinutes(-1), -366m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(4, _asOf.AddMinutes(1), 9000m) { UserId = _userId, CurrencyId = _currencyId },
+            new CashEntry(5, _asOf.Date.AddDays(-2), -200m) { UserId = _userId, CurrencyId = _currencyId });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         // From here on every write goes through the real repositories, which must stamp the owner keys themselves.
         Authorize("current-balances", _userId, UserRole.User);

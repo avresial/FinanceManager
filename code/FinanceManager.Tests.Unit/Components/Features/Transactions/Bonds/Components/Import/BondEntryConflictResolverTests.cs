@@ -76,7 +76,7 @@ public class BondEntryConflictResolverTests
     // An incoming row whose key (day, units, definition) differs from the existing entry of the day, so it is a real conflict.
     private static BondImportConflict Conflict(DateTime day, decimal units, int bondDetailsId) => new(
         new BondEntryImport(day, units, bondDetailsId, "incoming"),
-        new BondEntry(null, 1, day, 0m, units + 100m, bondDetailsId), "Day already has entries.");
+        new BondEntry(1, day, units + 100m, bondDetailsId), "Day already has entries.");
 
     private static BunitContext CreateContext(RecordingHttpHandler handler)
     {

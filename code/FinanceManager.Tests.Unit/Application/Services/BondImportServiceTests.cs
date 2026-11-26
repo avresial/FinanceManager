@@ -67,11 +67,11 @@ public class BondImportServiceTests
         _mockBondEntryRepository.Setup(x => x.GetByOwner(_owner, bondDetailsId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .Returns(rows.ToAsyncEnumerable());
 
-    private static BondEntry OwnerRow(long id, DateTime date, decimal valueChange, int bondDetailsId, int? accountId = null) =>
-        new(accountId, id, date, 0, valueChange, bondDetailsId) { UserId = _owner };
+    private static BondEntry OwnerRow(long id, DateTime date, decimal valueChange, int bondDetailsId) =>
+        new(id, date, valueChange, bondDetailsId) { UserId = _owner };
 
     [Fact]
-    public async Task ImportOwnerEntries_ProbesEachNamedDefinition_StoresUnlinkedRows_AndNeverRecalculates()
+    public async Task ImportOwnerEntries_ProbesEachNamedDefinition_AndStoresOwnerRows()
     {
         var date = new DateTime(2025, 3, 4, 10, 0, 0, DateTimeKind.Utc);
         SetupAddSucceeds();
@@ -84,7 +84,7 @@ public class BondImportServiceTests
         var result = await _service.ImportOwnerEntries(_owner, [new BondEntryImport(date, 5m, 2, "a"), new BondEntryImport(date, 6m, 3, "b")], TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.Imported);
-        Assert.All(added!, e => { Assert.Null(e.AccountId); Assert.Equal(_owner, e.UserId); Assert.Equal(0m, e.Value); });
+        Assert.All(added!, e => Assert.Equal(_owner, e.UserId));
         Assert.Equal([2, 3], added!.Select(e => e.BondDetailsId).Order());
         _mockBondEntryRepository.Verify(x => x.GetByOwner(_owner, 2, date.Date, date.Date.AddDays(1).AddTicks(-1), It.IsAny<CancellationToken>()), Times.Once);
         _mockBondEntryRepository.Verify(x => x.GetByOwner(_owner, 3, date.Date, date.Date.AddDays(1).AddTicks(-1), It.IsAny<CancellationToken>()), Times.Once);
@@ -95,7 +95,7 @@ public class BondImportServiceTests
     {
         var date = new DateTime(2025, 3, 4, 10, 0, 0, DateTimeKind.Utc);
         SetupAddSucceeds();
-        SetupOwnerRows(2, OwnerRow(1, date, 10m, 2, accountId: 9), OwnerRow(2, date, 10m, 2), OwnerRow(3, date, 99m, 2));
+        SetupOwnerRows(2, OwnerRow(1, date, 10m, 2), OwnerRow(2, date, 10m, 2), OwnerRow(3, date, 99m, 2));
         SetupOwnerRows(3, OwnerRow(4, date, 1m, 3));
         BondEntryImport[] incoming =
         [
@@ -110,11 +110,7 @@ public class BondImportServiceTests
         var surplus = Assert.Single(result.Conflicts, x => !x.IsExactMatch);
         Assert.Equal("third", surplus.ImportEntry!.Description);
         Assert.DoesNotContain(result.Conflicts, x => x.ExistingEntry?.EntryId == 3);
-
-        // The existing side of a match carries neither the legacy account link nor a running value.
-        var matched = result.Conflicts.Where(x => x.IsExactMatch).Select(x => x.ExistingEntry!).ToList();
-        Assert.Contains(matched, x => x.EntryId == 1);
-        Assert.All(matched, x => { Assert.Null(x.AccountId); Assert.Equal(0m, x.Value); });
+        Assert.Contains(result.Conflicts, x => x.IsExactMatch && x.ExistingEntry!.EntryId == 1);
     }
 
     [Fact]
@@ -131,7 +127,7 @@ public class BondImportServiceTests
 
         Assert.Equal(2, result.Imported);
         Assert.Equal(["two", "three"], added.Select(e => e.Description));
-        Assert.All(added, e => { Assert.Null(e.AccountId); Assert.Equal(_owner, e.UserId); });
+        Assert.All(added, e => Assert.Equal(_owner, e.UserId));
     }
 
     [Fact]

@@ -180,7 +180,7 @@ public class DistributionOverviewCardViewTests
     }
 
     [Fact]
-    public async Task CurrencyView_KeepsRowsPlain_EvenWhenSlicesCarryAccountIds()
+    public async Task CurrencyView_KeepsRowsPlain()
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p

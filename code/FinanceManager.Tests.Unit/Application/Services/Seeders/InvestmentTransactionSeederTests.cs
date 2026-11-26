@@ -44,7 +44,6 @@ public class InvestmentTransactionSeederTests
         Assert.All(_saved, t =>
         {
             Assert.Equal(-9, t.UserId);
-            Assert.Null(t.AccountId);
             Assert.Equal(4, t.AssetListingId);
         });
         Assert.Contains(_saved, t => t.Type == InvestmentTransactionType.Buy);
