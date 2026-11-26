@@ -37,7 +37,7 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
         }
 
         var page = await rows.OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
-            .Take(query.Take).Select(x => new BondLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate,
+            .Take(query.Take).Select(x => new BondLogEntry(x.Entry.EntryId, x.Entry.PostingDate,
                 x.Entry.ValueChange, x.Entry.Description, x.Entry.BondDetailsId, x.Currency, x.BondName, Array.Empty<FinancialLabel>())).ToListAsync(ct);
         if (!query.IncludeDetails || page.Count == 0) return page;
 
@@ -63,7 +63,7 @@ public class BondTransactionRepository(AppDbContext context) : IBondTransactionR
         return await (from e in context.BondEntries.AsNoTracking().Where(e => e.UserId == userId && e.EntryId == entryId)
                       join b in context.Bonds on e.BondDetailsId equals b.Id into bonds
                       from b in bonds.DefaultIfEmpty()
-                      select new BondLogEntry(e.AccountId, e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId,
+                      select new BondLogEntry(e.EntryId, e.PostingDate, e.ValueChange, e.Description, e.BondDetailsId,
                           b != null ? b.Currency.ShortName : null, b != null ? b.Name : null,
                           e.Labels.Select(l => new FinancialLabel { Id = l.Id, Name = l.Name, Classifications = l.Classifications.ToList() }).ToList()))
             .AsSplitQuery().FirstOrDefaultAsync(ct);

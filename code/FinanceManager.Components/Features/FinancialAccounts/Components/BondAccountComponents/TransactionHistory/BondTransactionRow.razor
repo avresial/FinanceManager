@@ -44,10 +44,6 @@
                      Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
                 @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange) units
             </MudText>
-            @if (ShowPosition)
-            {
-                <MudText Typo="Typo.caption" Class="fm-tabular" Style="white-space: nowrap; color: var(--mud-palette-text-secondary);">Position: @FormatUnits(Entry.Value) units</MudText>
-            }
         </MudStack>
     </MudStack>
 </div>
@@ -60,15 +56,11 @@
                 <MudText Typo="Typo.body2">@DateFormatter.FormatDateTime(Entry.PostingDate.ToLocalTime())</MudText>
             </MudItem>
             <MudItem xs="6">
-                <MudText Typo="Typo.caption" Color="Color.Default">@(ShowPosition ? "Units" : "Units change")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">Units change</MudText>
                 <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                    @if (ShowPosition)
-                    {
-                        <MudText Typo="Typo.body2" Class="fm-tabular">@FormatUnits(Entry.Value)</MudText>
-                    }
-                    <MudText Typo="@(ShowPosition ? Typo.caption : Typo.body2)" Class="fm-tabular"
+                    <MudText Typo="Typo.body2" Class="fm-tabular"
                              Color="@(Entry.ValueChange >= 0 ? Color.Success : Color.Error)">
-                        @(ShowPosition ? "(" : "")@(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange)@(ShowPosition ? ")" : "")
+                        @(Entry.ValueChange >= 0 ? "+" : "")@FormatUnits(Entry.ValueChange)
                     </MudText>
                 </MudStack>
             </MudItem>
@@ -88,36 +80,6 @@
                 <MudItem xs="6">
                     <MudText Typo="Typo.caption" Color="Color.Default">Unit value</MudText>
                     <MudText Typo="Typo.body2">@MoneyFormatter.Format(BondDetails.UnitValue, BondDetails.Currency.ShortName)</MudText>
-                </MudItem>
-            }
-            @if (_showValuation)
-            {
-                <MudItem xs="12">
-                    <MudDivider Class="my-1" Style="border-style: dashed;" />
-                </MudItem>
-                <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Unit price at transaction</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_unitPriceAtPosting, _valuationCurrency)</MudText>
-                </MudItem>
-                <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Unit price now</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_unitPriceNow, _valuationCurrency)</MudText>
-                </MudItem>
-                <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Value at transaction</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_valueAtPosting, _valuationCurrency)</MudText>
-                </MudItem>
-                <MudItem xs="6">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Value now</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular">@MoneyFormatter.Format(_valueNow, _valuationCurrency)</MudText>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudText Typo="Typo.caption" Color="Color.Default">Gain / loss</MudText>
-                    <MudText Typo="Typo.body2" Class="fm-tabular"
-                             Color="@(_gainLoss >= 0 ? Color.Success : Color.Error)">
-                        @MoneyFormatter.FormatSigned(_gainLoss, _valuationCurrency)
-                        (@(_gainLoss >= 0 ? "+" : "")@_gainLossPercent.ToString("N2")%)
-                    </MudText>
                 </MudItem>
             }
             @if (Entry.Labels is not null && Entry.Labels.Any())

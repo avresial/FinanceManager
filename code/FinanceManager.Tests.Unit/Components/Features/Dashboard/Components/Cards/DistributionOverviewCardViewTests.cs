@@ -184,8 +184,8 @@ public class DistributionOverviewCardViewTests
     {
         await using var context = CreateContext();
         var cut = context.Render<LiabilitiesDistributionOverviewCardView>(p => p
-            .Add(x => x.TypeData, [new("Loan", 75m) { AccountId = 3 }, new("Mortgage", 25m) { AccountId = 4 }])
-            .Add(x => x.AccountData, [new("Car loan", 75m) { AccountId = 7 }, new("PLN", 25m)]));
+            .Add(x => x.TypeData, [new("Loan", 75m), new("Mortgage", 25m)])
+            .Add(x => x.AccountData, [new("Car loan", 75m), new("PLN", 25m)]));
 
         // Account pages are gone, so no row links to one.
         Assert.Empty(cut.FindAll("a[data-testid=distribution-row]"));

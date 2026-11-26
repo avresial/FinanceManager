@@ -14,6 +14,7 @@ using FinanceManager.Domain.FinancialAccounts.Bond.Exports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Imports;
 using FinanceManager.Domain.FinancialAccounts.Bond.Repositories;
 using FinanceManager.Domain.FinancialAccounts.Shared.Entities;
+using FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 using FinanceManager.Domain.Labels.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ namespace FinanceManager.Api.Features.Transactions.Bonds.Controllers;
 [Tags("Owner Bond Transactions")]
 [ProducesResponseType(StatusCodes.Status401Unauthorized)]
 public class BondTransactionsController(
-    IBondAccountEntryRepository<BondAccountEntry> entryRepository,
+    IAccountEntryRepository<BondAccountEntry> entryRepository,
     IBondDetailsRepository bondDetailsRepository,
     IFinancialLabelsRepository labelsRepository,
     IUserPlanVerifier userPlanVerifier,
@@ -64,7 +65,7 @@ public class BondTransactionsController(
             Description = request.Description ?? string.Empty,
             Labels = labels,
         };
-        if (!await entryRepository.Add(entry, recalculate: false, cancellationToken)) return BadRequest("Cannot add this entry.");
+        if (!await entryRepository.Add(entry, cancellationToken)) return BadRequest("Cannot add this entry.");
 
         await financialAlertService.EvaluateAlertsAsync(ownerId, cancellationToken);
         return await Persisted(ownerId, entry.EntryId, cancellationToken);
@@ -97,7 +98,7 @@ public class BondTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The owner and account link never come from the request.
-        var entry = new BondAccountEntry(existing.AccountId, entryId, request.PostingDate, existing.Value, request.ValueChange, request.BondDetailsId)
+        var entry = new BondAccountEntry(null, entryId, request.PostingDate, 0, request.ValueChange, request.BondDetailsId)
         {
             UserId = ownerId,
             Description = request.Description ?? string.Empty,

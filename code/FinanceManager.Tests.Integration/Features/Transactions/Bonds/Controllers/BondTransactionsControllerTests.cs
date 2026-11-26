@@ -120,7 +120,6 @@ public class BondTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var dto = await response.Content.ReadFromJsonAsync<BondTransactionLogItemDto>(ct);
         Assert.NotNull(dto);
-        Assert.Null(dto.LegacyAccountId);
         Assert.Equal(-40m, dto.ValueChange);
         Assert.Equal(_bondA, dto.BondDetailsId);
         Assert.Equal("Bond 11", dto.BondName);
@@ -250,7 +249,7 @@ public class BondTransactionsControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
-    public async Task LinkedEntry_EditAndDeleteRepairEachInstrumentRunningValue_ButNeverTouchAnUnlinkedRow()
+    public async Task HistoricalEntry_EditAndDeletePreserveDormantBalances()
     {
         Seed();
         var a1 = await SeedEntry(_owner, _accountId, _bondA, _day, 10m, value: 10m);
@@ -260,19 +259,18 @@ public class BondTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
 
-        // Moving the first entry past the other instrument's entry changes values in both partitions.
         using var moved = await Client.PutAsJsonAsync($"{_route}/{a1}", new SaveBondEntryRequest(_bondB, _day.AddDays(1).AddHours(12), 20m, "moved"), ct);
         Assert.Equal(HttpStatusCode.OK, moved.StatusCode);
         Db.ChangeTracker.Clear();
         Assert.Equal(4m, await ValueOf(b1));
-        Assert.Equal(24m, await ValueOf(a1));
-        Assert.Equal(5m, await ValueOf(a2));
+        Assert.Equal(10m, await ValueOf(a1));
+        Assert.Equal(15m, await ValueOf(a2));
         Assert.Equal(0m, await ValueOf(unlinked));
 
         using var deleted = await Client.DeleteAsync($"{_route}/{b1}", ct);
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
         Db.ChangeTracker.Clear();
-        Assert.Equal(20m, await ValueOf(a1));
+        Assert.Equal(10m, await ValueOf(a1));
         Assert.Equal(0m, await ValueOf(unlinked));
     }
 
@@ -337,11 +335,9 @@ public class BondTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<BondImportResult>(ct);
         Assert.Equal(2, result!.Imported);
-        Assert.Null(result.AccountId);
         Assert.Equal(0, result.Failed);
         var surplus = Assert.Single(result.Conflicts, c => !c.IsExactMatch);
         Assert.Equal("second occurrence", surplus.ImportEntry!.Description);
-        Assert.Null(surplus.AccountId);
         Assert.Null(surplus.ExistingEntry);
         Assert.Single(result.Conflicts, c => c.IsExactMatch);
         Db.ChangeTracker.Clear();

@@ -27,7 +27,6 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _userId = 1028;
-    private const int _accountId = 1028;
     private static readonly DateTime _end = new(2024, 6, 30, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _start = _end.AddMonths(-6);
     private TestDatabase? _database;
@@ -40,7 +39,7 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase(stampOwnerKeys: true);
+        _database = new TestDatabase();
         services.AddSingleton(_database.Context);
         services.AddScoped<INetWorthService>(provider =>
         {
@@ -58,19 +57,12 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
         var context = _database!.Context;
         var currency = new Currency(0, "PLN", "zł");
         context.Currencies.Add(currency);
-        context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = _accountId,
-            UserId = _userId,
-            Name = "Long-held bond",
-            AccountType = AccountType.Bond
-        });
         var posting = _start.Date.AddDays(-3650);
         var details = new BondDetails("Long-held", "Synthetic", DateOnly.FromDateTime(posting), new(2025, 1, 1),
             [new() { DateOperator = DateOperator.UntilDate, DateValue = "2025-01-01", Rate = 0.05m }], currency)
         { Id = 1028 };
         context.Bonds.Add(details);
-        var entry = new BondAccountEntry(_accountId, 1028, posting, 1m, 1m, details.Id);
+        var entry = new BondAccountEntry(null, 1028, posting, 1m, 1m, details.Id) { UserId = _userId };
         context.BondEntries.Add(entry);
         await context.SaveChangesAsync(ct);
         Authorize("testuser", _userId, UserRole.User);
@@ -97,19 +89,14 @@ public class DashboardLongHeldBondParityTests(OptionsProvider optionsProvider) :
 
         using (var scope = _scopeFactory!.CreateScope())
         {
-            var repository = scope.ServiceProvider.GetRequiredService<IFinancialAccountRepository>();
-            var account = Assert.Single(await repository.GetAccounts<BondAccount>(_userId, start, _end).ToListAsync(ct));
             var loadedDetails = Assert.Single(await scope.ServiceProvider.GetRequiredService<IBondDetailsRepository>().GetByIdsAsync([1028], ct));
             var series = candidate["netWorthSeries"]!.AsArray();
             Assert.Equal((int)(_end - start).TotalDays + 1, series.Count);
             foreach (var point in series)
             {
                 var date = point!["dateTime"]!.GetValue<DateTime>();
-                var selected = account.GetThisOrNextOlder(date, loadedDetails.Id);
-                Assert.NotNull(selected);
-                Assert.Equal(entry.EntryId, selected.EntryId);
-                Assert.True((start.Date - selected.PostingDate.Date).Days >= 3650);
-                Assert.Equal(Math.Round(selected.GetPriceAt(DateOnly.FromDateTime(date), loadedDetails), 2), point["value"]!.GetValue<decimal>());
+                Assert.True((start.Date - entry.PostingDate.Date).Days >= 3650);
+                Assert.Equal(Math.Round(BondAccountEntry.GetPrice(DateOnly.FromDateTime(entry.PostingDate), entry.ValueChange, DateOnly.FromDateTime(date), loadedDetails)[DateOnly.FromDateTime(date)], 2), point["value"]!.GetValue<decimal>());
             }
         }
 

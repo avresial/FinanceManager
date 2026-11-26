@@ -28,7 +28,6 @@ public class BondUnrealizedGainLossCalculatorTests
         var result = await _calculator.CalculateAsync(position, details, DefaultCurrency.PLN, _asOf);
 
         Assert.NotNull(result);
-        Assert.Null(result.AccountId);
         Assert.Equal("Bonds", result.AccountName);
         Assert.Equal("5", result.InstrumentId);
         Assert.Equal(10m, result.Quantity);

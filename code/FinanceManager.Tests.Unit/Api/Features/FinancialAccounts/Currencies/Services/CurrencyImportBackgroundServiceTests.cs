@@ -32,7 +32,7 @@ public class CurrencyImportBackgroundServiceTests
         importService
             .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
                 It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
-            .ReturnsAsync(new ImportResult(10, 1, 0, [], []));
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
 
         var alerts = new Mock<IFinancialAlertService>();
         var services = new ServiceCollection();
@@ -70,7 +70,7 @@ public class CurrencyImportBackgroundServiceTests
         importService
             .Setup(x => x.ImportOwnerEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(),
                 It.IsAny<CancellationToken>(), It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
-            .ReturnsAsync(new ImportResult(10, 1, 0, [], []));
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
 
         var services = new ServiceCollection();
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -106,7 +106,7 @@ public class CurrencyImportBackgroundServiceTests
         importService
             .Setup(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
                 It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()))
-            .ReturnsAsync(new ImportResult(null, 1, 0, [], []));
+            .ReturnsAsync(new ImportResult(1, 0, [], []));
 
         var services = new ServiceCollection();
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -130,8 +130,6 @@ public class CurrencyImportBackgroundServiceTests
 
         importService.Verify(x => x.ImportOwnerEntries(5, 3, It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
             It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Once);
-        importService.Verify(x => x.ImportEntries(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<IEnumerable<CurrencyEntryImport>>(), It.IsAny<CancellationToken>(),
-            It.IsAny<Func<IReadOnlyList<ImportConflict>, Task>?>(), It.IsAny<Func<int, int, int, Task>?>()), Times.Never);
         store.TryGetStatus(jobId, 5, out var status);
         Assert.Equal(AsyncImportJobState.Completed, status!.Status);
     }

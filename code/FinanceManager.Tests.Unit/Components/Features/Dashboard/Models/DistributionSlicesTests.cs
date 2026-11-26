@@ -65,7 +65,6 @@ public class DistributionSlicesTests
         Assert.Equal(1m + 2m + 3m, other.Value);
         Assert.Equal(["Item 3", "Item 2", "Item 1"], other.Members.Select(x => x.Name));
         Assert.Equal(ColorsProvider.OtherColor, other.Color);
-        Assert.Null(other.AccountId);
         Assert.Equal(5, slices.Take(5).Select(x => x.Color).Distinct().Count());
     }
 
@@ -78,15 +77,6 @@ public class DistributionSlicesTests
 
         Assert.Equal("Stock", Assert.Single(slices).Name);
         Assert.Equal(100.0m, slices[0].Percent);
-    }
-
-    [Fact]
-    public void Build_KeepsAccountIds()
-    {
-        var slices = DistributionSlices.Build([new("Main", 60m) { AccountId = 7 }, new("Legacy", 40m)]);
-
-        Assert.Equal(7, slices[0].AccountId);
-        Assert.Null(slices[1].AccountId);
     }
 
     [Fact]

@@ -75,4 +75,18 @@ public class CashTransactionsHttpClient(HttpClient httpClient)
         return await response.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(cancellationToken)
             ?? throw new InvalidOperationException("The server returned no entry.");
     }
+
+    public async Task<CurrencyImportJobStatusDto?> GetCurrencyImportStatusAsync(Guid jobId)
+    {
+        using var response = await httpClient.GetAsync($"{Endpoint}/import/jobs/{jobId}");
+        if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
+        return await response.Content.ReadFromJsonAsync<CurrencyImportJobStatusDto?>();
+    }
+
+    public async Task<CurrencyImportJobStatusDto?> ResolveAsyncCurrencyImportConflictsAsync(CurrencyImportResolveConflictsRequestDto request)
+    {
+        using var response = await httpClient.PostAsJsonAsync($"{Endpoint}/import/jobs/{request.JobId}/resolve", request);
+        if (!response.IsSuccessStatusCode) throw new Exception(await response.Content.ReadAsStringAsync());
+        return await response.Content.ReadFromJsonAsync<CurrencyImportJobStatusDto?>();
+    }
 }

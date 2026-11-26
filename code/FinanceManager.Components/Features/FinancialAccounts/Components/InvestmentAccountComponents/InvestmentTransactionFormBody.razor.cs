@@ -23,7 +23,7 @@ public partial class InvestmentTransactionFormBody : ComponentBase
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
-    [Inject] public required InvestmentTransactionHttpClient TransactionHttpClient { get; set; }
+    [Inject] public required InstrumentSearchHttpClient TransactionHttpClient { get; set; }
     [Inject] public required InvestmentTradesHttpClient TradesHttpClient { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
     [Inject] public required ISettingsService SettingsService { get; set; }

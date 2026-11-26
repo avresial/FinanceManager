@@ -20,18 +20,18 @@ public class TransactionRowTests
         await using var context = CreateContext();
         var cut = RenderRow(context, initiallyExpanded: false);
 
-        Assert.DoesNotContain("Running balance", cut.Markup);
+        Assert.DoesNotContain("Posting date", cut.Markup);
         Assert.DoesNotContain("Contractor details", cut.Markup);
 
         cut.Find("[role='button']").Click();
 
-        Assert.Contains("Running balance", cut.Markup);
+        Assert.Contains("Posting date", cut.Markup);
         Assert.Contains("Contractor details", cut.Markup);
         Assert.Contains("Edit", cut.Markup);
 
         // Collapsing keeps the rendered details so the collapse animation has content to shrink.
         cut.Find("[role='button']").Click();
-        Assert.Contains("Running balance", cut.Markup);
+        Assert.Contains("Posting date", cut.Markup);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class TransactionRowTests
         await using var context = CreateContext();
         var cut = RenderRow(context, initiallyExpanded: true);
 
-        Assert.Contains("Running balance", cut.Markup);
+        Assert.Contains("Posting date", cut.Markup);
     }
 
     [Fact]
@@ -71,7 +71,6 @@ public class TransactionRowTests
         var cut = context.Render<TransactionRow>(p => p
             .Add(x => x.Entry, new CurrencyAccountEntry(null, 7, new DateTime(2026, 1, 2, 12, 0, 0, DateTimeKind.Utc), 0m, -20m) { Description = "Groceries" })
             .Add(x => x.Currency, "PLN")
-            .Add(x => x.ShowBalance, false)
             .Add(x => x.InitiallyExpanded, true));
         var published = 0;
         context.Services.GetRequiredService<AccountDataSynchronizationService>().AccountsChanged += () => published++;

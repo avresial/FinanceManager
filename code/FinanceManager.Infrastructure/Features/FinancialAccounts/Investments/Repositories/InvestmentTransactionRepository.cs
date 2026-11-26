@@ -34,17 +34,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .ThenInclude(x => x.MarketDataSymbols)
             .FirstOrDefaultAsync(x => x.EntryId == id, cancellationToken);
 
-    public async Task<IReadOnlyList<InvestmentTransaction>> GetByAccount(int accountId, CancellationToken cancellationToken = default) =>
-        await context.InvestmentTransactions.AsNoTracking()
-            .AsSplitQuery().Include(x => x.Labels)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.Asset)
-            .Include(x => x.AssetListing)
-            .ThenInclude(x => x.MarketDataSymbols)
-            .Where(x => x.AccountId == accountId)
-            .OrderBy(x => x.PostingDate).ThenBy(x => x.EntryId)
-            .ToListAsync(cancellationToken);
-
     public async Task<IReadOnlyList<InvestmentTransaction>> GetByUserAndIds(
         long userId,
         IReadOnlyCollection<long> transactionIds,
@@ -122,139 +111,46 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
 
     public async Task<InvestmentTransaction> Add(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
-        var accountId = transaction.AccountId;
         var now = DateTimeOffset.UtcNow;
         if (transaction.CreatedAt == default) transaction.CreatedAt = now;
         transaction.UpdatedAt = now;
 
         transaction.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
-        await InAccountTransaction(accountId, async () =>
-        {
-            context.InvestmentTransactions.Add(transaction);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([(accountId, transaction.AssetListingId)], cancellationToken);
-        }, cancellationToken);
+        context.InvestmentTransactions.Add(transaction);
+        await context.SaveChangesAsync(cancellationToken);
         return transaction;
     }
 
     public async Task<bool> Update(InvestmentTransaction transaction, CancellationToken cancellationToken = default)
     {
-        if (await GetAccountId(transaction.EntryId, cancellationToken) is not AccountLink link) return false;
-        var accountId = link.AccountId;
+        var existing = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == transaction.EntryId, cancellationToken);
+        if (existing is null) return false;
 
-        var updated = false;
-        await InAccountTransaction(accountId, async () =>
-        {
-            var existing = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == transaction.EntryId, cancellationToken);
-            if (existing is null) return;
-
-            // A changed listing moves the row between two running-sum partitions, so both must be recalculated.
-            // Original values are used because a caller may pass the tracked instance with its listing already changed.
-            var entry = context.Entry(existing);
-            var originalAccountId = entry.Property(x => x.AccountId).OriginalValue;
-            var previousPartition = (originalAccountId, entry.Property(x => x.AssetListingId).OriginalValue);
-            await entry.Collection(x => x.Labels).LoadAsync(cancellationToken);
-            existing.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
-            // Owner and account link are never reassigned; an unlinked (owner-wide) trade stays unlinked.
-            existing.AccountId = originalAccountId;
-            existing.UserId = entry.Property(x => x.UserId).OriginalValue;
-            existing.AssetListingId = transaction.AssetListingId;
-            existing.Type = transaction.Type;
-            existing.Quantity = transaction.Quantity;
-            existing.UnitPrice = transaction.UnitPrice;
-            existing.Currency = transaction.Currency;
-            existing.TradeDate = transaction.TradeDate;
-            existing.Fee = transaction.Fee;
-            existing.Description = transaction.Description;
-            existing.UpdatedAt = DateTimeOffset.UtcNow;
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([previousPartition, (existing.AccountId, existing.AssetListingId)], cancellationToken);
-            updated = true;
-        }, cancellationToken);
-        return updated;
+        var entry = context.Entry(existing);
+        await entry.Collection(x => x.Labels).LoadAsync(cancellationToken);
+        existing.Labels = await ResolveLabels(transaction.Labels, cancellationToken);
+        existing.UserId = entry.Property(x => x.UserId).OriginalValue;
+        existing.AssetListingId = transaction.AssetListingId;
+        existing.Type = transaction.Type;
+        existing.Quantity = transaction.Quantity;
+        existing.UnitPrice = transaction.UnitPrice;
+        existing.Currency = transaction.Currency;
+        existing.TradeDate = transaction.TradeDate;
+        existing.Fee = transaction.Fee;
+        existing.Description = transaction.Description;
+        existing.UpdatedAt = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<bool> Delete(long id, CancellationToken cancellationToken = default)
     {
-        if (await GetAccountId(id, cancellationToken) is not AccountLink link) return false;
-        var accountId = link.AccountId;
+        var entity = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == id, cancellationToken);
+        if (entity is null) return false;
 
-        var deleted = false;
-        await InAccountTransaction(accountId, async () =>
-        {
-            var entity = await context.InvestmentTransactions.FirstOrDefaultAsync(x => x.EntryId == id, cancellationToken);
-            if (entity is null) return;
-
-            context.InvestmentTransactions.Remove(entity);
-            await context.SaveChangesAsync(cancellationToken);
-            await RecalculateValues([(accountId, entity.AssetListingId)], cancellationToken);
-            deleted = true;
-        }, cancellationToken);
-        return deleted;
-    }
-
-    /// <summary>Returns the trade's account link, or <c>null</c> when the trade does not exist. An unlinked (owner-wide) trade returns a link holding <c>null</c>.</summary>
-    private Task<AccountLink?> GetAccountId(long entryId, CancellationToken cancellationToken) =>
-        context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.EntryId == entryId)
-            .Select(x => new AccountLink(x.AccountId))
-            .FirstOrDefaultAsync(cancellationToken);
-
-    private sealed record AccountLink(int? AccountId);
-
-    /// <summary>Running units exist only per account; unlinked trades have no partition to recalculate.</summary>
-    private async Task RecalculateValues(IEnumerable<(int? AccountId, long AssetListingId)> partitions, CancellationToken cancellationToken)
-    {
-        var linked = partitions.Where(x => x.AccountId.HasValue).Select(x => (x.AccountId!.Value, x.AssetListingId)).ToList();
-        if (linked.Count > 0 && await new InvestmentTransactionValueCalculator(context).Recalculate(linked, cancellationToken) > 0)
-            await context.SaveChangesAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Runs the trade change and the running-value recalculation in one database transaction, so a failure in
-    /// either leaves both untouched. Providers without transactions (InMemory) just run the work.
-    /// <para>
-    /// A no-op update on the account row comes first and holds that row's lock until commit. Concurrent writers to the
-    /// same account therefore run one at a time and see each other's committed trades, on every relational provider.
-    /// Without it, two writers could each calculate a running sum that misses the other's uncommitted trade.
-    /// </para>
-    /// </summary>
-    private async Task InAccountTransaction(int? accountId, Func<Task> work, CancellationToken cancellationToken)
-    {
-        // An unlinked trade has no running-value partition to protect, so its single SaveChanges is already atomic.
-        if (accountId is not int linkedAccountId || !context.Database.IsRelational())
-        {
-            await work();
-            return;
-        }
-
-        var ownsTransaction = context.Database.CurrentTransaction is null;
-        await using var transaction = ownsTransaction ? await context.Database.BeginTransactionAsync(cancellationToken) : null;
-        await context.Accounts
-            .Where(x => x.AccountId == linkedAccountId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.Name, x => x.Name), cancellationToken);
-        await work();
-        if (transaction is not null)
-            await transaction.CommitAsync(cancellationToken);
-    }
-
-    public async Task<IReadOnlyDictionary<long, decimal>> GetHoldingsAsOf(IReadOnlyCollection<int> accountIds, DateOnly asOf, CancellationToken cancellationToken = default)
-    {
-        if (accountIds.Count == 0) return new Dictionary<long, decimal>();
-
-        var rows = await context.InvestmentTransactions.AsNoTracking()
-            .Where(x => x.AccountId.HasValue && accountIds.Contains(x.AccountId.Value) && x.PostingDate <= asOf.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
-            .GroupBy(x => x.AssetListingId)
-            .Select(g => new
-            {
-                ListingId = g.Key,
-                Holding = g.Sum(t => t.Type == InvestmentTransactionType.Buy
-                    ? t.Quantity
-                    : t.Type == InvestmentTransactionType.Sell ? -t.Quantity : 0m)
-            })
-            .ToListAsync(cancellationToken);
-
-        return rows.ToDictionary(x => x.ListingId, x => x.Holding);
+        context.InvestmentTransactions.Remove(entity);
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task<IReadOnlyList<InvestmentHolding>> GetHoldingsByUserAsOf(long userId, DateOnly asOf, CancellationToken cancellationToken = default)
@@ -388,18 +284,6 @@ public class InvestmentTransactionRepository(AppDbContext context) : IInvestment
             .Distinct()
             .OrderBy(x => x)
             .ToListAsync(cancellationToken);
-
-    public Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPage(
-        int accountId,
-        int pageSize,
-        DateOnly? cursorTradeDate = null,
-        long? cursorId = null,
-        DateOnly? startDate = null,
-        DateOnly? endDate = null,
-        InvestmentTransactionType? type = null,
-        string? search = null,
-        CancellationToken cancellationToken = default) =>
-        ReadHistoryPage(x => x.AccountId == accountId, pageSize, cursorTradeDate, cursorId, startDate, endDate, null, type, search, cancellationToken);
 
     public Task<(IReadOnlyList<InvestmentTransaction> Items, bool HasMore)> GetHistoryPageByUser(
         long userId,

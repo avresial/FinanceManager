@@ -16,7 +16,7 @@ public class UserPlanVerifierTests
 {
     private readonly Mock<IAccountEntryRepository<CurrencyAccountEntry>> _currencyEntryRepositoryMock = new();
     private readonly Mock<IInvestmentTransactionRepository> _investmentTransactionRepositoryMock = new();
-    private readonly Mock<IBondAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
+    private readonly Mock<IAccountEntryRepository<BondAccountEntry>> _bondEntryRepositoryMock = new();
     private readonly Mock<IUserRepository> _userRepositoryMock = new();
     private readonly UserPlanVerifier _userPlanVerifier;
 

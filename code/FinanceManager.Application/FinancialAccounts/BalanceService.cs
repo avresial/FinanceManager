@@ -11,32 +11,17 @@ public class BalanceService(IEnumerable<IBalanceServiceTyped> typedBalanceServic
     public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetInflow(userId, currency, start, end));
 
-    public Task<List<TimeSeriesModel>> GetInflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetInflow(userId, currency, start, end, accountIds));
-
     public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetOutflow(userId, currency, start, end));
-
-    public Task<List<TimeSeriesModel>> GetOutflow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetOutflow(userId, currency, start, end, accountIds));
 
     public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetNetCashFlow(userId, currency, start, end));
 
-    public Task<List<TimeSeriesModel>> GetNetCashFlow(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetNetCashFlow(userId, currency, start, end, accountIds));
-
     public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetCapital(userId, currency, start, end));
 
-    public Task<List<TimeSeriesModel>> GetCapital(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetCapital(userId, currency, start, end, accountIds));
-
     public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end) =>
         Aggregate(service => service.GetClosingBalance(userId, currency, start, end));
-
-    public Task<List<TimeSeriesModel>> GetClosingBalance(int userId, Currency currency, DateTime start, DateTime end, IReadOnlyCollection<int> accountIds) =>
-        Aggregate(service => service.GetClosingBalance(userId, currency, start, end, accountIds));
 
     private async Task<List<TimeSeriesModel>> Aggregate(Func<IBalanceServiceTyped, Task<List<TimeSeriesModel>>> getter)
     {

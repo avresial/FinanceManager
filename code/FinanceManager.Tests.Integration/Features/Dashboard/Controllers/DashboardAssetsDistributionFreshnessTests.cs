@@ -27,7 +27,7 @@ namespace FinanceManager.Tests.Integration.Features.Dashboard.Controllers;
 public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsProvider) : ControllerTests(optionsProvider)
 {
     private const int _userId = 7949;
-    private const int _accountId = 8949;
+
     private const long _listingId = 949;
     private const int _currencyId = 840;
     private static readonly DateTime _end = new(2024, 6, 10, 12, 0, 0, DateTimeKind.Utc);
@@ -41,7 +41,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.RemoveAll<DbContextOptions<AppDbContext>>();
-        _database = new TestDatabase(stampOwnerKeys: true);
+        _database = new TestDatabase();
         services.AddSingleton(_database.Context);
 
         // Keep production Dashboard caching, AssetsService and InvestmentValuationService.
@@ -78,7 +78,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         var types = await assets.GetEndAssetsPerType(_userId, currency, _end);
         var accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
         Assert.Equal(types.Select(x => (x.Name, x.Value)), initial.AssetsPerType.Select(x => (x.Name, x.Value)));
-        Assert.Equal(accounts.Select(x => (x.AccountId, x.Name, x.Value)), initial.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
+        Assert.Equal(accounts.Select(x => (x.Name, x.Value)), initial.AssetsPerAccount.Select(x => (x.Name, x.Value)));
 
         // A provider/cache refresh can change valuation without a user transaction mutation.
         _price = price;
@@ -105,7 +105,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         // The breakdown is per held listing, so a renamed listing (not an account) shows up on the next refresh.
         var listing = await context.AssetListings.SingleAsync(x => x.Id == _listingId, TestContext.Current.CancellationToken);
         listing.Ticker = "RENAMED";
-        var transaction = await context.InvestmentTransactions.SingleAsync(x => x.AccountId == _accountId, TestContext.Current.CancellationToken);
+        var transaction = await context.InvestmentTransactions.SingleAsync(x => x.UserId == _userId, TestContext.Current.CancellationToken);
         transaction.Quantity = 5m;
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -118,10 +118,10 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         var accounts = await assets.GetEndAssetsPerAccount(_userId, currency, _end);
 
         Assert.Equal(types.Select(x => (x.Name, x.Value)), refreshed!.AssetsPerType.Select(x => (x.Name, x.Value)));
-        Assert.Equal(accounts.Select(x => (x.AccountId, x.Name, x.Value)), refreshed.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
+        Assert.Equal(accounts.Select(x => (x.Name, x.Value)), refreshed.AssetsPerAccount.Select(x => (x.Name, x.Value)));
         Assert.Equal(500m, Assert.Single(refreshed.AssetsPerType).Value);
         var refreshedRow = Assert.Single(refreshed.AssetsPerAccount);
-        Assert.Equal(("RENAMED", null), (refreshedRow.Name, refreshedRow.AccountId));
+        Assert.Equal("RENAMED", refreshedRow.Name);
         Assert.Equal(300m, Assert.Single(initial!.AssetsPerType).Value);
         Assert.Equal("TEST", Assert.Single(initial.AssetsPerAccount).Name);
         _netWorth.Verify(x => x.GetNetWorth(_userId, It.IsAny<Currency>(), _start, _end), Times.Once);
@@ -144,14 +144,6 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
     {
         var context = _database!.Context;
         context.Currencies.Add(new Currency(_currencyId, "USD", "$"));
-        context.Accounts.Add(new FinancialAccountBaseDto
-        {
-            AccountId = _accountId,
-            UserId = _userId,
-            Name = "Investment",
-            AccountLabel = AccountLabel.Stock,
-            AccountType = AccountType.Stock
-        });
         context.Assets.Add(new Asset { Id = 949, Name = "Test equity", Type = AssetType.Stock });
         context.AssetListings.Add(new AssetListing
         {
@@ -167,7 +159,7 @@ public class DashboardAssetsDistributionFreshnessTests(OptionsProvider optionsPr
         context.InvestmentTransactions.Add(new InvestmentTransaction
         {
             UserId = _userId,
-            AccountId = _accountId,
+
             AssetListingId = _listingId,
             Type = InvestmentTransactionType.Buy,
             Quantity = 3m,

@@ -1,5 +1,6 @@
 using FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
+using FinanceManager.Contracts.Transactions.Investments;
 using FinanceManager.Domain.FinancialAccounts.Investments.Entities;
 
 namespace FinanceManager.Tests.Unit.Domain.FinancialAccounts.Investments;
@@ -17,9 +18,9 @@ public class InvestmentTransactionNotesMappingTests
     [InlineData("Monthly ETF contribution", "Monthly ETF contribution")]
     public void AddRequest_MapsNotesToDescription_WithNullBecomingEmpty(string? notes, string expectedDescription)
     {
-        var request = new AddInvestmentTransactionRequest(1, 2, InvestmentTransactionTypeDto.Buy, 1m, 10m, "USD", _tradeDate, Notes: notes);
+        var request = new CreateInvestmentTradeRequest(2, InvestmentTransactionTypeDto.Buy, 1m, 10m, "USD", _tradeDate, Notes: notes);
 
-        var entity = request.ToEntity(userId: 7, accountId: request.AccountId, assetListingId: 2);
+        var entity = request.ToEntity(userId: 7, assetListingId: 2);
 
         Assert.Equal(expectedDescription, entity.Description);
     }
@@ -30,9 +31,9 @@ public class InvestmentTransactionNotesMappingTests
     [InlineData("Tech trim", "Tech trim")]
     public void UpdateRequest_MapsNotesToDescription_WithNullBecomingEmpty(string? notes, string expectedDescription)
     {
-        var request = new UpdateInvestmentTransactionRequest(9, 1, 2, InvestmentTransactionTypeDto.Sell, 1m, 10m, "USD", _tradeDate, Notes: notes);
+        var request = new UpdateInvestmentTradeRequest(2, InvestmentTransactionTypeDto.Sell, 1m, 10m, "USD", _tradeDate, Notes: notes);
 
-        var entity = request.ToEntity();
+        var entity = request.ToEntity(9);
 
         Assert.Equal(expectedDescription, entity.Description);
     }

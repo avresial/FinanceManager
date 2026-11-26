@@ -5,9 +5,6 @@ public class NameValueResult
     public string Name { get; set; } = string.Empty;
     public decimal Value { get; set; }
 
-    // Set only on per-account rows so the UI can link to the account; names are not unique.
-    public int? AccountId { get; set; }
-
     // Set on the per-holding rows of the assets distribution ("Cash", "Bond", "Stock") so the UI can tell a ticker from a currency code.
     public string? Kind { get; set; }
 
@@ -17,7 +14,6 @@ public class NameValueResult
 
     public NameValueResult()
     {
-
     }
 
     public NameValueResult(string name, decimal value)

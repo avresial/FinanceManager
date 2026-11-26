@@ -28,7 +28,6 @@ public class AssetsControllerTests
     private readonly Mock<IFeeDragService> _feeDragServiceMock = new();
     private readonly Mock<ICurrencyRepository> _currencyRepositoryMock = new();
     private readonly Mock<IInvestmentAppreciationService> _investmentAppreciationServiceMock = new();
-    private readonly Mock<IAccountRepository<InvestmentAccount>> _accountRepositoryMock = new();
     private readonly Mock<IMoneyWeightedReturnService> _moneyWeightedReturnServiceMock = new();
     private readonly Mock<ITimeWeightedReturnService> _timeWeightedReturnServiceMock = new();
     private readonly Mock<IPortfolioReturnAttributionService> _portfolioReturnAttributionServiceMock = new();
@@ -46,7 +45,6 @@ public class AssetsControllerTests
             _feeDragServiceMock.Object,
             _currencyRepositoryMock.Object,
             _investmentAppreciationServiceMock.Object,
-            _accountRepositoryMock.Object,
             _moneyWeightedReturnServiceMock.Object,
             _timeWeightedReturnServiceMock.Object,
             _portfolioReturnAttributionServiceMock.Object)

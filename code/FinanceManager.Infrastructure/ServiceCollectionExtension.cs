@@ -124,15 +124,11 @@ public static class ServiceCollectionExtension
                 .AddScoped<IDividendPaymentRepository, DividendPaymentRepository>()
                 .AddScoped<IAtomicOperation, EfAtomicOperation>()
                 .AddScoped<IPriceQuoteRepository, PriceQuoteRepository>()
-                .AddScoped<IFinancialAccountRepository, AccountRepository>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IGiftCodeRepository, GiftCodeRepository>()
                 .AddScoped<IRefreshTokenRepository, RefreshTokenRepository>()
                 .AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>()
                 .AddScoped<IActiveUsersRepository, ActiveUsersRepository>()
-                .AddScoped<IAccountRepository<InvestmentAccount>, InvestmentAccountRepository>()
-                .AddScoped<IAccountRepository<BondAccount>, BondAccountRepository>()
-                .AddScoped<ICurrencyAccountRepository<CurrencyAccount>, CurrencyAccountRepository>()
                 .AddScoped<INewVisitsRepository, NewVisitsRepository>()
                 .AddScoped<IFinancialInsightsRepository, FinancialInsightsRepository>()
                 .AddScoped<IFinancialLabelsRepository, FinancialLabelsRepository>()
@@ -160,34 +156,12 @@ public static class ServiceCollectionExtension
         return services;
     }
 
-    // Account entry repositories are registered as inner concrete services wrapped by HybridCache decorators
-    // (CachedAccountEntryRepository<T>) that cache point-reads and month-bucket range reads, and bust the
-    // owner's cache on every write. The owner resolver translates accountId → userId for per-user tags.
-    // See issues #455 (point-read cache) and #456 (range/bucket cache).
     private static void AddCachedEntryRepositories(IServiceCollection services)
     {
-        services.AddSingleton(new EntryRangeCacheOptions());
-        services.AddScoped<IAccountUserResolver, AccountUserResolver>();
-
-        services.AddScoped<CurrencyEntryRepository>();
-        services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>>(sp =>
-            new CachedAccountEntryRepository<CurrencyAccountEntry>(
-                sp.GetRequiredService<CurrencyEntryRepository>(),
-                sp.GetRequiredService<IAccountUserResolver>(),
-                sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>(),
-                sp.GetRequiredService<EntryRangeCacheOptions>()));
-
-        services.AddScoped<BondEntryRepository>();
-        services.AddScoped<CachedBondEntryRepository>(sp =>
-            new CachedBondEntryRepository(
-                sp.GetRequiredService<BondEntryRepository>(),
-                sp.GetRequiredService<IAccountUserResolver>(),
-                sp.GetRequiredService<ICacheInvalidator>(),
-                sp.GetRequiredService<HybridCache>(),
-                sp.GetRequiredService<EntryRangeCacheOptions>()));
-        services.AddScoped<IBondAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
-        services.AddScoped<IAccountEntryRepository<BondAccountEntry>>(sp => sp.GetRequiredService<CachedBondEntryRepository>());
+        services.AddScoped<IAccountEntryRepository<CurrencyAccountEntry>, CurrencyEntryRepository>()
+            .Decorate<IAccountEntryRepository<CurrencyAccountEntry>, CachedAccountEntryRepository<CurrencyAccountEntry>>();
+        services.AddScoped<IAccountEntryRepository<BondAccountEntry>, BondEntryRepository>()
+            .Decorate<IAccountEntryRepository<BondAccountEntry>, CachedAccountEntryRepository<BondAccountEntry>>();
     }
 
     public static IServiceCollection AddDatabase(this IServiceCollection services, IConfigurationManager configuration)
@@ -289,5 +263,4 @@ public static class ServiceCollectionExtension
 
         return configuredProvider;
     }
-
 }

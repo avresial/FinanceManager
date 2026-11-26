@@ -57,7 +57,6 @@ public class LiabilitiesServiceTests
 
         Assert.Equal([("PLN", -200m), ("EUR", -20m)], list.Select(x => (x.Name, x.Value)));
         Assert.Equal(["PLN", "EUR"], list.Select(x => x.CurrencyCode));
-        Assert.All(list, x => Assert.Null(x.AccountId));
     }
 
     [Fact]
@@ -90,7 +89,6 @@ public class LiabilitiesServiceTests
         var result = Assert.Single(list);
         Assert.Equal("Cash", result.Name);
         Assert.Equal(-150m, result.Value);
-        Assert.Null(result.AccountId);
         // A mix of currencies has no single code to claim.
         Assert.Null(result.CurrencyCode);
     }

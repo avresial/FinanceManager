@@ -5,15 +5,6 @@ namespace FinanceManager.Application.FinancialAccounts.Currencies.Import;
 
 public interface ICurrencyAccountImportService
 {
-    Task ApplyResolvedConflicts(IEnumerable<ResolvedImportConflict> resolvedConflicts, CancellationToken cancellationToken);
-    Task<ImportResult> ImportEntries(
-        int userId,
-        int accountId,
-        IEnumerable<CurrencyEntryImport> entries,
-        CancellationToken cancellationToken,
-        Func<IReadOnlyList<ImportConflict>, Task>? onConflicts = null,
-        Func<int, int, int, Task>? onProgress = null);
-
     /// <summary>
     /// Imports into the owner's pool of one currency. Every row of that currency the owner has, linked or not, is
     /// compared; no account is involved and no running value is recalculated. Exact matches are treated as already

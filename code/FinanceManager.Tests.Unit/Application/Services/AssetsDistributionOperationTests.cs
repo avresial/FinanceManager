@@ -37,7 +37,7 @@ public class AssetsDistributionOperationTests
         _transactions.Setup(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         _investment = new AssetsServiceInvestment(
-            Mock.Of<IAccountRepository<InvestmentAccount>>(), _valuation.Object,
+            _valuation.Object,
             _transactions.Object, Mock.Of<IInvestmentPriceProvider>(),
             Mock.Of<ICurrencyExchangeService>(), Mock.Of<IDividendPaymentRepository>());
         var currencies = new Mock<ICurrencyRepository>();
@@ -80,7 +80,7 @@ public class AssetsDistributionOperationTests
         var type = Assert.Single(result.AssetsPerType);
         Assert.Equal(("Stock", 160m), (type.Name, type.Value));
         var row = Assert.Single(result.AssetsPerAccount);
-        Assert.Equal((null, "CSPX", 200m, "Stock", null), (row.AccountId, row.Name, row.Value, row.Kind, row.CurrencyCode));
+        Assert.Equal(("CSPX", 200m, "Stock", null), (row.Name, row.Value, row.Kind, row.CurrencyCode));
         _valuation.Verify(x => x.GetUserHoldingValuesAsync(1, DefaultCurrency.PLN, _asOf, It.IsAny<CancellationToken>()), Times.Once);
         // The holdings are read once, inside the valuation: naming the rows needs no second pass over the trades.
         _transactions.Verify(x => x.GetHoldingsByUserAsOf(It.IsAny<long>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -101,7 +101,6 @@ public class AssetsDistributionOperationTests
         else
             Assert.Empty(result.AssetsPerType);
         Assert.Equal(new[] { ("AAA", (decimal)positive - 10), ("CCC", 10m) }, result.AssetsPerAccount.Select(x => (x.Name, x.Value)));
-        Assert.All(result.AssetsPerAccount, x => Assert.Null(x.AccountId));
     }
 
     [Fact]
@@ -227,8 +226,8 @@ public class AssetsDistributionOperationTests
 
         Assert.Equal(typeFirst.Select(x => (x.Name, x.Value)), paired.AssetsPerType.Select(x => (x.Name, x.Value)));
         Assert.Equal(typeSecond.Select(x => (x.Name, x.Value)), paired.AssetsPerType.Select(x => (x.Name, x.Value)));
-        Assert.Equal(accountFirst.Select(x => (x.AccountId, x.Name, x.Value)), paired.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
-        Assert.Equal(accountSecond.Select(x => (x.AccountId, x.Name, x.Value)), paired.AssetsPerAccount.Select(x => (x.AccountId, x.Name, x.Value)));
+        Assert.Equal(accountFirst.Select(x => (x.Name, x.Value)), paired.AssetsPerAccount.Select(x => (x.Name, x.Value)));
+        Assert.Equal(accountSecond.Select(x => (x.Name, x.Value)), paired.AssetsPerAccount.Select(x => (x.Name, x.Value)));
         Assert.Equal(5, _valuation.Invocations.Count);
     }
 

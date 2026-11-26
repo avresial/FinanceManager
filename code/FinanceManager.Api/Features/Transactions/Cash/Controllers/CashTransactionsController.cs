@@ -1,4 +1,5 @@
 using FinanceManager.Api.Features.Dashboard.Extensions;
+using FinanceManager.Api.Features.FinancialAccounts.Currencies.Hubs;
 using FinanceManager.Api.Features.FinancialAccounts.Currencies.Services;
 using FinanceManager.Api.Features.Labels.Services;
 using FinanceManager.Api.Features.Transactions.Shared.Validation;
@@ -11,6 +12,7 @@ using FinanceManager.Application.TransactionRules.Services;
 using FinanceManager.Contracts.Dashboard;
 using FinanceManager.Contracts.Transactions.Cash;
 using FinanceManager.Domain.Dashboard.Dtos;
+using FinanceManager.Domain.Dashboard.Services;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Entities;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
@@ -23,6 +25,7 @@ using FinanceManager.Domain.Transactions.Cash.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.SignalR;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 
@@ -93,7 +96,7 @@ public class CashTransactionsController(
         };
         await transactionRuleService.ApplyToEntryAsync(ownerId, entry, cancellationToken);
 
-        if (!await entryRepository.Add(entry, recalculate: false, cancellationToken)) return BadRequest("Cannot add this entry.");
+        if (!await entryRepository.Add(entry, cancellationToken)) return BadRequest("Cannot add this entry.");
 
         await QueueLabeling(ownerId, entry, cancellationToken);
         await financialAlertService.EvaluateAlertsAsync(ownerId, cancellationToken);
@@ -122,7 +125,7 @@ public class CashTransactionsController(
         if (labels is null) return BadRequest("Unknown label ID.");
 
         // The entry keeps its persisted currency, and its owner and account link never come from the request.
-        var entry = new CurrencyAccountEntry(existing.AccountId, entryId, request.PostingDate, existing.Value, request.ValueChange)
+        var entry = new CurrencyAccountEntry(null, entryId, request.PostingDate, 0, request.ValueChange)
         {
             UserId = ownerId,
             CurrencyId = existing.CurrencyId,
@@ -209,5 +212,110 @@ public class CashTransactionsController(
 
         currencyCode ??= (await currencyRepository.GetCurrency(saved.CurrencyId, cancellationToken))?.ShortName;
         return Ok(saved.ToLogItemDto(currencyCode));
+    }
+
+    [HttpGet("import/jobs/{jobId:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyImportJobStatusDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult ImportStatus(
+        Guid jobId,
+        [FromServices] ICurrencyImportJobStore jobStore)
+    {
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+        if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
+            return NotFound("Import job not found.");
+
+        return Ok(status);
+    }
+
+    [HttpPost("import/jobs/{jobId:guid}/resolve")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(CurrencyImportJobStatusDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ResolveAsyncImportConflicts(
+        Guid jobId,
+        [FromBody] CurrencyImportResolveConflictsRequestDto request,
+        [FromServices] ICurrencyAccountImportService importService,
+        [FromServices] ICacheInvalidator dashboardCacheInvalidator,
+        [FromServices] ILogger<CashTransactionsController> logger,
+        [FromServices] ICurrencyImportJobStore jobStore,
+        [FromServices] IHubContext<CurrencyImportHub> hub)
+    {
+        if (request is null || request.JobId != jobId || request.Decisions.Count == 0)
+            return BadRequest("Provide conflict decisions for the requested job.");
+
+        if (!ApiAuthenticationHelper.TryGetOwnerId(User, out var userId)) return Forbid();
+
+        if (!jobStore.TryGetCurrencyId(jobId, userId, out var currencyId))
+            return NotFound("Import job not found.");
+
+        if (request.Decisions.Any(decision => decision.PickImported == decision.PickExisting))
+            return BadRequest("Each decision must pick exactly one side.");
+        if (!jobStore.TryGetStatus(jobId, userId, out var current) || current is null)
+            return NotFound("Import job not found.");
+        var unknown = request.Decisions.FirstOrDefault(decision => current.Conflicts.All(conflict => conflict.ConflictId != decision.ConflictId));
+        if (unknown is not null)
+            return NotFound($"Conflict {unknown.ConflictId} was not found.");
+
+        var anyApplied = false;
+        try
+        {
+            foreach (var decision in request.Decisions)
+            {
+                if (!jobStore.TryResolveConflict(jobId, userId, decision, out var addition))
+                    return NotFound($"Conflict {decision.ConflictId} was not found.");
+                // An already resolved decision comes back empty and stays a no-op.
+                if (addition is null)
+                    continue;
+
+                bool added;
+                try
+                {
+                    added = await importService.ApplyOwnerConflict(userId, currencyId, addition, HttpContext.RequestAborted);
+                }
+                catch
+                {
+                    jobStore.TryReopenConflict(jobId, userId, decision.ConflictId);
+                    throw;
+                }
+
+                if (!added)
+                {
+                    jobStore.TryReopenConflict(jobId, userId, decision.ConflictId);
+                    return Problem(statusCode: StatusCodes.Status500InternalServerError, title: "Could not save the decision.",
+                        detail: $"Conflict {decision.ConflictId} could not be saved; check the import status and retry.");
+                }
+
+                anyApplied = true;
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The plan limit is rechecked for every approved addition.
+            return BadRequest(ex.Message);
+        }
+        finally
+        {
+            if (anyApplied)
+            {
+                await dashboardCacheInvalidator.InvalidateUser(userId);
+                // Alerts are a side effect: a failure here must not replace the response the decisions earned.
+                try
+                {
+                    await financialAlertService.EvaluateAlertsAsync(userId, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Alert evaluation failed after resolving import conflicts.");
+                }
+            }
+        }
+
+        if (!jobStore.TryGetStatus(jobId, userId, out var status) || status is null)
+            return NotFound("Import job not found.");
+
+        await hub.Clients.Group(CurrencyImportHub.GetJobGroupName(jobId)).SendAsync("ImportStatusUpdated", status);
+        return Ok(status);
     }
 }

@@ -54,11 +54,7 @@ public class InvestmentTransaction
 
     private decimal _value;
 
-    /// <summary>
-    /// Units of <see cref="AssetListingId"/> held in the account immediately after this trade: the running sum of
-    /// <see cref="SignedQuantity"/> per account and listing, ordered by posting date then entry id. Maintained by
-    /// the investment transaction repository, so it is not part of the entity's JSON.
-    /// </summary>
+    // Dormant running units, dropped in #1144.
     [JsonIgnore]
     public decimal Value
     {
@@ -106,6 +102,7 @@ public class InvestmentTransaction
     [JsonPropertyOrder(6)]
     public ICollection<FinancialLabel> Labels { get; set; } = [];
 
-    [JsonPropertyOrder(2)]
+    // Dormant account link, dropped in #1144.
+    [JsonIgnore]
     public int? AccountId { get; set; }
 }

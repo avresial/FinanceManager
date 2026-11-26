@@ -71,8 +71,8 @@ public class GuestAccountSeederTests
         var cashReader = new Mock<ICashTransactionReader>();
         cashReader.Setup(r => r.HasAnyEntries(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
         var cashEntries = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
-        cashEntries.Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), false, It.IsAny<CancellationToken>()))
-            .Callback<IEnumerable<CurrencyAccountEntry>, bool, CancellationToken>((entries, _, _) => saved.AddRange(entries))
+        cashEntries.Setup(r => r.Add(It.IsAny<IEnumerable<CurrencyAccountEntry>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<CurrencyAccountEntry>, CancellationToken>((entries, _) => saved.AddRange(entries))
             .ReturnsAsync(true);
         var labelsRepository = new Mock<IFinancialLabelsRepository>();
         labelsRepository.Setup(r => r.GetLabels(It.IsAny<CancellationToken>())).Returns(AsyncEnumerable.Empty<FinancialLabel>());
@@ -104,7 +104,7 @@ public class GuestAccountSeederTests
             new CurrencyAccountSeeder(cashReader.Object, cashEntries.Object, labelsRepository.Object, NullLogger<CurrencyAccountSeeder>.Instance),
             new InvestmentAccountSeeder(Mock.Of<IAssetRepository>(), Mock.Of<IAssetListingRepository>(),
                 Mock.Of<IMarketDataSymbolRepository>(), Mock.Of<IPriceQuoteRepository>(), investmentTransactions.Object, NullLogger<InvestmentAccountSeeder>.Instance),
-            new BondAccountSeeder(bondReader.Object, Mock.Of<IBondAccountEntryRepository<BondAccountEntry>>(), bondDetailsRepository.Object, NullLogger<BondAccountSeeder>.Instance),
+            new BondAccountSeeder(bondReader.Object, Mock.Of<IAccountEntryRepository<BondAccountEntry>>(), bondDetailsRepository.Object, NullLogger<BondAccountSeeder>.Instance),
             new FinancialInsightsSeeder(insightsRepository.Object, userRepository.Object, new ConfigurationBuilder().Build(), NullLogger<FinancialInsightsSeeder>.Instance),
             dateTimeProvider.Object,
             NullLogger<GuestAccountSeeder>.Instance);

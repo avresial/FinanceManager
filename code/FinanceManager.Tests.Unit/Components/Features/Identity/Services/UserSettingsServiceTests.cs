@@ -88,7 +88,7 @@ public class UserSettingsServiceTests
             loginService.Object,
             userService.Object,
             new CurrencyHttpClient(httpClient),
-            new InvestmentTransactionHttpClient(httpClient),
+            new InstrumentSearchHttpClient(httpClient),
             NullLogger<UserSettingsService>.Instance);
     }
 }

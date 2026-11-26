@@ -26,14 +26,4 @@ public class BondImportMapperTests
 
         Assert.Equal(string.Empty, entry.Description);
     }
-
-    [Fact]
-    public void ResolvedConflict_ToEntry_KeepsImportedDescription()
-    {
-        var import = new BondEntryImport(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 5m, 1, "Top up");
-
-        var entry = new ResolvedBondImportConflict(10, true, import, false, null).ToEntry();
-
-        Assert.Equal("Top up", entry.Description);
-    }
 }

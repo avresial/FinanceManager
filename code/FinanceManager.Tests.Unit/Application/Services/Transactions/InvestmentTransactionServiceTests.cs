@@ -46,12 +46,11 @@ public class InvestmentTransactionServiceTests
             .ThrowsAsync(new InstrumentImportException("instrument_import_failed", "Only stocks and ETFs can be added to an investment transaction."));
 
         var service = CreateService();
-        var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "USD", new DateOnly(2026, 1, 1),
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "USD", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var exception = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
-            service.AddAsync(request, 91, TestContext.Current.CancellationToken));
+            service.AddOwnerAsync(request, 91, TestContext.Current.CancellationToken));
 
         Assert.Equal("instrument_import_failed", exception.Code);
         _atomicOperation.Verify(
@@ -124,10 +123,9 @@ public class InvestmentTransactionServiceTests
                 TradeDate = new DateOnly(2026, 1, 1)
             });
 
-        var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "EUR", new DateOnly(2026, 1, 1),
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "EUR", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
-        var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
+        var result = await CreateService().AddOwnerAsync(request, 91, TestContext.Current.CancellationToken);
 
         Assert.Equal(7, result.Id);
         Assert.Equal(42, result.AssetListingId);
@@ -198,10 +196,9 @@ public class InvestmentTransactionServiceTests
                 TradeDate = new DateOnly(2026, 2, 10)
             });
 
-        var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionTypeDto.Buy, 3m, 118.45m, "eur", new DateOnly(2026, 2, 10),
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 3m, 118.45m, "eur", new DateOnly(2026, 2, 10),
             ExternalInstrumentResultId: "incomplete-id");
-        var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
+        var result = await CreateService().AddOwnerAsync(request, 91, TestContext.Current.CancellationToken);
 
         Assert.Equal(88, result.Id);
         Assert.Equal(55, result.AssetListingId);
@@ -224,12 +221,11 @@ public class InvestmentTransactionServiceTests
         _searchService.Setup(x => x.ResolveExternalResultAsync("result", It.IsAny<CancellationToken>()))
             .ReturnsAsync(instrument);
 
-        var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "PLN", new DateOnly(2026, 1, 1),
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "PLN", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var ex = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
-            CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken));
+            CreateService().AddOwnerAsync(request, 91, TestContext.Current.CancellationToken));
 
         Assert.Equal("currency_mismatch", ex.Code);
         _importService.Verify(x => x.ValidateForTransactionAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -248,12 +244,11 @@ public class InvestmentTransactionServiceTests
         _searchService.Setup(x => x.ResolveExternalResultAsync("result", It.IsAny<CancellationToken>()))
             .ReturnsAsync(instrument);
 
-        var request = new AddInvestmentTransactionRequest(
-            1, null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "ZZZ", new DateOnly(2026, 1, 1),
+        var request = new CreateInvestmentTradeRequest(null, InvestmentTransactionTypeDto.Buy, 1m, 100m, "ZZZ", new DateOnly(2026, 1, 1),
             ExternalInstrumentResultId: "result");
 
         var ex = await Assert.ThrowsAsync<InvestmentTransactionCommandException>(() =>
-            CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken));
+            CreateService().AddOwnerAsync(request, 91, TestContext.Current.CancellationToken));
 
         Assert.Equal("invalid_currency", ex.Code);
         _importService.Verify(x => x.ValidateForTransactionAsync(It.IsAny<InstrumentDiscoveryResultDto>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -296,9 +291,8 @@ public class InvestmentTransactionServiceTests
                 TradeDate = new DateOnly(2026, 3, 1)
             });
 
-        var request = new AddInvestmentTransactionRequest(
-            1, 77, InvestmentTransactionTypeDto.Buy, 2m, 450m, "PLN", new DateOnly(2026, 3, 1));
-        var result = await CreateService().AddAsync(request, 91, TestContext.Current.CancellationToken);
+        var request = new CreateInvestmentTradeRequest(77, InvestmentTransactionTypeDto.Buy, 2m, 450m, "PLN", new DateOnly(2026, 3, 1));
+        var result = await CreateService().AddOwnerAsync(request, 91, TestContext.Current.CancellationToken);
 
         Assert.Equal(99, result.Id);
         Assert.Equal("PLN", result.Currency);
@@ -306,10 +300,8 @@ public class InvestmentTransactionServiceTests
         Assert.False(result.AutomaticPricesAvailable);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData(12)]
-    public async Task AddAsync_StampsTheCallerAndTheAccountLinkOfTheEntryPoint(int? accountId)
+    [Fact]
+    public async Task AddOwnerAsync_StampsTheCaller()
     {
         InvestmentTransaction? added = null;
         _listingRepository.Setup(x => x.Get(42, It.IsAny<CancellationToken>()))
@@ -327,14 +319,12 @@ public class InvestmentTransactionServiceTests
             .ReturnsAsync(() => added);
         var service = CreateService();
 
-        var result = accountId is int account
-            ? await service.AddAsync(new AddInvestmentTransactionRequest(account, 42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken)
-            : await service.AddOwnerAsync(new CreateInvestmentTradeRequest(42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken);
+        var result = await service.AddOwnerAsync(new CreateInvestmentTradeRequest(42, InvestmentTransactionTypeDto.Buy, 1m, 100m, "eur", new DateOnly(2026, 1, 1)), 91, TestContext.Current.CancellationToken);
 
-        Assert.Equal(accountId, added!.AccountId);
+        Assert.Null(added!.AccountId);
         Assert.Equal(91, added.UserId);
         Assert.Equal("EUR", added.Currency);
-        Assert.Equal(accountId, result.AccountId);
+        Assert.Equal(91, result.UserId);
         _cacheInvalidator.Verify(x => x.InvalidateUser(91, It.IsAny<CancellationToken>()), Times.Once);
     }
 

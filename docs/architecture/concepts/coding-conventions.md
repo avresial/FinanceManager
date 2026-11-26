@@ -6,6 +6,8 @@
 
 Use PascalCase for files, types and methods; interfaces start with `I`, private/internal fields use `_camelCase`, and tests end in `Tests.cs`. Namespaces follow folders. Complex Razor components use `.razor`/`.razor.cs` pairs; one top-level type belongs in each correspondingly named file. Primary constructors and collection expressions follow the repository's C# conventions. Components with code use `[Inject]` properties.
 
+For ledger changes, take the owner from the authenticated context and aggregate deltas per currency, bond definition or listing. See [ADR 0008](../decisions/0008-owner-keyed-transaction-ledger.md).
+
 Current examples are [InvestmentValuationController](../../../code/FinanceManager.Api/Features/FinancialAccounts/Investments/Controllers/InvestmentValuationController.cs), [InvestmentPriceProvider](../../../code/FinanceManager.Application/Assets/Pricing/InvestmentPriceProvider.cs), and [LoginServiceTests](../../../code/FinanceManager.Tests.Unit/Components/Features/Identity/Services/LoginServiceTests.cs). Historical examples named StockPriceController/StockPriceProvider were replaced by the investment pricing flow; do not recreate those paths.
 
 ## Formatting and dependencies

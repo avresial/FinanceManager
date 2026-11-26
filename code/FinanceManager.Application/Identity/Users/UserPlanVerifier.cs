@@ -9,7 +9,7 @@ namespace FinanceManager.Application.Identity.Users;
 
 public class UserPlanVerifier(IAccountEntryRepository<CurrencyAccountEntry> currencyAccountEntryRepository,
     IInvestmentTransactionRepository investmentTransactionRepository,
-    IBondAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
+    IAccountEntryRepository<BondAccountEntry> bondAccountEntryRepository,
     IUserRepository userRepository) : IUserPlanVerifier
 {
     public async Task<int> GetUsedRecordsCapacity(int userId)

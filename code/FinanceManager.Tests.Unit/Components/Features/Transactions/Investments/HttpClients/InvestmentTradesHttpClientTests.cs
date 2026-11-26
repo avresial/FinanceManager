@@ -14,7 +14,7 @@ public class InvestmentTradesHttpClientTests
     [Fact]
     public async Task CreateAsync_PostsToTheOwnerRoute_AndReturnsTheSavedTrade()
     {
-        var saved = new InvestmentTransactionDto(9, 1, null, 4, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", _day, null, null);
+        var saved = new InvestmentTransactionDto(9, 1, 4, InvestmentTransactionTypeDto.Buy, 2m, 10m, "PLN", _day, null, null);
         var handler = new RecordingHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.Created) { Content = JsonContent.Create(saved) });
         var client = new InvestmentTradesHttpClient(handler.CreateClient());
 

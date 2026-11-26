@@ -14,7 +14,6 @@ public static class InvestmentTransactionMappingExtensions
     public static InvestmentTransactionDto ToDto(this InvestmentTransaction transaction) => new(
         transaction.EntryId,
         transaction.UserId,
-        transaction.AccountId,
         transaction.AssetListingId,
         (InvestmentTransactionTypeDto)transaction.Type,
         transaction.Quantity,
@@ -43,32 +42,10 @@ public static class InvestmentTransactionMappingExtensions
     };
 
     /// <summary>Build a new entity from an add request after its instrument source was resolved.</summary>
-    public static InvestmentTransaction ToEntity(this AddInvestmentTransactionRequest request, long userId, int? accountId, long assetListingId) => new()
+    public static InvestmentTransaction ToEntity(this CreateInvestmentTradeRequest request, long userId, long assetListingId) => new()
     {
         UserId = userId,
-        AccountId = accountId,
         AssetListingId = assetListingId,
-        Type = (InvestmentTransactionType)request.Type,
-        Quantity = request.Quantity,
-        UnitPrice = request.UnitPrice,
-        Currency = request.Currency,
-        TradeDate = request.TradeDate,
-        Fee = request.Fee,
-        Description = request.Notes ?? string.Empty,
-        Labels = (request.LabelIds ?? []).Distinct().Select(id => new FinancialLabel { Id = id, Name = string.Empty }).ToList()
-    };
-
-    /// <summary>Map an owner add request onto the shared add pipeline's request. The pipeline takes the account link separately, so none is set here.</summary>
-    public static AddInvestmentTransactionRequest ToAddRequest(this CreateInvestmentTradeRequest request) => new(
-        0, request.AssetListingId, request.Type, request.Quantity, request.UnitPrice, request.Currency, request.TradeDate,
-        request.Fee, request.Notes, request.ExternalInstrumentResultId, request.LabelIds);
-
-    /// <summary>Map an update request onto the editable fields the repository copies by id.</summary>
-    public static InvestmentTransaction ToEntity(this UpdateInvestmentTransactionRequest request) => new()
-    {
-        EntryId = request.Id,
-        AccountId = request.AccountId,
-        AssetListingId = request.AssetListingId,
         Type = (InvestmentTransactionType)request.Type,
         Quantity = request.Quantity,
         UnitPrice = request.UnitPrice,

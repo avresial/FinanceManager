@@ -21,7 +21,7 @@ public class BondEntryConflictResolverTests
     [Fact]
     public async Task ResubmitsEveryRowOfTheAcceptedKeys_AndNothingOfTheSkippedOnes()
     {
-        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 1, 0, [], []));
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(1, 0, [], []));
         await using var context = CreateContext(handler);
         // The file holds the 5-unit row twice on day A and once more on day B; both days conflict with a different existing entry.
         BondEntryImportRecordDto[] rows =
@@ -44,7 +44,7 @@ public class BondEntryConflictResolverTests
     [Fact]
     public async Task WhenEveryDayIsSkipped_SendsNothing()
     {
-        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 0, [], []));
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(0, 0, [], []));
         await using var context = CreateContext(handler);
         var cut = context.Render<BondEntryConflictResolver>(p => p
             .Add(x => x.ImportRows, [new BondEntryImportRecordDto(_dayA, 5m, 1, "first")])
@@ -59,7 +59,7 @@ public class BondEntryConflictResolverTests
     [Fact]
     public async Task WhenTheServerReportsFailedRows_ShowsThemAndDoesNotCompleteTheImport()
     {
-        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(null, 0, 1, ["Posting date must be UTC."], []));
+        var handler = RecordingHttpHandler.ForEntryForms(saved: new BondImportResult(0, 1, ["Posting date must be UTC."], []));
         await using var context = CreateContext(handler);
         var submitted = 0;
         var cut = context.Render<BondEntryConflictResolver>(p => p
@@ -76,7 +76,7 @@ public class BondEntryConflictResolverTests
 
     // An incoming row whose key (day, units, definition) differs from the existing entry of the day, so it is a real conflict.
     private static BondImportConflict Conflict(DateTime day, decimal units, int bondDetailsId) => new(
-        null, new BondEntryImport(day, units, bondDetailsId, "incoming"),
+        new BondEntryImport(day, units, bondDetailsId, "incoming"),
         new BondAccountEntry(null, 1, day, 0m, units + 100m, bondDetailsId), "Day already has entries.");
 
     private static BunitContext CreateContext(RecordingHttpHandler handler)

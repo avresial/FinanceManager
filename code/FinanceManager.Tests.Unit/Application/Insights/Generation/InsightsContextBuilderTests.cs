@@ -46,9 +46,9 @@ public class InsightsContextBuilderTests
     {
         var label = new FinancialLabel { Id = 1, Name = "Secret label" };
         _cash.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new CashLogEntry(null, 1, new DateTime(2026, 9, 1), -12.5m, "Coffee, \"large\"", 0, "PLN", "Cafe", [label])]);
+            .ReturnsAsync([new CashLogEntry(1, new DateTime(2026, 9, 1), -12.5m, "Coffee, \"large\"", 0, "PLN", "Cafe", [label])]);
         _bonds.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new BondLogEntry(null, 2, new DateTime(2026, 9, 2), 10m, "Buy", 3, "EUR", "EDO0834", [label])]);
+            .ReturnsAsync([new BondLogEntry(2, new DateTime(2026, 9, 2), 10m, "Buy", 3, "EUR", "EDO0834", [label])]);
 
         var csv = await Builder().BuildEntriesContextCsv(7, TestContext.Current.CancellationToken);
 
@@ -69,7 +69,7 @@ public class InsightsContextBuilderTests
     public async Task Build_OmitsEmptySections()
     {
         _cash.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new CashLogEntry(null, 1, new DateTime(2026, 9, 1), -1m, "x", 0, "PLN", null, [])]);
+            .ReturnsAsync([new CashLogEntry(1, new DateTime(2026, 9, 1), -1m, "x", 0, "PLN", null, [])]);
         _bonds.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         var csv = await Builder().BuildEntriesContextCsv(7, TestContext.Current.CancellationToken);
@@ -94,7 +94,7 @@ public class InsightsContextBuilderTests
     public async Task Build_NegativeGuestId_IsReadLikeAnyOwner()
     {
         _cash.Setup(r => r.GetHistory(-4, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new CashLogEntry(null, 1, new DateTime(2026, 9, 1), -1m, "demo", 0, "PLN", null, [])]);
+            .ReturnsAsync([new CashLogEntry(1, new DateTime(2026, 9, 1), -1m, "demo", 0, "PLN", null, [])]);
         _bonds.Setup(r => r.GetHistory(-4, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         var csv = await Builder().BuildEntriesContextCsv(-4, TestContext.Current.CancellationToken);
@@ -108,7 +108,7 @@ public class InsightsContextBuilderTests
     {
         var description = new string('d', 1_000);
         var rows = Enumerable.Range(1, 250)
-            .Select(id => new CashLogEntry(null, id, new DateTime(2026, 9, 1), -1m, description, 0, "PLN", null, []))
+            .Select(id => new CashLogEntry(id, new DateTime(2026, 9, 1), -1m, description, 0, "PLN", null, []))
             .ToList();
         _cash.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync(rows);
         _bonds.Setup(r => r.GetHistory(7, It.IsAny<OwnerHistoryQuery>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);

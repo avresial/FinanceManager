@@ -5,11 +5,6 @@ namespace FinanceManager.Application.FinancialAccounts.Investments.Transactions;
 
 public interface IInvestmentTransactionService
 {
-    Task<InvestmentTransactionDto> AddAsync(
-        AddInvestmentTransactionRequest request,
-        long userId,
-        CancellationToken cancellationToken = default);
-
     /// <summary>Adds an unlinked trade to the owner's pooled portfolio with the same validation and import pipeline.</summary>
     Task<InvestmentTransactionDto> AddOwnerAsync(
         CreateInvestmentTradeRequest request,

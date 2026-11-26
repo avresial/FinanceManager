@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 
 namespace FinanceManager.Components.Features.FinancialAccounts.HttpClients;
 
-public class InvestmentTransactionHttpClient(HttpClient httpClient)
+public class InstrumentSearchHttpClient(HttpClient httpClient)
 {
     public async Task<IReadOnlyList<InstrumentSearchResultDto>> SearchListingsAsync(
         string query,
@@ -13,7 +13,7 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return [];
-        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/SearchListings?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
+        var url = $"{httpClient.BaseAddress}api/investments/instruments/listings?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
         using var response = await httpClient.GetAsync(url, cancellationToken);
         if (!response.IsSuccessStatusCode) return [];
         return await response.Content.ReadFromJsonAsync<List<InstrumentSearchResultDto>>(cancellationToken) ?? [];
@@ -25,7 +25,7 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query)) return [];
-        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/SearchInstruments?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
+        var url = $"{httpClient.BaseAddress}api/investments/instruments/options?q={Uri.EscapeDataString(query)}&maxResults={maxResults}";
         using var response = await httpClient.GetAsync(url, cancellationToken);
         if (!response.IsSuccessStatusCode) return [];
         return await response.Content.ReadFromJsonAsync<List<InvestmentInstrumentOptionDto>>(cancellationToken) ?? [];
@@ -34,14 +34,14 @@ public class InvestmentTransactionHttpClient(HttpClient httpClient)
     public async Task<InstrumentSearchResultDto?> GetListingAsync(long listingId)
     {
         using var response = await httpClient.GetAsync(
-            $"{httpClient.BaseAddress}api/InvestmentTransaction/Listing/{listingId}");
+            $"{httpClient.BaseAddress}api/investments/instruments/listings/{listingId}");
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<InstrumentSearchResultDto>();
     }
 
     public async Task<ListingPriceDto?> GetListingPriceAsync(long listingId, DateOnly? asOf = null)
     {
-        var url = $"{httpClient.BaseAddress}api/InvestmentTransaction/ListingPrice/{listingId}";
+        var url = $"{httpClient.BaseAddress}api/investments/instruments/listings/{listingId}/price";
         if (asOf is DateOnly date)
             url += $"?asOf={date:yyyy-MM-dd}";
 

@@ -62,11 +62,11 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var entry1 = new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondDetailsId: 1);
-        var entry2 = new BondAccountEntry(_accountId, 0, jan15, 0, 300m, bondDetailsId: 1);
+        var entry1 = new BondAccountEntry(null, 0, jan10, 0, 500m, bondDetailsId: 1) { UserId = _userId };
+        var entry2 = new BondAccountEntry(null, 0, jan15, 0, 300m, bondDetailsId: 1) { UserId = _userId };
         List<BondAccountEntry> batch = [entry1, entry2];
 
-        var added = await _repo.Add(batch, recalculate: false, cancellationToken: ct);
+        var added = await _repo.Add(batch, cancellationToken: ct);
 
         Assert.True(added);
         Assert.True(entry1.EntryId > 0, "entry1.EntryId must be populated with database-generated ID");
@@ -75,7 +75,7 @@ public sealed class SqliteBondImportBatchTests : IDisposable
 
         var dbEntries = await _context.BondEntries
             .AsNoTracking()
-            .Where(e => e.AccountId == _accountId)
+            .Where(e => e.UserId == _userId)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 
@@ -83,57 +83,6 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         Assert.Equal(entry1.EntryId, dbEntries[0].EntryId);
         Assert.Equal(entry2.EntryId, dbEntries[1].EntryId);
         Assert.Empty(_context.ChangeTracker.Entries());
-    }
-
-    [Fact]
-    public async Task AddBatch_WithOutOfOrderDatesAndRecalculation_AnchorsToEarliestDate()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
-        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
-
-        const int bondA = 1;
-        const int bondB = 2;
-
-        // Seed existing baseline
-        await _repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondA), recalculate: true, cancellationToken: ct);
-        await _repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 2000m, bondB), recalculate: true, cancellationToken: ct);
-
-        // Batch provided in reverse date order: jan20 first, then jan15
-        var entryJan20 = new BondAccountEntry(_accountId, 0, jan20, 0, 500m, bondA);
-        var entryJan15 = new BondAccountEntry(_accountId, 0, jan15, 0, 200m, bondA);
-        var entryJan15B = new BondAccountEntry(_accountId, 0, jan15, 0, 400m, bondB);
-
-        var added = await _repo.Add([entryJan20, entryJan15, entryJan15B], recalculate: true, cancellationToken: ct);
-
-        Assert.True(added);
-        Assert.True(entryJan20.EntryId > 0);
-        Assert.True(entryJan15.EntryId > 0);
-        Assert.True(entryJan15B.EntryId > 0);
-
-        var bondAEntries = await _context.BondEntries
-            .AsNoTracking()
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondA)
-            .OrderBy(e => e.PostingDate)
-            .ToListAsync(ct);
-
-        var bondBEntries = await _context.BondEntries
-            .AsNoTracking()
-            .Where(e => e.AccountId == _accountId && e.BondDetailsId == bondB)
-            .OrderBy(e => e.PostingDate)
-            .ToListAsync(ct);
-
-        // Bond A: Jan 10 (1000), Jan 15 (+200 -> 1200), Jan 20 (+500 -> 1700)
-        Assert.Equal(3, bondAEntries.Count);
-        Assert.Equal(1000m, bondAEntries[0].Value);
-        Assert.Equal(1200m, bondAEntries[1].Value);
-        Assert.Equal(1700m, bondAEntries[2].Value);
-
-        // Bond B: Jan 10 (2000), Jan 15 (+400 -> 2400)
-        Assert.Equal(2, bondBEntries.Count);
-        Assert.Equal(2000m, bondBEntries[0].Value);
-        Assert.Equal(2400m, bondBEntries[1].Value);
     }
 
     [Fact]
@@ -145,12 +94,13 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         await _context.SaveChangesAsync(ct);
 
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new BondAccountEntry(_accountId, 0, jan10, 0, 500m, bondDetailsId: 1)
+        var entry = new BondAccountEntry(null, 0, jan10, 0, 500m, bondDetailsId: 1)
         {
+            UserId = _userId,
             Labels = [new FinancialLabel { Id = existingLabel.Id, Name = existingLabel.Name }]
         };
 
-        var added = await _repo.Add([entry], recalculate: false, cancellationToken: ct);
+        var added = await _repo.Add([entry], cancellationToken: ct);
 
         Assert.True(added);
         Assert.Equal(1, await _context.FinancialLabels.CountAsync(ct));
@@ -170,11 +120,6 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         var ct = TestContext.Current.CancellationToken;
 
         // Setup service with real repository and mocks for plan/account ownership
-        var mockAccountRepo = new Mock<IAccountRepository<BondAccount>>();
-        var account = new BondAccount(_userId, _accountId, "TestBonds");
-        mockAccountRepo.Setup(x => x.Get(_accountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        mockAccountRepo.Setup(x => x.Get(_accountId)).ReturnsAsync(account);
-
         var mockCurrencyEntryRepo = new Mock<IAccountEntryRepository<CurrencyAccountEntry>>();
         var mockInvestmentRepo = new Mock<IInvestmentTransactionRepository>();
         var mockUserRepo = new Mock<IUserRepository>();
@@ -195,7 +140,7 @@ public sealed class SqliteBondImportBatchTests : IDisposable
 
         var importAccountValidator = new ImportAccountValidator(userPlanVerifier);
         var logger = new Mock<ILogger<BondAccountImportService>>();
-        var service = new BondAccountImportService(mockAccountRepo.Object, _repo, importAccountValidator, logger.Object);
+        var service = new BondAccountImportService(_repo, importAccountValidator, logger.Object);
 
         // Seed existing baseline entries on Jan 10 and Jan 20
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
@@ -204,8 +149,8 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         var jan25 = new DateTime(2025, 1, 25, 0, 0, 0, DateTimeKind.Utc);
 
         const int bondA = 1;
-        await _repo.Add(new BondAccountEntry(_accountId, 0, jan10, 0, 1000m, bondA), recalculate: true, cancellationToken: ct);
-        await _repo.Add(new BondAccountEntry(_accountId, 0, jan20, 0, 500m, bondA), recalculate: true, cancellationToken: ct);
+        await _repo.Add(new BondAccountEntry(null, 0, jan10, 0, 1000m, bondA) { UserId = _userId }, cancellationToken: ct);
+        await _repo.Add(new BondAccountEntry(null, 0, jan20, 0, 500m, bondA) { UserId = _userId }, cancellationToken: ct);
 
         // Import dataset:
         // - Jan 25: clean new day -> should be imported
@@ -218,7 +163,7 @@ public sealed class SqliteBondImportBatchTests : IDisposable
             new(jan25, 300m, bondA)
         ];
 
-        var result = await service.ImportEntries(_userId, _accountId, importEntries, ct);
+        var result = await service.ImportOwnerEntries(_userId, importEntries, ct);
 
         Assert.Equal(2, result.Imported);
         Assert.Equal(0, result.Failed);
@@ -228,21 +173,21 @@ public sealed class SqliteBondImportBatchTests : IDisposable
         // Verify database state: 4 total entries in chronological order
         var entries = await _context.BondEntries
             .AsNoTracking()
-            .Where(e => e.AccountId == _accountId)
+            .Where(e => e.UserId == _userId)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 
         Assert.Equal(4, entries.Count);
         Assert.Equal(jan10, entries[0].PostingDate);
-        Assert.Equal(1000m, entries[0].Value);
+        Assert.Equal(1000m, entries[0].ValueChange);
 
         Assert.Equal(jan15, entries[1].PostingDate);
-        Assert.Equal(1200m, entries[1].Value); // 1000 + 200
+        Assert.Equal(200m, entries[1].ValueChange);
 
         Assert.Equal(jan20, entries[2].PostingDate);
-        Assert.Equal(1700m, entries[2].Value); // 1200 + 500
+        Assert.Equal(500m, entries[2].ValueChange);
 
         Assert.Equal(jan25, entries[3].PostingDate);
-        Assert.Equal(2000m, entries[3].Value); // 1700 + 300
+        Assert.Equal(300m, entries[3].ValueChange);
     }
 }

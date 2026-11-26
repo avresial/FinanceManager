@@ -29,62 +29,52 @@ public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueS
 
     [HttpGet("GetInflow/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
-    public async Task<IActionResult> GetInflow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetInflow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
-        return Ok(accountIds is { Count: > 0 }
-            ? await balanceService.GetInflow(userId, currency, start, end, accountIds)
-            : await balanceService.GetInflow(userId, currency, start, end));
+        return Ok(await balanceService.GetInflow(userId, currency, start, end));
     }
 
     [HttpGet("GetOutflow/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
-    public async Task<IActionResult> GetOutflow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOutflow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
-        return Ok(accountIds is { Count: > 0 }
-            ? await balanceService.GetOutflow(userId, currency, start, end, accountIds)
-            : await balanceService.GetOutflow(userId, currency, start, end));
+        return Ok(await balanceService.GetOutflow(userId, currency, start, end));
     }
 
     [HttpGet("GetNetCashFlow/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
-    public async Task<IActionResult> GetNetCashFlow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetNetCashFlow(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
-        return Ok(accountIds is { Count: > 0 }
-            ? await balanceService.GetNetCashFlow(userId, currency, start, end, accountIds)
-            : await balanceService.GetNetCashFlow(userId, currency, start, end));
+        return Ok(await balanceService.GetNetCashFlow(userId, currency, start, end));
     }
 
     [HttpGet("GetCapital/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
-    public async Task<IActionResult> GetCapital(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetCapital(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
-        return Ok(accountIds is { Count: > 0 }
-            ? await balanceService.GetCapital(userId, currency, start, end, accountIds)
-            : await balanceService.GetCapital(userId, currency, start, end));
+        return Ok(await balanceService.GetCapital(userId, currency, start, end));
     }
 
     [HttpGet("GetClosingBalance/{userId:int}/{currencyId:int}/{start:DateTime}/{end:DateTime}/{step:long?}")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TimeSeriesModel>))]
-    public async Task<IActionResult> GetClosingBalance(int userId, int currencyId, DateTime start, DateTime end, long? step = null, [FromQuery] List<int>? accountIds = null, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetClosingBalance(int userId, int currencyId, DateTime start, DateTime end, long? step = null, CancellationToken cancellationToken = default)
     {
         if (!ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)) return Forbid();
 
         var currency = await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken);
-        return Ok(accountIds is { Count: > 0 }
-            ? await balanceService.GetClosingBalance(userId, currency, start, end, accountIds)
-            : await balanceService.GetClosingBalance(userId, currency, start, end));
+        return Ok(await balanceService.GetClosingBalance(userId, currency, start, end));
     }
 
     [HttpGet("GetLabelsValue")]
@@ -105,5 +95,4 @@ public class MoneyFlowController(INetWorthService netWorthService, ILabelsValueS
         ApiAuthenticationHelper.IsAuthenticatedUser(User, userId)
             ? Ok(await savingsRateService.GetSavingsRate(userId, await currencyRepository.GetCurrencies(cancellationToken).SingleAsync(x => x.Id == currencyId, cancellationToken), start, end).ToListAsync(cancellationToken))
             : Forbid();
-
 }

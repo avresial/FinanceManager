@@ -57,7 +57,7 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
     [Inject] public required IUserService UserService { get; set; }
     [Inject] public required ILoginService LoginService { get; set; }
     [Inject] public required CurrencyHttpClient CurrencyHttpClient { get; set; }
-    [Inject] public required InvestmentTransactionHttpClient InvestmentTransactionHttpClient { get; set; }
+    [Inject] public required InstrumentSearchHttpClient InstrumentSearchHttpClient { get; set; }
     [Inject] public required UserSettingsService UserSettingsService { get; set; }
     [Inject] public required GiftCodeHttpClient GiftCodeHttpClient { get; set; }
     [Inject] public required NavigationManager NavigationManager { get; set; }
@@ -360,7 +360,7 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(value)) return [];
-        return await InvestmentTransactionHttpClient.SearchListingsAsync(
+        return await InstrumentSearchHttpClient.SearchListingsAsync(
             value,
             cancellationToken: cancellationToken);
     }
@@ -395,5 +395,4 @@ public partial class UserSettingsPage : ComponentBase, IAsyncDisposable
             return Color.Error;
         return Color.Primary;
     }
-
 }

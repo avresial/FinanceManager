@@ -56,7 +56,7 @@ A customizable grid of cards for the selected date range:
 Every card has an info tooltip that explains what it shows.
 
 ### Transactions
-There are no accounts to set up: every entry belongs to you, and balances are summed per currency, bond or instrument.
+Every entry belongs to you. Cash balances pool by currency, bonds by bond definition, and investment holdings by listing.
 
 | Kind | What it tracks |
 |---|---|

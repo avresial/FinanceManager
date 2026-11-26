@@ -1,7 +1,6 @@
 using FinanceManager.Components.Features.Dashboard.Models;
 using FinanceManager.Components.Features.MoneyFlow.HttpClients;
 using FinanceManager.Contracts.Dashboard;
-using FinanceManager.Contracts.FinancialAccounts.Currencies;
 using FinanceManager.Contracts.FinancialAccounts.Investments;
 using FinanceManager.Contracts.FinancialAccounts.Shared;
 using FinanceManager.Domain.Dashboard.Dtos;
@@ -66,11 +65,11 @@ public class TransactionLogHttpClientTests
         var label = new FinancialLabelDto { Id = 4, Name = "Food" };
         var page = new TransactionLogItemsPageDto(
         [
-            new CurrencyTransactionLogItemDto(10, 1, date, -10, "Lunch", 3, "EUR", null, [label]),
-            new CurrencyTransactionLogItemDto(null, 2, date, -10, "Dinner", 3, "EUR", null, []),
-            new BondTransactionLogItemDto(20, 1, date, 5, "", 7, "EUR", "Treasury", [label]),
-            new InvestmentTransactionLogItemDto(30, new InvestmentTransactionDto(
-                long.MaxValue, 7, 30, 1, InvestmentTransactionTypeDto.Sell, 1, 2, "USD", new DateOnly(2024, 3, 1), null, null, Labels: [label])),
+            new CurrencyTransactionLogItemDto(1, date, -10, "Lunch", 3, "EUR", null, [label]),
+            new CurrencyTransactionLogItemDto(2, date, -10, "Dinner", 3, "EUR", null, []),
+            new BondTransactionLogItemDto(1, date, 5, "", 7, "EUR", "Treasury", [label]),
+            new InvestmentTransactionLogItemDto(new InvestmentTransactionDto(
+                long.MaxValue, 7, 1, InvestmentTransactionTypeDto.Sell, 1, 2, "USD", new DateOnly(2024, 3, 1), null, null, Labels: [label])),
         ], new TransactionLogCursorDto(date, TransactionKindDto.Investment, long.MaxValue));
         using var handler = new StubHandler(request =>
         {
@@ -84,12 +83,10 @@ public class TransactionLogHttpClientTests
         Assert.Equal(new TransactionLogCursor(date, TransactionKind.Investment, long.MaxValue), result.NextCursor);
         Assert.Equal([TransactionKind.Cash, TransactionKind.Cash, TransactionKind.Bond, TransactionKind.Investment], result.Items.Select(i => i.Kind));
         var cash = Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[0]);
-        Assert.Equal((10, 3), (cash.LegacyAccountId, cash.Entry.CurrencyId));
+        Assert.Equal(3, cash.Entry.CurrencyId);
         Assert.Equal(("EUR", "Lunch", -10m, "Food"), (cash.Currency, cash.Entry.Description, cash.Entry.ValueChange, cash.Entry.Labels.Single().Name));
-        // Owned entries without a legacy link carry no account.
-        Assert.Null(Assert.IsType<CurrencyTransactionHistoryItem>(result.Items[1]).LegacyAccountId);
         var bond = Assert.IsType<BondTransactionHistoryItem>(result.Items[2]);
-        Assert.Equal((20, "Treasury", 7, "Food"), (bond.LegacyAccountId, bond.BondName, bond.Entry.BondDetailsId, bond.Entry.Labels.Single().Name));
+        Assert.Equal(("Treasury", 7, "Food"), (bond.BondName, bond.Entry.BondDetailsId, bond.Entry.Labels.Single().Name));
         var trade = Assert.IsType<InvestmentTransactionHistoryItem>(result.Items[3]);
         Assert.Equal((long.MaxValue, "Food"), (trade.EntryId, trade.Transaction.Labels!.Single().Name));
         Assert.Equal(new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc), trade.Date);

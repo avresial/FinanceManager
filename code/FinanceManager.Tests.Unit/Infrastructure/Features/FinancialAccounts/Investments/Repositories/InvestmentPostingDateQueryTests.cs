@@ -34,7 +34,6 @@ public class InvestmentPostingDateQueryTests
             new InvestmentTransaction
             {
                 EntryId = 1081 + index,
-                AccountId = 1081,
                 UserId = 1081,
                 AssetListing = listing,
                 Currency = "USD",
@@ -44,21 +43,18 @@ public class InvestmentPostingDateQueryTests
             }));
         await context.SaveChangesAsync(ct);
         context.ChangeTracker.Clear();
-        Assert.Equal(3, (await repository.GetByAccount(1081, ct)).Count);
         await repository.GetByUserAndIds(1081, [1081], ct);
         await repository.GetHistoryByUser(1081, new(null, null, 10, IncludeDetails: false), ct);
         await repository.GetByUser(1081, start, end, ct);
-        await repository.GetHoldingsAsOf([1081], end, ct);
-        await repository.GetHoldingsByUserAsOf(1081, end, ct);
         var latest = Assert.Single(await repository.GetLatestPricesByUserAsOf(1081, end, [1081], ct));
         Assert.Equal(("USD", 10m), (latest.Currency, latest.UnitPrice));
         Assert.Empty(await repository.GetLatestUnpricedTradesByUserAsOf(1081, end, [1081], ct));
         await repository.GetValuationInputsByUser(1081, start, end, ct);
         Assert.Equal(new[] { start.AddDays(-1), start }, (await repository.GetCapitalFlowInputsByUser(1081, end, ct)).Select(flow => flow.TradeDate));
-        var holdings = await repository.GetHoldingsAsOf([1081], end, ct);
-        Assert.Equal(2m, holdings[1081]);
+        var holdings = await repository.GetHoldingsByUserAsOf(1081, end, ct);
+        Assert.Equal(2m, Assert.Single(holdings).Units);
         await repository.GetHistoryByUser(1081, new(start.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), end.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), 10), ct);
-        await repository.GetHistoryPage(1081, 10, end, 100, start, end, cancellationToken: ct);
+        await repository.GetHistoryPageByUser(1081, 10, end, 100, start, end, cancellationToken: ct);
         await new AssetRepository(context).GetIncomplete(1, 10, null, DateTimeOffset.UtcNow, ct);
     }
 }

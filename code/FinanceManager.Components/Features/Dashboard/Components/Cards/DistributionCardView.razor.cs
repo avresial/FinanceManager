@@ -85,7 +85,7 @@ public partial class DistributionCardView
         // Recreate the chart whenever the slices, their colours or the currency change, instead of patching
         // a live chart: ApexCharts reads colours from the options only when it is created. Unchanged input keeps
         // the same list so a parent re-render does not push a series update into the chart.
-        var key = string.Join('|', slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}:{x.AccountId}:{x.Members.Count}:{x.CurrencyCode}"))
+        var key = string.Join('|', slices.Select(x => $"{x.Name}:{x.Value.ToString(CultureInfo.InvariantCulture)}:{x.Color}:{x.Members.Count}:{x.CurrencyCode}"))
             + $"|{CurrencyShortName}|{string.Join(',', _foreignCodes)}|{_mixedCurrencies}";
         if (key == _chartKey) return;
 

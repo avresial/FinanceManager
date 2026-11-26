@@ -62,7 +62,6 @@ public class FinancialInsightsSeeder(IFinancialInsightsRepository financialInsig
             insights.Add(new FinancialInsight
             {
                 UserId = guestUserId,
-                AccountId = null,
                 Title = title,
                 Message = message,
                 Tags = tags,

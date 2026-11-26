@@ -37,7 +37,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
         }
 
         var page = await rows.OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
-            .Take(query.Take).Select(x => new CashLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate,
+            .Take(query.Take).Select(x => new CashLogEntry(x.Entry.EntryId, x.Entry.PostingDate,
                 x.Entry.ValueChange, x.Entry.Description, x.Entry.CurrencyId, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>())).ToListAsync(ct);
         if (!query.IncludeDetails || page.Count == 0) return page;
 
@@ -59,7 +59,7 @@ public class CashTransactionRepository(AppDbContext context) : ICashTransactionR
                 Currency = context.Currencies.Where(c => c.Id == e.CurrencyId).Select(c => c.ShortName).FirstOrDefault()
             })
             .OrderByDescending(x => x.Entry.PostingDate).ThenByDescending(x => x.Entry.EntryId)
-            .Select(x => new CashLogEntry(x.Entry.AccountId, x.Entry.EntryId, x.Entry.PostingDate, x.Entry.ValueChange,
+            .Select(x => new CashLogEntry(x.Entry.EntryId, x.Entry.PostingDate, x.Entry.ValueChange,
                 x.Entry.Description, x.Entry.CurrencyId, x.Currency, x.Entry.ContractorDetails, Array.Empty<FinancialLabel>()))
             .ToListAsync(ct);
         if (rows.Count == 0) return rows;

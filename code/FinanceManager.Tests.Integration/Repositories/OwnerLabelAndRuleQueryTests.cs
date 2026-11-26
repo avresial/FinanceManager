@@ -66,7 +66,6 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
         var rows = await reader.GetByIds(_owner, [unlinked, linked, foreign, linked, 99999], TestContext.Current.CancellationToken);
 
         Assert.Equal([linked, unlinked], rows.Select(row => row.EntryId));
-        Assert.Equal([40, (int?)null], rows.Select(row => row.LegacyAccountId));
         Assert.Equal(["Food", "Rent"], rows[1].Labels.Select(label => label.Name).Order());
         Assert.All(rows, row => Assert.Equal("PLN", row.Currency));
         Assert.Equal([guest], (await reader.GetByIds(_guest, [guest, unlinked], TestContext.Current.CancellationToken)).Select(row => row.EntryId));
@@ -89,14 +88,12 @@ public sealed class OwnerLabelAndRuleQueryTests : IDisposable
 
         Assert.NotNull(row);
         Assert.Equal("Treasury 2030", row.BondName);
-        Assert.Null(row.LegacyAccountId);
         Assert.Equal("Rent", Assert.Single(row.Labels).Name);
         Assert.Null(await reader.GetById(_owner, foreign.EntryId, TestContext.Current.CancellationToken));
         Assert.Null(await reader.GetById(_other, unlinked.EntryId, TestContext.Current.CancellationToken));
         var orphan = await reader.GetById(_owner, missingDefinition.EntryId, TestContext.Current.CancellationToken);
         Assert.NotNull(orphan);
         Assert.Null(orphan.BondName);
-        Assert.Equal(12, orphan.LegacyAccountId);
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => reader.GetById(0, unlinked.EntryId, TestContext.Current.CancellationToken));
     }
 

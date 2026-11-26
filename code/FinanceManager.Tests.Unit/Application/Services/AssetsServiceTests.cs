@@ -78,16 +78,16 @@ public class AssetsServiceTests
         _mockService1.Setup(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, It.IsAny<CancellationToken>()))
             .Returns(first.Task);
         _mockService2.Setup(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AssetsDistributionResult([new("Second type", 3)], [new("Duplicate", 3) { AccountId = 3 }]));
+            .ReturnsAsync(new AssetsDistributionResult([new("Second type", 3)], [new("Duplicate", 3)]));
 
         var pending = _assetsService.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, TestContext.Current.CancellationToken);
         _mockService2.Verify(x => x.GetEndAssetsDistribution(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
         first.SetResult(new AssetsDistributionResult([new("First type", 30)],
-            [new("Duplicate", 20) { AccountId = 2 }, new("Duplicate", 10) { AccountId = 1 }]));
+            [new("Duplicate", 20), new("Duplicate", 10)]));
         var result = await pending.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(new[] { "First type", "Second type" }, result.PerType.Select(x => x.Name));
-        Assert.Equal(new int?[] { 2, 1, 3 }, result.PerAccount.Select(x => x.AccountId));
+        Assert.Equal([20m, 10m, 3m], result.PerAccount.Select(x => x.Value));
         _mockService2.Verify(x => x.GetEndAssetsDistribution(1, DefaultCurrency.PLN, asOf, TestContext.Current.CancellationToken), Times.Once);
     }
 
@@ -214,11 +214,11 @@ public class AssetsServiceTests
 
         _mockService1.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ReturnsAsync([
-                new UnrealizedGainLossAccountResult(1, "Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
+                new UnrealizedGainLossAccountResult("Stock account", 100m, 120m, 20m, 20m, asOfDate, 0)
             ]);
         _mockService2.Setup(x => x.GetUnrealizedGainLossPerAccount(It.IsAny<int>(), It.IsAny<Currency>(), It.IsAny<DateTime>()))
             .ReturnsAsync([
-                new UnrealizedGainLossAccountResult(2, "Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
+                new UnrealizedGainLossAccountResult("Bond account", 200m, 180m, -20m, -10m, asOfDate, 1)
             ]);
 
         var results = await _assetsService.GetUnrealizedGainLossPerAccount(1, DefaultCurrency.PLN, asOfDate);

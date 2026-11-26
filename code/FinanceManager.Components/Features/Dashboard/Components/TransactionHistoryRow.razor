@@ -7,11 +7,11 @@
     @switch (Item)
     {
         case CurrencyTransactionHistoryItem currency:
-            <TransactionRow @key="Item.Key" ShowBalance="false" Entry="currency.Entry" Currency="@currency.Currency"
+            <TransactionRow @key="Item.Key" Entry="currency.Entry" Currency="@currency.Currency"
                             IsMobile="@IsMobile" SiblingsShareSameTime="@SiblingsShareSameTime" />
             break;
         case BondTransactionHistoryItem bond:
-            <BondTransactionRow @key="Item.Key" ShowPosition="false" BondName="@bond.BondName" Entry="bond.Entry" BondDetails="@BondDetails" IsMobile="@IsMobile" />
+            <BondTransactionRow @key="Item.Key" BondName="@bond.BondName" Entry="bond.Entry" BondDetails="@BondDetails" IsMobile="@IsMobile" />
             break;
         case InvestmentTransactionHistoryItem investment:
             <InvestmentTransactionRow @key="Item.Key" Transaction="investment.Transaction" Valuation="@Valuation" IsMobile="@IsMobile"

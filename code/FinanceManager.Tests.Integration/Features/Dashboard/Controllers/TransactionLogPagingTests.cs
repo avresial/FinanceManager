@@ -170,7 +170,7 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
         var all = (await client.GetItemsPage(641, Query(), ct)).Items;
 
         Assert.All([(TransactionKind.Cash, cash.EntryId), (TransactionKind.Bond, bond.EntryId), (TransactionKind.Investment, trade.Id)],
-            key => Assert.Null(Assert.Single(all, item => (item.Kind, item.EntryId) == key).LegacyAccountId));
+            key => Assert.Single(all, item => (item.Kind, item.EntryId) == key));
         var usdCash = (await client.GetItemsPage(641, Query([TransactionKind.Cash], ["USD"]), ct)).Items;
         Assert.Contains(usdCash, item => item.EntryId == cash.EntryId);
         Assert.All(usdCash, item => Assert.Equal(TransactionKind.Cash, item.Kind));
@@ -225,7 +225,7 @@ public class TransactionLogPagingTests(OptionsProvider optionsProvider) : Contro
 
         Assert.Equal(7, expected.Count);
         Assert.Equal(expected, actual.Select(item => (item.Kind, item.EntryId)));
-        var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.LegacyAccountId == 11));
+        var savings = Assert.IsType<CurrencyTransactionHistoryItem>(actual.Single(item => item.Kind == TransactionKind.Cash && item.EntryId == 2));
         Assert.Equal(("USD", 1, "Long term"),
             (savings.Currency, savings.Entry.CurrencyId, savings.Entry.Labels.Single().Name));
         Assert.All(actual.OfType<BondTransactionHistoryItem>(), bond => Assert.Equal(7, bond.Entry.BondDetailsId));

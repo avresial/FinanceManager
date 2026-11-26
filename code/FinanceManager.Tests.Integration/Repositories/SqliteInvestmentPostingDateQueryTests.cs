@@ -51,10 +51,8 @@ public sealed class SqliteInvestmentPostingDateQueryTests : IDisposable
         await Seed();
         var ct = TestContext.Current.CancellationToken;
 
-        var holdings = await _repository.GetHoldingsAsOf([_accountId], _start, ct);
         var byUser = await _repository.GetHoldingsByUserAsOf(_userId, _start, ct);
 
-        Assert.Equal(3m, holdings[_listingId]);
         Assert.Equal(3m, byUser.Single(h => h.AssetListingId == _listingId).Units);
     }
 

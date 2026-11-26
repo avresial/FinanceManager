@@ -123,7 +123,6 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var dto = await response.Content.ReadFromJsonAsync<CurrencyTransactionLogItemDto>(ct);
         Assert.NotNull(dto);
-        Assert.Null(dto.LegacyAccountId);
         Assert.Equal(-12.5m, dto.ValueChange);
         Assert.Equal(_pln, dto.CurrencyId);
         Assert.Equal("PLN", dto.Currency);
@@ -184,7 +183,6 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
             $"{_route}?entryIds={unlinked}&entryIds={linked}&entryIds={foreign}&entryIds=9999&entryIds={linked}", ct);
 
         Assert.Equal([linked, unlinked], response!.Select(entry => entry.EntryId));
-        Assert.Equal(new int?[] { _accountId, null }, response!.Select(entry => entry.LegacyAccountId));
         Assert.All(response!, entry => Assert.Equal("PLN", entry.Currency));
     }
 
@@ -345,7 +343,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     }
 
     [Fact]
-    public async Task LinkedEntry_EditAndDeleteRepairTheAccountRunningValues_ButNeverTouchAnUnlinkedRow()
+    public async Task HistoricalEntry_EditAndDeletePreserveDormantBalances()
     {
         Seed();
         var first = await SeedEntry(_owner, _accountId, _pln, _day, 10m, value: 10m);
@@ -355,20 +353,19 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         Authorize("owner", _owner, UserRole.User);
         var ct = TestContext.Current.CancellationToken;
 
-        // Moving the first entry past the second changes the values between its old and its new position.
         using var edited = await Client.PutAsJsonAsync($"{_route}/{first}", Update(20m, date: _day.AddDays(1).AddHours(12)), ct);
         Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
         Db.ChangeTracker.Clear();
         var values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
         Assert.Equal([second, first, third], values.Select(e => e.EntryId));
-        Assert.Equal([5m, 25m, 27m], values.Select(e => e.Value));
+        Assert.Equal([15m, 10m, 17m], values.Select(e => e.Value));
         Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
 
         using var deleted = await Client.DeleteAsync($"{_route}/{second}", ct);
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
         Db.ChangeTracker.Clear();
         values = await Db.CurrencyEntries.AsNoTracking().Where(e => e.AccountId == _accountId).OrderBy(e => e.PostingDate).ThenBy(e => e.EntryId).ToListAsync(ct);
-        Assert.Equal([20m, 22m], values.Select(e => e.Value));
+        Assert.Equal([10m, 17m], values.Select(e => e.Value));
         Assert.Equal(0m, (await Db.CurrencyEntries.AsNoTracking().SingleAsync(e => e.EntryId == unlinked, ct)).Value);
     }
 
@@ -437,15 +434,14 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         var actionable = status.Conflicts.Where(c => !c.Conflict.IsExactMatch).ToList();
         var conflict = Assert.Single(actionable);
         Assert.Equal("surplus on the same day", conflict.Conflict.ImportEntry!.Description);
-        Assert.Null(conflict.Conflict.AccountId);
         Assert.Null(conflict.Conflict.ExistingEntry);
 
         // Another owner never sees the job; an unknown conflict id is rejected.
         Authorize("other", _other, UserRole.User);
-        using var foreign = await Client.GetAsync($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+        using var foreign = await Client.GetAsync($"api/transactions/cash/import/jobs/{jobId}", ct);
         Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
         Authorize("owner", _owner, UserRole.User);
-        using var bogus = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+        using var bogus = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{jobId}/resolve",
             new CurrencyImportResolveConflictsRequestDto { JobId = jobId, Decisions = [new("not-a-conflict", true, false)] }, ct);
         Assert.Equal(HttpStatusCode.NotFound, bogus.StatusCode);
 
@@ -453,7 +449,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         var request = new CurrencyImportResolveConflictsRequestDto { JobId = jobId, Decisions = [new(conflict.ConflictId, PickImported: true, PickExisting: false)] };
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            using var resolved = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+            using var resolved = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{jobId}/resolve", request, ct);
             Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
         }
 
@@ -480,14 +476,14 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
 
         // The plan limit is rechecked for the approved addition: refused, nothing saved, the decision stays open.
         _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(false);
-        using var refused = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+        using var refused = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{jobId}/resolve", request, ct);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Equal(1, await Db.CurrencyEntries.CountAsync(ct));
-        var open = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+        var open = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/transactions/cash/import/jobs/{jobId}", ct);
         Assert.Equal(0, open!.ResolvedConflictCount);
 
         _planVerifier.Setup(x => x.CanAddMoreEntries(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
-        using var retried = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts", request, ct);
+        using var retried = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{jobId}/resolve", request, ct);
         Assert.Equal(HttpStatusCode.OK, retried.StatusCode);
         Db.ChangeTracker.Clear();
         Assert.Equal(2, await Db.CurrencyEntries.CountAsync(ct));
@@ -507,13 +503,13 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
         var rowsBefore = await Db.CurrencyEntries.CountAsync(ct);
 
         // The conflict id of the caller's own job in another currency does not resolve here.
-        using var crossJob = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+        using var crossJob = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{plnConflict.JobId}/resolve",
             new CurrencyImportResolveConflictsRequestDto { JobId = plnConflict.JobId, Decisions = [new(usdConflict.ConflictId, true, false)] }, ct);
         Assert.Equal(HttpStatusCode.NotFound, crossJob.StatusCode);
 
         // Another owner cannot resolve the job even with a valid conflict id.
         Authorize("other", _other, UserRole.User);
-        using var foreign = await Client.PostAsJsonAsync("api/CurrencyAccountImport/ResolveAsyncImportConflicts",
+        using var foreign = await Client.PostAsJsonAsync($"api/transactions/cash/import/jobs/{plnConflict.JobId}/resolve",
             new CurrencyImportResolveConflictsRequestDto { JobId = plnConflict.JobId, Decisions = [new(plnConflict.ConflictId, true, false)] }, ct);
         Assert.Equal(HttpStatusCode.NotFound, foreign.StatusCode);
 
@@ -549,7 +545,7 @@ public class CashTransactionsControllerTests(OptionsProvider optionsProvider) : 
     {
         for (var attempt = 0; attempt < 200; attempt++)
         {
-            var status = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/CurrencyAccountImport/ImportStatus/{jobId}", ct);
+            var status = await Client.GetFromJsonAsync<CurrencyImportJobStatusDto>($"api/transactions/cash/import/jobs/{jobId}", ct);
             if (status is { IsCompleted: true }) return status;
             await Task.Delay(50, ct);
         }

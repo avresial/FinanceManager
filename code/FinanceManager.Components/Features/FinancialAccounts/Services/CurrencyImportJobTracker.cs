@@ -1,4 +1,5 @@
 using FinanceManager.Components.Features.FinancialAccounts.HttpClients;
+using FinanceManager.Components.Features.Transactions.Cash.HttpClients;
 using FinanceManager.Domain.FinancialAccounts.Currencies.Dtos;
 using FinanceManager.Domain.FinancialAccounts.Shared.Imports;
 using FinanceManager.Domain.Identity.Services;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace FinanceManager.Components.Features.FinancialAccounts.Services;
 
 public sealed class CurrencyImportJobTracker(
-    CurrencyAccountImportHttpClient importClient,
+    CashTransactionsHttpClient importClient,
     NavigationManager navigation,
     ILoginService loginService,
     ILogger<CurrencyImportJobTracker> logger) : IAsyncDisposable

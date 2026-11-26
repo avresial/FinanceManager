@@ -184,5 +184,5 @@ public partial class LiabilitiesDistributionOverviewCard
 
     // Liabilities are returned as negative magnitudes; flip them so the pie and legend show positive amounts.
     private static List<NameValueResult> ToPositive(IEnumerable<NameValueResult> data) =>
-        [.. data.Select(x => new NameValueResult { Name = x.Name, Value = Math.Abs(x.Value), AccountId = x.AccountId, Kind = x.Kind, CurrencyCode = x.CurrencyCode })];
+        [.. data.Select(x => new NameValueResult { Name = x.Name, Value = Math.Abs(x.Value), Kind = x.Kind, CurrencyCode = x.CurrencyCode })];
 }

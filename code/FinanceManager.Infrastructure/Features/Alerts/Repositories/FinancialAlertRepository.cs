@@ -381,6 +381,6 @@ internal sealed class FinancialAlertRepository(AppDbContext context) : IFinancia
 
         // The currency code stays null so the whole evaluation remains one SQL command; the evaluators resolve it from the snapshot.
         private static CashLogEntry ToLogEntry(long entryId, DateTime postingDate, decimal valueChange, string? description, int currencyId, string? contractorDetails) =>
-            new(null, entryId, postingDate, valueChange, description ?? string.Empty, currencyId, null, contractorDetails, Array.Empty<FinancialLabel>());
+            new(entryId, postingDate, valueChange, description ?? string.Empty, currencyId, null, contractorDetails, Array.Empty<FinancialLabel>());
     }
 }

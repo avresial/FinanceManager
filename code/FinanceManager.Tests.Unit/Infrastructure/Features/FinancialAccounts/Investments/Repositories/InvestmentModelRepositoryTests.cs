@@ -288,11 +288,11 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 2, 15)
         }, ct);
 
-        var holdingsMid = await txRepo.GetHoldingsAsOf([accountId], new DateOnly(2026, 1, 20), ct);
-        Assert.Equal(3.25m, holdingsMid[listing.Id]);
+        var holdingsMid = await txRepo.GetHoldingsByUserAsOf(1, new DateOnly(2026, 1, 20), ct);
+        Assert.Equal(3.25m, Assert.Single(holdingsMid, holding => holding.AssetListingId == listing.Id).Units);
 
-        var holdingsAfter = await txRepo.GetHoldingsAsOf([accountId], new DateOnly(2026, 3, 1), ct);
-        Assert.Equal(2.00m, holdingsAfter[listing.Id]);
+        var holdingsAfter = await txRepo.GetHoldingsByUserAsOf(1, new DateOnly(2026, 3, 1), ct);
+        Assert.Equal(2.00m, Assert.Single(holdingsAfter, holding => holding.AssetListingId == listing.Id).Units);
     }
 
     [Fact]
@@ -527,7 +527,7 @@ public class InvestmentModelRepositoryTests
             TradeDate = new DateOnly(2026, 1, 20)
         }, ct);
 
-        var (items, hasMore) = await txRepo.GetHistoryPage(accountId, pageSize: 10, cancellationToken: ct);
+        var (items, hasMore) = await txRepo.GetHistoryPageByUser(1, pageSize: 10, cancellationToken: ct);
 
         Assert.False(hasMore);
         Assert.Equal(3, items.Count);
@@ -564,15 +564,15 @@ public class InvestmentModelRepositoryTests
         var t4 = await txRepo.Add(new InvestmentTransaction { UserId = 1, AccountId = accountId, AssetListingId = listing.Id, Type = InvestmentTransactionType.Buy, Quantity = 4m, UnitPrice = 100m, Currency = "USD", TradeDate = sameDay }, ct);
 
         // Page 1 with pageSize = 2
-        var (page1, hasMore1) = await txRepo.GetHistoryPage(accountId, pageSize: 2, cancellationToken: ct);
+        var (page1, hasMore1) = await txRepo.GetHistoryPageByUser(1, pageSize: 2, cancellationToken: ct);
         Assert.True(hasMore1);
         Assert.Equal(2, page1.Count);
         Assert.Equal(t4.EntryId, page1[0].EntryId);
         Assert.Equal(t3.EntryId, page1[1].EntryId);
 
         // Page 2 continuing from page 1's last item (t3)
-        var (page2, hasMore2) = await txRepo.GetHistoryPage(
-            accountId, pageSize: 2, cursorTradeDate: page1[^1].TradeDate, cursorId: page1[^1].EntryId, cancellationToken: ct);
+        var (page2, hasMore2) = await txRepo.GetHistoryPageByUser(
+            1, pageSize: 2, cursorTradeDate: page1[^1].TradeDate, cursorId: page1[^1].EntryId, cancellationToken: ct);
         Assert.False(hasMore2);
         Assert.Equal(2, page2.Count);
         Assert.Equal(t2.EntryId, page2[0].EntryId);
@@ -641,46 +641,46 @@ public class InvestmentModelRepositoryTests
         }, ct);
 
         // Filter by Date Range
-        var (dateFiltered, _) = await txRepo.GetHistoryPage(
-            accountId, 10, startDate: new DateOnly(2026, 1, 1), endDate: new DateOnly(2026, 1, 31), cancellationToken: ct);
+        var (dateFiltered, _) = await txRepo.GetHistoryPageByUser(
+            1, 10, startDate: new DateOnly(2026, 1, 1), endDate: new DateOnly(2026, 1, 31), cancellationToken: ct);
         Assert.Single(dateFiltered);
         Assert.Equal("CSPX", dateFiltered[0].AssetListing.Ticker);
 
         // Filter by Type
-        var (typeFiltered, _) = await txRepo.GetHistoryPage(
-            accountId, 10, type: InvestmentTransactionType.Sell, cancellationToken: ct);
+        var (typeFiltered, _) = await txRepo.GetHistoryPageByUser(
+            1, 10, type: InvestmentTransactionType.Sell, cancellationToken: ct);
         Assert.Single(typeFiltered);
         Assert.Equal("AAPL", typeFiltered[0].AssetListing.Ticker);
 
         // Filter by Search on Notes
-        var (noteSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "ETF contribution", cancellationToken: ct);
+        var (noteSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "ETF contribution", cancellationToken: ct);
         Assert.Single(noteSearch);
         Assert.Equal("CSPX", noteSearch[0].AssetListing.Ticker);
 
         // Filter by Search on Ticker
-        var (tickerSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "AAPL", cancellationToken: ct);
+        var (tickerSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "AAPL", cancellationToken: ct);
         Assert.Single(tickerSearch);
         Assert.Equal("AAPL", tickerSearch[0].AssetListing.Ticker);
 
         // Filter by Search on Asset Name, case-insensitively
-        var (nameSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "apple", cancellationToken: ct);
+        var (nameSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "apple", cancellationToken: ct);
         Assert.Single(nameSearch);
         Assert.Equal("Apple Inc.", nameSearch[0].AssetListing.Asset.Name);
 
         // Filter by Search on ISIN
-        var (isinSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "US0378331005", cancellationToken: ct);
+        var (isinSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "US0378331005", cancellationToken: ct);
         Assert.Single(isinSearch);
         Assert.Equal("AAPL", isinSearch[0].AssetListing.Ticker);
 
         // Filter by Search on Currency and Exchange
-        var (currencySearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "usd", cancellationToken: ct);
+        var (currencySearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "usd", cancellationToken: ct);
         Assert.Equal(2, currencySearch.Count);
-        var (exchangeSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "nasdaq", cancellationToken: ct);
+        var (exchangeSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "nasdaq", cancellationToken: ct);
         Assert.Single(exchangeSearch);
         Assert.Equal("AAPL", exchangeSearch[0].AssetListing.Ticker);
 
         // Wildcards in the user's term are treated as literal text.
-        var (wildcardSearch, _) = await txRepo.GetHistoryPage(accountId, 10, search: "%", cancellationToken: ct);
+        var (wildcardSearch, _) = await txRepo.GetHistoryPageByUser(1, 10, search: "%", cancellationToken: ct);
         Assert.Empty(wildcardSearch);
     }
 
@@ -691,11 +691,11 @@ public class InvestmentModelRepositoryTests
         await using var ctx = CreateContext();
         var txRepo = new InvestmentTransactionRepository(ctx);
 
-        var (items, hasMore) = await txRepo.GetHistoryPage(999, 10, cancellationToken: ct);
+        var (items, hasMore) = await txRepo.GetHistoryPageByUser(999, 10, cancellationToken: ct);
         Assert.Empty(items);
         Assert.False(hasMore);
 
-        var (zeroPage, zeroHasMore) = await txRepo.GetHistoryPage(999, 0, cancellationToken: ct);
+        var (zeroPage, zeroHasMore) = await txRepo.GetHistoryPageByUser(999, 0, cancellationToken: ct);
         Assert.Empty(zeroPage);
         Assert.False(zeroHasMore);
     }
@@ -737,13 +737,13 @@ public class InvestmentModelRepositoryTests
         t1.Description = "Updated Note";
         await txRepo.Update(t1, ct);
 
-        var (afterUpdate, _) = await txRepo.GetHistoryPage(accountId, 10, cancellationToken: ct);
+        var (afterUpdate, _) = await txRepo.GetHistoryPageByUser(1, 10, cancellationToken: ct);
         Assert.Single(afterUpdate);
         Assert.Equal("Updated Note", afterUpdate[0].Description);
 
         // Delete
         await txRepo.Delete(t1.EntryId, ct);
-        var (afterDelete, _) = await txRepo.GetHistoryPage(accountId, 10, cancellationToken: ct);
+        var (afterDelete, _) = await txRepo.GetHistoryPageByUser(1, 10, cancellationToken: ct);
         Assert.Empty(afterDelete);
     }
     [Fact]

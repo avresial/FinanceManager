@@ -73,11 +73,11 @@ public sealed class McpToolsTests
     private static readonly DateTime _noon = new(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
 
     private static TransactionLogItem Cash(long id, DateTime? at = null, string description = "Lunch", string? contractor = "private raw counterparty", string currency = "PLN", params string[] labels) =>
-        new CurrencyTransactionLogItem(new CashLogEntry(null, id, at ?? _noon, -10m, description, 1, currency, contractor,
+        new CurrencyTransactionLogItem(new CashLogEntry(id, at ?? _noon, -10m, description, 1, currency, contractor,
             [.. labels.Select((name, index) => new FinancialLabel { Id = index + 1, Name = name })]));
 
     private static TransactionLogItem Bond(long id, DateTime? at = null) =>
-        new BondTransactionLogItem(new BondLogEntry(null, id, at ?? _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
+        new BondTransactionLogItem(new BondLogEntry(id, at ?? _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
 
     private static TransactionLogItem Trade(long id, DateTime? at = null) =>
         new InvestmentTransactionLogItem(Owned(_userId, id, at ?? _noon));
@@ -221,10 +221,10 @@ public sealed class McpToolsTests
     [Fact]
     public async Task GetTransaction_ReadsOwnedRowsByKindAndId()
     {
-        var cashRow = new CashLogEntry(null, 4, _noon, -10m, "Lunch", 1, "PLN", "private raw counterparty", []);
+        var cashRow = new CashLogEntry(4, _noon, -10m, "Lunch", 1, "PLN", "private raw counterparty", []);
         _cash.Setup(reader => reader.GetByIds(_userId, It.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 4 })), It.IsAny<CancellationToken>())).ReturnsAsync([cashRow]);
         _bonds.Setup(reader => reader.GetById(_userId, 5, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BondLogEntry(null, 5, _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
+            .ReturnsAsync(new BondLogEntry(5, _noon, 3m, "bond note", 5, "PLN", "Treasury 2030", []));
         _trades.Setup(repository => repository.Get(6, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Owned(_userId, 6, _noon));
 
@@ -351,8 +351,8 @@ public sealed class McpToolsTests
         investment.AssetListing.MarketDataSymbols = [new MarketDataSymbol { Symbol = "provider-secret" }];
         var payload = new object[]
         {
-            McpResponseMapper.Transaction(new CashLogEntry(3, 5, DateTime.UtcNow, -20, "Lunch", 1, "PLN", "private raw counterparty", [label])),
-            McpResponseMapper.Transaction(new CashLogEntry(3, 6, DateTime.UtcNow, -20, "", 1, "PLN", "fallback-sensitive counterparty", [])),
+            McpResponseMapper.Transaction(new CashLogEntry(5, DateTime.UtcNow, -20, "Lunch", 1, "PLN", "private raw counterparty", [label])),
+            McpResponseMapper.Transaction(new CashLogEntry(6, DateTime.UtcNow, -20, "", 1, "PLN", "fallback-sensitive counterparty", [])),
             McpResponseMapper.Transaction(investment),
             McpResponseMapper.InvestmentPosition(investment.AssetListing, 2, 40),
             McpResponseMapper.Currency(DefaultCurrency.USD),

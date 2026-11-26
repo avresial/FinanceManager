@@ -16,7 +16,8 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
 
     private decimal _value = value;
 
-    [JsonPropertyOrder(4)]
+    // Dormant running balance, dropped in #1144.
+    [JsonIgnore]
     public decimal Value
     {
         get => _value;
@@ -35,7 +36,8 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
     [JsonIgnore]
     public int CurrencyId { get; set; }
 
-    [JsonPropertyOrder(2)]
+    // Dormant account link, dropped in #1144.
+    [JsonIgnore]
     public int? AccountId { get; set; } = accountId;
 
     [JsonPropertyOrder(5)]
@@ -47,15 +49,12 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
 
         PostingDate = entry.PostingDate;
         Description = entry.Description;
-        // An entry without an account link has no running balance to keep in step.
-        if (AccountId is not null)
-            Value += entry.ValueChange - ValueChange;
         ValueChange = entry.ValueChange;
         Labels = entry.Labels ?? [];
         ContractorDetails = entry.ContractorDetails;
     }
 
-    public CurrencyAccountEntry GetCopy() => new(AccountId, EntryId, PostingDate, Value, ValueChange)
+    public CurrencyAccountEntry GetCopy() => new(null, EntryId, PostingDate, 0, ValueChange)
     {
         UserId = UserId,
         CurrencyId = CurrencyId,
@@ -63,5 +62,5 @@ public class CurrencyAccountEntry(int? accountId, long entryId, DateTime posting
         ContractorDetails = this.ContractorDetails,
     };
 
-    public override string ToString() => $"PostingDate: {PostingDate}, EntryId: {EntryId}, Value: {Value}, ValueChange: {ValueChange}";
+    public override string ToString() => $"PostingDate: {PostingDate}, EntryId: {EntryId}, ValueChange: {ValueChange}";
 }

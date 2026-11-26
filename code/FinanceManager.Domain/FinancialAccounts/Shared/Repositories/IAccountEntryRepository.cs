@@ -2,62 +2,10 @@ namespace FinanceManager.Domain.FinancialAccounts.Shared.Repositories;
 
 public interface IAccountEntryRepository<T>
 {
-    IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate);
-    IAsyncEnumerable<T> Get(int accountId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken);
-    Task<List<T>> Get(int accountId, DateTime date, int count, bool olderThenDate = true);
-
-    /// <summary>
-    /// Returns the <c>PostingDate</c> of every entry in the account (one element per entry, including
-    /// duplicate dates), projected straight from the index without materialising full entities. Lets a
-    /// caller size a transaction-history window cheaply before fetching the entries themselves.
-    /// </summary>
-    Task<List<DateTime>> GetPostingDates(int accountId);
-
-    /// <summary>
-    /// Gets entries within a date range, expanding backward to include at least <paramref name="minimumEntryCount"/>
-    /// entries if the range contains fewer. Returns the entries and the effective start date used. Uses at most
-    /// two queries: one to project dates, one to fetch the range.
-    /// </summary>
-    Task<(List<T> Entries, DateTime EffectiveStartDate)> GetEntriesWithMinimumCount(int accountId, DateTime startDate, DateTime endDate, int minimumEntryCount = 0);
-    Task<T?> Get(int accountId, long entryId);
-
     /// <summary>The owner's entries with exactly these ids (linked or not), with their labels. Ids that are missing or belong to someone else are skipped; a zero owner id returns nothing.</summary>
     Task<IReadOnlyList<T>> GetByIds(int userId, IReadOnlyCollection<long> entryIds, CancellationToken cancellationToken = default);
 
-
     Task<IReadOnlyList<T>> GetRecentUnlabelled(int count, CancellationToken cancellationToken = default);
-    Task<T?> GetYoungest(int accountId);
-    Task<T?> GetNextYounger(int accountId, long entryId);
-    Task<T?> GetNextYounger(int accountId, DateTime date);
-    Task<T?> GetNextOlder(int accountId, long entryId);
-    Task<T?> GetNextOlder(int accountId, DateTime date);
-    Task<T?> GetOldest(int accountId);
-    Task<int> GetCount(int accountId);
-
-    /// <summary>
-    /// Batch variant of <see cref="Get(int, DateTime, DateTime)"/>: returns every entry in the
-    /// [<paramref name="startDate"/>, <paramref name="endDate"/>] range for all supplied accounts in a
-    /// single query, ordered newest-first. Caller groups the result by <c>AccountId</c>. Loading a whole
-    /// user's accounts this way avoids the per-account round trips that caused the dashboard N+1 (issue #411).
-    /// </summary>
-    Task<List<T>> GetRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate);
-
-    /// <summary>
-    /// Returns the same value history without loading labels or using cache buckets. Intended for
-    /// calculations that only need entry dates and amounts.
-    /// </summary>
-    Task<List<T>> GetValueRange(IReadOnlyCollection<int> accountIds, DateTime startDate, DateTime endDate);
-
-    /// <summary>
-    /// Returns, per account, the single newest entry strictly older than <paramref name="date"/> in one
-    /// query. Instrument-aware repositories (stock/bond) expose a per-instrument variant of their own.
-    /// </summary>
-    Task<Dictionary<int, T>> GetNextOlder(IReadOnlyCollection<int> accountIds, DateTime date);
-
-    /// <summary>
-    /// Returns, per account, the single oldest entry strictly younger than <paramref name="date"/> in one query.
-    /// </summary>
-    Task<Dictionary<int, T>> GetNextYounger(IReadOnlyCollection<int> accountIds, DateTime date);
 
     /// <summary>
     /// Counts entries of this type for each of the supplied users in a single grouped query on the entry's
@@ -67,25 +15,11 @@ public interface IAccountEntryRepository<T>
     /// </summary>
     Task<IReadOnlyDictionary<int, int>> GetEntriesCountPerUser(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
-    Task RecalculateValues(int accountId, long entryId);
-    Task RecalculateValues(int accountId, long entryId, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Recomputes the running <c>Value</c> of every entry in the account from its <c>ValueChange</c>
-    /// series, anchored at zero from the oldest entry. Instrument-aware repositories (stock/bond)
-    /// recalculate each instrument independently. Used to repair accounts whose stored balances drifted
-    /// (e.g. legacy imports that never ran a recalculation pass).
-    /// </summary>
-    Task RecalculateValues(int accountId);
-    Task RecalculateValues(int accountId, CancellationToken cancellationToken);
-    Task<bool> Add(T entry, bool recalculate = true);
-    Task<bool> Add(T entry, bool recalculate, CancellationToken cancellationToken);
-    Task<bool> Add(IEnumerable<T> entries, bool recalculate = true);
-    Task<bool> Add(IEnumerable<T> entries, bool recalculate, CancellationToken cancellationToken);
+    Task<bool> Add(T entry, CancellationToken cancellationToken = default);
+    Task<bool> Add(IEnumerable<T> entries, CancellationToken cancellationToken = default);
 
     /// <summary>Attaches labels to the owner's entries (linked or not) and returns how many were newly attached. Assignments for missing or foreign entries are ignored.</summary>
     Task<int> AddLabels(int userId, IEnumerable<(long entryId, int labelId)> labelAssignments, CancellationToken cancellationToken = default);
-    Task<bool> Update(T entry);
 
     // ----- Owner-scoped access: the entry's own UserId is the only ownership check -----
 
@@ -99,16 +33,11 @@ public interface IAccountEntryRepository<T>
     IAsyncEnumerable<T> GetByOwner(int userId, int partitionId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates the editable fields and labels of the owner's entry. The owner and account link are never taken from
-    /// <paramref name="entry"/>. A linked entry also repairs its account's running values; an unlinked entry has none.
+    /// Updates the editable fields and labels of the owner's entry. Ownership comes from <paramref name="userId"/>.
     /// Returns false when the entry is missing or belongs to someone else.
     /// </summary>
     Task<bool> UpdateByOwner(int userId, T entry, CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes the owner's entry, repairing the running values of its account when it is linked. Returns false when the entry is missing or belongs to someone else.</summary>
+    /// <summary>Deletes the owner's entry. Returns false when the entry is missing or belongs to someone else.</summary>
     Task<bool> DeleteByOwner(int userId, long entryId, CancellationToken cancellationToken = default);
-    Task<bool> Delete(int accountId, long entryId);
-    Task<bool> Delete(int accountId, long entryId, CancellationToken cancellationToken);
-    Task<bool> Delete(int accountId);
-    Task<bool> Delete(int accountId, CancellationToken cancellationToken);
 }

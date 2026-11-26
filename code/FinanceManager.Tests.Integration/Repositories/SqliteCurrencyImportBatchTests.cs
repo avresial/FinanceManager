@@ -12,8 +12,6 @@ namespace FinanceManager.Tests.Integration.Repositories;
 [Trait("Category", "Integration")]
 public sealed class SqliteCurrencyImportBatchTests : IDisposable
 {
-    private const int _accountId = 7411;
-
     private readonly SqliteConnection _connection;
     private readonly AppDbContext _context;
     private readonly CurrencyEntryRepository _repo;
@@ -31,7 +29,6 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
 
         _context.Database.EnsureCreated();
         _repo = new CurrencyEntryRepository(_context);
-        _context.Accounts.Add(new FinancialAccountBaseDto { AccountId = _accountId, UserId = 1, AccountType = AccountType.Currency });
         _context.SaveChanges();
     }
 
@@ -48,10 +45,10 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
         var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var entry1 = new CurrencyAccountEntry(_accountId, 0, jan10, 0, 500m);
-        var entry2 = new CurrencyAccountEntry(_accountId, 0, jan15, 0, 300m);
+        var entry1 = new CurrencyAccountEntry(null, 0, jan10, 0, 500m) { UserId = 1 };
+        var entry2 = new CurrencyAccountEntry(null, 0, jan15, 0, 300m) { UserId = 1 };
 
-        var added = await _repo.Add([entry2, entry1], recalculate: false, cancellationToken: ct);
+        var added = await _repo.Add([entry2, entry1], cancellationToken: ct);
 
         Assert.True(added);
         Assert.True(entry1.EntryId > 0);
@@ -60,7 +57,7 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
 
         var dbEntries = await _context.CurrencyEntries
             .AsNoTracking()
-            .Where(e => e.AccountId == _accountId)
+            .Where(e => e.UserId == 1)
             .OrderBy(e => e.PostingDate)
             .ToListAsync(ct);
 
@@ -68,40 +65,6 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         Assert.Equal(entry1.EntryId, dbEntries[0].EntryId);
         Assert.Equal(entry2.EntryId, dbEntries[1].EntryId);
         Assert.Empty(_context.ChangeTracker.Entries());
-    }
-
-    [Fact]
-    public async Task AddBatch_WithOutOfOrderDates_AnchorsRecalculationAtEarliestEntry()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        var jan10 = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var jan15 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
-        var jan20 = new DateTime(2025, 1, 20, 0, 0, 0, DateTimeKind.Utc);
-        var jan25 = new DateTime(2025, 1, 25, 0, 0, 0, DateTimeKind.Utc);
-
-        await _repo.Add(new CurrencyAccountEntry(_accountId, 0, jan10, 0, 1_000m), recalculate: true, cancellationToken: ct);
-        await _repo.Add(new CurrencyAccountEntry(_accountId, 0, jan20, 0, 500m), recalculate: true, cancellationToken: ct);
-
-        var entryJan25 = new CurrencyAccountEntry(_accountId, 0, jan25, 0, 300m);
-        var entryJan15 = new CurrencyAccountEntry(_accountId, 0, jan15, 0, 200m);
-
-        var added = await _repo.Add([entryJan25, entryJan15], recalculate: true, cancellationToken: ct);
-
-        Assert.True(added);
-        Assert.True(entryJan25.EntryId > 0);
-        Assert.True(entryJan15.EntryId > 0);
-
-        var entries = await _context.CurrencyEntries
-            .AsNoTracking()
-            .Where(e => e.AccountId == _accountId)
-            .OrderBy(e => e.PostingDate)
-            .ToListAsync(ct);
-
-        Assert.Equal(4, entries.Count);
-        Assert.Equal(1_000m, entries[0].Value);
-        Assert.Equal(1_200m, entries[1].Value);
-        Assert.Equal(1_700m, entries[2].Value);
-        Assert.Equal(2_000m, entries[3].Value);
     }
 
     [Fact]
@@ -113,12 +76,13 @@ public sealed class SqliteCurrencyImportBatchTests : IDisposable
         await _context.SaveChangesAsync(ct);
 
         var postingDate = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc);
-        var entry = new CurrencyAccountEntry(_accountId, 0, postingDate, 0, 500m)
+        var entry = new CurrencyAccountEntry(null, 0, postingDate, 0, 500m)
         {
+            UserId = 1,
             Labels = [new FinancialLabel { Id = existingLabel.Id, Name = existingLabel.Name }]
         };
 
-        var added = await _repo.Add([entry], recalculate: false, cancellationToken: ct);
+        var added = await _repo.Add([entry], cancellationToken: ct);
 
         Assert.True(added);
         Assert.Equal(1, await _context.FinancialLabels.CountAsync(ct));

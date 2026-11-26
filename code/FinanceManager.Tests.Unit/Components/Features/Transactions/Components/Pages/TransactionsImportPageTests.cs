@@ -113,7 +113,7 @@ public class TransactionsImportPageTests
         context.Services.AddSingleton(new BondDetailsHttpClient(http));
         context.Services.AddSingleton(new CashTransactionsHttpClient(http));
         context.Services.AddSingleton(new BondTransactionsHttpClient(http));
-        context.Services.AddTransient<CurrencyAccountImportHttpClient>();
+        context.Services.AddTransient<CashTransactionsHttpClient>();
         context.Services.AddTransient<CsvHeaderMappingHttpClient>();
         context.Services.AddScoped<CurrencyImportJobTracker>();
         context.Services.AddSingleton<AccountDataSynchronizationService>();

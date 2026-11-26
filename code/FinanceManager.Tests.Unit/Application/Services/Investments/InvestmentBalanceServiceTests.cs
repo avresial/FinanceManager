@@ -12,14 +12,13 @@ public class InvestmentBalanceServiceTests
 {
     private const int _userId = 1;
 
-    private readonly Mock<IAccountRepository<InvestmentAccount>> _investmentAccountRepository = new();
     private readonly Mock<IInvestmentValuationService> _valuationService = new();
     private readonly Mock<IInvestmentCapitalSeriesService> _capitalSeriesService = new();
     private readonly InvestmentBalanceService _service;
 
     public InvestmentBalanceServiceTests()
     {
-        _service = new InvestmentBalanceService(_investmentAccountRepository.Object, _valuationService.Object, _capitalSeriesService.Object);
+        _service = new InvestmentBalanceService(_valuationService.Object, _capitalSeriesService.Object);
     }
 
     [Fact]
@@ -36,7 +35,6 @@ public class InvestmentBalanceServiceTests
 
         Assert.Equal([105m, 0m, 127m], result.Select(x => x.Value));
         // Account lookups are only needed for account-filtered charts.
-        _investmentAccountRepository.Verify(repo => repo.GetAll(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -53,7 +51,6 @@ public class InvestmentBalanceServiceTests
         Assert.Equal(125, result.Single(x => x.DateTime == start).Value);
         Assert.Equal(130, result.Single(x => x.DateTime == start.AddDays(1)).Value);
         Assert.Equal(180, result.Single(x => x.DateTime == end).Value);
-        _investmentAccountRepository.Verify(repo => repo.GetAll(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -69,45 +66,6 @@ public class InvestmentBalanceServiceTests
         Assert.Equal(8, Assert.Single(await _service.GetCapital(-7, DefaultCurrency.PLN, start, start)).Value);
         Assert.Empty(await _service.GetClosingBalance(0, DefaultCurrency.PLN, start, start));
         Assert.Empty(await _service.GetCapital(0, DefaultCurrency.PLN, start, start));
-    }
-
-    [Fact]
-    public async Task GetClosingBalance_WithTheIdOfAnOwnedInvestmentAccount_ReturnsThePooledOwnerSeries()
-    {
-        DateTime start = new(2024, 1, 1);
-        DateTime end = new(2024, 1, 1);
-        _investmentAccountRepository.Setup(repo => repo.GetAll(_userId))
-            .ReturnsAsync([new InvestmentAccount(_userId, 10, "Investments A"), new InvestmentAccount(_userId, 20, "Investments B")]);
-        _valuationService.Setup(x => x.GetUserValueSeriesAsync(_userId, DefaultCurrency.PLN, start.Date, end.Date, It.IsAny<CancellationToken>()))
-                         .ReturnsAsync(new Dictionary<DateTime, decimal> { [start] = 100 });
-
-        var result = await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end, new[] { 10 });
-
-        // The pooled series covers every account of the owner (and unlinked trades) until the account screens are removed.
-        Assert.Equal(100, Assert.Single(result).Value);
-    }
-
-    [Fact]
-    public async Task AccountFilteredReads_ForACashOrBondAccountId_ReturnNothing()
-    {
-        DateTime start = new(2024, 1, 1);
-        DateTime end = new(2024, 1, 2);
-        _investmentAccountRepository.Setup(repo => repo.GetAll(_userId)).ReturnsAsync([new InvestmentAccount(_userId, 10, "Investments A")]);
-
-        Assert.Empty(await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, end, new[] { 99 }));
-        Assert.Empty(await _service.GetCapital(_userId, DefaultCurrency.PLN, start, end, new[] { 99 }));
-        _valuationService.VerifyNoOtherCalls();
-        _capitalSeriesService.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task AccountFilteredReads_IgnoreAnotherUsersInvestmentAccountId()
-    {
-        DateTime start = new(2024, 1, 1);
-        _investmentAccountRepository.Setup(repo => repo.GetAll(_userId)).ReturnsAsync([new InvestmentAccount(999, 10, "Foreign")]);
-
-        Assert.Empty(await _service.GetClosingBalance(_userId, DefaultCurrency.PLN, start, start, new[] { 10 }));
-        _valuationService.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -130,12 +88,8 @@ public class InvestmentBalanceServiceTests
         Assert.Empty(await _service.GetInflow(_userId, DefaultCurrency.PLN, start, end));
         Assert.Empty(await _service.GetOutflow(_userId, DefaultCurrency.PLN, start, end));
         Assert.Empty(await _service.GetNetCashFlow(_userId, DefaultCurrency.PLN, start, end));
-        Assert.Empty(await _service.GetInflow(_userId, DefaultCurrency.PLN, start, end, new[] { 10 }));
-        Assert.Empty(await _service.GetOutflow(_userId, DefaultCurrency.PLN, start, end, new[] { 10 }));
-        Assert.Empty(await _service.GetNetCashFlow(_userId, DefaultCurrency.PLN, start, end, new[] { 10 }));
 
         // No account enumeration or valuation should happen for cash-flow paths.
-        _investmentAccountRepository.Verify(repo => repo.GetAll(It.IsAny<int>()), Times.Never);
         _valuationService.VerifyNoOtherCalls();
     }
 }

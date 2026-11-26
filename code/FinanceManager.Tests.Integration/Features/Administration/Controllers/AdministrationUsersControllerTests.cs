@@ -25,7 +25,7 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
         if (descriptor != null)
             services.Remove(descriptor);
 
-        _testDatabase = new TestDatabase(stampOwnerKeys: true);
+        _testDatabase = new TestDatabase();
         services.AddSingleton(_testDatabase!.Context);
     }
 
@@ -44,28 +44,6 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
                 PricingLevel = PricingLevel.Free,
                 UserRole = i == 1 ? UserRole.Admin : UserRole.User,
                 CreationDate = _nowUtc.AddDays(-userCount + i)
-            });
-        }
-
-        await _testDatabase!.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    }
-
-    private async Task SeedTestAccounts(int accountCount = 3)
-    {
-        await SeedTestUsers();
-
-        for (int i = 1; i <= accountCount; i++)
-        {
-            if (await _testDatabase!.Context.Accounts.AnyAsync(x => x.AccountId == i, TestContext.Current.CancellationToken))
-                continue;
-
-            _testDatabase.Context.Accounts.Add(new FinancialAccountBaseDto
-            {
-                AccountId = i,
-                UserId = 1,
-                Name = $"Test Account {i}",
-                AccountLabel = AccountLabel.Cash,
-                AccountType = AccountType.Currency
             });
         }
 
@@ -149,12 +127,12 @@ public class AdministrationUsersControllerTests(OptionsProvider optionsProvider)
     public async Task GetTotalTrackedMoney_WithData_ReturnsValue()
     {
         // Arrange
-        await SeedTestAccounts();
+        await SeedTestUsers();
         Authorize("AdminUser", 1, UserRole.Admin);
         var context = new AdministrationUsersHttpClient(Client);
 
         _testDatabase!.Context.Currencies.Add(DefaultCurrency.PLN);
-        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(1, 1, _nowUtc.AddDays(-10), 12.25m, 12.25m));
+        _testDatabase.Context.CurrencyEntries.Add(new CurrencyAccountEntry(null, 1, _nowUtc.AddDays(-10), 12.25m, 12.25m) { UserId = 1, CurrencyId = DefaultCurrency.PLN.Id });
         await _testDatabase.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act

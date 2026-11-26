@@ -41,7 +41,6 @@ public class AssetsServiceBondTests
         var distribution = await _service.GetEndAssetsDistribution(1, DefaultCurrency.PLN, _day.AddHours(12), TestContext.Current.CancellationToken);
 
         Assert.Equal([("Bond 1", 12m), ("Bond 2", 5m)], distribution.PerAccount.Select(x => (x.Name, x.Value)));
-        Assert.All(distribution.PerAccount, x => Assert.Null(x.AccountId));
         // Bond values stay in the bond's own currency, and the row says which class it is.
         Assert.All(distribution.PerAccount, x => Assert.Equal(("Bond", "PLN"), (x.Kind, x.CurrencyCode)));
         var total = Assert.Single(distribution.PerType);
@@ -144,8 +143,6 @@ public class AssetsServiceBondTests
         var owner = Assert.Single(await _service.GetUnrealizedGainLossPerAccount(-8, DefaultCurrency.PLN, _day.AddHours(12)));
 
         Assert.Equal([("Bond 1", 12m), ("Bond 2", 5m)], instruments.Select(x => (x.InstrumentName, x.Quantity)));
-        Assert.All(instruments, x => Assert.Null(x.AccountId));
-        Assert.Null(owner.AccountId);
         Assert.Equal("Bonds", owner.AccountName);
         Assert.Equal(17m, owner.CostBasis);
         Assert.Equal(17m, owner.CurrentValue);

@@ -6,7 +6,6 @@ namespace FinanceManager.Domain.FinancialAccounts.Currencies.Exports;
 public record CurrencyAccountExportDto(
     long Id,
     DateTime PostingDate,
-    decimal Value,
     decimal ValueChange,
     string? ContractorDetails = null,
     string? Description = null,
@@ -14,6 +13,6 @@ public record CurrencyAccountExportDto(
 {
     public static CurrencyAccountExportDto FromEntity(CurrencyAccountEntry entry)
     {
-        return new(entry.EntryId, entry.PostingDate, entry.Value, entry.ValueChange, entry.ContractorDetails, entry.Description);
+        return new(entry.EntryId, entry.PostingDate, entry.ValueChange, entry.ContractorDetails, entry.Description);
     }
 }
